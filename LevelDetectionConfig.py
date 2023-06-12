@@ -1,5 +1,9 @@
 import datetime
 import json
+import hashlib
+import base64
+
+from pandas._libs.tslibs import to_offset
 
 
 class Config():
@@ -20,11 +24,18 @@ class Config():
             'pattern': -1,
             'trigger': -2,
             'double': -4,
-            'hattrick': -6,
-            }
-
-        self.times = [(1, '1min'), (5, '5min'), (15, '15min'), (60, '1H'), (240, '4H'), (60*24, '1D'), (60*24*7, '1W')]
-        self.hattrick_index = 0
+            'hat_trick': -6,
+        }
+        self.times = [
+            '1min',  #: to_offset('1min'),
+            '5min',  #: to_offset('5min'),
+            '15min',  #: to_offset('15min'),
+            '1H',  #: to_offset('1H'),
+            '4H',  #: to_offset('4H'),
+            '1D',  #: to_offset('1D'),
+            '1W',  #: to_offset('1W')
+        ]
+        self.hat_trick_index = 0
         self.trigger_dept = 16
 
         self.dept_of_analysis = 3
@@ -44,6 +55,7 @@ myEncoder = MyEncoder()
 debug = False
 config = Config()
 print(myEncoder.encode(config))
-
+print(hashlib.md5(myEncoder.encode(config).encode('utf-8')))
+print(base64.b64encode(hashlib.md5(myEncoder.encode(config).encode('utf-8')).digest()))
 with open(f'LevelDetection.{config.id}.config.txt', 'w') as config_file:
     config_file.write(myEncoder.encode(config))

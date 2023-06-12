@@ -5,7 +5,7 @@ from LevelDetectionConfig import config
 DEBUG = False
 
 
-def plotfig(data: pd, save: bool = True, name: str = ''):
+def plotfig(data: pd, save: bool = False, name: str = ''):
     import os
     MAX_LEN_OF_DATA_FRAME_TO_PLOT = 50000
     SAFE_LEN_OF_DATA_FRAME_TO_PLOT = 10000
