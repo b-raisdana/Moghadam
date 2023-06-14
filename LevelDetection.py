@@ -1,4 +1,5 @@
 # import talib as ta
+import pandas_ta as ta
 import datetime
 from datetime import timedelta
 
@@ -20,6 +21,7 @@ fig = plotfig(test_prices, name='test prices', save=False, do_not_show=True)
 
 DEBUG = False
 INFINITY_TIME_DELTA = timedelta(days=10 * 365)
+
 
 def level_extractor(prices: pd.DataFrame, min_weight=None, significance=None, max_cycles=100):
     _peaks = peaks_valleys_extractor(prices, True, min_weight, significance, max_cycles)
@@ -108,7 +110,7 @@ def peaks_valleys_extractor(prices: pd.DataFrame, peaks_mode: bool = True, min_s
         for t_peak_valley_index in peaks_valleys[
             peaks_valleys['strength'] >= pd.to_timedelta(config.times[i]) * 2
         ].index.values:
-            peaks_valleys.at[t_peak_valley_index, 'effective_time'] = pd.to_timedelta(config.times[i])
+            peaks_valleys.at[t_peak_valley_index, 'effective_time'] = config.times[i]
     peaks_valleys = peaks_valleys[pd.notna(peaks_valleys['effective_time'])]
     return peaks_valleys
 
@@ -117,13 +119,17 @@ peaks, valleys = level_extractor(test_prices)
 
 print('Peaks:\n', peaks.sort_values(by='strength', ascending=False))
 fig.add_scatter(x=peaks.index.values, y=peaks['high'] + 1, mode="markers", name='Peak',
-                marker=dict(symbol="triangle-up", size=peaks['strength'] / pd.to_timedelta(config.times[0]),
+                text=peaks['effective_time'],
+                marker=dict(symbol="triangle-up",
+                            size=pd.to_timedelta(peaks['effective_time']) / pd.to_timedelta(config.times[0]),
                             color="blue"),
-                hovertemplate="Peak: @%{y:$,}(%{marker.size:,})<br>"
+                hovertemplate="Peak: %{marker.text:,}@%{y:$,}(%{marker.size:,})<br>"
                 )
 print('Valleys\n', valleys.sort_values(by='strength', ascending=False))
-fig.add_scatter(x=valleys.index.values, y=valleys['low'] - 1, mode="markers", name='Valley',
-                marker=dict(symbol="triangle-down", size=valleys['strength'] / pd.to_timedelta(config.times[0]),
+fig.add_scatter(x=valleys.index.values, y=valleys['low'] - 1, mode="markers+text", name='Valley',
+                # text=peaks['effective_time'],
+                marker=dict(symbol="triangle-down",
+                            size=pd.to_timedelta(valleys['effective_time']) / pd.to_timedelta(config.times[0]),
                             color="blue"),
                 hovertemplate="Valley: @%{y:$,}(%{marker.size:,})<br>"
                 )
