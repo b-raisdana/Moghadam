@@ -5,7 +5,7 @@ from LevelDetectionConfig import config
 DEBUG = False
 
 
-def plotfig(data: pd, save: bool = False, name: str = ''):
+def plotfig(data: pd, save: bool = False, name: str = '', do_not_show: bool = False):
     import os
     MAX_LEN_OF_DATA_FRAME_TO_PLOT = 50000
     SAFE_LEN_OF_DATA_FRAME_TO_PLOT = 10000
@@ -34,7 +34,7 @@ def plotfig(data: pd, save: bool = False, name: str = ''):
                                              open=data['open'], high=data['high'], low=data['low'],
                                              close=data['close'],
                                              )], ).update_yaxes(fixedrange=False).update_layout(yaxis_title=name)
-    if DEBUG: print('1')
-    fig.show()
-    if DEBUG: print('2')
+    if not do_not_show: fig.show()
     if save: fig.write_image(f'{config.id}.{name}.png')
+
+    return fig
