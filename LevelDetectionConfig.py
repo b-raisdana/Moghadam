@@ -55,6 +55,7 @@ myEncoder = MyEncoder()
 debug = False
 config = Config()
 print(myEncoder.encode(config))
+# todo: Use Hash in file name to prevent duplicate files for same config.
 print(hashlib.md5(myEncoder.encode(config).encode('utf-8')))
 print(base64.b64encode(hashlib.md5(myEncoder.encode(config).encode('utf-8')).digest()))
 with open(f'LevelDetection.{config.id}.config.txt', 'w') as config_file:

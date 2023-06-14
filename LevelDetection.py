@@ -129,6 +129,7 @@ fig.add_scatter(x=valleys.index.values, y=valleys['low'] - 1, mode="markers", na
                 )
 fig.update_layout(hovermode='x unified')
 fig.show()
+# todo: map strength to time to detect the most major time of S/Ps
 pass
 # reverse_prices.insert(len(reverse_prices.columns), 'ATR', ta.ATR(reverse_prices))
 # print(f"Null Peaks({len(reverse_prices.isna('ATR'))}):")
