@@ -17,7 +17,7 @@ print(reverse_prices)
 
 test_prices = reverse_prices.tail(1000)
 print(test_prices)
-fig = plotfig(test_prices, name='test prices', save=False, do_not_show=True)
+plotfig(test_prices, name='test prices', save=False, do_not_show=True)
 
 DEBUG = False
 INFINITY_TIME_DELTA = timedelta(days=10 * 365)
@@ -118,27 +118,56 @@ def peaks_valleys_extractor(prices: pd.DataFrame, peaks_mode: bool = True, min_s
 peaks, valleys = level_extractor(test_prices)
 
 print('Peaks:\n', peaks.sort_values(by='strength', ascending=False))
-fig.add_scatter(x=peaks.index.values, y=peaks['high'] + 1, mode="markers", name='Peak',
-                text=peaks['effective_time'],
-                marker=dict(symbol="triangle-up",
-                            size=pd.to_timedelta(peaks['effective_time']) / pd.to_timedelta(config.times[0]),
-                            color="blue"),
-                hovertemplate="Peak: %{marker.text:,}@%{y:$,}(%{marker.size:,})<br>"
-                )
-print('Valleys\n', valleys.sort_values(by='strength', ascending=False))
-fig.add_scatter(x=valleys.index.values, y=valleys['low'] - 1, mode="markers+text", name='Valley',
-                # text=peaks['effective_time'],
-                marker=dict(symbol="triangle-down",
-                            size=pd.to_timedelta(valleys['effective_time']) / pd.to_timedelta(config.times[0]),
-                            color="blue"),
-                hovertemplate="Valley: @%{y:$,}(%{marker.size:,})<br>"
-                )
-fig.update_layout(hovermode='x unified')
-fig.show()
+plotfig(test_prices, name='test prices', save=False, do_not_show=True) \
+    .add_scatter(x=peaks.index.values, y=peaks['high'] + 1, mode="markers", name='Peak',
+                 text=peaks['effective_time'],
+                 marker=dict(symbol="triangle-up",
+                             size=pd.to_timedelta(peaks['effective_time']) / pd.to_timedelta(config.times[0]),
+                             color="blue"),
+                 hovertemplate="Peak: %{marker.text:,}@%{y:$,}(%{marker.size:,})<br>"
+                 ) \
+    .add_scatter(x=valleys.index.values, y=valleys['low'] - 1, mode="markers+text", name='Valley',
+                 # text=peaks['effective_time'],
+                 marker=dict(symbol="triangle-down",
+                             size=pd.to_timedelta(valleys['effective_time']) / pd.to_timedelta(config.times[0]),
+                             color="blue"),
+                 hovertemplate="Valley: @%{y:$,}(%{marker.size:,})<br>"
+                 ) \
+    .update_layout(hovermode='x unified') \
+    .show()
 # todo: map strength to time to detect the most major time of S/Ps
 pass
-# reverse_prices.insert(len(reverse_prices.columns), 'ATR', ta.ATR(reverse_prices))
-# print(f"Null Peaks({len(reverse_prices.isna('ATR'))}):")
-# print(reverse_prices.isna('ATR'))
-# reverse_prices = reverse_prices.fillna(method='bfill')
-# reverse_prices = reverse_prices.fillna(method='ffill')
+for _time in config.times:
+    aggregate_test_prices = test_prices.groupby(pd.Grouper(freq=_time)) \
+        .agg({'open': 'first',
+              'close': 'last',
+              'low': 'min',
+              'high': 'max',
+              'volume': 'sum'})
+    _peaks = peaks[peaks['effective_time'] == _time]
+    _valleys = valleys[valleys['effective_time'] == _time]
+    plotfig(aggregate_test_prices, name='test prices', save=False, do_not_show=True) \
+        .add_scatter(x=_peaks.index.values, y=_peaks['high'] + 1, mode="markers", name='Peak',
+                     # text=_peaks['effective_time'],
+                     marker=dict(symbol="triangle-up",
+                                 # size=pd.to_timedelta(_peaks['effective_time']) / pd.to_timedelta(config.times[0]),
+                                 color="blue"),
+                     # hovertemplate="Peak: %{marker.text:,}@%{y:$,}(%{marker.size:,})<br>"
+                     hovertemplate="",
+                     text=[
+                         f"P:{_peaks.loc[_x]['effective_time']}@{_peaks.loc[_x]['high']}({pd.to_timedelta(_peaks.loc[_x]['effective_time']) / pd.to_timedelta(config.times[0])})"
+                         for _x in _peaks.index.values]
+                     ) \
+        .add_scatter(x=_valleys.index.values, y=_valleys['low'] - 1, mode="markers", name='Peak',
+                     # text=_valleys['effective_time'],
+                     marker=dict(symbol="triangle-down",
+                                 # size=pd.to_timedelta(_valleys['effective_time']) / pd.to_timedelta(config.times[0]),
+                                 color="blue"),
+                     # hovertemplate="Peak: %{marker.text:,}@%{y:$,}(%{marker.size:,})<br>"
+                     hovertemplate="",
+                     text=[
+                         f"V:{_valleys.loc[_x]['effective_time']}@{_valleys.loc[_x]['low']}({pd.to_timedelta(_valleys.loc[_x]['effective_time']) / pd.to_timedelta(config.times[0])})"
+                         for _x in _valleys.index.values]
+                     ) \
+        .update_layout(hovermode='x unified') \
+        .show()

@@ -43,7 +43,7 @@ class Config():
 
         self.end_time = '2021-03-01 03:43:00'
 
-        self.id = datetime.datetime.now().strftime("%Y-%m-%d.%H-%M")
+        self.id = ""
 
 
 class MyEncoder(json.JSONEncoder):
@@ -54,9 +54,19 @@ class MyEncoder(json.JSONEncoder):
 myEncoder = MyEncoder()
 debug = False
 config = Config()
-print(myEncoder.encode(config))
+# print(myEncoder.encode(config))
 # todo: Use Hash in file name to prevent duplicate files for same config.
-print(hashlib.md5(myEncoder.encode(config).encode('utf-8')))
+print(myEncoder.encode(config).encode('utf-8'))
+print(hashlib.md5(myEncoder.encode(config).encode('utf-8')).hexdigest())
 print(base64.b64encode(hashlib.md5(myEncoder.encode(config).encode('utf-8')).digest()))
-with open(f'LevelDetection.{config.id}.config.txt', 'w') as config_file:
+print(str.translate(base64.b64encode(hashlib.md5(myEncoder.encode(config).encode('utf-8')).digest())
+                              .decode('ascii'), {ord('+'): '', ord('/'): '', ord('='): '', }))
+
+config_digest = str.translate(base64.b64encode(hashlib.md5(myEncoder.encode(config).encode('utf-8')).digest())
+                              .decode('ascii'), {ord('+'): '', ord('/'): '', ord('='): '', })
+
+print(config_digest)
+with open(f'LevelDetection.{config_digest}.config.txt', 'w+') as config_file:
     config_file.write(myEncoder.encode(config))
+
+config.id = config_digest
