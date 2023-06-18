@@ -24,7 +24,7 @@ def test_even_distribution(peaks: pd, valleys: pd):
 
 
 def test_time_switching(ohlc_ticks: pd, peaks: pd, peaks_mode, ):
-    DEBUG = True
+    DEBUG  = True
     # try to check if every
     base_ohlc_ticks = pd.read_csv(f'{config.files_to_load[0]}.zip', index_col='date', parse_dates=['date'])
     if DEBUG: print(base_ohlc_ticks)
