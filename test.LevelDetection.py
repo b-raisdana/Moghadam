@@ -4,7 +4,7 @@ from LevelDetectionConfig import INFINITY_TIME_DELTA, config
 from LevelDetection import level_extractor
 
 
-def test_sequence_of_peaks_and_valleys(peaks: pd, valleys: pd):
+def test_even_distribution(peaks: pd, valleys: pd):
     peaks.insert(len(peaks.columns), 'is_a_peak', True)
     valleys.insert(len(valleys.columns), 'is_a_valleys', True)
 
@@ -23,15 +23,17 @@ def test_sequence_of_peaks_and_valleys(peaks: pd, valleys: pd):
             assert number_of_valleys_between_last_2_peaks == 1
 
 
-def test_if_all_peaks_valleys_are_detected(ohlc_ticks: pd, peaks: pd, peaks_mode, ):
+def test_time_switching(ohlc_ticks: pd, peaks: pd, peaks_mode, ):
     DEBUG = True
     # try to check if every
     base_ohlc_ticks = pd.read_csv(f'{config.files_to_load[0]}.zip', index_col='date', parse_dates=['date'])
     if DEBUG: print(base_ohlc_ticks)
     _base_peaks, _base_valleys = level_extractor(base_ohlc_ticks.tail(1000))
 
+    # todo: check index mapping after time switching
+
     for i in range(len(config.times)):
-        _time_ohlc_ticks = base_ohlc_ticks.groupby(pd.Grouper(freq=config.times[i]) \
+        _time_ohlc_ticks = base_ohlc_ticks.groupby(pd.Grouper(freq=config.times[i])
                                                    .agg({'open': 'first',
                                                          'close': 'last',
                                                          'low': 'min',
@@ -52,4 +54,4 @@ def test_if_all_peaks_valleys_are_detected(ohlc_ticks: pd, peaks: pd, peaks_mode
             plot_ohlc_with_peaks_n_valleys(ohlc=_time_ohlc_ticks, name=f'Test {config.times[i]}',
                                            peaks=_time_peaks, valleys=_time_valleys)
 
-        test_sequence_of_peaks_and_valleys(_time_peaks, _time_valleys)
+        test_even_distribution(_time_peaks, _time_valleys)
