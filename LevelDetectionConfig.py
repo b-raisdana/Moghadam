@@ -2,6 +2,7 @@ import datetime
 import json
 import hashlib
 import base64
+from datetime import timedelta
 
 from pandas._libs.tslibs import to_offset
 
@@ -43,6 +44,8 @@ class Config():
 
         self.end_time = '2021-03-01 03:43:00'
 
+        self.INFINITY_TIME_DELTA = timedelta(days=10 * 365)
+
         self.id = ""
 
 
@@ -60,7 +63,7 @@ print(myEncoder.encode(config).encode('utf-8'))
 print(hashlib.md5(myEncoder.encode(config).encode('utf-8')).hexdigest())
 print(base64.b64encode(hashlib.md5(myEncoder.encode(config).encode('utf-8')).digest()))
 print(str.translate(base64.b64encode(hashlib.md5(myEncoder.encode(config).encode('utf-8')).digest())
-                              .decode('ascii'), {ord('+'): '', ord('/'): '', ord('='): '', }))
+                    .decode('ascii'), {ord('+'): '', ord('/'): '', ord('='): '', }))
 
 config_digest = str.translate(base64.b64encode(hashlib.md5(myEncoder.encode(config).encode('utf-8')).digest())
                               .decode('ascii'), {ord('+'): '', ord('/'): '', ord('='): '', })
@@ -70,3 +73,5 @@ with open(f'LevelDetection.{config_digest}.config.txt', 'w+') as config_file:
     config_file.write(myEncoder.encode(config))
 
 config.id = config_digest
+
+INFINITY_TIME_DELTA = config.INFINITY_TIME_DELTA

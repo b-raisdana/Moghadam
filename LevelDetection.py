@@ -1,11 +1,11 @@
 # import talib as ta
-import pandas_ta as ta
 import datetime
 from datetime import timedelta
 
 import pandas as pd
 
-from LevelDetectionConfig import config
+from FigurePlotters import plot_ohlc_with_peaks_n_valleys
+from LevelDetectionConfig import config, INFINITY_TIME_DELTA
 from plotfig import plotfig
 
 # os.system((f'wget {config.data_path_preamble}/{config.files_to_load[0]}.zip -O {config.files_to_load[0]}.zip'))
@@ -20,7 +20,6 @@ print(test_prices)
 plotfig(test_prices, name='test prices', save=False, do_not_show=True)
 
 DEBUG = False
-INFINITY_TIME_DELTA = timedelta(days=10 * 365)
 
 
 def level_extractor(prices: pd.DataFrame, min_weight=None, significance=None, max_cycles=100):
@@ -146,28 +145,7 @@ for _time in config.times:
               'volume': 'sum'})
     _peaks = peaks[peaks['effective_time'] == _time]
     _valleys = valleys[valleys['effective_time'] == _time]
-    plotfig(aggregate_test_prices, name='test prices', save=False, do_not_show=True) \
-        .add_scatter(x=_peaks.index.values, y=_peaks['high'] + 1, mode="markers", name='Peak',
-                     # text=_peaks['effective_time'],
-                     marker=dict(symbol="triangle-up",
-                                 # size=pd.to_timedelta(_peaks['effective_time']) / pd.to_timedelta(config.times[0]),
-                                 color="blue"),
-                     # hovertemplate="Peak: %{marker.text:,}@%{y:$,}(%{marker.size:,})<br>"
-                     hovertemplate="",
-                     text=[
-                         f"P:{_peaks.loc[_x]['effective_time']}@{_peaks.loc[_x]['high']}({pd.to_timedelta(_peaks.loc[_x]['effective_time']) / pd.to_timedelta(config.times[0])})"
-                         for _x in _peaks.index.values]
-                     ) \
-        .add_scatter(x=_valleys.index.values, y=_valleys['low'] - 1, mode="markers", name='Peak',
-                     # text=_valleys['effective_time'],
-                     marker=dict(symbol="triangle-down",
-                                 # size=pd.to_timedelta(_valleys['effective_time']) / pd.to_timedelta(config.times[0]),
-                                 color="blue"),
-                     # hovertemplate="Peak: %{marker.text:,}@%{y:$,}(%{marker.size:,})<br>"
-                     hovertemplate="",
-                     text=[
-                         f"V:{_valleys.loc[_x]['effective_time']}@{_valleys.loc[_x]['low']}({pd.to_timedelta(_valleys.loc[_x]['effective_time']) / pd.to_timedelta(config.times[0])})"
-                         for _x in _valleys.index.values]
-                     ) \
-        .update_layout(hovermode='x unified') \
-        .show()
+
+    plot_ohlc_with_peaks_n_valleys(ohlc=aggregate_test_prices, name=_time, peaks=_peaks, valleys=_valleys)
+
+
