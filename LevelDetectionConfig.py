@@ -60,13 +60,13 @@ class MyEncoder(json.JSONEncoder):
 myEncoder = MyEncoder()
 debug = False
 config = Config()
-# print(myEncoder.encode(config))
+print(myEncoder.encode(config))
 # todo: Use Hash in file name to prevent duplicate files for same config.
-print(myEncoder.encode(config).encode('utf-8'))
-print(hashlib.md5(myEncoder.encode(config).encode('utf-8')).hexdigest())
-print(base64.b64encode(hashlib.md5(myEncoder.encode(config).encode('utf-8')).digest()))
-print(str.translate(base64.b64encode(hashlib.md5(myEncoder.encode(config).encode('utf-8')).digest())
-                    .decode('ascii'), {ord('+'): '', ord('/'): '', ord('='): '', }))
+# print(myEncoder.encode(config).encode('utf-8'))
+# print(hashlib.md5(myEncoder.encode(config).encode('utf-8')).hexdigest())
+# print(base64.b64encode(hashlib.md5(myEncoder.encode(config).encode('utf-8')).digest()))
+# print(str.translate(base64.b64encode(hashlib.md5(myEncoder.encode(config).encode('utf-8')).digest())
+#                     .decode('ascii'), {ord('+'): '', ord('/'): '', ord('='): '', }))
 
 config_digest = str.translate(base64.b64encode(hashlib.md5(myEncoder.encode(config).encode('utf-8')).digest())
                               .decode('ascii'), {ord('+'): '', ord('/'): '', ord('='): '', })

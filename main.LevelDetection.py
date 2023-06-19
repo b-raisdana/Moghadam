@@ -15,7 +15,7 @@ if __name__ == "__main__":
     # plotfig(reverse_prices.head(10000), name='reverse_prices Head')
     # plotfig(reverse_prices.tail(10000), name='reverse_prices Tail')
 
-    test_prices = reverse_prices.tail(1000)
+    test_prices = reverse_prices.tail(5000)
     # print(test_prices)
     plotfig(test_prices, name='test prices', save=False, do_not_show=True)
 
@@ -37,6 +37,10 @@ if __name__ == "__main__":
         _valleys = valleys[valleys['effective_time'].isin(config.times[i:])]
 
         plot_ohlc_with_peaks_n_valleys(ohlc=aggregate_test_prices, name=config.times[i], peaks=_peaks, valleys=_valleys)
+
+        _time_peaks, _time_valleys = level_extractor(aggregate_test_prices)
+        plot_ohlc_with_peaks_n_valleys\
+            (ohlc=aggregate_test_prices, name=f'B{config.times[i]}', peaks=_time_peaks, valleys=_time_valleys)
 
     # running test in main for debug
     even_distribution(peaks, valleys)

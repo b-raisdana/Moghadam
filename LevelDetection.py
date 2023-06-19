@@ -22,12 +22,12 @@ def peaks_valleys_extractor(prices: pd.DataFrame, peaks_mode: bool = True, min_s
     valleys_mode = not peaks_mode
     peaks_valleys: pd = prices.copy()  # pd.DataFrame(prices.index)
     peaks_valleys.insert(len(peaks_valleys.columns), 'strength', INFINITY_TIME_DELTA)
-    if DEBUG: print(
-        f"peaks_valleys[peaks_valleys['strength']==float('inf'):{peaks_valleys[peaks_valleys['strength'] == float('inf')]}")
-    if DEBUG: print(
-        f"len(peaks_valleys[peaks_valleys['strength']==float('inf')].index.values){len(peaks_valleys[peaks_valleys['strength'] == float('inf')].index.values)}")
-    if DEBUG: print(
-        f"peaks_valleys[peaks_valleys['strength']==float('inf')]:{peaks_valleys[peaks_valleys['strength'] == float('inf')]}")
+    # if DEBUG: print(
+    #     f"peaks_valleys[peaks_valleys['strength']==float('inf'):{peaks_valleys[peaks_valleys['strength'] == float('inf')]}")
+    # if DEBUG: print(
+    #     f"len(peaks_valleys[peaks_valleys['strength']==float('inf')].index.values){len(peaks_valleys[peaks_valleys['strength'] == float('inf')].index.values)}")
+    # if DEBUG: print(
+    #     f"peaks_valleys[peaks_valleys['strength']==float('inf')]:{peaks_valleys[peaks_valleys['strength'] == float('inf')]}")
     peaks_valleys = peaks_valleys[peaks_valleys['volume'] > 0]
     for i in range(1, len(peaks_valleys)):
         if valleys_mode:
@@ -96,7 +96,6 @@ def peaks_valleys_extractor(prices: pd.DataFrame, peaks_mode: bool = True, min_s
         ].index.values:
             peaks_valleys.at[t_peak_valley_index, 'effective_time'] = config.times[i]
 
-    # todo: merge peaks and valleys adjacent in the same candle and move the lower one to lower time.
-
+    # todo: merge adjacent peaks/valleys and move less significant to lower time.
     peaks_valleys = peaks_valleys[pd.notna(peaks_valleys['effective_time'])]
     return peaks_valleys
