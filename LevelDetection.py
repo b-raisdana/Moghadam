@@ -8,18 +8,7 @@ from FigurePlotters import plot_ohlc_with_peaks_n_valleys
 from LevelDetectionConfig import config, INFINITY_TIME_DELTA
 from plotfig import plotfig
 
-# os.system((f'wget {config.data_path_preamble}/{config.files_to_load[0]}.zip -O {config.files_to_load[0]}.zip'))
-
-reverse_prices = pd.read_csv(f'{config.files_to_load[0]}.zip', index_col='date', parse_dates=['date'])
-print(reverse_prices)
-# plotfig(reverse_prices.head(10000), name='reverse_prices Head')
-# plotfig(reverse_prices.tail(10000), name='reverse_prices Tail')
-
-test_prices = reverse_prices.tail(1000)
-print(test_prices)
-plotfig(test_prices, name='test prices', save=False, do_not_show=True)
-
-DEBUG = False
+DEBUG = True
 
 
 def level_extractor(prices: pd.DataFrame, min_weight=None, significance=None, max_cycles=100):
@@ -30,7 +19,6 @@ def level_extractor(prices: pd.DataFrame, min_weight=None, significance=None, ma
 
 def peaks_valleys_extractor(prices: pd.DataFrame, peaks_mode: bool = True, min_strength: timedelta = None,
                             ignore_n_percent_lowest_strength=None, max_cycles=100):
-    # Todo: Zero volume candles are not eliminated!
     valleys_mode = not peaks_mode
     peaks_valleys: pd = prices.copy()  # pd.DataFrame(prices.index)
     peaks_valleys.insert(len(peaks_valleys.columns), 'strength', INFINITY_TIME_DELTA)
@@ -49,7 +37,7 @@ def peaks_valleys_extractor(prices: pd.DataFrame, peaks_mode: bool = True, min_s
             if peaks_valleys.iloc[i]['high'] == peaks_valleys.iloc[i - 1]['high']:
                 peaks_valleys.at[peaks_valleys.index[i], 'strength'] = timedelta(0)
     for i in range(len(peaks_valleys.index.values)):
-        if DEBUG and peaks_valleys.index[i] == datetime.datetime.strptime('1/1/2017 0:10', '%m/%d/%Y %H:%M'):
+        if DEBUG and peaks_valleys.index[i] == datetime.datetime.strptime('12/31/2017 09:09', '%m/%d/%Y %H:%M'):
             pass
         left_distance = INFINITY_TIME_DELTA
         right_distance = INFINITY_TIME_DELTA
@@ -85,17 +73,14 @@ def peaks_valleys_extractor(prices: pd.DataFrame, peaks_mode: bool = True, min_s
                 = min(peaks_valleys.index[i] - peaks_valleys.index[0],
                       peaks_valleys.iloc[i]['strength'])  # min(i, len(prices) - i)
             continue
-        if DEBUG: print(
-            f"@{peaks_valleys.index[i]}:min(left_distance:{left_distance}, "
-            f"right_distance:{right_distance}):{min(left_distance, right_distance)}")
-        if peaks_valleys.iloc[i]['strength']:
-            pass
-        else:
-            pass
+        # if DEBUG: print(
+        #     f"@{peaks_valleys.index[i]}:min(left_distance:{left_distance}, "
+        #     f"right_distance:{right_distance}):{min(left_distance, right_distance)}")
         peaks_valleys.at[peaks_valleys.index[i], 'strength'] = \
             min(left_distance, right_distance, peaks_valleys.iloc[i]['strength'])
 
     if min_strength is not None:
+        raise Exception('Not tested')
         peaks_valleys = peaks_valleys['strength' >= min_strength]
     if ignore_n_percent_lowest_strength is not None:
         raise Exception('Not implemented')
@@ -107,45 +92,11 @@ def peaks_valleys_extractor(prices: pd.DataFrame, peaks_mode: bool = True, min_s
     peaks_valleys.insert(len(peaks_valleys.columns), 'effective_time', None)
     for i in range(len(config.times)):
         for t_peak_valley_index in peaks_valleys[
-            peaks_valleys['strength'] >= pd.to_timedelta(config.times[i]) * 2
+            peaks_valleys['strength'] > pd.to_timedelta(config.times[i])
         ].index.values:
             peaks_valleys.at[t_peak_valley_index, 'effective_time'] = config.times[i]
+
+    # todo: merge peaks and valleys adjacent in the same candle and move the lower one to lower time.
+
     peaks_valleys = peaks_valleys[pd.notna(peaks_valleys['effective_time'])]
     return peaks_valleys
-
-
-peaks, valleys = level_extractor(test_prices)
-
-print('Peaks:\n', peaks.sort_values(by='strength', ascending=False))
-plotfig(test_prices, name='test prices', save=False, do_not_show=True) \
-    .add_scatter(x=peaks.index.values, y=peaks['high'] + 1, mode="markers", name='Peak',
-                 text=peaks['effective_time'],
-                 marker=dict(symbol="triangle-up",
-                             size=pd.to_timedelta(peaks['effective_time']) / pd.to_timedelta(config.times[0]),
-                             color="blue"),
-                 hovertemplate="Peak: %{marker.text:,}@%{y:$,}(%{marker.size:,})<br>"
-                 ) \
-    .add_scatter(x=valleys.index.values, y=valleys['low'] - 1, mode="markers+text", name='Valley',
-                 # text=peaks['effective_time'],
-                 marker=dict(symbol="triangle-down",
-                             size=pd.to_timedelta(valleys['effective_time']) / pd.to_timedelta(config.times[0]),
-                             color="blue"),
-                 hovertemplate="Valley: @%{y:$,}(%{marker.size:,})<br>"
-                 ) \
-    .update_layout(hovermode='x unified') \
-    .show()
-# todo: map strength to time to detect the most major time of S/Ps
-pass
-for _time in config.times:
-    aggregate_test_prices = test_prices.groupby(pd.Grouper(freq=_time)) \
-        .agg({'open': 'first',
-              'close': 'last',
-              'low': 'min',
-              'high': 'max',
-              'volume': 'sum'})
-    _peaks = peaks[peaks['effective_time'] == _time]
-    _valleys = valleys[valleys['effective_time'] == _time]
-
-    plot_ohlc_with_peaks_n_valleys(ohlc=aggregate_test_prices, name=_time, peaks=_peaks, valleys=_valleys)
-
-
