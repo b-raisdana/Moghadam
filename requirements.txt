@@ -3,5 +3,5 @@ pandas
 plotly
 pydantic
 numpy
-# TA-Lib
-pandas-ta
+TA-Lib
+pytest

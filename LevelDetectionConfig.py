@@ -51,7 +51,10 @@ class Config():
 
 class MyEncoder(json.JSONEncoder):
     def default(self, o):
-        return o.__dict__
+        try:
+            return o.__reper__
+        except AttributeError:
+            return str(o)
 
 
 myEncoder = MyEncoder()

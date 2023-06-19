@@ -41,6 +41,7 @@ def test_time_switching(ohlc_ticks: pd, peaks: pd, peaks_mode, ):
                                                          'volume': 'sum'}))
 
         _time_peaks, _time_valleys = level_extractor(_time_ohlc_ticks)
+        _mapped_peaks_from_base = _base_peaks['effective_time'].isin(config.times[i:])
 
         try:
             assert _time_peaks == _base_peaks[_base_peaks['effective_time'].isin(config.times[i:])]
