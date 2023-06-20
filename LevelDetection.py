@@ -1,4 +1,4 @@
-# import talib as ta
+import talib as ta
 import datetime
 from datetime import timedelta
 
