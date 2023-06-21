@@ -1,0 +1,329 @@
+(Moghadam) PS C:\CT\Moghadam> pytest
+===================================================================================================================== test session starts =====================================================================================================================
+platform win32 -- Python 3.10.11, pytest-7.3.2, pluggy-1.0.0
+rootdir: C:\CT\Moghadam
+plugins: anyio-3.6.2
+collected 3 items
+
+test_LevelDetection.py FFF                                                                                                                                                                                                                               [100%]
+
+========================================================================================================================== FAILURES ===========================================================================================================================
+_____________________________________________________________________________________________________________________ test_time_switching _____________________________________________________________________________________________________________________
+
+    def test_time_switching():
+        # try to check if every
+
+        # todo: check index mapping after time switching
+
+        for i in range(len(config.times)):
+            _time_ohlc_ticks = base_ohlc_ticks.groupby(pd.Grouper(freq=config.times[i])) \
+                .agg({'open': 'first',
+                      'close': 'last',
+                      'low': 'min',
+                      'high': 'max',
+                      'volume': 'sum'})
+
+        _time_peaks, _time_valleys = level_extractor(_time_ohlc_ticks)
+        _mapped_peaks_from_base = base_peaks['effective_time'].isin(config.times[i:])
+
+        try:
+            # todo: ValueError: Can only compare identically-labeled DataFrame objects
+            print("_time_peaks:")
+            print(_time_peaks.columns)
+            print("base_peaks[base_peaks['effective_time'].isin(config.times[i:])]:")
+            print(base_peaks[base_peaks['effective_time'].isin(config.times[i:])].columns)
+            assert _time_peaks.values == base_peaks[base_peaks['effective_time'].isin(config.times[i:])].values
+        except AssertionError as e:
+            plot_ohlc_with_peaks_n_valleys(ohlc=_time_ohlc_ticks, name=f'Test {config.times[i]}',
+                                           peaks=_time_peaks, valleys=_time_valleys)
+
+        try:
+>           assert _time_valleys == base_valleys[base_valleys['effective_time'].isin(config.times[i:])]
+
+test_LevelDetection.py:65:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+C:\Users\Behrooz.KARGAH1\anaconda3\envs\Moghadam\lib\site-packages\pandas\core\ops\common.py:72: in new_method
+    return method(self, other)
+C:\Users\Behrooz.KARGAH1\anaconda3\envs\Moghadam\lib\site-packages\pandas\core\arraylike.py:42: in __eq__
+    return self._cmp_method(other, operator.eq)
+C:\Users\Behrooz.KARGAH1\anaconda3\envs\Moghadam\lib\site-packages\pandas\core\frame.py:7579: in _cmp_method
+    self, other = ops.align_method_FRAME(self, other, axis, flex=False, level=None)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+left =                 open     close       low      high         volume strength effective_time
+date                        ...52150  14 days             1W
+2017-12-31  14107.87  13880.00  12050.00  16480.52  105655.476641   7 days             1D
+right = Empty DataFrame
+Columns: [open, close, low, high, volume, strength, effective_time]
+Index: [], axis = 1, flex = False, level = None
+
+    def align_method_FRAME(
+        left, right, axis, flex: bool | None = False, level: Level = None
+    ):
+        """
+        Convert rhs to meet lhs dims if input is list, tuple or np.ndarray.
+
+        Parameters
+        ----------
+        left : DataFrame
+        right : Any
+        axis : int, str, or None
+        flex : bool or None, default False
+            Whether this is a flex op, in which case we reindex.
+            None indicates not to check for alignment.
+        level : int or level name, default None
+
+        Returns
+        -------
+        left : DataFrame
+        right : Any
+        """
+
+        def to_series(right):
+            msg = "Unable to coerce to Series, length must be {req_len}: given {given_len}"
+            if axis is not None and left._get_axis_name(axis) == "index":
+                if len(left.index) != len(right):
+                    raise ValueError(
+                        msg.format(req_len=len(left.index), given_len=len(right))
+                    )
+                right = left._constructor_sliced(right, index=left.index)
+            else:
+                if len(left.columns) != len(right):
+                    raise ValueError(
+                        msg.format(req_len=len(left.columns), given_len=len(right))
+                    )
+                right = left._constructor_sliced(right, index=left.columns)
+            return right
+
+        if isinstance(right, np.ndarray):
+
+            if right.ndim == 1:
+                right = to_series(right)
+
+            elif right.ndim == 2:
+                if right.shape == left.shape:
+                    right = left._constructor(right, index=left.index, columns=left.columns)
+
+                elif right.shape[0] == left.shape[0] and right.shape[1] == 1:
+                    # Broadcast across columns
+                    right = np.broadcast_to(right, left.shape)
+                    right = left._constructor(right, index=left.index, columns=left.columns)
+
+                elif right.shape[1] == left.shape[1] and right.shape[0] == 1:
+                    # Broadcast along rows
+                    right = to_series(right[0, :])
+
+                else:
+                    raise ValueError(
+                        "Unable to coerce to DataFrame, shape "
+                        f"must be {left.shape}: given {right.shape}"
+                    )
+
+            elif right.ndim > 2:
+                raise ValueError(
+                    "Unable to coerce to Series/DataFrame, "
+                    f"dimension must be <= 2: {right.shape}"
+                )
+
+        elif is_list_like(right) and not isinstance(right, (ABCSeries, ABCDataFrame)):
+            # GH 36702. Raise when attempting arithmetic with list of array-like.
+            if any(is_array_like(el) for el in right):
+                raise ValueError(
+                    f"Unable to coerce list of {type(right[0])} to Series/DataFrame"
+                )
+            # GH17901
+            right = to_series(right)
+
+        if flex is not None and isinstance(right, ABCDataFrame):
+            if not left._indexed_same(right):
+                if flex:
+                    left, right = left.align(right, join="outer", level=level, copy=False)
+                else:
+>                   raise ValueError(
+                        "Can only compare identically-labeled DataFrame objects"
+E                       ValueError: Can only compare identically-labeled DataFrame objects
+
+C:\Users\Behrooz.KARGAH1\anaconda3\envs\Moghadam\lib\site-packages\pandas\core\ops\__init__.py:289: ValueError
+-------------------------------------------------------------------------------------------------------------------- Captured stdout call ---------------------------------------------------------------------------------------------------------------------
+_time_peaks:
+Index(['open', 'close', 'low', 'high', 'volume', 'strength', 'effective_time'], dtype='object')
+base_peaks[base_peaks['effective_time'].isin(config.times[i:])]:
+Index(['open', 'close', 'low', 'high', 'volume', 'strength', 'effective_time'], dtype='object')
+__________________________________________________________________________________________________________________ test_every_peak_is_found ___________________________________________________________________________________________________________________
+
+self = Index(['open', 'close', 'low', 'high', 'volume', 'strength', 'effective_time'], dtype='object'), key = Timestamp('2017-01-01 00:15:00'), method = None, tolerance = None
+
+    def get_loc(self, key, method=None, tolerance=None):
+        """
+        Get integer location, slice or boolean mask for requested label.
+
+        Parameters
+        ----------
+        key : label
+        method : {None, 'pad'/'ffill', 'backfill'/'bfill', 'nearest'}, optional
+            * default: exact matches only.
+            * pad / ffill: find the PREVIOUS index value if no exact match.
+            * backfill / bfill: use NEXT index value if no exact match
+            * nearest: use the NEAREST index value if no exact match. Tied
+              distances are broken by preferring the larger index value.
+
+            .. deprecated:: 1.4
+                Use index.get_indexer([item], method=...) instead.
+
+        tolerance : int or float, optional
+            Maximum distance from index value for inexact matches. The value of
+            the index at the matching location must satisfy the equation
+            ``abs(index[loc] - key) <= tolerance``.
+
+        Returns
+        -------
+        loc : int if unique index, slice if monotonic index, else mask
+
+        Examples
+        --------
+        >>> unique_index = pd.Index(list('abc'))
+        >>> unique_index.get_loc('b')
+        1
+
+        >>> monotonic_index = pd.Index(list('abbc'))
+        >>> monotonic_index.get_loc('b')
+        slice(1, 3, None)
+
+        >>> non_monotonic_index = pd.Index(list('abcb'))
+        >>> non_monotonic_index.get_loc('b')
+        array([False,  True, False,  True])
+        """
+        if method is None:
+            if tolerance is not None:
+                raise ValueError(
+                    "tolerance argument only valid if using pad, "
+                    "backfill or nearest lookups"
+                )
+            casted_key = self._maybe_cast_indexer(key)
+            try:
+>               return self._engine.get_loc(casted_key)
+
+C:\Users\Behrooz.KARGAH1\anaconda3\envs\Moghadam\lib\site-packages\pandas\core\indexes\base.py:3802:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+>   ???
+
+pandas\_libs\index.pyx:138:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+>   ???
+
+pandas\_libs\index.pyx:165:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+>   ???
+
+pandas\_libs\hashtable_class_helper.pxi:5745:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+>   ???
+E   KeyError: Timestamp('2017-01-01 00:15:00')
+
+pandas\_libs\hashtable_class_helper.pxi:5753: KeyError
+
+The above exception was the direct cause of the following exception:
+
+    def test_every_peak_is_found():
+        for i in range(1, len(base_ohlc_ticks) - 1):
+            if base_ohlc_ticks.iloc[i - 1]['high'] < \
+                    base_ohlc_ticks.iloc[i]['high'] > \
+                    base_ohlc_ticks.iloc[i + 1]['high']:
+>               assert base_peaks[base_ohlc_ticks.index[i]]['high'] == base_ohlc_ticks.iloc[i]['high']
+
+test_LevelDetection.py:78:
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+C:\Users\Behrooz.KARGAH1\anaconda3\envs\Moghadam\lib\site-packages\pandas\core\frame.py:3807: in __getitem__
+    indexer = self.columns.get_loc(key)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = Index(['open', 'close', 'low', 'high', 'volume', 'strength', 'effective_time'], dtype='object'), key = Timestamp('2017-01-01 00:15:00'), method = None, tolerance = None
+
+    def get_loc(self, key, method=None, tolerance=None):
+        """
+        Get integer location, slice or boolean mask for requested label.
+
+        Parameters
+        ----------
+        key : label
+        method : {None, 'pad'/'ffill', 'backfill'/'bfill', 'nearest'}, optional
+            * default: exact matches only.
+            * pad / ffill: find the PREVIOUS index value if no exact match.
+            * backfill / bfill: use NEXT index value if no exact match
+            * nearest: use the NEAREST index value if no exact match. Tied
+              distances are broken by preferring the larger index value.
+
+            .. deprecated:: 1.4
+                Use index.get_indexer([item], method=...) instead.
+
+        tolerance : int or float, optional
+            Maximum distance from index value for inexact matches. The value of
+            the index at the matching location must satisfy the equation
+            ``abs(index[loc] - key) <= tolerance``.
+
+        Returns
+        -------
+        loc : int if unique index, slice if monotonic index, else mask
+
+        Examples
+        --------
+        >>> unique_index = pd.Index(list('abc'))
+        >>> unique_index.get_loc('b')
+        1
+
+        >>> monotonic_index = pd.Index(list('abbc'))
+        >>> monotonic_index.get_loc('b')
+        slice(1, 3, None)
+
+        >>> non_monotonic_index = pd.Index(list('abcb'))
+        >>> non_monotonic_index.get_loc('b')
+        array([False,  True, False,  True])
+        """
+        if method is None:
+            if tolerance is not None:
+                raise ValueError(
+                    "tolerance argument only valid if using pad, "
+                    "backfill or nearest lookups"
+                )
+            casted_key = self._maybe_cast_indexer(key)
+            try:
+                return self._engine.get_loc(casted_key)
+            except KeyError as err:
+>               raise KeyError(key) from err
+E               KeyError: Timestamp('2017-01-01 00:15:00')
+
+C:\Users\Behrooz.KARGAH1\anaconda3\envs\Moghadam\lib\site-packages\pandas\core\indexes\base.py:3804: KeyError
+___________________________________________________________________________________________________________________ test_strength_of_peaks ____________________________________________________________________________________________________________________
+
+    def test_strength_of_peaks():
+>           right_candles = base_ohlc_ticks[_t_index < base_peaks.index <
+                                            (_t_index + base_peaks.iloc[_t_index]['strength'])]
+E           ValueError: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+
+test_LevelDetection.py:83: ValueError
+====================================================================================================================== warnings summary =======================================================================================================================
+test_LevelDetection.py::test_time_switching
+test_LevelDetection.py::test_time_switching
+  C:\CT\Moghadam\test_LevelDetection.py:59: DeprecationWarning:
+
+  elementwise comparison failed; this will raise an error in the future.
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=================================================================================================================== short test summary info ===================================================================================================================
+FAILED test_LevelDetection.py::test_time_switching - ValueError: Can only compare identically-labeled DataFrame objects
+FAILED test_LevelDetection.py::test_every_peak_is_found - KeyError: Timestamp('2017-01-01 00:15:00')
+FAILED test_LevelDetection.py::test_strength_of_peaks - ValueError: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+================================================================================================================ 3 failed, 2 warnings in 6.11s ================================================================================================================
+(Moghadam) PS C:\CT\Moghadam>         assert _time_peaks.values == base_peaks[base_peaks['effective_time'].isin(config.times[i:])].values
+config.times[i:] : The term 'config.times[i:]' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+At line:1 char:83
++ ... base_peaks[base_peaks['effective_time'].isin(config.times[i:])].value ...
++                                                  ~~~~~~~~~~~~~~~~
+    + CategoryInfo          : ObjectNotFound: (config.times[i:]:String) [], CommandNotFoundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+
+(Moghadam) PS C:\CT\Moghadam>
