@@ -52,7 +52,7 @@ class Config():
 class MyEncoder(json.JSONEncoder):
     def default(self, o):
         try:
-            return o.__reper__
+            return o.__dict__
         except AttributeError:
             return str(o)
 
@@ -60,7 +60,8 @@ class MyEncoder(json.JSONEncoder):
 myEncoder = MyEncoder()
 debug = False
 config = Config()
-print(myEncoder.encode(config))
+config_as_json = myEncoder.encode(config).encode('utf-8')
+print(config_as_json)
 # todo: Use Hash in file name to prevent duplicate files for same config.
 # print(myEncoder.encode(config).encode('utf-8'))
 # print(hashlib.md5(myEncoder.encode(config).encode('utf-8')).hexdigest())
@@ -68,12 +69,12 @@ print(myEncoder.encode(config))
 # print(str.translate(base64.b64encode(hashlib.md5(myEncoder.encode(config).encode('utf-8')).digest())
 #                     .decode('ascii'), {ord('+'): '', ord('/'): '', ord('='): '', }))
 
-config_digest = str.translate(base64.b64encode(hashlib.md5(myEncoder.encode(config).encode('utf-8')).digest())
+config_digest = str.translate(base64.b64encode(hashlib.md5(config_as_json).digest())
                               .decode('ascii'), {ord('+'): '', ord('/'): '', ord('='): '', })
 
 print(config_digest)
 with open(f'LevelDetection.{config_digest}.config.txt', 'w+') as config_file:
-    config_file.write(myEncoder.encode(config))
+    config_file.write(config_as_json)
 
 config.id = config_digest
 

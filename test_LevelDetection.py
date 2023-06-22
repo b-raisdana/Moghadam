@@ -51,23 +51,26 @@ def test_time_switching():
     _mapped_peaks_from_base = base_peaks['effective_time'].isin(config.times[i:])
 
     try:
+        assert _time_peaks.values == base_peaks[base_peaks['effective_time'].isin(config.times[i:])].values
+
+    except AssertionError as e:
+        # plot_ohlc_with_peaks_n_valleys(ohlc=_time_ohlc_ticks, name=f'Test {config.times[i]}',
+        #                                peaks=_time_peaks, valleys=_time_valleys)
         # todo: ValueError: Can only compare identically-labeled DataFrame objects
         print("_time_peaks:")
         print(_time_peaks.columns)
         print("base_peaks[base_peaks['effective_time'].isin(config.times[i:])]:")
         print(base_peaks[base_peaks['effective_time'].isin(config.times[i:])].columns)
-        assert _time_peaks.values == base_peaks[base_peaks['effective_time'].isin(config.times[i:])].values
-    except AssertionError as e:
-        plot_ohlc_with_peaks_n_valleys(ohlc=_time_ohlc_ticks, name=f'Test {config.times[i]}',
-                                       peaks=_time_peaks, valleys=_time_valleys)
+        raise e
 
     try:
         assert _time_valleys == base_valleys[base_valleys['effective_time'].isin(config.times[i:])]
     except AssertionError as e:
-        plot_ohlc_with_peaks_n_valleys(ohlc=_time_ohlc_ticks, name=f'Test {config.times[i]}',
-                                       peaks=_time_peaks, valleys=_time_valleys)
-
-    # even_distribution(_time_peaks, _time_valleys)
+        print(f"_time_valleys:{_time_valleys.info}")
+        print(_time_valleys)
+        print("base_valleys[base_valleys['effective_time'].isin(config.times[i:])]:")
+        print(base_valleys[base_valleys['effective_time'].isin(config.times[i:])].columns)
+        raise e
 
 
 def test_every_peak_is_found():
@@ -75,7 +78,15 @@ def test_every_peak_is_found():
         if base_ohlc_ticks.iloc[i - 1]['high'] < \
                 base_ohlc_ticks.iloc[i]['high'] > \
                 base_ohlc_ticks.iloc[i + 1]['high']:
-            assert base_peaks[base_ohlc_ticks.index[i]]['high'] == base_ohlc_ticks.iloc[i]['high']
+            try:
+                assert base_peaks[base_ohlc_ticks.index[i]]['high'] == base_ohlc_ticks.iloc[i]['high']
+            except AssertionError as e:
+                pass
+                print("base_peaks[base_ohlc_ticks.index[i]]['high']")
+                print(base_peaks[base_ohlc_ticks.index[i]]['high'])
+                print("base_ohlc_ticks.iloc[i]['high']")
+                print(base_ohlc_ticks.iloc[i]['high'])
+                raise e
 
 
 def test_strength_of_peaks():

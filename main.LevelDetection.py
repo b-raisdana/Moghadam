@@ -17,31 +17,30 @@ if __name__ == "__main__":
 
     test_prices = reverse_prices.tail(5000)
     # print(test_prices)
-    plotfig(test_prices, name='test prices', save=False, do_not_show=True)
+    # plotfig(test_prices, name='test prices', save=False, do_not_show=True)
 
     peaks, valleys = level_extractor(test_prices)
 
     print('Peaks:\n', peaks.sort_values(by='strength', ascending=False))
-    plot_ohlc_with_peaks_n_valleys(ohlc=test_prices, name='Test Prices (Base = 1min)', peaks=peaks, valleys=valleys)
+    # plot_ohlc_with_peaks_n_valleys(ohlc=test_prices, name='Test Prices (Base = 1min)', peaks=peaks, valleys=valleys)
 
     # todo: map strength to time to detect the most major time of S/Ps
 
-    for i in range(len(config.times)):
-        aggregate_test_prices = test_prices.groupby(pd.Grouper(freq=config.times[i])) \
-            .agg({'open': 'first',
-                  'close': 'last',
-                  'low': 'min',
-                  'high': 'max',
-                  'volume': 'sum'})
-        _peaks = peaks[peaks['effective_time'].isin(config.times[i:])]
-        _valleys = valleys[valleys['effective_time'].isin(config.times[i:])]
-
-        plot_ohlc_with_peaks_n_valleys(ohlc=aggregate_test_prices, name=config.times[i], peaks=_peaks, valleys=_valleys)
-
-        _time_peaks, _time_valleys = level_extractor(aggregate_test_prices)
-        plot_ohlc_with_peaks_n_valleys\
-            (ohlc=aggregate_test_prices, name=f'B{config.times[i]}', peaks=_time_peaks, valleys=_time_valleys)
+    # for i in range(len(config.times)):
+    #     aggregate_test_prices = test_prices.groupby(pd.Grouper(freq=config.times[i])) \
+    #         .agg({'open': 'first',
+    #               'close': 'last',
+    #               'low': 'min',
+    #               'high': 'max',
+    #               'volume': 'sum'})
+    #     _peaks = peaks[peaks['effective_time'].isin(config.times[i:])]
+    #     _valleys = valleys[valleys['effective_time'].isin(config.times[i:])]
+    #
+    #     plot_ohlc_with_peaks_n_valleys(ohlc=aggregate_test_prices, name=config.times[i], peaks=_peaks, valleys=_valleys)
+    #
+    #     _time_peaks, _time_valleys = level_extractor(aggregate_test_prices)
+    #     plot_ohlc_with_peaks_n_valleys\
+    #         (ohlc=aggregate_test_prices, name=f'B{config.times[i]}', peaks=_time_peaks, valleys=_time_valleys)
 
     # running test in main for debug
-    even_distribution(peaks, valleys)
     test_time_switching()
