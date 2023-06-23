@@ -18,20 +18,20 @@ def even_distribution(peaks: pd, valleys: pd):
     #
     # print(joined)
     #
-    # for i in range(len(peaks.index.values)):
+    # for i in range(len(peaks)):
     #     if i > 0:
     #         number_of_valleys_between_last_2_peaks = joined[
     #             peaks.index.values[i - 1] <= joined.index <= peaks.index.values[i]]
     #         assert number_of_valleys_between_last_2_peaks == 1
-    #     if i < len(peaks.index.values) - 1:
+    #     if i < len(peaks) - 1:
     #         umber_of_valleys_between_next_2_peaks = joined[
     #             peaks.index.values[i] <= joined.index <= peaks.index.values[i + 1]]
     #         assert number_of_valleys_between_last_2_peaks == 1
 
 
-base_ohlc_ticks = pd.read_csv(f'{config.files_to_load[0]}.zip', index_col='date', parse_dates=['date'])
+base_ohlc_ticks = pd.read_csv(f'{config.files_to_load[0]}.zip', index_col='date', parse_dates=['date'], nrows=100)
 if DEBUG: print(base_ohlc_ticks)
-base_peaks, base_valleys = level_extractor(base_ohlc_ticks.tail(1000))
+base_peaks, base_valleys = level_extractor(base_ohlc_ticks)
 
 
 def test_time_switching():
@@ -39,7 +39,7 @@ def test_time_switching():
 
     # todo: check index mapping after time switching
 
-    for i in range(len(config.times)):
+    for i in range(1, len(config.times)):
         _time_ohlc_ticks = base_ohlc_ticks.groupby(pd.Grouper(freq=config.times[i])) \
             .agg({'open': 'first',
                   'close': 'last',
@@ -47,30 +47,37 @@ def test_time_switching():
                   'high': 'max',
                   'volume': 'sum'})
 
-    _time_peaks, _time_valleys = level_extractor(_time_ohlc_ticks)
-    _mapped_peaks_from_base = base_peaks['effective_time'].isin(config.times[i:])
+        _time_peaks, _time_valleys = level_extractor(_time_ohlc_ticks)
+        _mapped_peaks_from_base = base_peaks[base_peaks['effective_time'].isin(config.times[i:])]
 
-    try:
-        assert _time_peaks.values == base_peaks[base_peaks['effective_time'].isin(config.times[i:])].values
+        comparable_time_peaks = _time_peaks[['high', 'effective_time']]
+        comparable_mapped_base_peaks = _mapped_peaks_from_base[['high', 'effective_time']]
+        for j in comparable_time_peaks.index.values:
+            time_aligned_base_peaks = comparable_mapped_base_peaks[j:j + pd.to_timedelta(config.times[i])]
+            _t = comparable_time_peaks[j]
+            try:
+                assert comparable_time_peaks[j] in time_aligned_base_peaks
+                # assert _time_peaks.values == base_peaks[base_peaks['effective_time'].isin(config.times[i:])].values
+            except Exception as e:
+                plot_ohlc_with_peaks_n_valleys(ohlc=base_ohlc_ticks, name=f'base_ohlc_ticks  {config.times[i]}',
+                                               peaks=_mapped_peaks_from_base)
+                plot_ohlc_with_peaks_n_valleys(ohlc=_time_ohlc_ticks, name=f'_time_ohlc_ticks {config.times[i]}',
+                                               peaks=_time_peaks, valleys=_time_valleys)
+                # todo: ValueError: Can only compare identically-labeled DataFrame objects
+                print(f"comparable_time_peaks({comparable_time_peaks.columns}):")
+                print(comparable_time_peaks)
+                print(f"comparable_mapped_base_peaks({comparable_mapped_base_peaks.columns}):")
+                print(comparable_mapped_base_peaks)
+                raise e
 
-    except AssertionError as e:
-        # plot_ohlc_with_peaks_n_valleys(ohlc=_time_ohlc_ticks, name=f'Test {config.times[i]}',
-        #                                peaks=_time_peaks, valleys=_time_valleys)
-        # todo: ValueError: Can only compare identically-labeled DataFrame objects
-        print("_time_peaks:")
-        print(_time_peaks.columns)
-        print("base_peaks[base_peaks['effective_time'].isin(config.times[i:])]:")
-        print(base_peaks[base_peaks['effective_time'].isin(config.times[i:])].columns)
-        raise e
-
-    try:
-        assert _time_valleys == base_valleys[base_valleys['effective_time'].isin(config.times[i:])]
-    except AssertionError as e:
-        print(f"_time_valleys:{_time_valleys.info}")
-        print(_time_valleys)
-        print("base_valleys[base_valleys['effective_time'].isin(config.times[i:])]:")
-        print(base_valleys[base_valleys['effective_time'].isin(config.times[i:])].columns)
-        raise e
+        try:
+            assert _time_valleys == base_valleys[base_valleys['effective_time'].isin(config.times[i:])]
+        except Exception as e:
+            print(f"_time_valleys:{_time_valleys.info}")
+            print(_time_valleys)
+            print("base_valleys[base_valleys['effective_time'].isin(config.times[i:])]:")
+            print(base_valleys[base_valleys['effective_time'].isin(config.times[i:])])
+            raise e
 
 
 def test_every_peak_is_found():
@@ -80,7 +87,7 @@ def test_every_peak_is_found():
                 base_ohlc_ticks.iloc[i + 1]['high']:
             try:
                 assert base_peaks[base_ohlc_ticks.index[i]]['high'] == base_ohlc_ticks.iloc[i]['high']
-            except AssertionError as e:
+            except Exception as e:
                 pass
                 print("base_peaks[base_ohlc_ticks.index[i]]['high']")
                 print(base_peaks[base_ohlc_ticks.index[i]]['high'])

@@ -5,3 +5,10 @@ pydantic
 numpy
 TA-Lib
 pytest
+
+
+
+# conda update --all
+
+# conda install pip
+# pip install -r requirements.txt

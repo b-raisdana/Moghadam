@@ -58,23 +58,16 @@ class MyEncoder(json.JSONEncoder):
 
 
 myEncoder = MyEncoder()
-debug = False
+DEBUG = False
 config = Config()
 config_as_json = myEncoder.encode(config).encode('utf-8')
-print(config_as_json)
-# todo: Use Hash in file name to prevent duplicate files for same config.
-# print(myEncoder.encode(config).encode('utf-8'))
-# print(hashlib.md5(myEncoder.encode(config).encode('utf-8')).hexdigest())
-# print(base64.b64encode(hashlib.md5(myEncoder.encode(config).encode('utf-8')).digest()))
-# print(str.translate(base64.b64encode(hashlib.md5(myEncoder.encode(config).encode('utf-8')).digest())
-#                     .decode('ascii'), {ord('+'): '', ord('/'): '', ord('='): '', }))
-
+if DEBUG: print(str(config_as_json))
 config_digest = str.translate(base64.b64encode(hashlib.md5(config_as_json).digest())
                               .decode('ascii'), {ord('+'): '', ord('/'): '', ord('='): '', })
 
-print(config_digest)
+if DEBUG: print(config_digest)
 with open(f'LevelDetection.{config_digest}.config.txt', 'w+') as config_file:
-    config_file.write(config_as_json)
+    config_file.write(str(config_as_json))
 
 config.id = config_digest
 

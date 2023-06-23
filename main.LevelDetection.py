@@ -1,13 +1,14 @@
 import pandas as pd
 
-from FigurePlotters import plot_ohlc_with_peaks_n_valleys
+from FigurePlotters import plot_ohlc_with_peaks_n_valleys, plotfig
 from LevelDetection import level_extractor
 from LevelDetectionConfig import config
-from plotfig import plotfig
 from test_LevelDetection import test_time_switching, even_distribution
 
 if __name__ == "__main__":
 
+    test_time_switching()
+    exit(0)
     # os.system((f'wget {config.data_path_preamble}/{config.files_to_load[0]}.zip -O {config.files_to_load[0]}.zip'))
 
     reverse_prices = pd.read_csv(f'{config.files_to_load[0]}.zip', index_col='date', parse_dates=['date'])
@@ -15,7 +16,7 @@ if __name__ == "__main__":
     # plotfig(reverse_prices.head(10000), name='reverse_prices Head')
     # plotfig(reverse_prices.tail(10000), name='reverse_prices Tail')
 
-    test_prices = reverse_prices.tail(5000)
+    test_prices = reverse_prices.tail(1000)
     # print(test_prices)
     # plotfig(test_prices, name='test prices', save=False, do_not_show=True)
 
@@ -23,8 +24,6 @@ if __name__ == "__main__":
 
     print('Peaks:\n', peaks.sort_values(by='strength', ascending=False))
     # plot_ohlc_with_peaks_n_valleys(ohlc=test_prices, name='Test Prices (Base = 1min)', peaks=peaks, valleys=valleys)
-
-    # todo: map strength to time to detect the most major time of S/Ps
 
     # for i in range(len(config.times)):
     #     aggregate_test_prices = test_prices.groupby(pd.Grouper(freq=config.times[i])) \
@@ -43,4 +42,3 @@ if __name__ == "__main__":
     #         (ohlc=aggregate_test_prices, name=f'B{config.times[i]}', peaks=_time_peaks, valleys=_time_valleys)
 
     # running test in main for debug
-    test_time_switching()
