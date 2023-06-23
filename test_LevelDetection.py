@@ -122,8 +122,10 @@ def test_strength_of_peaks():
         if _t_index - base_peaks.loc[_t_index]['strength'] > base_peaks.index[0]:
             if _t_index + base_peaks.loc[_t_index]['strength'] < base_peaks.index[-1]:
                 # the peak is not top in either sides
-                assert base_ohlc_ticks.loc[_t_index + base_peaks.loc[_t_index]['strength']]['high'] > base_peaks.loc[_t_index]['high'] \
-                       or base_ohlc_ticks.loc[_t_index - base_peaks.loc[_t_index]['strength']]['high'] > base_peaks.loc[_t_index]['high']
+                assert base_ohlc_ticks.loc[_t_index + base_peaks.loc[_t_index]['strength']]['high'] > \
+                       base_peaks.loc[_t_index]['high'] \
+                       or base_ohlc_ticks.loc[_t_index - base_peaks.loc[_t_index]['strength']]['high'] > \
+                       base_peaks.loc[_t_index]['high']
             else:
                 # the peak is top in all next candles
                 assert base_ohlc_ticks.loc[_t_index - base_peaks.loc[_t_index]['strength']]['high'] > \
@@ -132,4 +134,5 @@ def test_strength_of_peaks():
             # the peak is top in all before candles
             assert base_peaks.loc[_t_index]['strength'] == _t_index - base_ohlc_ticks.index[0]
 
+        # todo: all asserts are reached
 # todo: repeat above for valleys
