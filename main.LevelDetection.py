@@ -3,11 +3,13 @@ import pandas as pd
 from FigurePlotters import plot_ohlc_with_peaks_n_valleys, plotfig
 from LevelDetection import level_extractor
 from LevelDetectionConfig import config
-from test_LevelDetection import test_time_switching, even_distribution
+from test_LevelDetection import test_time_switching, even_distribution, test_every_peak_is_found, test_strength_of_peaks
 
 if __name__ == "__main__":
 
-    test_time_switching()
+    # test_time_switching()
+    test_every_peak_is_found()
+    test_strength_of_peaks()
     exit(0)
     # os.system((f'wget {config.data_path_preamble}/{config.files_to_load[0]}.zip -O {config.files_to_load[0]}.zip'))
 
