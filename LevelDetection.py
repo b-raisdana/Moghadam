@@ -97,6 +97,7 @@ def peaks_valleys_extractor(prices: pd.DataFrame, peaks_mode: bool = True, min_s
                     right_distance = (right_higher_valleys.index[0] - peaks_valleys.index[i])  #
                     lower_candles_before_right_nearest_higher_peak = \
                         # todo: left code here!!!
+                    # https://stackoverflow.com/questions/22898824/filtering-pandas-dataframes-on-dates
                         prices[peaks_valleys.index[i] < prices.index] \
                                [prices.index < peaks_valleys.index[i] + right_distance] \
                             .loc[prices['high'] < peaks_valleys.iloc[i]['high']]
