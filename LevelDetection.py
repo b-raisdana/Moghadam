@@ -11,17 +11,13 @@ from LevelDetectionConfig import config, INFINITY_TIME_DELTA
 DEBUG = True
 
 
-def level_extractor(prices: pd.DataFrame, min_weight=None, significance=None, max_cycles=100):
-    _peaks = peaks_valleys_extractor(prices, True, min_weight, significance, max_cycles)
-    _valleys = peaks_valleys_extractor(prices, False, min_weight, significance, max_cycles)
+def find_peaks_n_valleys(prices: pd.DataFrame, min_weight=None, significance=None, max_cycles=100):
+    _peaks = find_peak_or_valleys(prices, True, min_weight, significance, max_cycles)
+    _valleys = find_peak_or_valleys(prices, False, min_weight, significance, max_cycles)
     return _peaks, _valleys
 
 
-def peaks_valleys_extractor(prices: pd.DataFrame, peaks_mode: bool = True, min_strength: timedelta = None,
-                            ignore_n_percent_lowest_strength=None, max_cycles=100):
-    valleys_mode = not peaks_mode
-    peaks_valleys: pd = prices.copy()  # pd.DataFrame(prices.index)
-    peaks_valleys.insert(len(peaks_valleys.columns), 'strength', INFINITY_TIME_DELTA)
+def compare_with_next_and_previous(peaks_mode, peaks_valleys):
     if peaks_mode:
         peaks_valleys.insert(len(peaks_valleys.columns), 'next_high', peaks_valleys['high'].shift(-1))
         peaks_valleys.insert(len(peaks_valleys.columns), 'previous_high', peaks_valleys['high'].shift(1))
@@ -34,15 +30,10 @@ def peaks_valleys_extractor(prices: pd.DataFrame, peaks_mode: bool = True, min_s
         peaks_valleys = peaks_valleys[(peaks_valleys['previous_low'] > peaks_valleys['low']) &
                                       (peaks_valleys['low'] <= peaks_valleys['next_low'])]
         peaks_valleys = peaks_valleys.drop(labels=['next_low', 'previous_low'], axis=1)
-    # for i in range(1, len(peaks_valleys)):
-    #     if valleys_mode:
-    #         if peaks_valleys.iloc[i]['low'] == peaks_valleys.iloc[i - 1]['low']:
-    #             peaks_valleys.at[peaks_valleys.index[i], 'strength'] = timedelta(0)
-    #     else:  # peaks_mode
-    #         if peaks_valleys.iloc[i]['high'] == peaks_valleys.iloc[i - 1]['high']:
-    #             peaks_valleys.at[peaks_valleys.index[i], 'strength'] = timedelta(0)
-    peaks_valleys = peaks_valleys[peaks_valleys['volume'] > 0]
-    # peaks_valleys = peaks_valleys[peaks_valleys['strength'] > timedelta(0)]
+    return peaks_valleys
+
+
+def calculate_strength(peaks_valleys, valleys_mode, prices):
     for i in range(len(peaks_valleys.index.values)):
         if DEBUG and peaks_valleys.index[i] == Timestamp('2017-01-01 00:48:00'):
             pass
@@ -51,61 +42,103 @@ def peaks_valleys_extractor(prices: pd.DataFrame, peaks_mode: bool = True, min_s
 
         if valleys_mode:
             if i > 0:
-                left_lower_valleys = prices[(prices.index < peaks_valleys.index[i]) &
-                                            (prices['low'] < peaks_valleys.iloc[i]['low'])]
-                if len(left_lower_valleys.index.values) > 0:
-                    left_distance = (peaks_valleys.index[i] - left_lower_valleys.index[-1])
-                    # check if at least one higher valley exist in the range
-                    higher_candles_after_left_nearest_lower_valley = \
-                        prices[((peaks_valleys.index[i] - left_distance) < prices.index) &
-                               (prices.index < peaks_valleys.index[i]) &
-                               (prices['low'] > peaks_valleys.iloc[i]['low'])]
-                    if len(higher_candles_after_left_nearest_lower_valley) == 0:
-                        left_distance = timedelta(0)
+                left_distance = left_valley_distance(prices, peaks_valleys, i, left_distance)
             if i < len(peaks_valleys.index.values) - 1:
-                right_lower_valleys = prices[(prices.index > peaks_valleys.index[i]) &
-                                             (prices['low'] < peaks_valleys.iloc[i]['low'])]
-                if len(right_lower_valleys.index.values) > 0:
-                    right_distance = (right_lower_valleys.index[0] - peaks_valleys.index[i])
-                    higher_candles_before_right_nearest_lower_valley = \
-                        prices[(peaks_valleys.index[i] < prices.index) &
-                               (prices.index < (peaks_valleys.index[i] + right_distance)) &
-                               (prices['low'] > peaks_valleys.iloc[i]['low'])]
-                    if len(higher_candles_before_right_nearest_lower_valley) == 0:
-                        right_distance = timedelta(0)
+                right_distance = right_valley_distance(prices, peaks_valleys, i, right_distance)
         else:  # peaks_mode
             if i > 0:
-                left_higher_valleys = prices[(prices.index < peaks_valleys.index[i]) &
-                                             (prices['high'] > peaks_valleys.iloc[i]['high'])]
-                if len(left_higher_valleys.index.values) > 0:
-                    left_distance = (peaks_valleys.index[i] - left_higher_valleys.index[-1])  #
-                    lower_candles_after_left_nearest_higher_peak = \
-                        prices[((peaks_valleys.index[i] - left_distance) < prices.index) &
-                               (prices.index < peaks_valleys.index[i]) &
-                               (prices['high'] < peaks_valleys.iloc[i]['high'])]
-                    if len(lower_candles_after_left_nearest_higher_peak) == 0:
-                        left_distance = timedelta(0)
+                left_distance = left_peak_distance(i, left_distance, peaks_valleys, prices)
             if i < len(peaks_valleys.index.values) - 1:
-                right_higher_valleys = prices[(prices.index > peaks_valleys.index[i]) &
-                                              (prices['high'] > peaks_valleys.iloc[i]['high'])]
-                if len(right_higher_valleys.index.values) > 0:
-                    right_distance = (right_higher_valleys.index[0] - peaks_valleys.index[i])
-                    lower_candles_before_right_nearest_higher_peak = \
-                        prices[(peaks_valleys.index[i] < prices.index) &
-                                   (prices.index < (peaks_valleys.index[i] + right_distance)) &
-                                   (prices['high'] < peaks_valleys.iloc[i]['high'])]
-                    if len(lower_candles_before_right_nearest_higher_peak) == 0:
-                        left_distance = timedelta(0)
+                left_distance, right_distance = right_peak_distance(i, left_distance, peaks_valleys, prices,
+                                                                    right_distance)
         if 0 < i < len(peaks_valleys.index.values) - 1 and left_distance == INFINITY_TIME_DELTA:
             peaks_valleys.at[peaks_valleys.index[i], 'strength'] \
                 = min(peaks_valleys.index[i] - prices.index[0], right_distance,
                       peaks_valleys.iloc[i]['strength'])  # min(i, len(prices) - i)
             continue
-        # if DEBUG: print(
-        #     f"@{peaks_valleys.index[i]}:min(left_distance:{left_distance}, "
-        #     f"right_distance:{right_distance}):{min(left_distance, right_distance)}")
         peaks_valleys.at[peaks_valleys.index[i], 'strength'] = \
             min(left_distance, right_distance, peaks_valleys.iloc[i]['strength'])
+    return peaks_valleys
+
+
+def left_valley_distance(prices, peaks_valleys, i, left_distance):
+    left_lower_valleys = prices[(prices.index < peaks_valleys.index[i]) &
+                                (prices['low'] < peaks_valleys.iloc[i]['low'])]
+    if len(left_lower_valleys.index.values) > 0:
+        left_distance = (peaks_valleys.index[i] - left_lower_valleys.index[-1])
+        # check if at least one higher valley exist in the range
+        higher_candles_after_left_nearest_lower_valley = \
+            prices[((peaks_valleys.index[i] - left_distance) < prices.index) &
+                   (prices.index < peaks_valleys.index[i]) &
+                   (prices['low'] > peaks_valleys.iloc[i]['low'])]
+        if len(higher_candles_after_left_nearest_lower_valley) == 0:
+            left_distance = timedelta(0)
+    return left_distance
+
+
+def right_valley_distance(prices, peaks_valleys, i, right_distance):
+    right_lower_valleys = prices[(prices.index > peaks_valleys.index[i]) &
+                                 (prices['low'] < peaks_valleys.iloc[i]['low'])]
+    if len(right_lower_valleys.index.values) > 0:
+        right_distance = (right_lower_valleys.index[0] - peaks_valleys.index[i])
+        higher_candles_before_right_nearest_lower_valley = \
+            prices[(peaks_valleys.index[i] < prices.index) &
+                   (prices.index < (peaks_valleys.index[i] + right_distance)) &
+                   (prices['low'] > peaks_valleys.iloc[i]['low'])]
+        if len(higher_candles_before_right_nearest_lower_valley) == 0:
+            right_distance = timedelta(0)
+    return right_distance
+
+
+def right_peak_distance(i, left_distance, peaks_valleys, prices, right_distance):
+    right_higher_valleys = prices[(prices.index > peaks_valleys.index[i]) &
+                                  (prices['high'] > peaks_valleys.iloc[i]['high'])]
+    if len(right_higher_valleys.index.values) > 0:
+        right_distance = (right_higher_valleys.index[0] - peaks_valleys.index[i])
+        lower_candles_before_right_nearest_higher_peak = \
+            prices[(peaks_valleys.index[i] < prices.index) &
+                   (prices.index < (peaks_valleys.index[i] + right_distance)) &
+                   (prices['high'] < peaks_valleys.iloc[i]['high'])]
+        if len(lower_candles_before_right_nearest_higher_peak) == 0:
+            left_distance = timedelta(0)
+    return left_distance, right_distance
+
+
+def left_peak_distance(i, left_distance, peaks_valleys, prices):
+    left_higher_peaks = prices[(prices.index < peaks_valleys.index[i]) &
+                               (prices['high'] > peaks_valleys.iloc[i]['high'])]
+    if len(left_higher_peaks.index.values) > 0:
+        left_distance = (peaks_valleys.index[i] - left_higher_peaks.index[-1])  #
+        lower_candles_after_left_nearest_higher_peak = \
+            prices[((peaks_valleys.index[i] - left_distance) < prices.index) &
+                   (prices.index < peaks_valleys.index[i]) &
+                   (prices['high'] < peaks_valleys.iloc[i]['high'])]
+        if len(lower_candles_after_left_nearest_higher_peak) == 0:
+            left_distance = timedelta(0)
+    return left_distance
+
+
+def map_strength_to_frequency(peaks_valleys):
+    peaks_valleys.insert(len(peaks_valleys.columns), 'effective_time', None)
+
+    for i in range(len(config.times)):
+        for t_peak_valley_index in peaks_valleys[
+            peaks_valleys['strength'] > pd.to_timedelta(config.times[i])
+        ].index.values:
+            peaks_valleys.at[t_peak_valley_index, 'effective_time'] = config.times[i]
+    peaks_valleys = peaks_valleys[pd.notna(peaks_valleys['effective_time'])]
+    return peaks_valleys
+
+
+def find_peak_or_valleys(prices: pd.DataFrame, peaks_mode: bool = True, min_strength: timedelta = None,
+                         ignore_n_percent_lowest_strength=None, max_cycles=100):
+    valleys_mode = not peaks_mode
+    peaks_valleys: pd = prices.copy()  # pd.DataFrame(prices.index)
+    peaks_valleys.insert(len(peaks_valleys.columns), 'strength', INFINITY_TIME_DELTA)
+    peaks_valleys = compare_with_next_and_previous(peaks_mode, peaks_valleys)
+    peaks_valleys = peaks_valleys[peaks_valleys['volume'] > 0]
+    # peaks_valleys = peaks_valleys[peaks_valleys['strength'] > timedelta(0)]
+    peaks_valleys = calculate_strength(peaks_valleys, valleys_mode, prices)
 
     if min_strength is not None:
         raise Exception('Not tested')
@@ -117,13 +150,6 @@ def peaks_valleys_extractor(prices: pd.DataFrame, peaks_mode: bool = True, min_s
         # if len(peak_valley_weights) > ignore_n_percent_lowest_strength:
         #     peaks_valleys = peaks_valleys['strength' >= peak_valley_weights[ignore_n_percent_lowest_strength - 1]]
     peaks_valleys = peaks_valleys[peaks_valleys['strength'] > timedelta(0)]
-    peaks_valleys.insert(len(peaks_valleys.columns), 'effective_time', None)
-    for i in range(len(config.times)):
-        for t_peak_valley_index in peaks_valleys[
-            peaks_valleys['strength'] > pd.to_timedelta(config.times[i])
-        ].index.values:
-            peaks_valleys.at[t_peak_valley_index, 'effective_time'] = config.times[i]
 
-    # todo: merge adjacent peaks/valleys and move less significant to lower time.
-    peaks_valleys = peaks_valleys[pd.notna(peaks_valleys['effective_time'])]
+    peaks_valleys = map_strength_to_frequency(peaks_valleys)
     return peaks_valleys

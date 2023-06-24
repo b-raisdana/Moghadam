@@ -3,7 +3,7 @@ import math
 from FigurePlotters import plot_ohlc_with_peaks_n_valleys
 import pandas as pd
 from LevelDetectionConfig import INFINITY_TIME_DELTA, config
-from LevelDetection import level_extractor
+from LevelDetection import find_peaks_n_valleys
 
 DEBUG = True
 
@@ -29,19 +29,15 @@ def even_distribution(peaks: pd, valleys: pd):
     #         assert number_of_valleys_between_last_2_peaks == 1
 
 
-base_ohlc_ticks = pd.read_csv(f'{config.files_to_load[0]}.zip', index_col='date', parse_dates=['date'], nrows=100)
+base_ohlc_ticks = pd.read_csv(f'{config.files_to_load[0]}.zip', index_col='date', parse_dates=['date'], nrows=5000)
 if DEBUG: print(base_ohlc_ticks)
-base_peaks, base_valleys = level_extractor(base_ohlc_ticks)
+base_peaks, base_valleys = find_peaks_n_valleys(base_ohlc_ticks)
 
-plot_ohlc_with_peaks_n_valleys(ohlc=base_ohlc_ticks, name=f'base_ohlc_ticks',
-                               peaks=base_peaks, valleys=base_valleys)
+# plot_ohlc_with_peaks_n_valleys(ohlc=base_ohlc_ticks, name=f'base_ohlc_ticks',
+#                                peaks=base_peaks, valleys=base_valleys)
 
 
 def test_time_switching():
-    # try to check if every
-
-    # todo: check index mapping after time switching
-
     for i in range(1, len(config.times)):
         _time_ohlc_ticks = base_ohlc_ticks.groupby(pd.Grouper(freq=config.times[i])) \
             .agg({'open': 'first',
@@ -50,7 +46,7 @@ def test_time_switching():
                   'high': 'max',
                   'volume': 'sum'})
 
-        _time_peaks, _time_valleys = level_extractor(_time_ohlc_ticks)
+        _time_peaks, _time_valleys = find_peaks_n_valleys(_time_ohlc_ticks)
 
         _mapped_peaks_from_base = base_peaks[base_peaks['effective_time'].isin(config.times[i:])]
         comparable_time_peaks = _time_peaks[['high', 'effective_time']] \
