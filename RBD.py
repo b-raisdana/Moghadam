@@ -19,6 +19,8 @@ DROP_TREND = 'DROP_TREND'
 
 
 def rally_base_drop(peaks_n_valleys: pd):
+    # base: in reverse trigger time a candle being 80% covered by its previous one.
+    # we go out of base if engulf and hunter levels being passed
     if len(peaks_n_valleys['effective_time'].unique()) > 1:
         raise Exception('Expected to peaks_n_valleys filtered and grouped by effective_time before!')
     effective_time = peaks_n_valleys['effective_time'].unique()[0]
