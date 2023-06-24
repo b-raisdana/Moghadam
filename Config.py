@@ -66,7 +66,7 @@ config_digest = str.translate(base64.b64encode(hashlib.md5(config_as_json).diges
                               .decode('ascii'), {ord('+'): '', ord('/'): '', ord('='): '', })
 
 if DEBUG: print(config_digest)
-with open(f'LevelDetection.{config_digest}.config.txt', 'w+') as config_file:
+with open(f'Config.{config_digest}.txt', 'w+') as config_file:
     config_file.write(str(config_as_json))
 
 config.id = config_digest

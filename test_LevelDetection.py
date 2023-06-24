@@ -1,9 +1,10 @@
 import math
+from time import strftime
 
 from FigurePlotters import plot_ohlc_with_peaks_n_valleys
 import pandas as pd
-from LevelDetectionConfig import INFINITY_TIME_DELTA, config
-from LevelDetection import find_peaks_n_valleys
+from Config import INFINITY_TIME_DELTA, config
+from PeaksValleys import find_peaks_n_valleys
 
 DEBUG = True
 
@@ -29,9 +30,13 @@ def even_distribution(peaks: pd, valleys: pd):
     #         assert number_of_valleys_between_last_2_peaks == 1
 
 
-base_ohlc_ticks = pd.read_csv(f'{config.files_to_load[0]}.zip', index_col='date', parse_dates=['date'], nrows=5000)
+base_ohlc_ticks = pd.read_csv(f'{config.files_to_load[0]}.zip', sep=',', header=0, index_col='date',
+                              parse_dates=['date'], skiprows=range(1, 400320), nrows=1440)
 if DEBUG: print(base_ohlc_ticks)
+# base_ohlc_ticks['indexer'] = range(0,len(base_ohlc_ticks))
 base_peaks, base_valleys = find_peaks_n_valleys(base_ohlc_ticks)
+# base_peaks.to_csv(f'peaks.{base_ohlc_ticks.index[0].strftime("%y-%m-%d.%H-%M")}T{base_ohlc_ticks.index[-1].strftime("%y-%m-%d.%H-%M")}.zip')
+# base_valleys.to_csv(f'valleys.{base_ohlc_ticks.index[0].strftime("%y-%m-%d.%H-%M")}T{base_ohlc_ticks.index[-1].strftime("%y-%m-%d.%H-%M")}.zip')
 
 # plot_ohlc_with_peaks_n_valleys(ohlc=base_ohlc_ticks, name=f'base_ohlc_ticks',
 #                                peaks=base_peaks, valleys=base_valleys)
@@ -115,8 +120,8 @@ def test_strength_of_peaks():
                                        (base_ohlc_ticks.index < _t_index)]
         assert base_peaks.loc[_t_index]['high'] >= left_candles.max()['high']
 
-        if _t_index - base_peaks.loc[_t_index]['strength'] > base_peaks.index[0]:
-            if _t_index + base_peaks.loc[_t_index]['strength'] < base_peaks.index[-1]:
+        if _t_index - base_peaks.loc[_t_index]['strength'] > base_ohlc_ticks.index[0]:
+            if _t_index + base_peaks.loc[_t_index]['strength'] < base_ohlc_ticks.index[-1]:
                 # the peak is not top in either sides
                 assert base_ohlc_ticks.loc[_t_index + base_peaks.loc[_t_index]['strength']]['high'] > \
                        base_peaks.loc[_t_index]['high'] \

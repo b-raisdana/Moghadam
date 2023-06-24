@@ -1,8 +1,7 @@
 import pandas as pd
 
 from FigurePlotters import plot_ohlc_with_peaks_n_valleys, plotfig
-from LevelDetection import find_peaks_n_valleys
-from LevelDetectionConfig import config
+from Config import config
 from test_LevelDetection import test_time_switching, even_distribution, test_every_peak_is_found, test_strength_of_peaks
 
 if __name__ == "__main__":

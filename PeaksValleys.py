@@ -6,7 +6,7 @@ import pandas as pd
 from pandas import Timestamp
 
 from FigurePlotters import plot_ohlc_with_peaks_n_valleys, plotfig
-from LevelDetectionConfig import config, INFINITY_TIME_DELTA
+from Config import config, INFINITY_TIME_DELTA
 
 DEBUG = True
 
@@ -35,23 +35,23 @@ def compare_with_next_and_previous(peaks_mode, peaks_valleys):
 
 def calculate_strength(peaks_valleys, valleys_mode, prices):
     for i in range(len(peaks_valleys.index.values)):
-        if DEBUG and peaks_valleys.index[i] == Timestamp('2017-01-01 00:48:00'):
+        if DEBUG and peaks_valleys.index[i] == Timestamp('2017-01-04 11:17:00'):
             pass
         left_distance = INFINITY_TIME_DELTA
         right_distance = INFINITY_TIME_DELTA
 
         if valleys_mode:
-            if i > 0:
+            if peaks_valleys.index[i] > prices.index[0]:
                 left_distance = left_valley_distance(prices, peaks_valleys, i, left_distance)
-            if i < len(peaks_valleys.index.values) - 1:
+            if peaks_valleys.index[i] < prices.index[-1]:
                 right_distance = right_valley_distance(prices, peaks_valleys, i, right_distance)
         else:  # peaks_mode
-            if i > 0:
+            if peaks_valleys.index[i] > prices.index[0]:
                 left_distance = left_peak_distance(i, left_distance, peaks_valleys, prices)
-            if i < len(peaks_valleys.index.values) - 1:
+            if peaks_valleys.index[i] < prices.index[-1]:
                 left_distance, right_distance = right_peak_distance(i, left_distance, peaks_valleys, prices,
                                                                     right_distance)
-        if 0 < i < len(peaks_valleys.index.values) - 1 and left_distance == INFINITY_TIME_DELTA:
+        if prices.index[0] < peaks_valleys.index[i] < prices.index[-1] and left_distance == INFINITY_TIME_DELTA:
             peaks_valleys.at[peaks_valleys.index[i], 'strength'] \
                 = min(peaks_valleys.index[i] - prices.index[0], right_distance,
                       peaks_valleys.iloc[i]['strength'])  # min(i, len(prices) - i)
@@ -95,12 +95,12 @@ def right_peak_distance(i, left_distance, peaks_valleys, prices, right_distance)
                                   (prices['high'] > peaks_valleys.iloc[i]['high'])]
     if len(right_higher_valleys.index.values) > 0:
         right_distance = (right_higher_valleys.index[0] - peaks_valleys.index[i])
-        lower_candles_before_right_nearest_higher_peak = \
-            prices[(peaks_valleys.index[i] < prices.index) &
-                   (prices.index < (peaks_valleys.index[i] + right_distance)) &
-                   (prices['high'] < peaks_valleys.iloc[i]['high'])]
-        if len(lower_candles_before_right_nearest_higher_peak) == 0:
-            left_distance = timedelta(0)
+        # lower_candles_before_right_nearest_higher_peak = \
+        #     prices[(peaks_valleys.index[i] < prices.index) &
+        #            (prices.index < (peaks_valleys.index[i] + right_distance)) &
+        #            (prices['high'] < peaks_valleys.iloc[i]['high'])]
+        # if len(lower_candles_before_right_nearest_higher_peak) == 0:
+        #     left_distance = timedelta(0)
     return left_distance, right_distance
 
 

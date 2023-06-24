@@ -1,7 +1,7 @@
 import pandas as pd
 from plotly import graph_objects as plgo
 
-from LevelDetectionConfig import config
+from Config import config
 
 DEBUG = False
 
