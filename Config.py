@@ -1,10 +1,8 @@
-import datetime
-import json
-import hashlib
 import base64
+import hashlib
+import json
 from datetime import timedelta
-
-from pandas._libs.tslibs import to_offset
+from enum import Enum
 
 
 class Config():
@@ -72,3 +70,14 @@ with open(f'Config.{config_digest}.txt', 'w+') as config_file:
 config.id = config_digest
 
 INFINITY_TIME_DELTA = config.INFINITY_TIME_DELTA
+
+
+class TREND(Enum):
+    BULLISH = 'BULLISH_TREND'
+    BEARISH = 'BEARISH_TREND'
+    SIDE = 'SIDE_TREND'
+
+
+class TopTYPE(Enum):
+    PEAK = 'peak'
+    VALLEY = 'valley'

@@ -1,14 +1,38 @@
 # import talib as ta
-import datetime
 from datetime import timedelta
 
 import pandas as pd
 from pandas import Timestamp
+from plotly import graph_objects as plgo
 
-from FigurePlotters import plot_ohlc_with_peaks_n_valleys, plotfig
-from Config import config, INFINITY_TIME_DELTA
+from Config import config, INFINITY_TIME_DELTA, TopTYPE
+from FigurePlotters import plotfig
 
 DEBUG = True
+
+
+def generate_test_ohlc():
+    test_ohlc_ticks = pd.read_csv(f'{config.files_to_load[0]}.zip', sep=',', header=0, index_col='date',
+                                  parse_dates=['date'], skiprows=range(1, 400320), nrows=1440)
+    file_name = f'ohlc.{test_ohlc_ticks.index[0].strftime("%y-%m-%d.%H-%M")}T' \
+                f'{test_ohlc_ticks.index[-1].strftime("%y-%m-%d.%H-%M")}.zip'
+    test_ohlc_ticks.to_csv(
+        file_name,
+        compression='zip')
+
+
+def generate_peaks_n_valleys_csv():
+    test_ohlc_ticks = pd.read_csv('ohlc.17-10-06.00-00T17-10-06.23-59.zip', sep=',', header=0, index_col='date',
+                                  parse_dates=['date'])
+    test_peaks, test_valleys = find_peaks_n_valleys(test_ohlc_ticks)
+    test_peaks.to_csv(
+        f'peaks.{test_ohlc_ticks.index[0].strftime("%y-%m-%d.%H-%M")}T'
+        f'{test_ohlc_ticks.index[-1].strftime("%y-%m-%d.%H-%M")}.zip',
+        compression='zip')
+    test_valleys.to_csv(
+        f'valleys.{test_ohlc_ticks.index[0].strftime("%y-%m-%d.%H-%M")}T'
+        f'{test_ohlc_ticks.index[-1].strftime("%y-%m-%d.%H-%M")}.zip',
+        compression='zip')
 
 
 def find_peaks_n_valleys(prices: pd.DataFrame, min_weight=None, significance=None, max_cycles=100):
@@ -153,3 +177,49 @@ def find_peak_or_valleys(prices: pd.DataFrame, peaks_mode: bool = True, min_stre
 
     peaks_valleys = map_strength_to_frequency(peaks_valleys)
     return peaks_valleys
+
+
+def plot_peaks_n_valleys(ohlc: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']),
+                         peaks: pd = pd.DataFrame(columns=['high', 'effective_time']),
+                         valleys: pd = pd.DataFrame(columns=['low', 'effective_time']),
+                         name: str = '') -> plgo.Figure:
+    fig = plotfig(ohlc, name=name, save=False, do_not_show=True)
+    if len(peaks) > 0:
+        fig.add_scatter(x=peaks.index.values, y=peaks['high'] + 1, mode="markers", name='P',
+                        marker=dict(symbol="triangle-up", color="blue"),
+                        hovertemplate="%{text}",
+                        text=[
+                            f"{peaks.loc[_x]['effective_time']}@{peaks.loc[_x]['high']}"
+                            for _x in peaks.index.values]
+                        )
+    if len(valleys) > 0:
+        fig.add_scatter(x=valleys.index.values, y=valleys['low'] - 1, mode="markers", name='V',
+                        marker=dict(symbol="triangle-down", color="blue"),
+                        hovertemplate="%{text}",
+                        text=[
+                            f"{valleys.loc[_x]['effective_time']}@{valleys.loc[_x]['low']}"
+                            for _x in valleys.index.values]
+                        )
+        fig.update_layout(hovermode='x unified')
+        fig.show()
+    return fig
+
+
+def peaks_only(peaks_n_valleys: pd.DataFrame):
+    return peaks_n_valleys[peaks_n_valleys['peak_or_valley'] == TopTYPE.PEAK.value]
+
+
+def valleys_only(peaks_n_valleys: pd.DataFrame):
+    return peaks_n_valleys[peaks_n_valleys['peak_or_valley'] == TopTYPE.VALLEY.value]
+
+
+def effective_peak_valleys(peaks_n_valleys, effective_time):
+    try:
+        index = config.times.index(effective_time)
+    except ValueError as e:
+        raise Exception(f'effective_time:{effective_time} should be in [{config.times}]!')
+    return peaks_n_valleys[peaks_n_valleys['effective_time'].isin(config.times[index:])]
+
+
+def merge_tops(peaks, valleys):
+    return pd.concat([peaks, valleys]).sort_index()

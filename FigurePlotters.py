@@ -6,32 +6,6 @@ from Config import config
 DEBUG = False
 
 
-def plot_ohlc_with_peaks_n_valleys(ohlc: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']),
-                                   peaks: pd = pd.DataFrame(columns=['high', 'effective_time']),
-                                   valleys: pd = pd.DataFrame(columns=['low', 'effective_time']),
-                                   name: str = '') -> plgo.Figure:
-    fig = plotfig(ohlc, name=name, save=False, do_not_show=True)
-    if len(peaks) > 0:
-        fig.add_scatter(x=peaks.index.values, y=peaks['high'] + 1, mode="markers", name='P',
-                        marker=dict(symbol="triangle-up", color="blue"),
-                        hovertemplate="%{text}",
-                        text=[
-                            f"{peaks.loc[_x]['effective_time']}@{peaks.loc[_x]['high']}"
-                            for _x in peaks.index.values]
-                        )
-    if len(valleys) > 0:
-        fig.add_scatter(x=valleys.index.values, y=valleys['low'] - 1, mode="markers", name='V',
-                        marker=dict(symbol="triangle-down", color="blue"),
-                        hovertemplate="%{text}",
-                        text=[
-                            f"{valleys.loc[_x]['effective_time']}@{valleys.loc[_x]['low']}"
-                            for _x in valleys.index.values]
-                        )
-        fig.update_layout(hovermode='x unified')
-        fig.show()
-    return fig
-
-
 def plotfig(data: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']),
             save: bool = False, name: str = '', do_not_show: bool = False) -> plgo.Figure:
     import os

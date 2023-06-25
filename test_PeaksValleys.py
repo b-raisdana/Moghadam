@@ -1,16 +1,13 @@
-import math
-from time import strftime
-
-from FigurePlotters import plot_ohlc_with_peaks_n_valleys
 import pandas as pd
-from Config import INFINITY_TIME_DELTA, config
-from PeaksValleys import find_peaks_n_valleys
+
+from Config import config
+from PeaksValleys import find_peaks_n_valleys, plot_peaks_n_valleys
 
 DEBUG = True
 
 
 def even_distribution(peaks: pd, valleys: pd):
-    # I found the peaks and valleys are not required to be distributed evenly\
+    # the peaks and valleys are not required to be distributed evenly\
     return True
     # peaks.insert(len(peaks.columns), 'is_a_peak', True)
     # valleys.insert(len(valleys.columns), 'is_a_valleys', True)
@@ -30,16 +27,16 @@ def even_distribution(peaks: pd, valleys: pd):
     #         assert number_of_valleys_between_last_2_peaks == 1
 
 
-base_ohlc_ticks = pd.read_csv(f'{config.files_to_load[0]}.zip', sep=',', header=0, index_col='date',
-                              parse_dates=['date'], skiprows=range(1, 400320), nrows=1440)
-if DEBUG: print(base_ohlc_ticks)
-# base_ohlc_ticks['indexer'] = range(0,len(base_ohlc_ticks))
-base_peaks, base_valleys = find_peaks_n_valleys(base_ohlc_ticks)
-# base_peaks.to_csv(f'peaks.{base_ohlc_ticks.index[0].strftime("%y-%m-%d.%H-%M")}T{base_ohlc_ticks.index[-1].strftime("%y-%m-%d.%H-%M")}.zip')
-# base_valleys.to_csv(f'valleys.{base_ohlc_ticks.index[0].strftime("%y-%m-%d.%H-%M")}T{base_ohlc_ticks.index[-1].strftime("%y-%m-%d.%H-%M")}.zip')
-
-# plot_ohlc_with_peaks_n_valleys(ohlc=base_ohlc_ticks, name=f'base_ohlc_ticks',
-#                                peaks=base_peaks, valleys=base_valleys)
+# base_ohlc_ticks = pd.read_csv(f'{config.files_to_load[0]}.zip', sep=',', header=0, index_col='date',
+#                               parse_dates=['date'], skiprows=range(1, 400320), nrows=1440)
+# if DEBUG: print(base_ohlc_ticks)
+# # base_ohlc_ticks['indexer'] = range(0,len(base_ohlc_ticks))
+# base_peaks, base_valleys = find_peaks_n_valleys(base_ohlc_ticks)
+# # base_peaks.to_csv(f'peaks.{base_ohlc_ticks.index[0].strftime("%y-%m-%d.%H-%M")}T{base_ohlc_ticks.index[-1].strftime("%y-%m-%d.%H-%M")}.zip')
+# # base_valleys.to_csv(f'valleys.{base_ohlc_ticks.index[0].strftime("%y-%m-%d.%H-%M")}T{base_ohlc_ticks.index[-1].strftime("%y-%m-%d.%H-%M")}.zip')
+#
+# # plot_ohlc_with_peaks_n_valleys(ohlc=base_ohlc_ticks, name=f'base_ohlc_ticks',
+# #                                peaks=base_peaks, valleys=base_valleys)
 
 
 def test_time_switching():
@@ -82,10 +79,10 @@ def test_time_switching():
             assert len(comparable_time_valleys.index.isin(comparable_mapped_base_valleys.index)) == \
                    len(comparable_time_valleys)
         except Exception as e:
-            plot_ohlc_with_peaks_n_valleys(ohlc=base_ohlc_ticks, name=f'base_ohlc_ticks  {config.times[i]}',
-                                           valleys=_mapped_valleys_from_base)
-            plot_ohlc_with_peaks_n_valleys(ohlc=_time_ohlc_ticks, name=f'_time_ohlc_ticks {config.times[i]}',
-                                           peaks=_time_peaks, valleys=_time_valleys)
+            plot_peaks_n_valleys(ohlc=base_ohlc_ticks, name=f'base_ohlc_ticks  {config.times[i]}',
+                                 valleys=_mapped_valleys_from_base)
+            plot_peaks_n_valleys(ohlc=_time_ohlc_ticks, name=f'_time_ohlc_ticks {config.times[i]}',
+                                 peaks=_time_peaks, valleys=_time_valleys)
             # todo: ValueError: Can only compare identically-labeled DataFrame objects
             print(f"comparable_time_valleys({comparable_time_valleys.columns}):")
             print(comparable_time_valleys)
