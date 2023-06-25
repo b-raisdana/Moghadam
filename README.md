@@ -10,6 +10,7 @@
 - \>3 standard or smaller candles >80% overlaps with previous one = Base
 Supply & Demand indicator
 👉👉https://forexbee.co/supply-and-demand...
+Supply and demand visible range luxalgo
 4. Detect Pivots and create Levels
    a. after a confirmed trend reversal, expect to move 3 ATR toward trend + 1ATR reverse
 6. Detect Gaps according to lower time data
