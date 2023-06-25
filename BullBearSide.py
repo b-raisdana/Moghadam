@@ -60,9 +60,11 @@ def bull_bear_side_boundaries(ohlc: pd.DataFrame):
     effective_times = [i.replace('bull_bear_side_', '') for i in ohlc.columns if i.startswith('bull_bear_side_')]
     boundaries = pd.DataFrame()
     for effective_time in effective_times:
+        # todo: move effective time to a column to prevent multiple columns for different effective times.
         ohlc[f'previous_bull_bear_side_{effective_time}'] = ohlc[f'bull_bear_side_{effective_time}'].shift(1)
-        time_boundaries = ohlc[
+        t_time_boundaries = ohlc[
             ohlc[f'previous_bull_bear_side_{effective_time}'] != ohlc[f'bull_bear_side_{effective_time}']]
+        time_boundaries = t_time_boundaries[[f'bull_bear_side_{effective_time}', ]]
         for i in range(len(time_boundaries)):
             # todo: trace to here
             if i < len(time_boundaries) - 1:
