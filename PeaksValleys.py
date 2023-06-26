@@ -182,7 +182,7 @@ def find_peak_or_valleys(prices: pd.DataFrame, peaks_mode: bool = True, min_stre
 def plot_peaks_n_valleys(ohlc: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']),
                          peaks: pd = pd.DataFrame(columns=['high', 'effective_time']),
                          valleys: pd = pd.DataFrame(columns=['low', 'effective_time']),
-                         name: str = '') -> plgo.Figure:
+                         name: str = '', do_not_show: bool = False) -> plgo.Figure:
     fig = plotfig(ohlc, name=name, save=False, do_not_show=True)
     if len(peaks) > 0:
         fig.add_scatter(x=peaks.index.values, y=peaks['high'] + 1, mode="markers", name='P',
@@ -201,16 +201,16 @@ def plot_peaks_n_valleys(ohlc: pd = pd.DataFrame(columns=['open', 'high', 'low',
                             for _x in valleys.index.values]
                         )
         fig.update_layout(hovermode='x unified')
-        fig.show()
+        if not do_not_show: fig.show()
     return fig
 
 
 def peaks_only(peaks_n_valleys: pd.DataFrame):
-    return peaks_n_valleys[peaks_n_valleys['peak_or_valley'] == TopTYPE.PEAK.value]
+    return peaks_n_valleys[peaks_n_valleys['peak_or_valley'] == TopTYPE.PEAK]
 
 
 def valleys_only(peaks_n_valleys: pd.DataFrame):
-    return peaks_n_valleys[peaks_n_valleys['peak_or_valley'] == TopTYPE.VALLEY.value]
+    return peaks_n_valleys[peaks_n_valleys['peak_or_valley'] == TopTYPE.VALLEY]
 
 
 def effective_peak_valleys(peaks_n_valleys, effective_time):

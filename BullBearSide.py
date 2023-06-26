@@ -1,4 +1,5 @@
 import pandas as pd
+from pandas import Timestamp
 
 from Config import TopTYPE, config, TREND
 from PeaksValleys import plot_peaks_n_valleys, peaks_only, valleys_only, effective_peak_valleys
@@ -47,38 +48,40 @@ def bull_bear_side_for_effective_time(effective_time: str, ohlc: pd.DataFrame, p
             [f'{j}_{k}' for j in ['previous', 'next'] for k in [e.value for e in TopTYPE]]]):
         ohlc = insert_previous_n_next_peaks_n_valleys(_effective_peaks_n_valley, ohlc)
     ohlc[f'bull_bear_side_{effective_time}'] = TREND.SIDE
-    for i in ohlc.loc[(ohlc.next_valley_value > ohlc.previous_valley_value) & (
-            ohlc.next_peak_value > ohlc.previous_peak_value)].index:
-        ohlc.at[i, f'bull_bear_side_{effective_time}'] = TREND.BULLISH
-    for i in ohlc.loc[(ohlc.next_peak_value < ohlc.previous_peak_value) & (
-            ohlc.next_valley_value < ohlc.previous_valley_value)].index:
-        ohlc.at[i, f'bull_bear_side_{effective_time}'] = TREND.BEARISH
+    ohlc.loc[(ohlc.next_valley_value > ohlc.previous_valley_value) & (
+            ohlc.next_peak_value > ohlc.previous_peak_value), f'bull_bear_side_{effective_time}'] = TREND.BULLISH
+    ohlc.loc[(ohlc.next_peak_value < ohlc.previous_peak_value) & (
+            ohlc.next_valley_value < ohlc.previous_valley_value), f'bull_bear_side_{effective_time}'] = TREND.BEARISH
     return ohlc
 
 
-def bull_bear_side_boundaries(ohlc: pd.DataFrame):
+def trend_boundaries(ohlc: pd.DataFrame):
     effective_times = [i.replace('bull_bear_side_', '') for i in ohlc.columns if i.startswith('bull_bear_side_')]
     boundaries = pd.DataFrame()
+    ohlc['time_of_previous'] = ohlc.index.shift(-1, freq='1min')
     for effective_time in effective_times:
         # todo: move effective time to a column to prevent multiple columns for different effective times.
         ohlc[f'previous_bull_bear_side_{effective_time}'] = ohlc[f'bull_bear_side_{effective_time}'].shift(1)
-        t_time_boundaries = ohlc[
+        time_boundaries = ohlc[
             ohlc[f'previous_bull_bear_side_{effective_time}'] != ohlc[f'bull_bear_side_{effective_time}']]
-        time_boundaries = t_time_boundaries[[f'bull_bear_side_{effective_time}', ]]
-        for i in range(len(time_boundaries)):
-            # todo: trace to here
-            if i < len(time_boundaries) - 1:
-                time_boundaries.at[time_boundaries.index[i], 'end'] = ohlc.loc[:time_boundaries.index[i + 1]].index[-1]
-            else:
-                time_boundaries.at[time_boundaries.index[i], 'end'] = ohlc.index[-1]
         time_boundaries['effective_time'] = effective_time
-        pd.concat([boundaries, time_boundaries])
+        time_boundaries['bull_bear_side'] = time_boundaries[f'bull_bear_side_{effective_time}']
+        unnecessary_columns = [i for i in ohlc.columns if
+                               i.startswith('bull_bear_side_') or i.startswith('previous_bull_bear_side_')]
+        time_boundaries.drop(columns=unnecessary_columns, inplace=True)
+        time_of_last_candle = ohlc.index[-1]
+        time_boundaries.loc[:, 'time_of_next'] = time_boundaries.index
+        time_boundaries.loc[:, 'time_of_next'] = time_boundaries['time_of_next'].shift(-1)
+        time_boundaries.loc[time_boundaries.index[-1], 'time_of_next'] = time_of_last_candle
+        time_boundaries.loc[:, 'end'] = ohlc.loc[time_boundaries['time_of_next'], 'time_of_previous'].tolist()
+        time_boundaries.drop(columns=['time_of_next'])
+        boundaries = pd.concat([boundaries, time_boundaries])
     return boundaries
 
 
 def boundary_including_peaks_valleys(peaks_n_valleys: pd.DataFrame, boundary_start: pd.Timestamp,
                                      boundary_end: pd.Timestamp):
-    return peaks_n_valleys.loc[(peaks_n_valleys.index >= boundary_start) & (peaks_n_valleys.index >= boundary_end)]
+    return peaks_n_valleys.loc[(peaks_n_valleys.index >= boundary_start) & (peaks_n_valleys.index <= boundary_end)]
 
 
 def bull_bear_side(ohlc: pd.DataFrame, peaks_n_valley: pd.DataFrame) -> pd.DataFrame:
@@ -87,19 +90,44 @@ def bull_bear_side(ohlc: pd.DataFrame, peaks_n_valley: pd.DataFrame) -> pd.DataF
     return ohlc
 
 
-def plot_bull_bear_side(ohlc: pd.DataFrame, peaks_n_valleys: pd.DataFrame, name):
+MAX_NUMBER_OF_PLOT_SCATTERS = 50
+
+
+def plot_bull_bear_side(ohlc: pd.DataFrame, peaks_n_valleys: pd.DataFrame, boundaries: pd.DataFrame = None,
+                        name: str = '', do_not_show: bool = False, html_path:str = ''):
     fig = plot_peaks_n_valleys(ohlc, peaks=peaks_only(peaks_n_valleys), valleys=valleys_only(peaks_n_valleys),
-                               name=name)
-    _bull_bear_side_boundaries = bull_bear_side_boundaries(ohlc)
-    for effective_time in _bull_bear_side_boundaries['effective_time'].unique():
-        for boundary_index, boundary in _bull_bear_side_boundaries.iterrows():
-            boundary_peaks_n_valleys = boundary_including_peaks_valleys(peaks_n_valleys, boundary.index,
+                               name=name, do_not_show=True)
+    if boundaries is None:
+        boundaries = trend_boundaries(ohlc)
+    remained_number_of_scatters = MAX_NUMBER_OF_PLOT_SCATTERS
+    for effective_time in boundaries['effective_time'].unique():
+        if remained_number_of_scatters <= 0:
+            break
+        for boundary_index, boundary in boundaries.iterrows():
+            if boundary_index == Timestamp('2017-01-04 11:17:00'):
+                pass
+            boundary_peaks_n_valleys = boundary_including_peaks_valleys(peaks_n_valleys, boundary_index,
                                                                         boundary['end'])
             boundary_peaks = peaks_only(boundary_peaks_n_valleys)
             boundary_valleys = valleys_only(boundary_peaks_n_valleys)
-            xs = [boundary_index, boundary_peaks.index, boundary['end'], boundary_valleys.index]
-            ys = [ohlc.loc[boundary_index]['open'], boundary_peaks['high'], ohlc.loc[boundary['end']]['close'],
-                  boundary_valleys['low']]
-            fill_color = 'green' if boundary[f'bull_bear_side_{effective_time}'] == TREND.BULLISH else 'red' if \
-                boundary[f'bull_bear_side_{effective_time}'] == TREND.BEARISH else 'gray'
-            fig.add_scatter(x=xs, y=ys, fill="toself", fillcolor=fill_color, name=effective_time)
+            xs = [boundary_index] + boundary_peaks.index.tolist() + [boundary['end']] + \
+                 sorted(boundary_valleys.index.tolist(), reverse=True)
+            ys = [ohlc.loc[boundary_index, 'open']] + boundary_peaks['high'].values.tolist() + \
+                 [ohlc.loc[boundary['end'], 'close']] + sorted(boundary_valleys['low'].values.tolist(), reverse=True)
+            fill_color = 'green' if boundary['bull_bear_side'] == TREND.BULLISH else \
+                'red' if boundary['bull_bear_side'] == TREND.BEARISH else 'gray'
+            if remained_number_of_scatters > 0:
+                fig.add_scatter(x=xs, y=ys, mode="lines", fill="toself", # fillcolor=fill_color,
+                                fillpattern=dict(fgopacity=0.5, shape='.'),
+                                name=f'{boundary_index} {effective_time}',
+                                line=dict(color=fill_color, width=config.times.index(effective_time) + 1))
+                remained_number_of_scatters -= 1
+            else:
+                break
+
+    if html_path != '':
+        figure_as_html = fig.to_html()
+        with open(html_path, '+w') as f:
+            f.write(figure_as_html)
+    if not do_not_show: fig.show()
+    return fig

@@ -1,6 +1,6 @@
 import pandas as pd
 
-from BullBearSide import bull_bear_side, bull_bear_side_boundaries, plot_bull_bear_side
+from BullBearSide import bull_bear_side, trend_boundaries, plot_bull_bear_side
 from Config import config, TopTYPE
 from PeaksValleys import generate_test_ohlc, generate_peaks_n_valleys_csv, merge_tops
 from test_PeaksValleys import test_time_switching, even_distribution, test_every_peak_is_found, test_strength_of_peaks
@@ -20,8 +20,8 @@ if __name__ == "__main__":
     valleys['peak_or_valley'] = TopTYPE.VALLEY
     peaks_n_valleys = merge_tops(peaks, valleys)
     prices = bull_bear_side(prices, peaks_n_valleys)
-    _boundaries = bull_bear_side_boundaries(prices)
-    plot_bull_bear_side(prices, peaks_n_valleys)
+    _boundaries = trend_boundaries(prices)
+    plot_bull_bear_side(prices, peaks_n_valleys, _boundaries, html_path='test_plot.html')
     # test_bull_bear_side(test_prices, peaks, valleys)
 
 # def test_peaks_valleys():

@@ -1,5 +1,6 @@
 import pandas as pd
 from plotly import graph_objects as plgo
+from plotly.io import to_html
 
 from Config import config
 
@@ -40,3 +41,9 @@ def plotfig(data: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']),
     if save: fig.write_image(f'{config.id}.{name}.png')
 
     return fig
+
+
+def concat_figures(figures: [plgo.Figure]):
+    # todo: test it
+    for figure in figures:
+        print(to_html(figure))
