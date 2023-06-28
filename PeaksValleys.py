@@ -1,4 +1,5 @@
 # import talib as ta
+import os
 from datetime import timedelta
 
 import pandas as pd
@@ -217,5 +218,9 @@ def effective_peak_valleys(peaks_n_valleys: pd.DataFrame, effective_time: str):
 def merge_tops(peaks: pd.DataFrame, valleys: pd.DataFrame) -> pd.DataFrame:
     return pd.concat([peaks, valleys]).sort_index()
 
+
 def read_peaks_n_valleys(date_range_string: str) -> pd.DataFrame:
-    ohlc = pd.read_csv(f'ohlc.{date_range_string}.zip', sep=',', header=0, index_col='date', parse_dates=['date'])
+    if not os.path.isfile(f'peaks_n_valleys.{date_range_string}.zip'):
+        ohlc = pd.read_csv(f'ohlc.{date_range_string}.zip', sep=',', header=0, index_col='date', parse_dates=['date'])
+
+    # todo: not completed
