@@ -39,20 +39,20 @@ def insert_previous_n_next_top(top_type: TopTYPE, peaks_n_valleys, ohlc):
     return ohlc
 
 
-def bull_bear_side_for_effective_time(effective_time: str, ohlc: pd.DataFrame, peaks_n_valley: pd.DataFrame):
+def bull_bear_side_for_effective_time(effective_time: str, ohlca: pd.DataFrame, peaks_n_valley: pd.DataFrame, atr_significance: float = 10/100):
     # Todo: Not tested!
     if effective_time not in config.times:
         raise Exception(f'Unsupported effective_time:{effective_time} expected to be from: [{config.times}]')
     _effective_peaks_n_valley = effective_peak_valleys(peaks_n_valley, effective_time)
-    if any([i not in ohlc.columns for i in
+    if any([i not in ohlca.columns for i in
             [f'{j}_{k}' for j in ['previous', 'next'] for k in [e.value for e in TopTYPE]]]):
-        ohlc = insert_previous_n_next_peaks_n_valleys(_effective_peaks_n_valley, ohlc)
-    ohlc[f'bull_bear_side_{effective_time}'] = TREND.SIDE
-    ohlc.loc[(ohlc.next_valley_value > ohlc.previous_valley_value) & (
-            ohlc.next_peak_value > ohlc.previous_peak_value), f'bull_bear_side_{effective_time}'] = TREND.BULLISH
-    ohlc.loc[(ohlc.next_peak_value < ohlc.previous_peak_value) & (
-            ohlc.next_valley_value < ohlc.previous_valley_value), f'bull_bear_side_{effective_time}'] = TREND.BEARISH
-    return ohlc
+        ohlca = insert_previous_n_next_peaks_n_valleys(_effective_peaks_n_valley, ohlca)
+    ohlca[f'bull_bear_side_{effective_time}'] = TREND.SIDE
+    ohlca.loc[(ohlca.next_valley_value > ohlca.previous_valley_value) & (
+            ohlca.next_peak_value > ohlca.previous_peak_value), f'bull_bear_side_{effective_time}'] = TREND.BULLISH
+    ohlca.loc[(ohlca.next_peak_value < ohlca.previous_peak_value) & (
+            ohlca.next_valley_value < ohlca.previous_valley_value), f'bull_bear_side_{effective_time}'] = TREND.BEARISH
+    return ohlca
 
 
 def trend_boundaries(ohlc: pd.DataFrame):
@@ -84,10 +84,10 @@ def boundary_including_peaks_valleys(peaks_n_valleys: pd.DataFrame, boundary_sta
     return peaks_n_valleys.loc[(peaks_n_valleys.index >= boundary_start) & (peaks_n_valleys.index <= boundary_end)]
 
 
-def bull_bear_side(ohlc: pd.DataFrame, peaks_n_valley: pd.DataFrame) -> pd.DataFrame:
+def bull_bear_side(ohlca: pd.DataFrame, peaks_n_valley: pd.DataFrame) -> pd.DataFrame:
     for effective_time in peaks_n_valley['effective_time'].unique():
-        ohlc = bull_bear_side_for_effective_time(effective_time, ohlc, peaks_n_valley)
-    return ohlc
+        ohlca = bull_bear_side_for_effective_time(effective_time, ohlca, peaks_n_valley)
+    return ohlca
 
 
 MAX_NUMBER_OF_PLOT_SCATTERS = 50

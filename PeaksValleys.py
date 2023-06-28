@@ -11,17 +11,7 @@ from FigurePlotters import plotfig
 DEBUG = True
 
 
-def generate_test_ohlc():
-    test_ohlc_ticks = pd.read_csv(f'{config.files_to_load[0]}.zip', sep=',', header=0, index_col='date',
-                                  parse_dates=['date'], skiprows=range(1, 400320), nrows=1440)
-    file_name = f'ohlc.{test_ohlc_ticks.index[0].strftime("%y-%m-%d.%H-%M")}T' \
-                f'{test_ohlc_ticks.index[-1].strftime("%y-%m-%d.%H-%M")}.zip'
-    test_ohlc_ticks.to_csv(
-        file_name,
-        compression='zip')
-
-
-def generate_peaks_n_valleys_csv():
+def generate_peaks_n_valleys_csv() -> None:
     test_ohlc_ticks = pd.read_csv('ohlc.17-10-06.00-00T17-10-06.23-59.zip', sep=',', header=0, index_col='date',
                                   parse_dates=['date'])
     test_peaks, test_valleys = find_peaks_n_valleys(test_ohlc_ticks)
@@ -35,13 +25,14 @@ def generate_peaks_n_valleys_csv():
         compression='zip')
 
 
-def find_peaks_n_valleys(prices: pd.DataFrame, min_weight=None, significance=None, max_cycles=100):
-    _peaks = find_peak_or_valleys(prices, True, min_weight, significance, max_cycles)
-    _valleys = find_peak_or_valleys(prices, False, min_weight, significance, max_cycles)
+def find_peaks_n_valleys(prices: pd.DataFrame, min_strength=pd.to_timedelta(config.times[2]), significance=None,
+                         max_cycles=100) -> (pd.DataFrame, pd.DataFrame):
+    _peaks = find_peak_or_valleys(prices, True, min_strength, significance, max_cycles)
+    _valleys = find_peak_or_valleys(prices, False, min_strength, significance, max_cycles)
     return _peaks, _valleys
 
 
-def compare_with_next_and_previous(peaks_mode, peaks_valleys):
+def compare_with_next_and_previous(peaks_mode: TopTYPE, peaks_valleys: pd.DataFrame) -> pd.DataFrame:
     if peaks_mode:
         peaks_valleys.insert(len(peaks_valleys.columns), 'next_high', peaks_valleys['high'].shift(-1))
         peaks_valleys.insert(len(peaks_valleys.columns), 'previous_high', peaks_valleys['high'].shift(1))
@@ -57,7 +48,7 @@ def compare_with_next_and_previous(peaks_mode, peaks_valleys):
     return peaks_valleys
 
 
-def calculate_strength(peaks_valleys, valleys_mode, prices):
+def calculate_strength(peaks_valleys: pd.DataFrame, valleys_mode: bool, prices: pd.DataFrame):
     for i in range(len(peaks_valleys.index.values)):
         if DEBUG and peaks_valleys.index[i] == Timestamp('2017-01-04 11:17:00'):
             pass
@@ -73,8 +64,7 @@ def calculate_strength(peaks_valleys, valleys_mode, prices):
             if peaks_valleys.index[i] > prices.index[0]:
                 left_distance = left_peak_distance(i, left_distance, peaks_valleys, prices)
             if peaks_valleys.index[i] < prices.index[-1]:
-                left_distance, right_distance = right_peak_distance(i, left_distance, peaks_valleys, prices,
-                                                                    right_distance)
+                right_distance = right_peak_distance(i, right_distance, peaks_valleys, prices)
         if prices.index[0] < peaks_valleys.index[i] < prices.index[-1] and left_distance == INFINITY_TIME_DELTA:
             peaks_valleys.at[peaks_valleys.index[i], 'strength'] \
                 = min(peaks_valleys.index[i] - prices.index[0], right_distance,
@@ -85,7 +75,8 @@ def calculate_strength(peaks_valleys, valleys_mode, prices):
     return peaks_valleys
 
 
-def left_valley_distance(prices, peaks_valleys, i, left_distance):
+def left_valley_distance(prices: pd.DataFrame, peaks_valleys: pd.DataFrame, i: int,
+                         left_distance: pd.Timedelta) -> pd.Timedelta:
     left_lower_valleys = prices[(prices.index < peaks_valleys.index[i]) &
                                 (prices['low'] < peaks_valleys.iloc[i]['low'])]
     if len(left_lower_valleys.index.values) > 0:
@@ -100,7 +91,8 @@ def left_valley_distance(prices, peaks_valleys, i, left_distance):
     return left_distance
 
 
-def right_valley_distance(prices, peaks_valleys, i, right_distance):
+def right_valley_distance(prices: pd.DataFrame, peaks_valleys: pd.DataFrame, i: int,
+                          right_distance: pd.Timedelta) -> pd.Timedelta:
     right_lower_valleys = prices[(prices.index > peaks_valleys.index[i]) &
                                  (prices['low'] < peaks_valleys.iloc[i]['low'])]
     if len(right_lower_valleys.index.values) > 0:
@@ -114,7 +106,8 @@ def right_valley_distance(prices, peaks_valleys, i, right_distance):
     return right_distance
 
 
-def right_peak_distance(i, left_distance, peaks_valleys, prices, right_distance):
+def right_peak_distance(i: int, right_distance: pd.Timedelta, peaks_valleys: pd.DataFrame,
+                        prices: pd.DataFrame) -> pd.Timedelta:
     right_higher_valleys = prices[(prices.index > peaks_valleys.index[i]) &
                                   (prices['high'] > peaks_valleys.iloc[i]['high'])]
     if len(right_higher_valleys.index.values) > 0:
@@ -125,10 +118,11 @@ def right_peak_distance(i, left_distance, peaks_valleys, prices, right_distance)
         #            (prices['high'] < peaks_valleys.iloc[i]['high'])]
         # if len(lower_candles_before_right_nearest_higher_peak) == 0:
         #     left_distance = timedelta(0)
-    return left_distance, right_distance
+    return right_distance
 
 
-def left_peak_distance(i, left_distance, peaks_valleys, prices):
+def left_peak_distance(i: int, left_distance: pd.Timedelta, peaks_valleys: pd.DataFrame,
+                       prices: pd.DataFrame) -> pd.Timedelta:
     left_higher_peaks = prices[(prices.index < peaks_valleys.index[i]) &
                                (prices['high'] > peaks_valleys.iloc[i]['high'])]
     if len(left_higher_peaks.index.values) > 0:
@@ -142,7 +136,7 @@ def left_peak_distance(i, left_distance, peaks_valleys, prices):
     return left_distance
 
 
-def map_strength_to_frequency(peaks_valleys):
+def map_strength_to_frequency(peaks_valleys: pd.DataFrame) -> pd.DataFrame:
     peaks_valleys.insert(len(peaks_valleys.columns), 'effective_time', None)
 
     for i in range(len(config.times)):
@@ -155,13 +149,12 @@ def map_strength_to_frequency(peaks_valleys):
 
 
 def find_peak_or_valleys(prices: pd.DataFrame, peaks_mode: bool = True, min_strength: timedelta = None,
-                         ignore_n_percent_lowest_strength=None, max_cycles=100):
+                         ignore_n_percent_lowest_strength=None) -> pd.DataFrame:  # , max_cycles=100):
     valleys_mode = not peaks_mode
     peaks_valleys: pd = prices.copy()  # pd.DataFrame(prices.index)
     peaks_valleys.insert(len(peaks_valleys.columns), 'strength', INFINITY_TIME_DELTA)
     peaks_valleys = compare_with_next_and_previous(peaks_mode, peaks_valleys)
     peaks_valleys = peaks_valleys[peaks_valleys['volume'] > 0]
-    # peaks_valleys = peaks_valleys[peaks_valleys['strength'] > timedelta(0)]
     peaks_valleys = calculate_strength(peaks_valleys, valleys_mode, prices)
 
     if min_strength is not None:
@@ -205,15 +198,15 @@ def plot_peaks_n_valleys(ohlc: pd = pd.DataFrame(columns=['open', 'high', 'low',
     return fig
 
 
-def peaks_only(peaks_n_valleys: pd.DataFrame):
+def peaks_only(peaks_n_valleys: pd.DataFrame) -> pd.DataFrame:
     return peaks_n_valleys[peaks_n_valleys['peak_or_valley'] == TopTYPE.PEAK]
 
 
-def valleys_only(peaks_n_valleys: pd.DataFrame):
+def valleys_only(peaks_n_valleys: pd.DataFrame) -> pd.DataFrame:
     return peaks_n_valleys[peaks_n_valleys['peak_or_valley'] == TopTYPE.VALLEY]
 
 
-def effective_peak_valleys(peaks_n_valleys, effective_time):
+def effective_peak_valleys(peaks_n_valleys: pd.DataFrame, effective_time: str):
     try:
         index = config.times.index(effective_time)
     except ValueError as e:
@@ -221,5 +214,5 @@ def effective_peak_valleys(peaks_n_valleys, effective_time):
     return peaks_n_valleys[peaks_n_valleys['effective_time'].isin(config.times[index:])]
 
 
-def merge_tops(peaks, valleys):
+def merge_tops(peaks: pd.DataFrame, valleys: pd.DataFrame) -> pd.DataFrame:
     return pd.concat([peaks, valleys]).sort_index()
