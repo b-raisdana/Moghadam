@@ -7,6 +7,7 @@ from pandas import Timestamp
 from plotly import graph_objects as plgo
 
 from Config import config, INFINITY_TIME_DELTA, TopTYPE
+from DataPreparation import read_file, check_dataframe, read_multi_time_ohlc
 from FigurePlotters import plotfig
 
 DEBUG = True
@@ -224,3 +225,36 @@ def read_peaks_n_valleys(date_range_string: str) -> pd.DataFrame:
         ohlc = pd.read_csv(f'ohlc.{date_range_string}.zip', sep=',', header=0, index_col='date', parse_dates=['date'])
 
     # todo: not completed
+    raise Exception('Not completed!')
+
+
+def check_multi_time_peaks_n_valleys_columns(multi_time_peaks_n_valleys: pd.DataFrame, raise_exception=False) -> bool:
+    return check_dataframe(multi_time_peaks_n_valleys, config.multi_time_peaks_n_valleys_columns, raise_exception)
+
+
+def find_single_time_peaks_n_valleys(ohlc: pd.DataFrame, sort_index: bool = True) -> pd.DataFrame:  # , max_cycles=100):
+    ohlc['next_high'] = ohlc['high'].shift(-1)
+    ohlc['previous_high'] = ohlc['high'].shift(1)
+    ohlc['next_low'] = ohlc['low'].shift(-1)
+    ohlc['previous_low'] = ohlc['low'].shift(1)
+    _peaks = ohlc.loc[(ohlc['high'] > ohlc['previous_high']) & (ohlc['high'] >= ohlc['next_high'])].copy()
+    _peaks['peak_or_valley'] = TopTYPE.PEAK
+    _valleys = ohlc.loc[(ohlc['low'] < ohlc['previous_low']) & (ohlc['low'] >= ohlc['next_low'])].copy()
+    _peaks['peak_or_valley'] = TopTYPE.PEAK
+    _peaks_n_valleys = pd.concat([_peaks, _valleys])
+    return _peaks_n_valleys.sort_index() if sort_index else _peaks_n_valleys
+
+
+def generate_multi_time_peaks_n_valleys(date_range_str):
+    multi_time_ohlc = read_multi_time_ohlc()
+    _peaks_n_valleys = pd.DataFrame()
+    for _, time in enumerate(config.times):
+        time_peaks_n_valleys = find_single_time_peaks_n_valleys(
+            multi_time_ohlc.loc[multi_time_ohlc['effective_time'] == time], sort_index=False)
+        time_peaks_n_valleys['effective_time'] = time
+    _peaks_n_valleys = pd.concat([_peaks_n_valleys, time_peaks_n_valleys])
+    return _peaks_n_valleys.sort_index()
+
+
+def read_multi_time_peaks_n_valleys(date_range_str: str = config.under_process_date_range):
+    return read_file(date_range_str, 'multi_time_peaks_n_valleys', generate_multi_time_peaks_n_valleys)

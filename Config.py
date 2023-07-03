@@ -7,6 +7,7 @@ from enum import Enum
 
 class Config():
     def __init__(self):
+        self.under_process_date_range = config.under_process_date_range,
         self.files_to_load = [
             '17-01-01.0-01TO17-12-31.23-59.1min',
             '17-01-01.0-01TO17-12-31.23-59.5min',
@@ -38,7 +39,11 @@ class Config():
         self.trigger_dept = 16
 
         self.dept_of_analysis = 3
-        self.feature_columns = ['open', 'high', 'low', 'close', 'volume']
+        self.ohlc_columns = ['open', 'high', 'low', 'close', 'volume']
+        self.ohlca_columns = self.ohlc_columns.append('ATR')
+        self.multi_time_ohlca_columns = self.ohlca_columns.append('effective_time')
+        self.multi_time_peaks_n_valleys_columns = self.ohlc_columns.append(
+            ['effective_time', 'strength', 'peak_or_valley'])
 
         self.end_time = '2021-03-01 03:43:00'
 
