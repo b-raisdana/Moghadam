@@ -27,7 +27,7 @@ def generate_peaks_n_valleys_csv() -> None:
         compression='zip')
 
 
-def find_peaks_n_valleys(prices: pd.DataFrame, min_strength=pd.to_timedelta(config.times[2]), significance=None,
+def find_peaks_n_valleys(prices: pd.DataFrame, min_strength=pd.to_timedelta(config.timeframes[2]), significance=None,
                          max_cycles=100) -> (pd.DataFrame, pd.DataFrame):
     _peaks = find_peak_or_valleys(prices, True, min_strength, significance, max_cycles)
     _valleys = find_peak_or_valleys(prices, False, min_strength, significance, max_cycles)
@@ -139,14 +139,14 @@ def left_peak_distance(i: int, left_distance: pd.Timedelta, peaks_valleys: pd.Da
 
 
 def map_strength_to_frequency(peaks_valleys: pd.DataFrame) -> pd.DataFrame:
-    peaks_valleys.insert(len(peaks_valleys.columns), 'effective_time', None)
+    peaks_valleys.insert(len(peaks_valleys.columns), 'timeframe', None)
 
-    for i in range(len(config.times)):
+    for i in range(len(config.timeframes)):
         for t_peak_valley_index in peaks_valleys[
-            peaks_valleys['strength'] > pd.to_timedelta(config.times[i])
+            peaks_valleys['strength'] > pd.to_timedelta(config.timeframes[i])
         ].index.values:
-            peaks_valleys.at[t_peak_valley_index, 'effective_time'] = config.times[i]
-    peaks_valleys = peaks_valleys[pd.notna(peaks_valleys['effective_time'])]
+            peaks_valleys.at[t_peak_valley_index, 'timeframe'] = config.timeframes[i]
+    peaks_valleys = peaks_valleys[pd.notna(peaks_valleys['timeframe'])]
     return peaks_valleys
 
 
@@ -175,8 +175,8 @@ def find_peak_or_valleys(prices: pd.DataFrame, peaks_mode: bool = True, min_stre
 
 
 def plot_peaks_n_valleys(ohlc: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']),
-                         peaks: pd = pd.DataFrame(columns=['high', 'effective_time']),
-                         valleys: pd = pd.DataFrame(columns=['low', 'effective_time']),
+                         peaks: pd = pd.DataFrame(columns=['high', 'timeframe']),
+                         valleys: pd = pd.DataFrame(columns=['low', 'timeframe']),
                          name: str = '', do_not_show: bool = False) -> plgo.Figure:
     fig = plotfig(ohlc, name=name, save=False, do_not_show=True)
     if len(peaks) > 0:
@@ -184,7 +184,7 @@ def plot_peaks_n_valleys(ohlc: pd = pd.DataFrame(columns=['open', 'high', 'low',
                         marker=dict(symbol="triangle-up", color="blue"),
                         hovertemplate="%{text}",
                         text=[
-                            f"{peaks.loc[_x]['effective_time']}@{peaks.loc[_x]['high']}"
+                            f"{peaks.loc[_x]['timeframe']}@{peaks.loc[_x]['high']}"
                             for _x in peaks.index.values]
                         )
     if len(valleys) > 0:
@@ -192,7 +192,7 @@ def plot_peaks_n_valleys(ohlc: pd = pd.DataFrame(columns=['open', 'high', 'low',
                         marker=dict(symbol="triangle-down", color="blue"),
                         hovertemplate="%{text}",
                         text=[
-                            f"{valleys.loc[_x]['effective_time']}@{valleys.loc[_x]['low']}"
+                            f"{valleys.loc[_x]['timeframe']}@{valleys.loc[_x]['low']}"
                             for _x in valleys.index.values]
                         )
         fig.update_layout(hovermode='x unified')
@@ -208,12 +208,12 @@ def valleys_only(peaks_n_valleys: pd.DataFrame) -> pd.DataFrame:
     return peaks_n_valleys[peaks_n_valleys['peak_or_valley'] == TopTYPE.VALLEY]
 
 
-def effective_peak_valleys(peaks_n_valleys: pd.DataFrame, effective_time: str):
+def effective_peak_valleys(peaks_n_valleys: pd.DataFrame, timeframe: str):
     try:
-        index = config.times.index(effective_time)
+        index = config.timeframes.index(timeframe)
     except ValueError as e:
-        raise Exception(f'effective_time:{effective_time} should be in [{config.times}]!')
-    return peaks_n_valleys[peaks_n_valleys['effective_time'].isin(config.times[index:])]
+        raise Exception(f'timeframe:{timeframe} should be in [{config.timeframes}]!')
+    return peaks_n_valleys[peaks_n_valleys['timeframe'].isin(config.timeframes[index:])]
 
 
 def merge_tops(peaks: pd.DataFrame, valleys: pd.DataFrame) -> pd.DataFrame:
@@ -248,10 +248,10 @@ def find_single_time_peaks_n_valleys(ohlc: pd.DataFrame, sort_index: bool = True
 def generate_multi_time_peaks_n_valleys(date_range_str):
     multi_time_ohlc = read_multi_time_ohlc()
     _peaks_n_valleys = pd.DataFrame()
-    for _, time in enumerate(config.times):
+    for _, time in enumerate(config.timeframes):
         time_peaks_n_valleys = find_single_time_peaks_n_valleys(
-            multi_time_ohlc.loc[multi_time_ohlc['effective_time'] == time], sort_index=False)
-        time_peaks_n_valleys['effective_time'] = time
+            multi_time_ohlc.loc[multi_time_ohlc['timeframe'] == time], sort_index=False)
+        time_peaks_n_valleys['timeframe'] = time
     _peaks_n_valleys = pd.concat([_peaks_n_valleys, time_peaks_n_valleys])
     return _peaks_n_valleys.sort_index()
 

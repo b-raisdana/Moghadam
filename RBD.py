@@ -17,11 +17,11 @@ def load_peak_n_valleys() -> pd:
 
 
 def rally_base_drop(peaks_n_valleys: pd):
-    if len(peaks_n_valleys['effective_time'].unique()) > 1:
-        raise Exception('Expected to peaks_n_valleys filtered and grouped by effective_time before!')
-    effective_time = peaks_n_valleys['effective_time'].unique()[0]
+    if len(peaks_n_valleys['timeframe'].unique()) > 1:
+        raise Exception('Expected to peaks_n_valleys filtered and grouped by timeframe before!')
+    timeframe = peaks_n_valleys['timeframe'].unique()[0]
     trend = pd.DataFrame(
-        index=pd.date_range(start=peaks_n_valleys.index[0], end=peaks_n_valleys.index[-1], freq=effective_time))
+        index=pd.date_range(start=peaks_n_valleys.index[0], end=peaks_n_valleys.index[-1], freq=timeframe))
     add_previous_n_next_peaks_n_valleys(peaks_n_valleys, trend)
     trend['trend'] = RALLY_TREND if (
             trend.next_valley > trend.previous_valley and trend.previous_peak > trend.next_peak) \

@@ -32,12 +32,12 @@ def convert_to_ohlca_csv(input_file_path: str) -> None:
 
 def generate_multi_time_ohlca(date_range_str: str = config.under_process_date_range) -> None:
     multi_time_ohlca = read_multi_time_ohlc(date_range_str)
-    for i, time in enumerate(config.times[1:]):
-        multi_time_ohlca.at[multi_time_ohlca['effective_time'] == time, 'ATR'] = ta.ATR(
-            open=multi_time_ohlca.loc[multi_time_ohlca['effective_time'] == time, 'open'],
-            high=multi_time_ohlca.loc[multi_time_ohlca['effective_time'] == time, 'high'],
-            low=multi_time_ohlca.loc[multi_time_ohlca['effective_time'] == time, 'low'],
-            close=multi_time_ohlca.loc[multi_time_ohlca['effective_time'] == time, 'close'],
+    for i, time in enumerate(config.timeframes[1:]):
+        multi_time_ohlca.at[multi_time_ohlca['timeframe'] == time, 'ATR'] = ta.ATR(
+            open=multi_time_ohlca.loc[multi_time_ohlca['timeframe'] == time, 'open'],
+            high=multi_time_ohlca.loc[multi_time_ohlca['timeframe'] == time, 'high'],
+            low=multi_time_ohlca.loc[multi_time_ohlca['timeframe'] == time, 'low'],
+            close=multi_time_ohlca.loc[multi_time_ohlca['timeframe'] == time, 'close'],
         )
     return multi_time_ohlca
 
@@ -59,14 +59,14 @@ def read_multi_time_ohlca(date_range_str: str = config.under_process_date_range)
 
 def generate_multi_time_ohlc(date_range_str: str):
     ohlc = read_ohlc(date_range_str)
-    for _, time in enumerate(config.times[1:]):
-        _time_ohlc_ticks = ohlc.groupby(pd.Grouper(freq=config.times[_])) \
+    for _, time in enumerate(config.timeframes[1:]):
+        _time_ohlc_ticks = ohlc.groupby(pd.Grouper(freq=config.timeframes[_])) \
             .agg({'open': 'first',
                   'close': 'last',
                   'low': 'min',
                   'high': 'max',
                   'volume': 'sum'})
-        _time_ohlc_ticks['effective_time'] = time
+        _time_ohlc_ticks['timeframe'] = time
         ohlc = pd.concat([ohlc, _time_ohlc_ticks]).sort_index()
     ohlc.to_csv(f'multi_time_ohlc.{date_range_str}.zip', compression='zip')
 

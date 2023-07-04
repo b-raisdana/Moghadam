@@ -19,14 +19,14 @@ class Config():
         ]
         self.data_path_preamble = 'https://raw.githubusercontent.com/b-raisdana/BTC-price/main/'
 
-        self.time_shifter = {
+        self.timeframe_shifter = {
             'structure': 0,
             'pattern': -1,
             'trigger': -2,
             'double': -4,
             'hat_trick': -6,
         }
-        self.times = [
+        self.timeframes = [
             '1min',  #: to_offset('1min'),
             '5min',  #: to_offset('5min'),
             '15min',  #: to_offset('15min'),
@@ -35,15 +35,17 @@ class Config():
             '1D',  #: to_offset('1D'),
             '1W',  #: to_offset('1W')
         ]
+        self.structure_timeframes = self.timeframes[2:]
+        self.trigger_timeframes = self.timeframes[:-2]
         self.hat_trick_index = 0
         self.trigger_dept = 16
 
         self.dept_of_analysis = 3
         self.ohlc_columns = ['open', 'high', 'low', 'close', 'volume']
         self.ohlca_columns = self.ohlc_columns.append('ATR')
-        self.multi_time_ohlca_columns = self.ohlca_columns.append('effective_time')
+        self.multi_time_ohlca_columns = self.ohlca_columns.append('timeframe')
         self.multi_time_peaks_n_valleys_columns = self.ohlc_columns.append(
-            ['effective_time', 'strength', 'peak_or_valley'])
+            ['timeframe', 'strength', 'peak_or_valley'])
 
         self.end_time = '2021-03-01 03:43:00'
 

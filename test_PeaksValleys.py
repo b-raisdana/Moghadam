@@ -40,8 +40,8 @@ def even_distribution(peaks: pd, valleys: pd):
 
 
 def test_time_switching():
-    for i in range(1, len(config.times)):
-        _time_ohlc_ticks = base_ohlc_ticks.groupby(pd.Grouper(freq=config.times[i])) \
+    for i in range(1, len(config.timeframes)):
+        _time_ohlc_ticks = base_ohlc_ticks.groupby(pd.Grouper(freq=config.timeframes[i])) \
             .agg({'open': 'first',
                   'close': 'last',
                   'low': 'min',
@@ -50,15 +50,15 @@ def test_time_switching():
 
         _time_peaks, _time_valleys = find_peaks_n_valleys(_time_ohlc_ticks)
 
-        _mapped_peaks_from_base = base_peaks[base_peaks['effective_time'].isin(config.times[i:])]
-        comparable_time_peaks = _time_peaks[['high', 'effective_time']] \
-            .set_index(['high', 'effective_time'])
-        comparable_mapped_base_peaks = _mapped_peaks_from_base[['high', 'effective_time']] \
-            .set_index(['high', 'effective_time'])
+        _mapped_peaks_from_base = base_peaks[base_peaks['timeframe'].isin(config.timeframes[i:])]
+        comparable_time_peaks = _time_peaks[['high', 'timeframe']] \
+            .set_index(['high', 'timeframe'])
+        comparable_mapped_base_peaks = _mapped_peaks_from_base[['high', 'timeframe']] \
+            .set_index(['high', 'timeframe'])
         try:
             assert len(comparable_time_peaks.index.isin(comparable_mapped_base_peaks.index)) == \
                    len(comparable_time_peaks)
-            # assert _time_peaks.values == base_peaks[base_peaks['effective_time'].isin(config.times[i:])].values
+            # assert _time_peaks.values == base_peaks[base_peaks['timeframe'].isin(config.times[i:])].values
         except Exception as e:
             # plot_ohlc_with_peaks_n_valleys(ohlc=base_ohlc_ticks, name=f'base_ohlc_ticks  {config.times[i]}',
             #                                peaks=_mapped_peaks_from_base)
@@ -70,18 +70,18 @@ def test_time_switching():
             print(comparable_mapped_base_peaks)
             raise e
 
-        _mapped_valleys_from_base = base_valleys[base_valleys['effective_time'].isin(config.times[i:])]
-        comparable_time_valleys = _time_valleys[['low', 'effective_time']] \
-            .set_index(['low', 'effective_time'])
-        comparable_mapped_base_valleys = _mapped_valleys_from_base[['low', 'effective_time']] \
-            .set_index(['low', 'effective_time'])
+        _mapped_valleys_from_base = base_valleys[base_valleys['timeframe'].isin(config.timeframes[i:])]
+        comparable_time_valleys = _time_valleys[['low', 'timeframe']] \
+            .set_index(['low', 'timeframe'])
+        comparable_mapped_base_valleys = _mapped_valleys_from_base[['low', 'timeframe']] \
+            .set_index(['low', 'timeframe'])
         try:
             assert len(comparable_time_valleys.index.isin(comparable_mapped_base_valleys.index)) == \
                    len(comparable_time_valleys)
         except Exception as e:
-            plot_peaks_n_valleys(ohlc=base_ohlc_ticks, name=f'base_ohlc_ticks  {config.times[i]}',
+            plot_peaks_n_valleys(ohlc=base_ohlc_ticks, name=f'base_ohlc_ticks  {config.timeframes[i]}',
                                  valleys=_mapped_valleys_from_base)
-            plot_peaks_n_valleys(ohlc=_time_ohlc_ticks, name=f'_time_ohlc_ticks {config.times[i]}',
+            plot_peaks_n_valleys(ohlc=_time_ohlc_ticks, name=f'_time_ohlc_ticks {config.timeframes[i]}',
                                  peaks=_time_peaks, valleys=_time_valleys)
             # todo: ValueError: Can only compare identically-labeled DataFrame objects
             print(f"comparable_time_valleys({comparable_time_valleys.columns}):")
