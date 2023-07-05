@@ -7,7 +7,7 @@ from pandas import Timestamp
 from plotly import graph_objects as plgo
 
 from Config import config, INFINITY_TIME_DELTA, TopTYPE
-from DataPreparation import read_file, check_dataframe, read_multi_time_ohlc
+from DataPreparation import read_file, check_dataframe, read_multi_timeframe_ohlc
 from FigurePlotters import plotfig
 
 DEBUG = True
@@ -228,11 +228,11 @@ def read_peaks_n_valleys(date_range_string: str) -> pd.DataFrame:
     raise Exception('Not completed!')
 
 
-def check_multi_time_peaks_n_valleys_columns(multi_time_peaks_n_valleys: pd.DataFrame, raise_exception=False) -> bool:
-    return check_dataframe(multi_time_peaks_n_valleys, config.multi_time_peaks_n_valleys_columns, raise_exception)
+def check_multi_timeframe_peaks_n_valleys_columns(multi_timeframe_peaks_n_valleys: pd.DataFrame, raise_exception=False) -> bool:
+    return check_dataframe(multi_timeframe_peaks_n_valleys, config.multi_timeframe_peaks_n_valleys_columns, raise_exception)
 
 
-def find_single_time_peaks_n_valleys(ohlc: pd.DataFrame, sort_index: bool = True) -> pd.DataFrame:  # , max_cycles=100):
+def find_single_timeframe_peaks_n_valleys(ohlc: pd.DataFrame, sort_index: bool = True) -> pd.DataFrame:  # , max_cycles=100):
     ohlc['next_high'] = ohlc['high'].shift(-1)
     ohlc['previous_high'] = ohlc['high'].shift(1)
     ohlc['next_low'] = ohlc['low'].shift(-1)
@@ -245,16 +245,16 @@ def find_single_time_peaks_n_valleys(ohlc: pd.DataFrame, sort_index: bool = True
     return _peaks_n_valleys.sort_index() if sort_index else _peaks_n_valleys
 
 
-def generate_multi_time_peaks_n_valleys(date_range_str):
-    multi_time_ohlc = read_multi_time_ohlc()
+def generate_multi_timeframe_peaks_n_valleys(date_range_str):
+    multi_timeframe_ohlc = read_multi_timeframe_ohlc()
     _peaks_n_valleys = pd.DataFrame()
     for _, time in enumerate(config.timeframes):
-        time_peaks_n_valleys = find_single_time_peaks_n_valleys(
-            multi_time_ohlc.loc[multi_time_ohlc['timeframe'] == time], sort_index=False)
+        time_peaks_n_valleys = find_single_timeframe_peaks_n_valleys(
+            multi_timeframe_ohlc.loc[multi_timeframe_ohlc['timeframe'] == time], sort_index=False)
         time_peaks_n_valleys['timeframe'] = time
     _peaks_n_valleys = pd.concat([_peaks_n_valleys, time_peaks_n_valleys])
     return _peaks_n_valleys.sort_index()
 
 
-def read_multi_time_peaks_n_valleys(date_range_str: str = config.under_process_date_range):
-    return read_file(date_range_str, 'multi_time_peaks_n_valleys', generate_multi_time_peaks_n_valleys)
+def read_multi_timeframe_peaks_n_valleys(date_range_str: str = config.under_process_date_range):
+    return read_file(date_range_str, 'multi_timeframe_peaks_n_valleys', generate_multi_timeframe_peaks_n_valleys)

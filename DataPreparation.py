@@ -15,80 +15,57 @@ def generate_test_ohlc():
     test_ohlc_ticks.to_csv(file_name, compression='zip')
 
 
-def insert_atr(ohlc: pd.DataFrame) -> pd.DataFrame:
-    _ATR = ta.ATR(high=ohlc['high'].values, low=ohlc['low'].values, open=ohlc['open'].values,
-                  close=ohlc['close'].values)
-    ohlc['ATR'] = _ATR
-    return ohlc
+def insert_atr(single_timeframe_ohlc: pd.DataFrame) -> pd.DataFrame:
+    _ATR = ta.ATR(high=single_timeframe_ohlc['high'].values, low=single_timeframe_ohlc['low'].values,
+                  open=single_timeframe_ohlc['open'].values,
+                  close=single_timeframe_ohlc['close'].values)
+    single_timeframe_ohlc['ATR'] = _ATR
+    return single_timeframe_ohlc
 
 
-def convert_to_ohlca_csv(input_file_path: str) -> None:
-    if not input_file_path.startswith('ohlc') or input_file_path.startswith('ohlca'):
-        raise Exception('input_file expected to start with "ohlc" and does not start with "ohlca"!')
-    ohlc = pd.read_csv(input_file_path, sep=',', header=0, index_col='date', parse_dates=['date'])
+def generate_ohlca(date_range_str: str) -> None:
+    # if not input_file_path.startswith('ohlc') or input_file_path.startswith('ohlca'):
+    #     raise Exception('input_file expected to start with "ohlc" and does not start with "ohlca"!')
+    ohlc = pd.read_csv(f'ohlc.{date_range_str}.zip', sep=',', header=0, index_col='date', parse_dates=['date'])
     ohlca = insert_atr(ohlc)
-    ohlca.to_csv(input_file_path.replace('ohlc', 'ohlca', 1), compression='zip')
+    ohlca.to_csv(f'ohlca.{date_range_str}.zip', compression='zip')
 
 
-def generate_multi_time_ohlca(date_range_str: str = config.under_process_date_range) -> None:
-    multi_time_ohlca = read_multi_time_ohlc(date_range_str)
-    for i, time in enumerate(config.timeframes[1:]):
-        multi_time_ohlca.at[multi_time_ohlca['timeframe'] == time, 'ATR'] = ta.ATR(
-            open=multi_time_ohlca.loc[multi_time_ohlca['timeframe'] == time, 'open'],
-            high=multi_time_ohlca.loc[multi_time_ohlca['timeframe'] == time, 'high'],
-            low=multi_time_ohlca.loc[multi_time_ohlca['timeframe'] == time, 'low'],
-            close=multi_time_ohlca.loc[multi_time_ohlca['timeframe'] == time, 'close'],
-        )
-    return multi_time_ohlca
+def generate_multi_timeframe_ohlca(date_range_str: str = config.under_process_date_range) -> None:
+    multi_timeframe_ohlc = read_multi_timeframe_ohlc(date_range_str)
+    multi_timeframe_ohlca = insert_atr(multi_timeframe_ohlc)
+    multi_timeframe_ohlca.to_csv(f'multi_timeframe_ohlca.{date_range_str}.zip', compression='zip')
 
 
-def read_multi_time_ohlca(date_range_str: str = config.under_process_date_range) -> pd.DataFrame:
-    # multi_time_ohlca = None
-    # try:
-    #     multi_time_ohlca = pd.read_csv(f'multi_time_ohlc.{date_range_str}.zip', sep=',', header=0, index_col='date',
-    #                                    parse_dates=['date'], skiprows=range(1, 400320), nrows=1440)
-    # if not check_multi_time_ohlca_columns(multi_time_ohlca):
-    #     generate_multi_time_ohlca(date_range_str)
-    #     multi_time_ohlca = pd.read_csv(f'multi_time_ohlc.{date_range_str}.zip', sep=',', header=0, index_col='date',
-    #                                    parse_dates=['date'], skiprows=range(1, 400320), nrows=1440)
-    #     if not check_multi_time_ohlca_columns(multi_time_ohlca):
-    #         raise Exception(f'Failed to generate_multi_time_ohlca.
-    #               multi_time_ohlca.columns:{multi_time_ohlca.columns}')
-    return read_file(date_range_str, 'multi_time_ohlca', generate_multi_time_ohlca)
-
-
-def generate_multi_time_ohlc(date_range_str: str):
+def generate_multi_timeframe_ohlc(date_range_str: str):
     ohlc = read_ohlc(date_range_str)
     for _, time in enumerate(config.timeframes[1:]):
-        _time_ohlc_ticks = ohlc.groupby(pd.Grouper(freq=config.timeframes[_])) \
+        _timeframe_ohlc_ticks = ohlc.groupby(pd.Grouper(freq=config.timeframes[_])) \
             .agg({'open': 'first',
                   'close': 'last',
                   'low': 'min',
                   'high': 'max',
                   'volume': 'sum'})
-        _time_ohlc_ticks['timeframe'] = time
-        ohlc = pd.concat([ohlc, _time_ohlc_ticks]).sort_index()
-    ohlc.to_csv(f'multi_time_ohlc.{date_range_str}.zip', compression='zip')
+        _timeframe_ohlc_ticks['timeframe'] = time
+        ohlc = pd.concat([ohlc, _timeframe_ohlc_ticks])
+    ohlc.sort_index().to_csv(f'multi_timeframe_ohlc.{date_range_str}.zip', compression='zip')
 
 
-def read_multi_time_ohlc(date_range_str: str = config.under_process_date_range) -> pd.DataFrame:
-    return read_file(date_range_str, 'multi_time_ohlca', generate_multi_time_ohlc)
+def read_multi_timeframe_ohlc(date_range_str: str = config.under_process_date_range) -> pd.DataFrame:
+    return read_file(date_range_str, 'multi_timeframe_ohlc', generate_multi_timeframe_ohlc)
 
 
-def read_file(date_range_str: str, data_frame_type: str, generator: typing.Callable) -> pd.DataFrame:
+def read_file(date_range_str: str, data_frame_type: str, generator: typing.Callable, skiprows=None,
+              nrows=None) -> pd.DataFrame:
     df = None
     try:
         df = pd.read_csv(f'{data_frame_type}.{date_range_str}.zip', sep=',', header=0, index_col='date',
-                         parse_dates=['date'], skiprows=range(1, 400320), nrows=1440)
+                         parse_dates=['date'], skiprows=skiprows, nrows=nrows)
     except:
         pass
-    if (data_frame_type + '_columns') not in dict(config).__dir__():
+    if (data_frame_type + '_columns') not in config.__dir__():
         raise Exception(data_frame_type + '_columns not defined in configuration!')
-    if not check_dataframe(df, dict(config)[data_frame_type + '_columns']):
-        # generator_name = 'generate_' + data_frame_type
-        # generator_func = generator_name()
-        # if not callable(generator_func):
-        #     raise Exception(f'{generator_func}() is not callable!')
+    if df is None or not check_dataframe(df, getattr(config, data_frame_type + '_columns')):
         generator(date_range_str)
         df = pd.read_csv(f'{data_frame_type}.{date_range_str}.zip', sep=',', header=0, index_col='date',
                          parse_dates=['date'], skiprows=range(1, 400320), nrows=1440)
@@ -97,8 +74,8 @@ def read_file(date_range_str: str, data_frame_type: str, generator: typing.Calla
     return df
 
 
-def check_multi_time_ohlca_columns(multi_time_ohlca: pd.DataFrame, raise_exception=False) -> bool:
-    return check_dataframe(multi_time_ohlca, config.multi_time_ohlca_columns, raise_exception)
+def check_multi_timeframe_ohlca_columns(multi_timeframe_ohlca: pd.DataFrame, raise_exception=False) -> bool:
+    return check_dataframe(multi_timeframe_ohlca, config.multi_timeframe_ohlca_columns, raise_exception)
 
 
 def check_dataframe(data_frame: pd.DataFrame, columns: [str], raise_exception=False):
@@ -120,20 +97,21 @@ def check_dataframe(data_frame: pd.DataFrame, columns: [str], raise_exception=Fa
     return True
 
 
+def read_multi_timeframe_ohlca(date_range_str: str = config.under_process_date_range) -> pd.DataFrame:
+    return read_file(date_range_str, 'multi_timeframe_ohlca', generate_multi_timeframe_ohlca)
+
+
 def read_ohlca(date_range_string: str) -> pd.DataFrame:
-    # try:
-    #     ohlca = pd.read_csv(f'ohlca.{date_range_string}.zip', sep=',', header=0, index_col='date', parse_dates=['date'])
-    # except pd.errors.ParserError as e:
-    #     convert_to_ohlca_csv(f'ohlc.{date_range_string}.zip')
-    #     ohlca = pd.read_csv(f'ohlca.{date_range_string}.zip', sep=',', header=0, index_col='date', parse_dates=['date'])
-    #
-    # return ohlca
-    return read_file(date_range_string, 'ohlca')
+    return read_file(date_range_string, 'ohlca', generate_ohlca)
 
 
 def read_ohlc(date_range_string: str) -> pd.DataFrame:
     try:
-        return read_file(date_range_string, 'ohlc')
+        return read_file(date_range_string, 'ohlc', generate_ohlc)
     except:
         log(f'Failed to load ohlc.{date_range_string} try to load ohlca.{date_range_string}')
-        return read_file(date_range_string, 'ohlc')
+        return read_file(date_range_string, 'ohlca', generate_ohlc)
+
+
+def generate_ohlc(date_range_string: str):
+    raise Exception('Not implemented')

@@ -3,11 +3,12 @@ import hashlib
 import json
 from datetime import timedelta
 from enum import Enum
+from typing import List
 
 
 class Config():
     def __init__(self):
-        self.under_process_date_range = config.under_process_date_range,
+        self.under_process_date_range = '17-10-06.00-00T17-10-06.23-59'
         self.files_to_load = [
             '17-01-01.0-01TO17-12-31.23-59.1min',
             '17-01-01.0-01TO17-12-31.23-59.5min',
@@ -42,10 +43,9 @@ class Config():
 
         self.dept_of_analysis = 3
         self.ohlc_columns = ['open', 'high', 'low', 'close', 'volume']
-        self.ohlca_columns = self.ohlc_columns.append('ATR')
-        self.multi_time_ohlca_columns = self.ohlca_columns.append('timeframe')
-        self.multi_time_peaks_n_valleys_columns = self.ohlc_columns.append(
-            ['timeframe', 'strength', 'peak_or_valley'])
+        self.ohlca_columns: List = self.ohlc_columns + ['ATR']
+        self.multi_timeframe_ohlca_columns = self.ohlca_columns + ['timeframe']
+        self.multi_timeframe_peaks_n_valleys_columns = self.ohlc_columns + ['timeframe', 'strength', 'peak_or_valley']
 
         self.end_time = '2021-03-01 03:43:00'
 
