@@ -61,8 +61,6 @@ def batch_plot_to_html(figures: [plgo.Figure], file_name, file_open_mode='+w'):
         f.write(output_html)
 
 
-
-
 # def clone(el):
 #     if isinstance(el, NavigableString):
 #         return type(el)(el)
