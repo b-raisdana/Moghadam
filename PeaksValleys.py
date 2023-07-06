@@ -1,5 +1,4 @@
 # import talib as ta
-import os
 from datetime import timedelta
 
 import pandas as pd
@@ -7,24 +6,28 @@ from pandas import Timestamp
 from plotly import graph_objects as plgo
 
 from Config import config, INFINITY_TIME_DELTA, TopTYPE
-from DataPreparation import read_file, check_dataframe, read_multi_timeframe_ohlc
+from DataPreparation import read_file, check_dataframe, read_multi_timeframe_ohlc, read_ohlc
 from FigurePlotters import plotfig
 
 DEBUG = True
 
 
-def generate_peaks_n_valleys_csv() -> None:
-    test_ohlc_ticks = pd.read_csv('ohlc.17-10-06.00-00T17-10-06.23-59.zip', sep=',', header=0, index_col='date',
-                                  parse_dates=['date'])
-    test_peaks, test_valleys = find_peaks_n_valleys(test_ohlc_ticks)
-    test_peaks.to_csv(
-        f'peaks.{test_ohlc_ticks.index[0].strftime("%y-%m-%d.%H-%M")}T'
-        f'{test_ohlc_ticks.index[-1].strftime("%y-%m-%d.%H-%M")}.zip',
-        compression='zip')
-    test_valleys.to_csv(
-        f'valleys.{test_ohlc_ticks.index[0].strftime("%y-%m-%d.%H-%M")}T'
-        f'{test_ohlc_ticks.index[-1].strftime("%y-%m-%d.%H-%M")}.zip',
-        compression='zip')
+def generate_peaks_n_valleys(date_range_string: str) -> None:
+    # ohlc = pd.read_csv('ohlc.17-10-06.00-00T17-10-06.23-59.zip', sep=',', header=0, index_col='date',
+    #                               parse_dates=['date'])
+    ohlc = read_ohlc(date_range_string)
+    _peaks, _valleys = find_peaks_n_valleys(ohlc)
+    # _peaks.to_csv(
+    #     f'peaks.{ohlc.index[0].strftime("%y-%m-%d.%H-%M")}T'
+    #     f'{ohlc.index[-1].strftime("%y-%m-%d.%H-%M")}.zip',
+    #     compression='zip')
+    # _valleys.to_csv(
+    #     f'valleys.{ohlc.index[0].strftime("%y-%m-%d.%H-%M")}T'
+    #     f'{ohlc.index[-1].strftime("%y-%m-%d.%H-%M")}.zip',
+    #     compression='zip')
+    peaks_n_valleys = pd.concat([_peaks, _valleys]).sort_index()
+    peaks_n_valleys.to_csv(f'peaks_n_valleys.{date_range_string}.zip', compression='zip')
+    plot_peaks_n_valleys(peaks_n_valleys)
 
 
 def find_peaks_n_valleys(prices: pd.DataFrame, min_strength=pd.to_timedelta(config.timeframes[2]), significance=None,
@@ -221,18 +224,22 @@ def merge_tops(peaks: pd.DataFrame, valleys: pd.DataFrame) -> pd.DataFrame:
 
 
 def read_peaks_n_valleys(date_range_string: str) -> pd.DataFrame:
-    if not os.path.isfile(f'peaks_n_valleys.{date_range_string}.zip'):
-        ohlc = pd.read_csv(f'ohlc.{date_range_string}.zip', sep=',', header=0, index_col='date', parse_dates=['date'])
-
-    # todo: not completed
-    raise Exception('Not completed!')
-
-
-def check_multi_timeframe_peaks_n_valleys_columns(multi_timeframe_peaks_n_valleys: pd.DataFrame, raise_exception=False) -> bool:
-    return check_dataframe(multi_timeframe_peaks_n_valleys, config.multi_timeframe_peaks_n_valleys_columns, raise_exception)
+    # if not os.path.isfile(f'peaks_n_valleys.{date_range_string}.zip'):
+    #     ohlc = pd.read_csv(f'ohlc.{date_range_string}.zip', sep=',', header=0, index_col='date', parse_dates=['date'])
+    #
+    # # todo: not completed
+    # raise Exception('Not completed!')
+    read_file(date_range_string, 'peaks_n_valleys', generate_peaks_n_valleys)
 
 
-def find_single_timeframe_peaks_n_valleys(ohlc: pd.DataFrame, sort_index: bool = True) -> pd.DataFrame:  # , max_cycles=100):
+def check_multi_timeframe_peaks_n_valleys_columns(multi_timeframe_peaks_n_valleys: pd.DataFrame,
+                                                  raise_exception=False) -> bool:
+    return check_dataframe(multi_timeframe_peaks_n_valleys, config.multi_timeframe_peaks_n_valleys_columns,
+                           raise_exception)
+
+
+def find_single_timeframe_peaks_n_valleys(ohlc: pd.DataFrame,
+                                          sort_index: bool = True) -> pd.DataFrame:  # , max_cycles=100):
     ohlc['next_high'] = ohlc['high'].shift(-1)
     ohlc['previous_high'] = ohlc['high'].shift(1)
     ohlc['next_low'] = ohlc['low'].shift(-1)
@@ -245,6 +252,11 @@ def find_single_timeframe_peaks_n_valleys(ohlc: pd.DataFrame, sort_index: bool =
     return _peaks_n_valleys.sort_index() if sort_index else _peaks_n_valleys
 
 
+def plot_multi_timeframe_peaks_n_valleys(_peaks_n_valleys):
+    # todo: implement   plot_multi_timeframe_peaks_n_valleys
+    pass
+
+
 def generate_multi_timeframe_peaks_n_valleys(date_range_str):
     multi_timeframe_ohlc = read_multi_timeframe_ohlc()
     _peaks_n_valleys = pd.DataFrame()
@@ -252,8 +264,11 @@ def generate_multi_timeframe_peaks_n_valleys(date_range_str):
         time_peaks_n_valleys = find_single_timeframe_peaks_n_valleys(
             multi_timeframe_ohlc.loc[multi_timeframe_ohlc['timeframe'] == time], sort_index=False)
         time_peaks_n_valleys['timeframe'] = time
-    _peaks_n_valleys = pd.concat([_peaks_n_valleys, time_peaks_n_valleys])
-    return _peaks_n_valleys.sort_index()
+        _peaks_n_valleys = pd.concat([_peaks_n_valleys, time_peaks_n_valleys])
+    _peaks_n_valleys = _peaks_n_valleys.sort_index()
+    _peaks_n_valleys.to_csv(f'multi_timeframe_peaks_n_valleys.{date_range_str}.zip', compression='zip')
+    plot_multi_timeframe_peaks_n_valleys(_peaks_n_valleys)
+    # return _peaks_n_valleys
 
 
 def read_multi_timeframe_peaks_n_valleys(date_range_str: str = config.under_process_date_range):

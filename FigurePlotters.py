@@ -1,4 +1,6 @@
 import pandas as pd
+import plotly
+from bs4 import BeautifulSoup, Tag, NavigableString
 from plotly import graph_objects as plgo
 from plotly.io import to_html
 
@@ -43,7 +45,34 @@ def plotfig(data: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']),
     return fig
 
 
-def concat_figures(figures: [plgo.Figure]):
+def batch_plot_to_html(figures: [plgo.Figure], file_name, file_open_mode='+w'):
     # todo: test it
-    for figure in figures:
-        print(to_html(figure))
+    # concatenated_body = ''
+    # body_children_of_figures = [BeautifulSoup(figure).body.findChildren() for figure in figures.to_html]
+    # final_figure = BeautifulSoup(figures[0])
+    # for child in body_children_of_figures:
+    #     final_figure.body.append(copy.copy(child))
+    # output_html = figures[0].to_html()
+    output_html = '<html><head></head><body>'
+    for fig in figures:
+        output_html += plotly.io.to_html(fig, full_html=False)
+    output_html += '</body></html>'
+    with open(file_name, file_open_mode) as f:
+        f.write(output_html)
+
+
+
+
+# def clone(el):
+#     if isinstance(el, NavigableString):
+#         return type(el)(el)
+#
+#     copy = Tag(None, el.builder, el.name, el.namespace, el.nsprefix)
+#     # work around bug where there is no builder set
+#     # https://bugs.launchpad.net/beautifulsoup/+bug/1307471
+#     copy.attrs = dict(el.attrs)
+#     for attr in ('can_be_empty_element', 'hidden'):
+#         setattr(copy, attr, getattr(el, attr))
+#     for child in el.contents:
+#         copy.append(clone(child))
+#     return copy

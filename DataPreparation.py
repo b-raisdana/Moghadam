@@ -17,10 +17,14 @@ def generate_test_ohlc():
 
 def insert_atr(single_timeframe_ohlc: pd.DataFrame) -> pd.DataFrame:
     _ATR = ta.ATR(high=single_timeframe_ohlc['high'].values, low=single_timeframe_ohlc['low'].values,
-                  open=single_timeframe_ohlc['open'].values,
                   close=single_timeframe_ohlc['close'].values)
     single_timeframe_ohlc['ATR'] = _ATR
     return single_timeframe_ohlc
+
+
+def plot_ohlca(ohlca):
+    # todo: implement plot_ohlca
+    pass
 
 
 def generate_ohlca(date_range_str: str) -> None:
@@ -29,12 +33,24 @@ def generate_ohlca(date_range_str: str) -> None:
     ohlc = pd.read_csv(f'ohlc.{date_range_str}.zip', sep=',', header=0, index_col='date', parse_dates=['date'])
     ohlca = insert_atr(ohlc)
     ohlca.to_csv(f'ohlca.{date_range_str}.zip', compression='zip')
+    plot_ohlca(ohlca)
+
+
+def plot_multi_timeframe_ohlca(multi_timeframe_ohlca):
+    # todo: not implemented
+    pass
 
 
 def generate_multi_timeframe_ohlca(date_range_str: str = config.under_process_date_range) -> None:
     multi_timeframe_ohlc = read_multi_timeframe_ohlc(date_range_str)
     multi_timeframe_ohlca = insert_atr(multi_timeframe_ohlc)
     multi_timeframe_ohlca.to_csv(f'multi_timeframe_ohlca.{date_range_str}.zip', compression='zip')
+    plot_multi_timeframe_ohlca(multi_timeframe_ohlca)
+
+
+def plot_multi_timeframe_ohlc():
+    # todo: implement plot_multi_timeframe_ohlc
+    pass
 
 
 def generate_multi_timeframe_ohlc(date_range_str: str):
@@ -48,7 +64,9 @@ def generate_multi_timeframe_ohlc(date_range_str: str):
                   'volume': 'sum'})
         _timeframe_ohlc_ticks['timeframe'] = time
         ohlc = pd.concat([ohlc, _timeframe_ohlc_ticks])
-    ohlc.sort_index().to_csv(f'multi_timeframe_ohlc.{date_range_str}.zip', compression='zip')
+    ohlc = ohlc.sort_index()
+    ohlc.to_csv(f'multi_timeframe_ohlc.{date_range_str}.zip', compression='zip')
+    plot_multi_timeframe_ohlc(ohlc)
 
 
 def read_multi_timeframe_ohlc(date_range_str: str = config.under_process_date_range) -> pd.DataFrame:
@@ -57,6 +75,7 @@ def read_multi_timeframe_ohlc(date_range_str: str = config.under_process_date_ra
 
 def read_file(date_range_str: str, data_frame_type: str, generator: typing.Callable, skiprows=None,
               nrows=None) -> pd.DataFrame:
+    # todo: add cache to read_file
     df = None
     try:
         df = pd.read_csv(f'{data_frame_type}.{date_range_str}.zip', sep=',', header=0, index_col='date',
@@ -114,4 +133,4 @@ def read_ohlc(date_range_string: str) -> pd.DataFrame:
 
 
 def generate_ohlc(date_range_string: str):
-    raise Exception('Not implemented')
+    raise Exception('Not implemented so we expect to file exists.')

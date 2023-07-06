@@ -44,6 +44,7 @@ class Config():
         self.dept_of_analysis = 3
         self.ohlc_columns = ['open', 'high', 'low', 'close', 'volume']
         self.ohlca_columns: List = self.ohlc_columns + ['ATR']
+        self.multi_timeframe_ohlc_columns = self.ohlc_columns + ['timeframe']
         self.multi_timeframe_ohlca_columns = self.ohlca_columns + ['timeframe']
         self.multi_timeframe_peaks_n_valleys_columns = self.ohlc_columns + ['timeframe', 'strength', 'peak_or_valley']
 

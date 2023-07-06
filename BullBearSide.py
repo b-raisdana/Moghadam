@@ -2,7 +2,9 @@ import pandas as pd
 from pandas import Timestamp
 
 from Config import TopTYPE, config, TREND
-from PeaksValleys import plot_peaks_n_valleys, peaks_only, valleys_only, effective_peak_valleys
+from DataPreparation import read_file, read_ohlca
+from PeaksValleys import plot_peaks_n_valleys, peaks_only, valleys_only, effective_peak_valleys, \
+    read_multi_timeframe_peaks_n_valleys
 
 
 def insert_previous_n_next_peaks_n_valleys(peaks_n_valleys, ohlc):
@@ -62,28 +64,33 @@ def candles_trend_single_timeframe(timeframe: str, ohlca: pd.DataFrame, peaks_n_
     return ohlca
 
 
-def trend_boundaries(candle_trend: pd.DataFrame):
-    effective_times = [i.replace('bull_bear_side_', '') for i in candle_trend.columns if i.startswith('bull_bear_side_')]
+def multi_timeframe_trend_boundaries(multi_timeframe_candle_trend: pd.DataFrame):
+    effective_times = [i.replace('bull_bear_side_', '') for i in multi_timeframe_candle_trend.columns if
+                       i.startswith('bull_bear_side_')]
     for _, timeframe in enumerate(config.structure_timeframes):
-        if f'previous_bull_bear_side_{timeframe}' not in candle_trend.columns:
-            raise Exception(f'previous_bull_bear_side_{timeframe} not found in candle_trend:({candle_trend.columns})')
+        if f'previous_bull_bear_side_{timeframe}' not in multi_timeframe_candle_trend.columns:
+            raise Exception(
+                f'previous_bull_bear_side_{timeframe} not found in candle_trend:({multi_timeframe_candle_trend.columns})')
     boundaries = pd.DataFrame()
-    candle_trend['time_of_previous'] = candle_trend.index.shift(-1, freq='1min')
+    multi_timeframe_candle_trend['time_of_previous'] = multi_timeframe_candle_trend.index.shift(-1, freq='1min')
     for timeframe in effective_times:
         # todo: move effective time to a column to prevent multiple columns for different effective times.
-        candle_trend[f'previous_bull_bear_side_{timeframe}'] = candle_trend[f'bull_bear_side_{timeframe}'].shift(1)
-        time_boundaries = candle_trend[
-            candle_trend[f'previous_bull_bear_side_{timeframe}'] != candle_trend[f'bull_bear_side_{timeframe}']]
+        multi_timeframe_candle_trend[f'previous_bull_bear_side_{timeframe}'] = multi_timeframe_candle_trend[
+            f'bull_bear_side_{timeframe}'].shift(1)
+        time_boundaries = multi_timeframe_candle_trend[
+            multi_timeframe_candle_trend[f'previous_bull_bear_side_{timeframe}'] != multi_timeframe_candle_trend[
+                f'bull_bear_side_{timeframe}']]
         time_boundaries['timeframe'] = timeframe
         time_boundaries['bull_bear_side'] = time_boundaries[f'bull_bear_side_{timeframe}']
-        unnecessary_columns = [i for i in candle_trend.columns if
+        unnecessary_columns = [i for i in multi_timeframe_candle_trend.columns if
                                i.startswith('bull_bear_side_') or i.startswith('previous_bull_bear_side_')]
         time_boundaries.drop(columns=unnecessary_columns, inplace=True)
-        time_of_last_candle = candle_trend.index[-1]
+        time_of_last_candle = multi_timeframe_candle_trend.index[-1]
         time_boundaries.loc[:, 'time_of_next'] = time_boundaries.index
         time_boundaries.loc[:, 'time_of_next'] = time_boundaries['time_of_next'].shift(-1)
         time_boundaries.loc[time_boundaries.index[-1], 'time_of_next'] = time_of_last_candle
-        time_boundaries.loc[:, 'end'] = candle_trend.loc[time_boundaries['time_of_next'], 'time_of_previous'].tolist()
+        time_boundaries.loc[:, 'end'] = multi_timeframe_candle_trend.loc[
+            time_boundaries['time_of_next'], 'time_of_previous'].tolist()
         time_boundaries.drop(columns=['time_of_next'])
         boundaries = pd.concat([boundaries, time_boundaries])
     return boundaries
@@ -94,21 +101,16 @@ def boundary_including_peaks_valleys(peaks_n_valleys: pd.DataFrame, boundary_sta
     return peaks_n_valleys.loc[(peaks_n_valleys.index >= boundary_start) & (peaks_n_valleys.index <= boundary_end)]
 
 
-def candles_trend_multi_timeframe(ohlca: pd.DataFrame, peaks_n_valleys: pd.DataFrame) -> pd.DataFrame:
-    for timeframe in peaks_n_valleys['timeframe'].unique():
-        ohlca = candles_trend_single_timeframe(timeframe, ohlca, peaks_n_valleys)
-    return ohlca
-
-
 MAX_NUMBER_OF_PLOT_SCATTERS = 50
 
 
-def plot_bull_bear_side(ohlc: pd.DataFrame, peaks_n_valleys: pd.DataFrame, boundaries: pd.DataFrame = None,
+def plot_bull_bear_side(ohlc: pd.DataFrame, peaks_n_valleys: pd.DataFrame, boundaries: pd.DataFrame,
                         name: str = '', do_not_show: bool = False, html_path: str = ''):
     fig = plot_peaks_n_valleys(ohlc, peaks=peaks_only(peaks_n_valleys), valleys=valleys_only(peaks_n_valleys),
                                name=name, do_not_show=True)
-    if boundaries is None:
-        boundaries = trend_boundaries(ohlc)
+    # if boundaries is None:
+    #     boundaries = multi_timeframe_trend_boundaries(multi_timeframe_candle_trend)
+
     remained_number_of_scatters = MAX_NUMBER_OF_PLOT_SCATTERS
     for timeframe in boundaries['timeframe'].unique():
         if remained_number_of_scatters <= 0:
@@ -141,3 +143,49 @@ def plot_bull_bear_side(ohlc: pd.DataFrame, peaks_n_valleys: pd.DataFrame, bound
             f.write(figure_as_html)
     if not do_not_show: fig.show()
     return fig
+
+
+def read_multi_timeframe_trend_boundaries(date_range_str: str):
+    return read_file(date_range_str, 'trend_boundaries', generate_multi_timeframe_trend_boundaries)
+
+
+def plot_multi_timeframe_trend_boundaries(multi_timeframe_trend_boundaries):
+    # todo: implement plot_multi_timeframe_trend_boundaries
+    figures = []
+    for _, timeframe in enumerate(multi_timeframe_trend_boundaries['timeframe'].unique()):
+        _figure = plot_single_time_frame_trend_boundaries(
+            multi_timeframe_trend_boundaries[multi_timeframe_trend_boundaries['timeframe'] == timeframe])
+        figures.append(_figure)
+    batch_plot(figures)
+
+
+def generate_multi_timeframe_trend_boundaries(date_range_str: str):
+    multi_timeframe_candle_trend = read_multi_timeframe_candle_trend(date_range_str)
+    trend_boundaries = multi_timeframe_trend_boundaries(multi_timeframe_candle_trend)
+    trend_boundaries.to_csv(f'multi_timeframe_trend_boundaries.{date_range_str}.zip', compression='zip')
+    plot_multi_timeframe_trend_boundaries(trend_boundaries)
+
+
+def read_multi_timeframe_candle_trend(date_range_str: str):
+    return read_file(date_range_str, 'multi_timeframe_candle_trend', generate_multi_timeframe_candle_trend)
+
+
+def plot_multi_timeframe_candle_trend(multi_timeframe_candle_trend):
+    # todo: implement plot_multi_timeframe_candle_trend
+    pass
+
+
+def generate_multi_timeframe_candle_trend(date_range_str: str):
+    # def candles_trend_multi_timeframe(ohlca: pd.DataFrame, peaks_n_valleys: pd.DataFrame) -> pd.DataFrame:
+    #     for timeframe in peaks_n_valleys['timeframe'].unique():
+    #         ohlca = candles_trend_single_timeframe(timeframe, ohlca, peaks_n_valleys)
+    #     return ohlca
+    ohlca = read_ohlca(date_range_str)
+    peaks_n_valleys = read_multi_timeframe_peaks_n_valleys(date_range_str)
+    multi_timeframe_candle_trend = pd.DataFrame()
+    for timeframe in peaks_n_valleys['timeframe'].unique():
+        multi_timeframe_candle_trend = pd.concat([multi_timeframe_candle_trend,
+                                                  candles_trend_single_timeframe(timeframe, ohlca, peaks_n_valleys)])
+    multi_timeframe_candle_trend = multi_timeframe_candle_trend.sort_index()
+    multi_timeframe_candle_trend.to_csv(f'multi_timeframe_candle_trend.{date_range_str}.zip')
+    plot_multi_timeframe_candle_trend(multi_timeframe_candle_trend)
