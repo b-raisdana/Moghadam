@@ -211,12 +211,12 @@ def valleys_only(peaks_n_valleys: pd.DataFrame) -> pd.DataFrame:
     return peaks_n_valleys[peaks_n_valleys['peak_or_valley'] == TopTYPE.VALLEY]
 
 
-def effective_peak_valleys(peaks_n_valleys: pd.DataFrame, timeframe: str):
+def higher_or_eq_timeframe_peaks_n_valleys(peaks_n_valleys: pd.DataFrame, timeframe: str):
     try:
         index = config.timeframes.index(timeframe)
     except ValueError as e:
         raise Exception(f'timeframe:{timeframe} should be in [{config.timeframes}]!')
-    return peaks_n_valleys[peaks_n_valleys['timeframe'].isin(config.timeframes[index:])]
+    return peaks_n_valleys.loc[(slice(None), config.timeframes[index:]), :]
 
 
 def merge_tops(peaks: pd.DataFrame, valleys: pd.DataFrame) -> pd.DataFrame:
@@ -226,8 +226,6 @@ def merge_tops(peaks: pd.DataFrame, valleys: pd.DataFrame) -> pd.DataFrame:
 def read_peaks_n_valleys(date_range_string: str) -> pd.DataFrame:
     # if not os.path.isfile(f'peaks_n_valleys.{date_range_string}.zip'):
     #     ohlc = pd.read_csv(f'ohlc.{date_range_string}.zip', sep=',', header=0, index_col='date', parse_dates=['date'])
-    #
-    # # todo: not completed
     # raise Exception('Not completed!')
     read_file(date_range_string, 'peaks_n_valleys', generate_peaks_n_valleys)
 
@@ -247,8 +245,9 @@ def find_single_timeframe_peaks_n_valleys(ohlc: pd.DataFrame,
     _peaks = ohlc.loc[(ohlc['high'] > ohlc['previous_high']) & (ohlc['high'] >= ohlc['next_high'])].copy()
     _peaks['peak_or_valley'] = TopTYPE.PEAK
     _valleys = ohlc.loc[(ohlc['low'] < ohlc['previous_low']) & (ohlc['low'] >= ohlc['next_low'])].copy()
-    _peaks['peak_or_valley'] = TopTYPE.PEAK
+    _valleys['peak_or_valley'] = TopTYPE.VALLEY
     _peaks_n_valleys = pd.concat([_peaks, _valleys])
+    _peaks_n_valleys = _peaks_n_valleys.loc[:, ['open', 'high', 'low', 'close', 'volume', 'peak_or_valley']]
     return _peaks_n_valleys.sort_index() if sort_index else _peaks_n_valleys
 
 
@@ -260,10 +259,10 @@ def plot_multi_timeframe_peaks_n_valleys(_peaks_n_valleys):
 def generate_multi_timeframe_peaks_n_valleys(date_range_str):
     multi_timeframe_ohlc = read_multi_timeframe_ohlc()
     _peaks_n_valleys = pd.DataFrame()
-    for _, time in enumerate(config.timeframes):
+    for _, timeframe in enumerate(config.timeframes):
         time_peaks_n_valleys = find_single_timeframe_peaks_n_valleys(
-            multi_timeframe_ohlc.loc[multi_timeframe_ohlc['timeframe'] == time], sort_index=False)
-        time_peaks_n_valleys['timeframe'] = time
+            multi_timeframe_ohlc.loc[(slice(None), timeframe), :], sort_index=False)
+        # time_peaks_n_valleys['timeframe'] = timeframe
         _peaks_n_valleys = pd.concat([_peaks_n_valleys, time_peaks_n_valleys])
     _peaks_n_valleys = _peaks_n_valleys.sort_index()
     _peaks_n_valleys.to_csv(f'multi_timeframe_peaks_n_valleys.{date_range_str}.zip', compression='zip')

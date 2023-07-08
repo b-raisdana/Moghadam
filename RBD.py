@@ -8,9 +8,9 @@ from PeaksValleys import merge_tops
 
 
 def load_peak_n_valleys() -> pd:
-    peaks = pd.read_csv('peaks.17-10-05.18-40T17-10-06.11-19.zip', index_col='date', header=0, parse_dates='date')
+    peaks = pd.read_csv('archive/peaks.17-10-05.18-40T17-10-06.11-19.zip', index_col='date', header=0, parse_dates='date')
     peaks['peak_or_valley'] = TopTYPE.PEAK
-    valleys = pd.read_csv('valleys.17-10-05.18-40T17-10-06.11-19.zip', index_col='date', header=0, parse_dates='date')
+    valleys = pd.read_csv('archive/valleys.17-10-05.18-40T17-10-06.11-19.zip', index_col='date', header=0, parse_dates='date')
     valleys['peak_or_valley'] = TopTYPE.VALLEY
     peaks_n_valleys = merge_tops(peaks, valleys)
     return peaks_n_valleys

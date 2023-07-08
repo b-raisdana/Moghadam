@@ -46,7 +46,8 @@ class Config():
         self.ohlca_columns: List = self.ohlc_columns + ['ATR']
         self.multi_timeframe_ohlc_columns = self.ohlc_columns + ['timeframe']
         self.multi_timeframe_ohlca_columns = self.ohlca_columns + ['timeframe']
-        self.multi_timeframe_peaks_n_valleys_columns = self.ohlc_columns + ['timeframe', 'strength', 'peak_or_valley']
+        self.multi_timeframe_peaks_n_valleys_columns = self.ohlc_columns + ['timeframe', 'peak_or_valley'] # 'strength',
+        self.multi_timeframe_trend_boundaries_columns = ['timeframe', 'end', 'bull_bear_side']
 
         self.end_time = '2021-03-01 03:43:00'
 
@@ -66,13 +67,13 @@ class MyEncoder(json.JSONEncoder):
 myEncoder = MyEncoder()
 DEBUG = False
 config = Config()
-config_as_json = myEncoder.encode(config).encode('utf-8')
+config_as_json = myEncoder.encode(config)
 if DEBUG: print(str(config_as_json))
-config_digest = str.translate(base64.b64encode(hashlib.md5(config_as_json).digest())
+config_digest = str.translate(base64.b64encode(hashlib.md5(config_as_json.encode('utf-8')).digest())
                               .decode('ascii'), {ord('+'): '', ord('/'): '', ord('='): '', })
 
 if DEBUG: print(config_digest)
-with open(f'Config.{config_digest}.txt', 'w+') as config_file:
+with open(f'Config.{config_digest}.json', 'w+') as config_file:
     config_file.write(str(config_as_json))
 
 config.id = config_digest

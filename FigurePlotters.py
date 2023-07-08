@@ -45,8 +45,8 @@ def plotfig(data: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']),
     return fig
 
 
-def batch_plot_to_html(figures: [plgo.Figure], file_name, file_open_mode='+w'):
-    # todo: test it
+def batch_plot_to_html(figures: [plgo.Figure], file_name, file_open_mode='+w', show=False):
+    # todo: test batch_plot_to_html
     # concatenated_body = ''
     # body_children_of_figures = [BeautifulSoup(figure).body.findChildren() for figure in figures.to_html]
     # final_figure = BeautifulSoup(figures[0])
@@ -59,7 +59,8 @@ def batch_plot_to_html(figures: [plgo.Figure], file_name, file_open_mode='+w'):
     output_html += '</body></html>'
     with open(file_name, file_open_mode) as f:
         f.write(output_html)
-
+    if show:
+        raise Exception('Not implemented')
 
 # def clone(el):
 #     if isinstance(el, NavigableString):
