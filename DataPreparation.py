@@ -59,16 +59,18 @@ def generate_multi_timeframe_ohlc(date_range_str: str):
     multi_timeframe_ohlc = ohlc.copy()
     multi_timeframe_ohlc.insert(0, 'timeframe', config.timeframes[0])
     multi_timeframe_ohlc.set_index('timeframe', append=True, inplace=True)
+    multi_timeframe_ohlc = multi_timeframe_ohlc.swaplevel()
     for _, timeframe in enumerate(config.timeframes[1:]):
-        _timeframe_ohlc_ticks = ohlc.groupby(pd.Grouper(freq=timeframe)) \
+        _timeframe_ohlc = ohlc.groupby(pd.Grouper(freq=timeframe)) \
             .agg({'open': 'first',
                   'close': 'last',
                   'low': 'min',
                   'high': 'max',
-                  'volume': 'sum',})
-        _timeframe_ohlc_ticks.insert(0, 'timeframe', timeframe)
-        _timeframe_ohlc_ticks.set_index('timeframe', append=True, inplace=True)
-        multi_timeframe_ohlc = pd.concat([multi_timeframe_ohlc, _timeframe_ohlc_ticks])
+                  'volume': 'sum', })
+        _timeframe_ohlc.insert(0, 'timeframe', timeframe)
+        _timeframe_ohlc.set_index('timeframe', append=True, inplace=True)
+        _timeframe_ohlc = _timeframe_ohlc.swaplevel()
+        multi_timeframe_ohlc = pd.concat([multi_timeframe_ohlc, _timeframe_ohlc])
     multi_timeframe_ohlc = multi_timeframe_ohlc.sort_index()
     multi_timeframe_ohlc.to_csv(f'multi_timeframe_ohlc.{date_range_str}.zip', compression='zip')
     plot_multi_timeframe_ohlc(ohlc)
@@ -87,6 +89,7 @@ def read_file(date_range_str: str, data_frame_type: str, generator: typing.Calla
                          parse_dates=['date'], skiprows=skiprows, nrows=nrows)
         if 'multi_timeframe' in data_frame_type:
             df.set_index('timeframe', append=True, inplace=True)
+            df = df.swaplevel()
     except Exception as e:
         pass
     if (data_frame_type + '_columns') not in config.__dir__():
@@ -97,6 +100,7 @@ def read_file(date_range_str: str, data_frame_type: str, generator: typing.Calla
                          parse_dates=['date'], skiprows=skiprows, nrows=nrows)
         if 'multi_timeframe' in data_frame_type:
             df.set_index('timeframe', append=True, inplace=True)
+            df = df.swaplevel()
         if not check_dataframe(df, getattr(config, data_frame_type + '_columns')):
             raise Exception(f'Failed to generate {data_frame_type}! {data_frame_type}.columns:{df.columns}')
     return df
@@ -106,20 +110,20 @@ def check_multi_timeframe_ohlca_columns(multi_timeframe_ohlca: pd.DataFrame, rai
     return check_dataframe(multi_timeframe_ohlca, config.multi_timeframe_ohlca_columns, raise_exception)
 
 
-def check_dataframe(data_frame: pd.DataFrame, columns: [str], raise_exception=False):
+def check_dataframe(dataframe: pd.DataFrame, columns: [str], raise_exception=False):
     try:
-        data_frame.columns
+        dataframe.columns
     except NameError:
         if raise_exception:
             raise Exception(
-                f'The DataFrame does not have columns:{data_frame}')
+                f'The DataFrame does not have columns:{dataframe}')
         else:
             return False
     for _column in columns:
-        if _column not in list(data_frame.columns) + list(data_frame.index.names):
+        if _column not in list(dataframe.columns) + list(dataframe.index.names):
             if raise_exception:
                 raise Exception(
-                    f'The DataFrame expected to contain {_column} but have these columns:{data_frame.columns}')
+                    f'The DataFrame expected to contain {_column} but have these columns:{dataframe.columns}')
             else:
                 return False
     return True
@@ -143,3 +147,10 @@ def read_ohlc(date_range_string: str) -> pd.DataFrame:
 
 def generate_ohlc(date_range_string: str):
     raise Exception('Not implemented so we expect to file exists.')
+
+
+def single_timeframe(multi_timeframe_data: pd.DataFrame, timeframe):
+    if multi_timeframe_data.index.names[0] != 'timeframe':
+        raise Exception(
+            f'Level 0 of a multi_timeframe_data expected to be "timeframe" but indexes are [{multi_timeframe_data.index.names}]')
+    return multi_timeframe_data.loc[timeframe, :]
