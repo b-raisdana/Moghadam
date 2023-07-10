@@ -49,7 +49,7 @@ class Config():
         self.multi_timeframe_ohlca_columns = self.ohlca_columns + ['timeframe']
         self.multi_timeframe_peaks_n_valleys_columns = self.ohlc_columns + ['timeframe', 'peak_or_valley'] # 'strength',
         self.multi_timeframe_trend_boundaries_columns = ['timeframe', 'end', 'bull_bear_side',
-                                                         'highest_hig', 'lowest_low', 'high_time', 'low_time',
+                                                         'highest_high', 'lowest_low', 'high_time', 'low_time',
                                                          'trend_line_acceleration', 'trend_line_base',
                                                          'canal_line_acceleration', 'canal_line_base',
                                                          ]

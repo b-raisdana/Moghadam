@@ -23,7 +23,7 @@ def rally_base_drop(peaks_n_valleys: pd):
     trend = pd.DataFrame(
         index=pd.date_range(start=peaks_n_valleys.index[0], end=peaks_n_valleys.index[-1], freq=timeframe))
     add_previous_n_next_peaks_n_valleys(peaks_n_valleys, trend)
-    trend['trend'] = RALLY_TREND if (
+    trend['RDB'] = RALLY_TREND if (
             trend.next_valley > trend.previous_valley and trend.previous_peak > trend.next_peak) \
         else DROP_TREND if (trend.next_valley < trend.previous_valley and trend.previous_peak < trend.next_peak) \
         else BASE_TREND
