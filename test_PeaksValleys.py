@@ -1,7 +1,7 @@
 import pandas as pd
 
 from Config import config
-from PeaksValleys import find_peaks_n_valleys, plot_peaks_n_valleys
+from PeaksValleys import zz_find_peaks_n_valleys, plot_peaks_n_valleys
 
 DEBUG = True
 
@@ -48,7 +48,7 @@ def test_timeframe_switching():
                   'high': 'max',
                   'volume': 'sum'})
 
-        _timeframe_peaks, _timeframe_valleys = find_peaks_n_valleys(_timeframe_ohlc_ticks)
+        _timeframe_peaks, _timeframe_valleys = zz_find_peaks_n_valleys(_timeframe_ohlc_ticks)
 
         _mapped_peaks_from_base = base_peaks[base_peaks['timeframe'].isin(config.timeframes[i:])]
         # todo: test set_index(['high', 'timeframe']

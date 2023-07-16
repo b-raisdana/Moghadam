@@ -3,9 +3,10 @@ pandas~=1.5.3
 plotly~=5.9.0
 pydantic
 numpy
+# conda install -c conda-forge ta-lib
 TA-Lib
 pytest
-beautifulsoup4
+# beautifulsoup4
 
 # conda update --all
 

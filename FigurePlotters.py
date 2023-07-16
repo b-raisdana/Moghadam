@@ -9,7 +9,7 @@ from Config import config
 DEBUG = False
 
 
-def plotfig(data: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']),
+def plot_ohlc(data: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']),
             save: bool = False, name: str = '', do_not_show: bool = False) -> plgo.Figure:
     import os
     MAX_LEN_OF_DATA_FRAME_TO_PLOT = 50000
@@ -45,7 +45,7 @@ def plotfig(data: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']),
     return fig
 
 
-def batch_plot_to_html(figures: [plgo.Figure], file_name, file_open_mode='+w', show=False):
+def batch_plot_to_html(figures: [plgo.Figure], file_name, file_open_mode='+w', show=True):
     # todo: test batch_plot_to_html
     # concatenated_body = ''
     # body_children_of_figures = [BeautifulSoup(figure).body.findChildren() for figure in figures.to_html]

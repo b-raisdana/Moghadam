@@ -1,5 +1,5 @@
 import pandas as pd
-from pandas import Timestamp
+from plotly import graph_objects as plgo
 
 from Config import TopTYPE, config, TREND
 from DataPreparation import read_file, read_multi_timeframe_ohlc, \
@@ -155,37 +155,43 @@ def add_highest_high_n_lowest_low(_boundaries, single_timeframe_candle_trend):
                                        'low'].min()
 
 
+def most_two_significant_tops(start, end, single_timeframe_peaks_n_valleys, tops_type: TopTYPE) -> pd.DataFrame:
+    # todo: test most_two_significant_valleys
+    filtered_valleys = single_timeframe_peaks_n_valleys.loc[
+        (single_timeframe_peaks_n_valleys.index >= start) &
+        (single_timeframe_peaks_n_valleys.index <= end) &
+        (single_timeframe_peaks_n_valleys['peak_or_valley'] == tops_type.value)
+        ].sort_values(by='strength')
+    return filtered_valleys.iloc[:2].sort_index()
+
+
 def add_canal_lines(_boundaries, single_timeframe_peaks_n_valleys):
+    # todo: test add_canal_lines
     for i, _boundary in _boundaries.iterrows():
         if _boundary['bull_bear_side'] == TREND.SIDE.value:
             continue
-        _peaks = most_two_significant_peaks(i, _boundary['end'], single_timeframe_peaks_n_valleys)
-        _valleys = most_two_significant_valleys(i, _boundary['end'], single_timeframe_peaks_n_valleys)
+        _peaks = most_two_significant_tops(i, _boundary['end'], single_timeframe_peaks_n_valleys, TopTYPE.PEAK)
+        _valleys = most_two_significant_tops(i, _boundary['end'], single_timeframe_peaks_n_valleys, TopTYPE.VALLEY)
         if _boundary['bull_bear_side'] == TREND.BULLISH.value:
-            canal_tops = _peaks
-            trend_peaks = _valleys
+            canal_top = _peaks.iloc[0, 'high'].to_numpy()
+            trend_tops = _valleys['low'].to_numpy()
         else:
-            canal_tops = _valleys
-            trend_peaks = _peaks
-        trend_base =
-        trend_acceleration =
-        canal_base =
-        canal_acceleration =
+            canal_top = _valleys.iloc[0, 'low'].to_numpy()
+            trend_tops = _peaks['high'].to_numpy()
+        trend_acceleration = (trend_tops[1][1] - trend_tops[0][1]) / (trend_tops[1][0] - trend_tops[0][0])
+        trend_base = trend_tops[0][1] - trend_tops[0][0] * trend_acceleration
+        canal_acceleration = trend_acceleration
+        canal_base = canal_top[0][1] - canal_top[0][0] * canal_acceleration
+        _boundaries.iloc[i, ['trend_acceleration', 'trend_base', 'canal_acceleration', 'canal_base']] = \
+            [trend_acceleration, trend_base, canal_acceleration, canal_base]
+    return _boundaries
 
 
 def single_timeframe_trend_boundaries(single_timeframe_candle_trend: pd.DataFrame,
                                       single_timeframe_peaks_n_valleys) -> pd.DataFrame:
     _boundaries = detect_boundaries(single_timeframe_candle_trend)
-
     _boundaries = add_highest_high_n_lowest_low(_boundaries, single_timeframe_candle_trend)
-
     _boundaries = add_canal_lines(_boundaries, single_timeframe_peaks_n_valleys)
-
-    # ['end', 'bull_bear_side',
-    #  'highest_hig', 'lowest_low', 'high_time', 'low_time',
-    #  'trend_line_acceleration', 'trend_line_base',
-    #  'canal_line_acceleration', 'canal_line_base',
-    #  ]
     _boundaries = _boundaries[[i for i in config.multi_timeframe_trend_boundaries_columns if i != 'timeframe']]
     return _boundaries
 
@@ -214,8 +220,9 @@ def boundary_including_peaks_valleys(peaks_n_valleys: pd.DataFrame, boundary_sta
 MAX_NUMBER_OF_PLOT_SCATTERS = 50
 
 
-def plot_bull_bear_side(ohlc: pd.DataFrame, peaks_n_valleys: pd.DataFrame, boundaries: pd.DataFrame,
-                        name: str = '', do_not_show: bool = False, html_path: str = ''):
+def plot_single_time_frame_trend_boundaries(ohlc: pd.DataFrame, peaks_n_valleys: pd.DataFrame, boundaries: pd.DataFrame,
+                                            name: str = '', do_not_show: bool = False,
+                                            html_path: str = '') -> plgo.Figure:
     fig = plot_peaks_n_valleys(ohlc, peaks=peaks_only(peaks_n_valleys), valleys=valleys_only(peaks_n_valleys),
                                name=name, do_not_show=True)
     # if boundaries is None:
@@ -259,19 +266,22 @@ def read_multi_timeframe_trend_boundaries(date_range_str: str):
     return read_file(date_range_str, 'multi_timeframe_trend_boundaries', generate_multi_timeframe_trend_boundaries)
 
 
-def plot_single_time_frame_trend_boundaries(param):
-    # todo: implement plot_single_time_frame_trend_boundaries
-    pass
-
-
-def plot_multi_timeframe_trend_boundaries(multi_timeframe_trend_boundaries):
-    # todo: implement plot_multi_timeframe_trend_boundaries
+def plot_multi_timeframe_trend_boundaries(multi_time_frame_ohlc, multi_time_frame_peaks_n_valleys,
+                                          _multi_timeframe_trend_boundaries, show: bool = True):
+    # todo: test plot_multi_timeframe_trend_boundaries
     figures = []
-    for _, timeframe in enumerate(multi_timeframe_trend_boundaries['timeframe'].unique()):
+    for _, timeframe in enumerate(_multi_timeframe_trend_boundaries['timeframe'].unique()):
         _figure = plot_single_time_frame_trend_boundaries(
-            multi_timeframe_trend_boundaries[multi_timeframe_trend_boundaries['timeframe'] == timeframe])
+            ohlc=single_timeframe(multi_time_frame_ohlc, timeframe),
+            peaks_n_valleys=single_timeframe(multi_time_frame_peaks_n_valleys, timeframe),
+            boundaries=_multi_timeframe_trend_boundaries[
+                _multi_timeframe_trend_boundaries[
+                    'timeframe'] == timeframe])
         figures.append(_figure)
-    batch_plot_to_html(figures)
+    batch_plot_to_html(figures, file_name=f'multi_timeframe_trend_boundaries.'
+                                          f'{multi_time_frame_ohlc.index[0].strftime("%y-%m-%d.%H-%M")}T'
+                                          f'{multi_time_frame_ohlc.index[-1].strftime("%y-%m-%d.%H-%M")}'
+                                          f'.html', show=show)
 
 
 def generate_multi_timeframe_trend_boundaries(date_range_str: str):

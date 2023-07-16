@@ -17,6 +17,8 @@ def load_peak_n_valleys() -> pd:
 
 
 def rally_base_drop(peaks_n_valleys: pd):
+    # base: in reverse trigger time a candle being 80% covered by its previous one.
+    # we go out of base if engulf and hunter levels being passed
     if len(peaks_n_valleys['timeframe'].unique()) > 1:
         raise Exception('Expected to peaks_n_valleys filtered and grouped by timeframe before!')
     timeframe = peaks_n_valleys['timeframe'].unique()[0]
