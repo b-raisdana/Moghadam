@@ -1,12 +1,11 @@
 kaleido
-pandas
-plotly
+pandas~=1.5.3
+plotly~=5.9.0
 pydantic
 numpy
 TA-Lib
 pytest
-
-
+beautifulsoup4
 
 # conda update --all
 

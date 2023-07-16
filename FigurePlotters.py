@@ -1,35 +1,12 @@
 import pandas as pd
+import plotly
+from bs4 import BeautifulSoup, Tag, NavigableString
 from plotly import graph_objects as plgo
+from plotly.io import to_html
 
 from Config import config
 
 DEBUG = False
-
-
-def plot_ohlc_with_peaks_n_valleys(ohlc: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']),
-                                   peaks: pd = pd.DataFrame(columns=['high', 'effective_time']),
-                                   valleys: pd = pd.DataFrame(columns=['low', 'effective_time']),
-                                   name: str = '') -> plgo.Figure:
-    fig = plotfig(ohlc, name=name, save=False, do_not_show=True)
-    if len(peaks) > 0:
-        fig.add_scatter(x=peaks.index.values, y=peaks['high'] + 1, mode="markers", name='P',
-                        marker=dict(symbol="triangle-up", color="blue"),
-                        hovertemplate="%{text}",
-                        text=[
-                            f"{peaks.loc[_x]['effective_time']}@{peaks.loc[_x]['high']}"
-                            for _x in peaks.index.values]
-                        )
-    if len(valleys) > 0:
-        fig.add_scatter(x=valleys.index.values, y=valleys['low'] - 1, mode="markers", name='V',
-                        marker=dict(symbol="triangle-down", color="blue"),
-                        hovertemplate="%{text}",
-                        text=[
-                            f"{valleys.loc[_x]['effective_time']}@{valleys.loc[_x]['low']}"
-                            for _x in valleys.index.values]
-                        )
-        fig.update_layout(hovermode='x unified')
-        fig.show()
-    return fig
 
 
 def plotfig(data: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']),
@@ -66,3 +43,35 @@ def plotfig(data: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']),
     if save: fig.write_image(f'{config.id}.{name}.png')
 
     return fig
+
+
+def batch_plot_to_html(figures: [plgo.Figure], file_name, file_open_mode='+w', show=False):
+    # todo: test batch_plot_to_html
+    # concatenated_body = ''
+    # body_children_of_figures = [BeautifulSoup(figure).body.findChildren() for figure in figures.to_html]
+    # final_figure = BeautifulSoup(figures[0])
+    # for child in body_children_of_figures:
+    #     final_figure.body.append(copy.copy(child))
+    # output_html = figures[0].to_html()
+    output_html = '<html><head></head><body>'
+    for fig in figures:
+        output_html += plotly.io.to_html(fig, full_html=False)
+    output_html += '</body></html>'
+    with open(file_name, file_open_mode) as f:
+        f.write(output_html)
+    if show:
+        raise Exception('Not implemented')
+
+# def clone(el):
+#     if isinstance(el, NavigableString):
+#         return type(el)(el)
+#
+#     copy = Tag(None, el.builder, el.name, el.namespace, el.nsprefix)
+#     # work around bug where there is no builder set
+#     # https://bugs.launchpad.net/beautifulsoup/+bug/1307471
+#     copy.attrs = dict(el.attrs)
+#     for attr in ('can_be_empty_element', 'hidden'):
+#         setattr(copy, attr, getattr(el, attr))
+#     for child in el.contents:
+#         copy.append(clone(child))
+#     return copy
