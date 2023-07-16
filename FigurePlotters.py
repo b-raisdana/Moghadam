@@ -1,8 +1,6 @@
 import pandas as pd
 import plotly
-from bs4 import BeautifulSoup, Tag, NavigableString
 from plotly import graph_objects as plgo
-from plotly.io import to_html
 
 from Config import config
 
