@@ -71,11 +71,11 @@ def calculate_strength(peaks_valleys: pd.DataFrame, valleys_mode: bool, prices: 
             if peaks_valleys.index[i] < prices.index[-1]:
                 right_distance = right_peak_distance(i, right_distance, peaks_valleys, prices)
         if prices.index[0] < peaks_valleys.index[i] < prices.index[-1] and left_distance == INFINITY_TIME_DELTA:
-            peaks_valleys.at[peaks_valleys.index[i], 'strength'] \
+            peaks_valleys.iloc[i, 'strength'] \
                 = min(peaks_valleys.index[i] - prices.index[0], right_distance,
                       peaks_valleys.iloc[i]['strength'])  # min(i, len(prices) - i)
             continue
-        peaks_valleys.at[peaks_valleys.index[i], 'strength'] = \
+        peaks_valleys.iloc[i, 'strength'] = \
             min(left_distance, right_distance, peaks_valleys.iloc[i]['strength'])
     return peaks_valleys
 
