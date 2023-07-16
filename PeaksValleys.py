@@ -54,6 +54,7 @@ def zz_compare_with_next_and_previous(peaks_mode: TopTYPE, peaks_valleys: pd.Dat
 
 
 def calculate_strength(peaks_n_valleys: pd.DataFrame, valleys_mode: bool, prices: pd.DataFrame):
+    # todo: test calculate_strength
     if 'strength' not in peaks_n_valleys.columns:
         peaks_n_valleys['strength'] = INFINITY_TIME_DELTA
     peaks_or_valleys = peaks_n_valleys[
@@ -77,11 +78,11 @@ def calculate_strength(peaks_n_valleys: pd.DataFrame, valleys_mode: bool, prices
             if peaks_or_valleys.index[i] < prices.index[-1]:
                 right_distance = right_peak_distance(i, right_distance, peaks_or_valleys, prices)
         if prices.index[0] < peaks_or_valleys.index[i] < prices.index[-1] and left_distance == INFINITY_TIME_DELTA:
-            peaks_or_valleys.at[peaks_or_valleys.index[i], 'strength'] \
+            peaks_or_valleys.loc[peaks_or_valleys.index[i], 'strength'] \
                 = min(peaks_or_valleys.index[i] - prices.index[0], right_distance,
                       peaks_or_valleys.loc[peaks_or_valleys.index[i], 'strength'])  # min(i, len(prices) - i)
             continue
-        peaks_or_valleys.at[peaks_or_valleys.index[i], 'strength'] = \
+        peaks_or_valleys.loc[peaks_or_valleys.index[i], 'strength'] = \
             min(left_distance, right_distance, peaks_or_valleys.iloc[i]['strength'])
     output = pd.concat([peaks_or_valleys, reserved_peaks_or_valleys]).sort_index()
     return output
