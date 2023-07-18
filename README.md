@@ -5,7 +5,7 @@
 
 - sequence of 2 pairs of falling/rising peaks and valleys = Rally/Drop
 - sequential movement of 3 ATR is a rally/trend. is always covered by tops rally/drops?
-- \>3 sequential (spinning candles + gap \< spinning) = Base. if \<3 it is a minor base. expand previous rally/drop range to cover minor bases and merge woth next if it is from the same kind.
+- \>3 sequential (spinning candles + gap \< spinning) = Base.(jozve-amin-hemmati-220-(KohanFx.com).pdf) .if \<3 it is a minor base. expand previous rally/drop range to cover minor bases and merge with next if it is from the same kind.
 - Base = dogi (\<30% body + <Standard) between two rally/drop = Bullish/Bearish movement faster than ATR and sequential candles shall have big (>70) body.
 - Base zone with one candle is stronger than 2 candle ones.
 - \>3 standard or smaller candles >80% overlaps with previous one = Base
