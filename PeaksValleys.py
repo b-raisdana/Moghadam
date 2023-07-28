@@ -1,4 +1,5 @@
 # import talib as ta
+import os
 from datetime import timedelta
 
 import pandas as pd
@@ -7,34 +8,34 @@ from plotly import graph_objects as plgo
 
 from Config import config, INFINITY_TIME_DELTA, TopTYPE
 from DataPreparation import read_file, check_dataframe, read_multi_timeframe_ohlc, read_ohlc, single_timeframe
-from FigurePlotters import plot_ohlc
+from FigurePlotters import plot_ohlc, plot_multiple_figures
 
 DEBUG = True
 
 
-def zz_generate_peaks_n_valleys(date_range_string: str) -> None:
-    # ohlc = pd.read_csv('ohlc.17-10-06.00-00T17-10-06.23-59.zip', sep=',', header=0, index_col='date',
-    #                               parse_dates=['date'])
-    ohlc = read_ohlc(date_range_string)
-    _peaks, _valleys = zz_find_peaks_n_valleys(ohlc)
-    # _peaks.to_csv(
-    #     f'peaks.{ohlc.index[0].strftime("%y-%m-%d.%H-%M")}T'
-    #     f'{ohlc.index[-1].strftime("%y-%m-%d.%H-%M")}.zip',
-    #     compression='zip')
-    # _valleys.to_csv(
-    #     f'valleys.{ohlc.index[0].strftime("%y-%m-%d.%H-%M")}T'
-    #     f'{ohlc.index[-1].strftime("%y-%m-%d.%H-%M")}.zip',
-    #     compression='zip')
-    peaks_n_valleys = pd.concat([_peaks, _valleys]).sort_index()
-    peaks_n_valleys.to_csv(f'peaks_n_valleys.{date_range_string}.zip', compression='zip')
-    plot_peaks_n_valleys(peaks_n_valleys)
+# def zz_generate_peaks_n_valleys(date_range_string: str) -> None:
+#     # ohlc = pd.read_csv('ohlc.17-10-06.00-00T17-10-06.23-59.zip', sep=',', header=0, index_col='date',
+#     #                               parse_dates=['date'])
+#     ohlc = read_ohlc(date_range_string)
+#     _peaks, _valleys = zz_find_peaks_n_valleys(ohlc)
+#     # _peaks.to_csv(
+#     #     f'peaks.{ohlc.index[0].strftime("%y-%m-%d.%H-%M")}T'
+#     #     f'{ohlc.index[-1].strftime("%y-%m-%d.%H-%M")}.zip',
+#     #     compression='zip')
+#     # _valleys.to_csv(
+#     #     f'valleys.{ohlc.index[0].strftime("%y-%m-%d.%H-%M")}T'
+#     #     f'{ohlc.index[-1].strftime("%y-%m-%d.%H-%M")}.zip',
+#     #     compression='zip')
+#     peaks_n_valleys = pd.concat([_peaks, _valleys]).sort_index()
+#     peaks_n_valleys.to_csv(f'peaks_n_valleys.{date_range_string}.zip', compression='zip')
+#     plot_peaks_n_valleys(peaks_n_valleys)
 
 
-def zz_find_peaks_n_valleys(prices: pd.DataFrame, min_strength=pd.to_timedelta(config.timeframes[2]), significance=None,
-                            max_cycles=100) -> (pd.DataFrame, pd.DataFrame):
-    _peaks = zz_find_peak_or_valleys(prices, True, min_strength, significance, max_cycles)
-    _valleys = zz_find_peak_or_valleys(prices, False, min_strength, significance, max_cycles)
-    return _peaks, _valleys
+# def zz_find_peaks_n_valleys(prices: pd.DataFrame, min_strength=pd.to_timedelta(config.timeframes[2]), significance=None,
+#                             max_cycles=100) -> (pd.DataFrame, pd.DataFrame):
+#     _peaks = zz_find_peak_or_valleys(prices, True, min_strength, significance, max_cycles)
+#     _valleys = zz_find_peak_or_valleys(prices, False, min_strength, significance, max_cycles)
+#     return _peaks, _valleys
 
 
 # def zz_compare_with_next_and_previous(peaks_mode: TopTYPE, peaks_valleys: pd.DataFrame) -> pd.DataFrame:
@@ -53,7 +54,8 @@ def zz_find_peaks_n_valleys(prices: pd.DataFrame, min_strength=pd.to_timedelta(c
 #     return peaks_valleys
 
 
-def calculate_strength(peaks_n_valleys: pd.DataFrame, valleys_mode: bool, ohlc_with_next_n_previous_high_lows: pd.DataFrame):
+def calculate_strength(peaks_n_valleys: pd.DataFrame, valleys_mode: bool,
+                       ohlc_with_next_n_previous_high_lows: pd.DataFrame):
     # todo: test calculate_strength
     if 'strength' not in peaks_n_valleys.columns:
         peaks_n_valleys['strength'] = INFINITY_TIME_DELTA
@@ -69,15 +71,20 @@ def calculate_strength(peaks_n_valleys: pd.DataFrame, valleys_mode: bool, ohlc_w
 
         if valleys_mode:
             if peaks_or_valleys.index[i] > ohlc_with_next_n_previous_high_lows.index[0]:
-                left_distance = left_valley_distance(ohlc_with_next_n_previous_high_lows, peaks_or_valleys, i, left_distance)
+                left_distance = left_valley_distance(ohlc_with_next_n_previous_high_lows, peaks_or_valleys, i,
+                                                     left_distance)
             if peaks_or_valleys.index[i] < ohlc_with_next_n_previous_high_lows.index[-1]:
-                right_distance = right_valley_distance(ohlc_with_next_n_previous_high_lows, peaks_or_valleys, i, right_distance)
+                right_distance = right_valley_distance(ohlc_with_next_n_previous_high_lows, peaks_or_valleys, i,
+                                                       right_distance)
         else:  # peaks_mode
             if peaks_or_valleys.index[i] > ohlc_with_next_n_previous_high_lows.index[0]:
-                left_distance = left_peak_distance(i, left_distance, peaks_or_valleys, ohlc_with_next_n_previous_high_lows)
+                left_distance = left_peak_distance(i, left_distance, peaks_or_valleys,
+                                                   ohlc_with_next_n_previous_high_lows)
             if peaks_or_valleys.index[i] < ohlc_with_next_n_previous_high_lows.index[-1]:
-                right_distance = right_peak_distance(i, right_distance, peaks_or_valleys, ohlc_with_next_n_previous_high_lows)
-        if ohlc_with_next_n_previous_high_lows.index[0] < peaks_or_valleys.index[i] < ohlc_with_next_n_previous_high_lows.index[-1] and left_distance == INFINITY_TIME_DELTA:
+                right_distance = right_peak_distance(i, right_distance, peaks_or_valleys,
+                                                     ohlc_with_next_n_previous_high_lows)
+        if ohlc_with_next_n_previous_high_lows.index[0] < peaks_or_valleys.index[i] < \
+                ohlc_with_next_n_previous_high_lows.index[-1] and left_distance == INFINITY_TIME_DELTA:
             peaks_or_valleys.loc[peaks_or_valleys.index[i], 'strength'] \
                 = min(peaks_or_valleys.index[i] - ohlc_with_next_n_previous_high_lows.index[0], right_distance,
                       peaks_or_valleys.loc[peaks_or_valleys.index[i], 'strength'])  # min(i, len(prices) - i)
@@ -175,7 +182,7 @@ def map_strength_to_frequency(peaks_valleys: pd.DataFrame) -> pd.DataFrame:
 #         peaks_valleys = peaks_valleys['strength' >= min_strength]
 #     if ignore_n_percent_lowest_strength is not None:
 #         raise Exception('Not implemented')
-#         # todo: extract distribution of strength and ignore n_percent lowest peak_valleys
+#         zztodo: extract distribution of strength and ignore n_percent lowest peak_valleys
 #         # peak_valley_weights = peaks_valleys['strength'].unique().sort(reverse=True)
 #         # if len(peak_valley_weights) > ignore_n_percent_lowest_strength:
 #         #     peaks_valleys = peaks_valleys['strength' >= peak_valley_weights[ignore_n_percent_lowest_strength - 1]]
@@ -189,6 +196,18 @@ def plot_peaks_n_valleys(ohlc: pd = pd.DataFrame(columns=['open', 'high', 'low',
                          peaks: pd = pd.DataFrame(columns=['high', 'timeframe']),
                          valleys: pd = pd.DataFrame(columns=['low', 'timeframe']),
                          name: str = '', do_not_show: bool = False) -> plgo.Figure:
+    """
+        Plot candlesticks with highlighted peaks and valleys.
+
+        Parameters:
+            ohlc (pd.DataFrame): DataFrame containing OHLC data.
+            peaks (pd.DataFrame): DataFrame containing peaks data.
+            valleys (pd.DataFrame): DataFrame containing valleys data.
+            name (str): The name of the plot.
+
+        Returns:
+            plgo.Figure: The Plotly figure object containing the candlestick plot with peaks and valleys highlighted.
+        """
     fig = plot_ohlc(ohlc, name=name, save=False, do_not_show=True)
     if len(peaks) > 0:
         fig.add_scatter(x=peaks.index.values, y=peaks['high'] + 1, mode="markers", name='P',
@@ -212,10 +231,28 @@ def plot_peaks_n_valleys(ohlc: pd = pd.DataFrame(columns=['open', 'high', 'low',
 
 
 def peaks_only(peaks_n_valleys: pd.DataFrame) -> pd.DataFrame:
+    """
+        Filter peaks from the DataFrame containing peaks and valleys data.
+
+        Parameters:
+            peaks_n_valleys (pd.DataFrame): DataFrame containing peaks and valleys data.
+
+        Returns:
+            pd.DataFrame: DataFrame containing only peaks data.
+    """
     return peaks_n_valleys[peaks_n_valleys['peak_or_valley'] == TopTYPE.PEAK.value]
 
 
 def valleys_only(peaks_n_valleys: pd.DataFrame) -> pd.DataFrame:
+    """
+        Filter valleys from the DataFrame containing peaks and valleys data.
+
+        Parameters:
+            peaks_n_valleys (pd.DataFrame): DataFrame containing peaks and valleys data.
+
+        Returns:
+            pd.DataFrame: DataFrame containing only valleys data.
+    """
     return peaks_n_valleys[peaks_n_valleys['peak_or_valley'] == TopTYPE.VALLEY.value]
 
 
@@ -231,11 +268,11 @@ def merge_tops(peaks: pd.DataFrame, valleys: pd.DataFrame) -> pd.DataFrame:
     return pd.concat([peaks, valleys]).sort_index()
 
 
-def zz_read_peaks_n_valleys(date_range_string: str) -> pd.DataFrame:
-    # if not os.path.isfile(f'peaks_n_valleys.{date_range_string}.zip'):
-    #     ohlc = pd.read_csv(f'ohlc.{date_range_string}.zip', sep=',', header=0, index_col='date', parse_dates=['date'])
-    # raise Exception('Not completed!')
-    read_file(date_range_string, 'peaks_n_valleys', zz_generate_peaks_n_valleys)
+# def zz_read_peaks_n_valleys(date_range_string: str) -> pd.DataFrame:
+#     # if not os.path.isfile(f'peaks_n_valleys.{date_range_string}.zip'):
+#     #     ohlc = pd.read_csv(f'ohlc.{date_range_string}.zip', sep=',', header=0, index_col='date', parse_dates=['date'])
+#     # raise Exception('Not completed!')
+#     read_file(date_range_string, 'peaks_n_valleys', zz_generate_peaks_n_valleys)
 
 
 # def check_multi_timeframe_peaks_n_valleys_columns(multi_timeframe_peaks_n_valleys: pd.DataFrame,
@@ -259,12 +296,23 @@ def find_single_timeframe_peaks_n_valleys(ohlc: pd.DataFrame,
     return _peaks_n_valleys.sort_index() if sort_index else _peaks_n_valleys
 
 
-def plot_multi_timeframe_peaks_n_valleys(_peaks_n_valleys):
-    # todo: implement   plot_multi_timeframe_peaks_n_valleys
-    pass
+def plot_multi_timeframe_peaks_n_valleys(multi_timeframe_peaks_n_valleys, multi_timeframe_ohlc, show=True, save=True,
+                                         path_of_plot=config.path_of_plots):
+    # todo: test plot_multi_timeframe_peaks_n_valleys
+    figures = []
+    _multi_timeframe_peaks = peaks_only(multi_timeframe_peaks_n_valleys)
+    _multi_timeframe_valleys = valleys_only(multi_timeframe_peaks_n_valleys)
+    for _, timeframe in enumerate(config.timeframes):
+        figures.append(plot_peaks_n_valleys(single_timeframe(multi_timeframe_ohlc, timeframe),
+                                            peaks=single_timeframe(_multi_timeframe_peaks, timeframe),
+                                            valleys=single_timeframe(_multi_timeframe_valleys, timeframe),
+                                            name=f'{timeframe} Peaks n Valleys'))
+    fig = plot_multiple_figures(figures, file_name='multi_timeframe_peaks_n_valleys', show=show, save=save,
+                                path_of_plot=path_of_plot)
+    return fig
 
 
-def generate_multi_timeframe_peaks_n_valleys(date_range_str):
+def generate_multi_timeframe_peaks_n_valleys(date_range_str, file_path: str = config.path_of_data):
     multi_timeframe_ohlc = read_multi_timeframe_ohlc()
     _peaks_n_valleys = pd.DataFrame()
     for _, timeframe in enumerate(config.timeframes):
@@ -273,11 +321,12 @@ def generate_multi_timeframe_peaks_n_valleys(date_range_str):
         time_peaks_n_valleys = calculate_strength_of_peaks_n_valleys(time_ohlc, time_peaks_n_valleys)
         time_peaks_n_valleys['timeframe'] = timeframe
         time_peaks_n_valleys.set_index('timeframe', append=True, inplace=True)
-        time_peaks_n_valleys.swaplevel()
+        time_peaks_n_valleys = time_peaks_n_valleys.swaplevel()
         _peaks_n_valleys = pd.concat([_peaks_n_valleys, time_peaks_n_valleys])
     _peaks_n_valleys = _peaks_n_valleys.sort_index()
-    _peaks_n_valleys.to_csv(f'multi_timeframe_peaks_n_valleys.{date_range_str}.zip', compression='zip')
-    plot_multi_timeframe_peaks_n_valleys(_peaks_n_valleys)
+    _peaks_n_valleys.to_csv(os.path.join(file_path, f'multi_timeframe_peaks_n_valleys.{date_range_str}.zip'),
+                            compression='zip')
+    plot_multi_timeframe_peaks_n_valleys(_peaks_n_valleys, multi_timeframe_ohlc)
     # return _peaks_n_valleys
 
 

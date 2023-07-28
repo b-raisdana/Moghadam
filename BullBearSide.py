@@ -1,3 +1,5 @@
+import os
+
 import pandas as pd
 from plotly import graph_objects as plgo
 
@@ -119,7 +121,7 @@ def multi_timeframe_trend_boundaries(multi_timeframe_candle_trend: pd.DataFrame,
     # boundaries = pd.DataFrame()
     # multi_timeframe_candle_trend['time_of_previous'] = multi_timeframe_candle_trend.index.shift(-1, freq='1min')
     # for timeframe in timeframes:
-    #     # todo: move effective time to a column to prevent multiple columns for different effective times.
+    #     zztodo: move effective time to a column to prevent multiple columns for different effective times.
     #     multi_timeframe_candle_trend.loc[timeframe, 'previous_bull_bear_side'] = multi_timeframe_candle_trend[
     #         f'bull_bear_side_{timeframe}'].shift(1)
     #     time_boundaries = multi_timeframe_candle_trend[
@@ -298,14 +300,15 @@ def plot_multi_timeframe_trend_boundaries(multi_time_frame_ohlc, multi_time_fram
                                              f'.html', show=show)
 
 
-def generate_multi_timeframe_trend_boundaries(date_range_str: str):
+def generate_multi_timeframe_trend_boundaries(date_range_str: str, file_path: str = config.path_of_data):
     multi_timeframe_peaks_n_valleys = read_multi_timeframe_peaks_n_valleys(date_range_str)
     # Generate multi-timeframe candle trend
     multi_timeframe_candle_trend = generate_multi_timeframe_candle_trend(date_range_str)
     # Generate multi-timeframe trend boundaries
     trend_boundaries = multi_timeframe_trend_boundaries(multi_timeframe_candle_trend, multi_timeframe_peaks_n_valleys)
     # Save multi-timeframe trend boundaries to a.zip file
-    trend_boundaries.to_csv(f'multi_timeframe_trend_boundaries.{date_range_str}.zip', compression='zip')
+    trend_boundaries.to_csv(os.path.join(file_path, f'multi_timeframe_trend_boundaries.{date_range_str}.zip'),
+                            compression='zip')
     # Plot multi-timeframe trend boundaries
     plot_multi_timeframe_trend_boundaries(trend_boundaries)
 
@@ -313,10 +316,73 @@ def generate_multi_timeframe_trend_boundaries(date_range_str: str):
 # def read_multi_timeframe_candle_trend(date_range_str: str):
 #     return read_file(date_range_str, 'multi_timeframe_candle_trend', generate_multi_timeframe_candle_trend)
 
+def plot_single_timeframe_candle_trend(ohlc: pd.DataFrame, single_timeframe_candle_trend: pd.DataFrame,
+                                       single_timeframe_peaks_n_valleys: pd.DataFrame, show=True, save=True,
+                                       path_of_plot=config.path_of_plots, name='Single Timeframe Candle Trend'):
+    """
+    Plot candlesticks with highlighted trends (Bullish, Bearish, Side).
 
-def plot_multi_timeframe_candle_trend(multi_timeframe_candle_trend):
-    # todo: implement plot_multi_timeframe_candle_trend
-    pass
+    The function uses the provided DataFrame containing candle trends and highlights the bars of candles based on
+    their trend. Bullish candles are displayed with 70% transparent green color, Bearish candles with 70% transparent red,
+    and Side candles with 70% transparent grey color.
+
+    Parameters:
+        ohlc (pd.DataFrame): DataFrame containing OHLC data.
+        single_timeframe_candle_trend (pd.DataFrame): DataFrame containing candle trend data.
+        single_timeframe_peaks_n_valleys (pd.DataFrame): DataFrame containing peaks and valleys data.
+        show (bool): If True, the plot will be displayed.
+        save (bool): If True, the plot will be saved as an HTML file.
+        path_of_plot (str): Path to save the plot.
+        name (str): The title of the figure.
+
+    Returns:
+        plgo.Figure: The Plotly figure object containing the plot with highlighted trends.
+    """
+    # Calculate the trend colors
+    trend_colors = single_timeframe_candle_trend['bull_bear_side'].map({
+        TREND.BULLISH.value: 'rgba(0, 128, 0, 0.7)',  # 70% transparent green for Bullish trend
+        TREND.BEARISH.value: 'rgba(255, 0, 0, 0.7)',  # 70% transparent red for Bearish trend
+        TREND.SIDE.value: 'rgba(128, 128, 128, 0.7)'  # 70% transparent grey for Side trend
+    })
+
+    # Create the figure using plot_peaks_n_valleys function
+    fig = plot_peaks_n_valleys(ohlc,
+                               peaks=peaks_only(single_timeframe_peaks_n_valleys),
+                               valleys=valleys_only(single_timeframe_peaks_n_valleys),
+                               name=f'{name} Peaks n Valleys')
+
+    # Update the bar trace with trend colors
+    fig.update_traces(marker=dict(color=trend_colors), selector=dict(type='bar'))
+
+    # Set the title of the figure
+    fig.update_layout(title_text=name)
+
+    # Show the figure or write it to an HTML file
+    if save:
+        if not os.path.exists(path_of_plot):
+            os.mkdir(path_of_plot)
+        file_name = f'{name}.html'
+        file_path = os.path.join(path_of_plot, file_name)
+        fig.write_html(file_path)
+
+    if show:
+        fig.show()
+
+    return fig
+
+
+def plot_multi_timeframe_candle_trend(multi_timeframe_candle_trend, multi_timeframe_peaks_n_valleys, ohlc, show=True,
+                                      save=True, path_of_plot=config.path_of_plots):
+    # todo: test plot_multi_timeframe_candle_trend
+    figures = []
+    _multi_timeframe_peaks = peaks_only(multi_timeframe_peaks_n_valleys)
+    _multi_timeframe_valleys = valleys_only(multi_timeframe_peaks_n_valleys)
+    for _, timeframe in enumerate(config.timeframes):
+        figures.append(plot_single_timeframe_candle_trend(ohlc, single_timeframe(multi_timeframe_candle_trend, timeframe) ,
+                                       single_timeframe(multi_timeframe_peaks_n_valleys, timeframe), show=True, save=True,
+                                       path_of_plot=path_of_plot, name=f'{timeframe} Candle Trend'))
+    plot_multiple_figures(figures, file_name='multi_timeframe_candle_trend', show=show, save=save,
+                          path_of_plot=path_of_plot)
 
 
 def generate_multi_timeframe_candle_trend(date_range_str: str):

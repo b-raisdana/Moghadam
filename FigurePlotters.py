@@ -56,7 +56,7 @@ def plot_ohlc(data: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']),
     return fig
 
 
-def plot_multiple_figures(figures: [plgo.Figure], file_name, to_html=True, show=True,
+def plot_multiple_figures(figures: [plgo.Figure], file_name, save=True, show=True,
                           path_of_plot: str = config.path_of_plots):
     """
     Save multiple Plotly figures to an HTML file.
@@ -65,7 +65,7 @@ def plot_multiple_figures(figures: [plgo.Figure], file_name, to_html=True, show=
         figures (list): A list of Plotly figure objects to be saved.
         file_name (str): The name of the output HTML file.
         show (bool): If True, displays the plots in the browser.
-        to_html: If True, saves the plots as html file.
+        save: If True, saves the plots as html file.
         path_of_plot: Optional to specify the path of the plots. Used for easier test cleanup.
     Returns:
         None
@@ -93,7 +93,7 @@ def plot_multiple_figures(figures: [plgo.Figure], file_name, to_html=True, show=
     # Show or save the HTML file
     if show:
         fig.show()
-    if to_html:
+    if save:
         if not os.path.exists(path_of_plot):
             os.mkdir(path_of_plot)
         file_path = os.path.join(path_of_plot, file_name)

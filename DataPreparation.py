@@ -77,39 +77,41 @@ def plot_ohlca(ohlca: pd.DataFrame, date_range_str: str, save: bool = True, show
         fig.show()
 
 
-def generate_ohlca(date_range_str: str) -> None:
+def generate_ohlca(date_range_str: str, file_path: str = config.path_of_data) -> None:
     # if not input_file_path.startswith('ohlc') or input_file_path.startswith('ohlca'):
     #     raise Exception('input_file expected to start with "ohlc" and does not start with "ohlca"!')
     ohlc = pd.read_csv(f'ohlc.{date_range_str}.zip', sep=',', header=0, index_col='date', parse_dates=['date'])
     ohlca = insert_atr(ohlc)
-    ohlca.to_csv(f'ohlca.{date_range_str}.zip', compression='zip')
+    ohlca.to_csv(os.path.join(file_path, f'ohlca.{date_range_str}.zip'), compression='zip')
     plot_ohlca(ohlca)
 
 
 def plot_multi_timeframe_ohlca(multi_timeframe_ohlca, date_range_str: str):
-    # todo: implement plot_multi_timeframe_ohlca
+    # todo: test plot_multi_timeframe_ohlca
     figures = []
     for _, timeframe in enumerate(config.timeframes):
         figures.append(plot_ohlca(single_timeframe(multi_timeframe_ohlca, timeframe)))
     plot_multiple_figures(figures, file_name=f'multi_timeframe_ohlc.{date_range_str}.html')
 
 
-def generate_multi_timeframe_ohlca(date_range_str: str = config.under_process_date_range) -> None:
+def generate_multi_timeframe_ohlca(date_range_str: str = config.under_process_date_range,
+                                   file_path: str = config.path_of_data) -> None:
     multi_timeframe_ohlc = read_multi_timeframe_ohlc(date_range_str)
     multi_timeframe_ohlca = insert_atr(multi_timeframe_ohlc)
-    multi_timeframe_ohlca.to_csv(f'multi_timeframe_ohlca.{date_range_str}.zip', compression='zip')
+    multi_timeframe_ohlca.to_csv(os.path.join(file_path, f'multi_timeframe_ohlca.{date_range_str}.zip'),
+                                 compression='zip')
     plot_multi_timeframe_ohlca(multi_timeframe_ohlca)
 
 
 def plot_multi_timeframe_ohlc(multi_timeframe_ohlc, date_range_str):
-    # todo: implement plot_multi_timeframe_ohlc
+    # todo: test plot_multi_timeframe_ohlc
     figures = []
     for _, timeframe in enumerate(config.timeframes):
         figures.append(plot_ohlc(single_timeframe(multi_timeframe_ohlc, timeframe)))
     plot_multiple_figures(figures, file_name=f'multi_timeframe_ohlc.{date_range_str}.html')
 
 
-def generate_multi_timeframe_ohlc(date_range_str: str):
+def generate_multi_timeframe_ohlc(date_range_str: str, file_path: str = config.path_of_data):
     ohlc = read_ohlc(date_range_str)
     # ohlc['timeframe '] = config.timeframes[0]
     multi_timeframe_ohlc = ohlc.copy()
@@ -128,7 +130,8 @@ def generate_multi_timeframe_ohlc(date_range_str: str):
         _timeframe_ohlc = _timeframe_ohlc.swaplevel()
         multi_timeframe_ohlc = pd.concat([multi_timeframe_ohlc, _timeframe_ohlc])
     multi_timeframe_ohlc = multi_timeframe_ohlc.sort_index()
-    multi_timeframe_ohlc.to_csv(f'multi_timeframe_ohlc.{date_range_str}.zip', compression='zip')
+    multi_timeframe_ohlc.to_csv(os.path.join(file_path, f'multi_timeframe_ohlc.{date_range_str}.zip'),
+                                compression='zip')
     plot_multi_timeframe_ohlc(ohlc, date_range_str)
 
 
@@ -136,29 +139,30 @@ def read_multi_timeframe_ohlc(date_range_str: str = config.under_process_date_ra
     return read_file(date_range_str, 'multi_timeframe_ohlc', generate_multi_timeframe_ohlc)
 
 
-def read_file(date_range_str: str, data_frame_type: str, generator: typing.Callable, skiprows=None,
-              nrows=None) -> pd.DataFrame:
+def read_file(date_range_str: str, data_frame_type: str, generator: typing.Callable, skip_rows=None,
+              n_rows=None, file_path: str = config.path_of_data) -> pd.DataFrame:
     # todo: add cache to read_file
     df = None
     try:
-        df = pd.read_csv(f'{data_frame_type}.{date_range_str}.zip', sep=',', header=0, index_col='date',
-                         parse_dates=['date'], skiprows=skiprows, nrows=nrows)
-        if 'multi_timeframe' in data_frame_type:
-            df.set_index('timeframe', append=True, inplace=True)
-            df = df.swaplevel()
+        df = read_with_timeframe(data_frame_type, date_range_str, df, file_path, n_rows, skip_rows)
     except Exception as e:
         pass
     if (data_frame_type + '_columns') not in config.__dir__():
         raise Exception(data_frame_type + '_columns not defined in configuration!')
     if df is None or not check_dataframe(df, getattr(config, data_frame_type + '_columns')):
         generator(date_range_str)
-        df = pd.read_csv(f'{data_frame_type}.{date_range_str}.zip', sep=',', header=0, index_col='date',
-                         parse_dates=['date'], skiprows=skiprows, nrows=nrows)
-        if 'multi_timeframe' in data_frame_type:
-            df.set_index('timeframe', append=True, inplace=True)
-            df = df.swaplevel()
+        df = read_with_timeframe(data_frame_type, date_range_str, df, file_path, n_rows, skip_rows)
         if not check_dataframe(df, getattr(config, data_frame_type + '_columns')):
             raise Exception(f'Failed to generate {data_frame_type}! {data_frame_type}.columns:{df.columns}')
+    return df
+
+
+def read_with_timeframe(data_frame_type, date_range_str, df, file_path, n_rows, skip_rows):
+    df = pd.read_csv(os.path.join(file_path, f'{data_frame_type}.{date_range_str}.zip'), sep=',', header=0,
+                     index_col='date', parse_dates=['date'], skiprows=skip_rows, nrows=n_rows)
+    if 'multi_timeframe' in data_frame_type:
+        df.set_index('timeframe', append=True, inplace=True)
+        df = df.swaplevel()
     return df
 
 
