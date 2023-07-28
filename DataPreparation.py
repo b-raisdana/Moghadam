@@ -1,7 +1,8 @@
+import os
 import typing
-
 import pandas as pd
 import talib as ta
+from plotly import graph_objects as plgo
 
 from Config import config
 from FigurePlotters import plot_ohlc, plot_multiple_figures
@@ -23,9 +24,57 @@ def insert_atr(single_timeframe_ohlc: pd.DataFrame) -> pd.DataFrame:
     return single_timeframe_ohlc
 
 
-def plot_ohlca(ohlca):
-    # todo: implement plot_ohlca
-    pass
+def plot_ohlca(ohlca: pd.DataFrame, date_range_str: str, save: bool = True, show: bool = True):
+    """
+    Plot OHLC data with an additional ATR (Average True Range) boundary.
+
+    The function plots OHLC data as a candlestick chart and adds an ATR boundary to the plot.
+    The boundary's middle is calculated as the average of the candle's open and close,
+    and the width of the boundary is equal to the ATR value for each data point.
+
+    Parameters:
+        ohlca (pd.DataFrame): A DataFrame containing OHLC data along with the 'ATR' column representing the ATR values.
+        date_range_str (str): The date range string to identify the plot in the format 'YY-MM-DD.HH-MMTYY-MM-DD.HH-MM'.
+        save (bool): If True, the plot is saved as an HTML file.
+        show (bool): If True, the plot is displayed in the browser.
+
+    Returns:
+        None
+
+    Example:
+        # Assuming you have the 'ohlca' DataFrame with the required columns (open, high, low, close, ATR)
+        date_range_str = "17-10-06.00-00T17-10-06"
+        plot_ohlca(ohlca, date_range_str)
+    """
+    # Calculate the middle of the boundary (average of open and close)
+    ohlca['boundary_mid'] = (ohlca['open'] + ohlca['close']) / 2
+
+    # Create a figure using the plot_ohlc function
+    fig = plot_ohlc(ohlca[['open', 'high', 'low', 'close']], save=False, name='')
+
+    # Add scatter trace for the ATR boundary
+    fig.add_trace(
+        plgo.Scatter(
+            x=ohlca.index,
+            y=ohlca['boundary_mid'],
+            mode='lines',
+            line=dict(color='cray', width=ohlca['ATR'], dash='solid'),
+            fill='tozeroy',
+            fillcolor='rgba(128, 128, 128, 0.5)',  # 50% transparent cray color
+            name='ATR Boundary'
+        )
+    )
+
+    # Show the figure or write it to an HTML file
+    if save:
+        if not os.path.exists(config.path_of_plots):
+            os.mkdir(config.path_of_plots)
+        file_name = f'ohlca.{date_range_str}.html'
+        file_path = os.path.join(config.path_of_plots, file_name)
+        fig.write_html(file_path)
+
+    if show:
+        fig.show()
 
 
 def generate_ohlca(date_range_str: str) -> None:
@@ -37,9 +86,12 @@ def generate_ohlca(date_range_str: str) -> None:
     plot_ohlca(ohlca)
 
 
-def plot_multi_timeframe_ohlca(multi_timeframe_ohlca):
+def plot_multi_timeframe_ohlca(multi_timeframe_ohlca, date_range_str: str):
     # todo: implement plot_multi_timeframe_ohlca
-    pass
+    figures = []
+    for _, timeframe in enumerate(config.timeframes):
+        figures.append(plot_ohlca(single_timeframe(multi_timeframe_ohlca, timeframe)))
+    plot_multiple_figures(figures, file_name=f'multi_timeframe_ohlc.{date_range_str}.html')
 
 
 def generate_multi_timeframe_ohlca(date_range_str: str = config.under_process_date_range) -> None:
@@ -53,14 +105,8 @@ def plot_multi_timeframe_ohlc(multi_timeframe_ohlc, date_range_str):
     # todo: implement plot_multi_timeframe_ohlc
     figures = []
     for _, timeframe in enumerate(config.timeframes):
-        figures.append(plot_ohlc(single_timeframe(multi_timeframe_ohlc,timeframe)))
+        figures.append(plot_ohlc(single_timeframe(multi_timeframe_ohlc, timeframe)))
     plot_multiple_figures(figures, file_name=f'multi_timeframe_ohlc.{date_range_str}.html')
-
-
-def read_ohlc(date_range_str: str = config.under_process_date_range) -> pd.DataFrame:)
-
-
-def generate_multi_timeframe_ohlc(date_range_str: str = config.under_process_date_range) -> None:
 
 
 def generate_multi_timeframe_ohlc(date_range_str: str):
