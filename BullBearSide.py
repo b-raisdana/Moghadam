@@ -4,7 +4,7 @@ from plotly import graph_objects as plgo
 from Config import TopTYPE, config, TREND
 from DataPreparation import read_file, read_multi_timeframe_ohlc, \
     single_timeframe
-from FigurePlotters import batch_plot_to_html
+from FigurePlotters import plot_multiple_figures
 from PeaksValleys import plot_peaks_n_valleys, peaks_only, valleys_only, read_multi_timeframe_peaks_n_valleys
 
 
@@ -81,19 +81,23 @@ def single_timeframe_candles_trend(ohlc: pd.DataFrame, single_timeframe_peaks_n_
     # return ohlc
     # if timeframe not in config.timeframes:
     #     raise Exception(f'Unsupported timeframe:{timeframe} expected to be from: [{config.timeframes}]')
-    _previous_n_next_tops = insert_previous_n_next_tops(single_timeframe_peaks_n_valley, ohlc)
-    candle_trend = pd.DataFrame([TREND.SIDE.value] * len(_previous_n_next_tops), index=_previous_n_next_tops.index,
-                                columns=['bull_bear_side'])
-    candle_trend.loc[_previous_n_next_tops.index[
-        (_previous_n_next_tops['next_valley_value'] > _previous_n_next_tops['previous_valley_value']) &
-        (_previous_n_next_tops['next_peak_value'] > _previous_n_next_tops['previous_peak_value']) &
-        (_previous_n_next_tops['next_peak_index'] > _previous_n_next_tops[
+    candle_trend = insert_previous_n_next_tops(single_timeframe_peaks_n_valley, ohlc)
+    candle_trend['bull_bear_side'] = TREND.SIDE.value
+    # candle_trend = pd.DataFrame([TREND.SIDE.value] * len(ohlc_with_previous_n_next_tops),
+    #                             index=ohlc_with_previous_n_next_tops.index,
+    #                             columns=['bull_bear_side'])
+    candle_trend.loc[candle_trend.index[
+        (candle_trend['next_valley_value'] > candle_trend[
+            'previous_valley_value']) &
+        (candle_trend['next_peak_value'] > candle_trend['previous_peak_value']) &
+        (candle_trend['next_peak_index'] > candle_trend[
             'next_valley_index'])]  # the higher peak should be after higher valley
     , 'bull_bear_side'] = TREND.BULLISH.value
-    candle_trend.loc[_previous_n_next_tops.index[
-        (_previous_n_next_tops['next_peak_value'] < _previous_n_next_tops['previous_peak_value']) &
-        (_previous_n_next_tops['next_valley_value'] < _previous_n_next_tops['previous_valley_value']) &
-        (_previous_n_next_tops['next_peak_index'] > _previous_n_next_tops[
+    candle_trend.loc[candle_trend.index[
+        (candle_trend['next_peak_value'] < candle_trend['previous_peak_value']) &
+        (candle_trend['next_valley_value'] < candle_trend[
+            'previous_valley_value']) &
+        (candle_trend['next_peak_index'] > candle_trend[
             'next_valley_index'])]  # the lower valley should be after lower peak
     , 'bull_bear_side'] = TREND.BEARISH.value
     return candle_trend
@@ -137,7 +141,7 @@ def multi_timeframe_trend_boundaries(multi_timeframe_candle_trend: pd.DataFrame,
     timeframes = multi_timeframe_candle_trend.index.unique(level=0)
     for timeframe in timeframes:
         single_timeframe_candle_trend = single_timeframe(multi_timeframe_candle_trend, timeframe)
-        single_timeframe_peaks_n_valleys = single_timeframe(multi_timeframe_peaks_n_valleys)
+        single_timeframe_peaks_n_valleys = single_timeframe(multi_timeframe_peaks_n_valleys, timeframe)
         _timeframe_trend_boundaries = single_timeframe_trend_boundaries(single_timeframe_candle_trend,
                                                                         single_timeframe_peaks_n_valleys)
         _timeframe_trend_boundaries.set_index('timeframe', append=True, inplace=True)
@@ -148,11 +152,15 @@ def multi_timeframe_trend_boundaries(multi_timeframe_candle_trend: pd.DataFrame,
 
 
 def add_highest_high_n_lowest_low(_boundaries, single_timeframe_candle_trend):
+    if 'highest_high' not in _boundaries.columns:
+        # add highest_high to _boundaries.columns
+        _boundaries['highest_high'] = None
+    if 'lowest_low' not in _boundaries.columns:
+        _boundaries['lowest_low'] = None
     for i, _boundary in _boundaries.iterrows():
-        _boundaries[i, 'highest_high'] = single_timeframe_candle_trend.loc[_boundary.index[i]:_boundary.loc[i, 'end'], \
-                                         'high'].max()
-        _boundaries[i, 'lowest_low'] = single_timeframe_candle_trend.loc[_boundary.index[i]:_boundary.loc[i, 'end'], \
-                                       'low'].min()
+        _boundaries.loc[i, 'highest_high'] = single_timeframe_candle_trend.loc[i:_boundary['end'], 'high'].max()
+        _boundaries.loc[i, 'lowest_low'] = single_timeframe_candle_trend.loc[i:_boundary['end'], 'low'].min()
+    return _boundaries
 
 
 def most_two_significant_tops(start, end, single_timeframe_peaks_n_valleys, tops_type: TopTYPE) -> pd.DataFrame:
@@ -167,6 +175,8 @@ def most_two_significant_tops(start, end, single_timeframe_peaks_n_valleys, tops
 
 def add_canal_lines(_boundaries, single_timeframe_peaks_n_valleys):
     # todo: test add_canal_lines
+    if _boundaries is None:
+        return _boundaries
     for i, _boundary in _boundaries.iterrows():
         if _boundary['bull_bear_side'] == TREND.SIDE.value:
             continue
@@ -197,6 +207,8 @@ def single_timeframe_trend_boundaries(single_timeframe_candle_trend: pd.DataFram
 
 
 def detect_boundaries(single_timeframe_candle_trend):
+    if 'time_of_previous' not in single_timeframe_candle_trend.columns:
+        single_timeframe_candle_trend['time_of_previous'] = None
     single_timeframe_candle_trend.loc[1:, 'time_of_previous'] = single_timeframe_candle_trend.index[:-1]
     # single_timeframe_candle_trend['time_of_previous'] = single_timeframe_candle_trend.index.shift(-1, freq=timeframe)
     single_timeframe_candle_trend['previous_trend'] = single_timeframe_candle_trend['bull_bear_side'].shift(1)
@@ -204,6 +216,8 @@ def detect_boundaries(single_timeframe_candle_trend):
         single_timeframe_candle_trend['previous_trend'] != single_timeframe_candle_trend['bull_bear_side']]
     time_of_last_candle = single_timeframe_candle_trend.index[-1]
     # _boundaries['time_of_next'] = _boundaries.index.shift(-1, freq=timeframe)
+    if 'end' not in single_timeframe_candle_trend.columns:
+        single_timeframe_candle_trend['end'] = None
     _boundaries.loc[:-1, 'end'] = _boundaries.index[1:]
     # _boundaries.loc[:, 'time_of_next'] = _boundaries['time_of_next'].shift(-1)
     _boundaries.loc[_boundaries.index[-1], 'end'] = time_of_last_candle
@@ -278,17 +292,21 @@ def plot_multi_timeframe_trend_boundaries(multi_time_frame_ohlc, multi_time_fram
                 _multi_timeframe_trend_boundaries[
                     'timeframe'] == timeframe])
         figures.append(_figure)
-    batch_plot_to_html(figures, file_name=f'multi_timeframe_trend_boundaries.'
-                                          f'{multi_time_frame_ohlc.index[0].strftime("%y-%m-%d.%H-%M")}T'
-                                          f'{multi_time_frame_ohlc.index[-1].strftime("%y-%m-%d.%H-%M")}'
-                                          f'.html', show=show)
+    plot_multiple_figures(figures, file_name=f'multi_timeframe_trend_boundaries.'
+                                             f'{multi_time_frame_ohlc.index[0].strftime("%y-%m-%d.%H-%M")}T'
+                                             f'{multi_time_frame_ohlc.index[-1].strftime("%y-%m-%d.%H-%M")}'
+                                             f'.html', show=show)
 
 
 def generate_multi_timeframe_trend_boundaries(date_range_str: str):
     multi_timeframe_peaks_n_valleys = read_multi_timeframe_peaks_n_valleys(date_range_str)
+    # Generate multi-timeframe candle trend
     multi_timeframe_candle_trend = generate_multi_timeframe_candle_trend(date_range_str)
+    # Generate multi-timeframe trend boundaries
     trend_boundaries = multi_timeframe_trend_boundaries(multi_timeframe_candle_trend, multi_timeframe_peaks_n_valleys)
+    # Save multi-timeframe trend boundaries to a.zip file
     trend_boundaries.to_csv(f'multi_timeframe_trend_boundaries.{date_range_str}.zip', compression='zip')
+    # Plot multi-timeframe trend boundaries
     plot_multi_timeframe_trend_boundaries(trend_boundaries)
 
 

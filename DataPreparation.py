@@ -4,6 +4,7 @@ import pandas as pd
 import talib as ta
 
 from Config import config
+from FigurePlotters import plot_ohlc, plot_multiple_figures
 from helper import log
 
 
@@ -48,9 +49,18 @@ def generate_multi_timeframe_ohlca(date_range_str: str = config.under_process_da
     plot_multi_timeframe_ohlca(multi_timeframe_ohlca)
 
 
-def plot_multi_timeframe_ohlc(ohlc):
+def plot_multi_timeframe_ohlc(multi_timeframe_ohlc, date_range_str):
     # todo: implement plot_multi_timeframe_ohlc
-    pass
+    figures = []
+    for _, timeframe in enumerate(config.timeframes):
+        figures.append(plot_ohlc(single_timeframe(multi_timeframe_ohlc,timeframe)))
+    plot_multiple_figures(figures, file_name=f'multi_timeframe_ohlc.{date_range_str}.html')
+
+
+def read_ohlc(date_range_str: str = config.under_process_date_range) -> pd.DataFrame:)
+
+
+def generate_multi_timeframe_ohlc(date_range_str: str = config.under_process_date_range) -> None:
 
 
 def generate_multi_timeframe_ohlc(date_range_str: str):
@@ -73,7 +83,7 @@ def generate_multi_timeframe_ohlc(date_range_str: str):
         multi_timeframe_ohlc = pd.concat([multi_timeframe_ohlc, _timeframe_ohlc])
     multi_timeframe_ohlc = multi_timeframe_ohlc.sort_index()
     multi_timeframe_ohlc.to_csv(f'multi_timeframe_ohlc.{date_range_str}.zip', compression='zip')
-    plot_multi_timeframe_ohlc(ohlc)
+    plot_multi_timeframe_ohlc(ohlc, date_range_str)
 
 
 def read_multi_timeframe_ohlc(date_range_str: str = config.under_process_date_range) -> pd.DataFrame:
