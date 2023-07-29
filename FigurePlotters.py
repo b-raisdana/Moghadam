@@ -9,7 +9,7 @@ DEBUG = False
 
 
 def plot_ohlc(data: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']),
-              save: bool = False, name: str = '', do_not_show: bool = False) -> plgo.Figure:
+              save: bool = False, name: str = '', show: bool = True) -> plgo.Figure:
     """
         Plot OHLC (Open, High, Low, Close) data as a candlestick chart.
 
@@ -17,7 +17,7 @@ def plot_ohlc(data: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']),
             data (pd.DataFrame): A DataFrame containing OHLC data.
             save (bool): If True, the plot is saved as an image file.
             name (str): The name of the plot.
-            do_not_show (bool): If True, the plot will not be displayed.
+            show (bool): If False, the plot will not be displayed.
 
         Returns:
             plgo.Figure: The Plotly figure object containing the OHLC candlestick chart.
@@ -50,7 +50,7 @@ def plot_ohlc(data: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']),
                                              open=data['open'], high=data['high'], low=data['low'],
                                              close=data['close'],
                                              )], ).update_yaxes(fixedrange=False).update_layout(yaxis_title=name)
-    if not do_not_show: fig.show()
+    if show: fig.show()
     if save: fig.write_image(f'{config.id}.{name}.png')
 
     return fig

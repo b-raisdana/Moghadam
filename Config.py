@@ -47,7 +47,8 @@ class Config():
         self.ohlca_columns: List = self.ohlc_columns + ['ATR']
         self.multi_timeframe_ohlc_columns = self.ohlc_columns + ['timeframe']
         self.multi_timeframe_ohlca_columns = self.ohlca_columns + ['timeframe']
-        self.multi_timeframe_peaks_n_valleys_columns = self.ohlc_columns + ['timeframe', 'peak_or_valley', 'strength'] # 'strength',
+        self.multi_timeframe_peaks_n_valleys_columns = self.ohlc_columns + ['timeframe', 'peak_or_valley',
+                                                                            'strength']  # 'strength',
         self.multi_timeframe_trend_boundaries_columns = ['timeframe', 'end', 'bull_bear_side',
                                                          'highest_high', 'lowest_low', 'high_time', 'low_time',
                                                          'trend_line_acceleration', 'trend_line_base',
@@ -60,7 +61,7 @@ class Config():
 
         self.path_of_data = 'data'
         self.path_of_plots = os.path.join(self.path_of_data, 'plots')
-        self.path_of_logs = os.path.join(self.path_of_data, 'logs')
+        self.path_of_logs = 'logs'
         self.path_of_test_plots = os.path.join('test_plots')
 
         self.id = ""
@@ -83,8 +84,11 @@ config_digest = str.translate(base64.b64encode(hashlib.md5(config_as_json.encode
                               .decode('ascii'), {ord('+'): '', ord('/'): '', ord('='): '', })
 
 if DEBUG: print(config_digest)
-if os.path.exists(f'Config.{config_digest}.json'):
-    with open(f'Config.{config_digest}.json', 'w+') as config_file:
+dump_filename = os.path.join(config.path_of_logs, f'Config.{config_digest}.json')
+if not os.path.exists(config.path_of_logs):
+    os.makedirs(config.path_of_logs)
+if not os.path.exists(dump_filename):
+    with open(dump_filename, 'w+') as config_file:
         config_file.write(str(config_as_json))
 
 config.id = config_digest

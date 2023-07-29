@@ -82,8 +82,8 @@ def generate_ohlca(date_range_str: str, file_path: str = config.path_of_data) ->
     #     raise Exception('input_file expected to start with "ohlc" and does not start with "ohlca"!')
     ohlc = pd.read_csv(f'ohlc.{date_range_str}.zip', sep=',', header=0, index_col='date', parse_dates=['date'])
     ohlca = insert_atr(ohlc)
-    ohlca.to_csv(os.path.join(file_path, f'ohlca.{date_range_str}.zip'), compression='zip')
     plot_ohlca(ohlca)
+    ohlca.to_csv(os.path.join(file_path, f'ohlca.{date_range_str}.zip'), compression='zip')
 
 
 def plot_multi_timeframe_ohlca(multi_timeframe_ohlca, date_range_str: str):
@@ -98,9 +98,9 @@ def generate_multi_timeframe_ohlca(date_range_str: str = config.under_process_da
                                    file_path: str = config.path_of_data) -> None:
     multi_timeframe_ohlc = read_multi_timeframe_ohlc(date_range_str)
     multi_timeframe_ohlca = insert_atr(multi_timeframe_ohlc)
+    plot_multi_timeframe_ohlca(multi_timeframe_ohlca)
     multi_timeframe_ohlca.to_csv(os.path.join(file_path, f'multi_timeframe_ohlca.{date_range_str}.zip'),
                                  compression='zip')
-    plot_multi_timeframe_ohlca(multi_timeframe_ohlca)
 
 
 def plot_multi_timeframe_ohlc(multi_timeframe_ohlc, date_range_str):
@@ -130,9 +130,9 @@ def generate_multi_timeframe_ohlc(date_range_str: str, file_path: str = config.p
         _timeframe_ohlc = _timeframe_ohlc.swaplevel()
         multi_timeframe_ohlc = pd.concat([multi_timeframe_ohlc, _timeframe_ohlc])
     multi_timeframe_ohlc = multi_timeframe_ohlc.sort_index()
+    plot_multi_timeframe_ohlc(ohlc, date_range_str)
     multi_timeframe_ohlc.to_csv(os.path.join(file_path, f'multi_timeframe_ohlc.{date_range_str}.zip'),
                                 compression='zip')
-    plot_multi_timeframe_ohlc(ohlc, date_range_str)
 
 
 def read_multi_timeframe_ohlc(date_range_str: str = config.under_process_date_range) -> pd.DataFrame:

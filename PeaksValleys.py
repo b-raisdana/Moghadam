@@ -7,7 +7,7 @@ from pandas import Timestamp
 from plotly import graph_objects as plgo
 
 from Config import config, INFINITY_TIME_DELTA, TopTYPE
-from DataPreparation import read_file, check_dataframe, read_multi_timeframe_ohlc, read_ohlc, single_timeframe
+from DataPreparation import read_file, read_multi_timeframe_ohlc, single_timeframe
 from FigurePlotters import plot_ohlc, plot_multiple_figures
 
 DEBUG = True
@@ -195,7 +195,7 @@ def map_strength_to_frequency(peaks_valleys: pd.DataFrame) -> pd.DataFrame:
 def plot_peaks_n_valleys(ohlc: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']),
                          peaks: pd = pd.DataFrame(columns=['high', 'timeframe']),
                          valleys: pd = pd.DataFrame(columns=['low', 'timeframe']),
-                         name: str = '', do_not_show: bool = False) -> plgo.Figure:
+                         name: str = '', show: bool = True, save: bool = True) -> plgo.Figure:
     """
         Plot candlesticks with highlighted peaks and valleys.
 
@@ -204,29 +204,41 @@ def plot_peaks_n_valleys(ohlc: pd = pd.DataFrame(columns=['open', 'high', 'low',
             peaks (pd.DataFrame): DataFrame containing peaks data.
             valleys (pd.DataFrame): DataFrame containing valleys data.
             name (str): The name of the plot.
+            show (bool): Whether to show
+            save (bool): Whether to save
 
         Returns:
             plgo.Figure: The Plotly figure object containing the candlestick plot with peaks and valleys highlighted.
         """
-    fig = plot_ohlc(ohlc, name=name, save=False, do_not_show=True)
+    fig = plot_ohlc(ohlc, name=name, save=False, show=False)
     if len(peaks) > 0:
         fig.add_scatter(x=peaks.index.values, y=peaks['high'] + 1, mode="markers", name='P',
                         marker=dict(symbol="triangle-up", color="blue"),
                         hovertemplate="%{text}",
+                        # text=[
+                        #     f"{_x[0]}@{peaks.loc[_x]['high']}"
+                        #     for _x in peaks.index.values]
                         text=[
-                            f"{peaks.loc[_x]['timeframe']}@{peaks.loc[_x]['high']}"
-                            for _x in peaks.index.values]
+                            f"{_x[0]}@{row['high']}"
+                            for _x, row in peaks.iterrows()]
                         )
     if len(valleys) > 0:
         fig.add_scatter(x=valleys.index.values, y=valleys['low'] - 1, mode="markers", name='V',
                         marker=dict(symbol="triangle-down", color="blue"),
                         hovertemplate="%{text}",
                         text=[
-                            f"{valleys.loc[_x]['timeframe']}@{valleys.loc[_x]['low']}"
-                            for _x in valleys.index.values]
+                            f"{_x[0]}@{row['low']}"
+                            for _x, row in valleys.iterrows()]
                         )
         fig.update_layout(hovermode='x unified')
-        if not do_not_show: fig.show()
+        if show: fig.show()
+    if save:
+        figure_as_html = fig.to_html()
+        if name == '':
+            name = f'peaks_n_valleys.{ohlc.index[0].strftime("%y-%m-%d.%H-%M")}T' \
+                   f'{ohlc.index[-1].strftime("%y-%m-%d.%H-%M")}'
+        with open(f'{name}.html', '+w') as f:
+            f.write(figure_as_html)
     return fig
 
 
@@ -296,6 +308,23 @@ def find_single_timeframe_peaks_n_valleys(ohlc: pd.DataFrame,
     return _peaks_n_valleys.sort_index() if sort_index else _peaks_n_valleys
 
 
+def major_peaks_n_valleys(multi_timeframe_peaks_n_valleys: pd.DataFrame, timeframe: str) -> pd.DataFrame:
+    """
+    Filter rows from multi_timeframe_peaks_n_valleys with a timeframe equal to or greater than the specified timeframe.
+
+    Parameters:
+        multi_timeframe_peaks_n_valleys (pd.DataFrame): DataFrame containing peaks and valleys data with 'timeframe' index.
+        timeframe (str): The timeframe to filter rows.
+
+    Returns:
+        pd.DataFrame: DataFrame containing rows with timeframe equal to or greater than the specified timeframe.
+    """
+    timeframe_index = config.timeframes.index(timeframe)
+    relevant_timeframes = config.timeframes[timeframe_index:]
+    return multi_timeframe_peaks_n_valleys[
+        multi_timeframe_peaks_n_valleys.index.get_level_values('timeframe').isin(relevant_timeframes)]
+
+
 def plot_multi_timeframe_peaks_n_valleys(multi_timeframe_peaks_n_valleys, multi_timeframe_ohlc, show=True, save=True,
                                          path_of_plot=config.path_of_plots):
     # todo: test plot_multi_timeframe_peaks_n_valleys
@@ -304,9 +333,9 @@ def plot_multi_timeframe_peaks_n_valleys(multi_timeframe_peaks_n_valleys, multi_
     _multi_timeframe_valleys = valleys_only(multi_timeframe_peaks_n_valleys)
     for _, timeframe in enumerate(config.timeframes):
         figures.append(plot_peaks_n_valleys(single_timeframe(multi_timeframe_ohlc, timeframe),
-                                            peaks=single_timeframe(_multi_timeframe_peaks, timeframe),
-                                            valleys=single_timeframe(_multi_timeframe_valleys, timeframe),
-                                            name=f'{timeframe} Peaks n Valleys'))
+                                            peaks=major_peaks_n_valleys(_multi_timeframe_peaks, timeframe),
+                                            valleys=major_peaks_n_valleys(_multi_timeframe_valleys, timeframe),
+                                            name=f'{timeframe} Peaks n Valleys'), show=False, save=False)
     fig = plot_multiple_figures(figures, file_name='multi_timeframe_peaks_n_valleys', show=show, save=save,
                                 path_of_plot=path_of_plot)
     return fig
@@ -324,9 +353,9 @@ def generate_multi_timeframe_peaks_n_valleys(date_range_str, file_path: str = co
         time_peaks_n_valleys = time_peaks_n_valleys.swaplevel()
         _peaks_n_valleys = pd.concat([_peaks_n_valleys, time_peaks_n_valleys])
     _peaks_n_valleys = _peaks_n_valleys.sort_index()
+    plot_multi_timeframe_peaks_n_valleys(_peaks_n_valleys, multi_timeframe_ohlc)
     _peaks_n_valleys.to_csv(os.path.join(file_path, f'multi_timeframe_peaks_n_valleys.{date_range_str}.zip'),
                             compression='zip')
-    plot_multi_timeframe_peaks_n_valleys(_peaks_n_valleys, multi_timeframe_ohlc)
     # return _peaks_n_valleys
 
 

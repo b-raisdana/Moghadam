@@ -81,11 +81,10 @@ def test_timeframe_switching():
             assert len(comparable_timeframe_valleys.index.isin(comparable_mapped_base_valleys.index)) == \
                    len(comparable_timeframe_valleys)
         except Exception as e:
-            plot_peaks_n_valleys(ohlc=base_ohlc_ticks, name=f'base_ohlc_ticks  {config.timeframes[i]}',
-                                 valleys=_mapped_valleys_from_base)
-            plot_peaks_n_valleys(ohlc=_timeframe_ohlc_ticks, name=f'_timeframe_ohlc_ticks {config.timeframes[i]}',
-                                 peaks=_timeframe_peaks, valleys=_timeframe_valleys)
-            # todo: ValueError: Can only compare identically-labeled DataFrame objects
+            # plot_peaks_n_valleys(ohlc=base_ohlc_ticks, name=f'base_ohlc_ticks  {config.timeframes[i]}',
+            #                      valleys=_mapped_valleys_from_base)
+            # plot_peaks_n_valleys(ohlc=_timeframe_ohlc_ticks, name=f'_timeframe_ohlc_ticks {config.timeframes[i]}',
+            #                      peaks=_timeframe_peaks, valleys=_timeframe_valleys)
             print(f"comparable_timeframe_valleys({comparable_timeframe_valleys.columns}):")
             print(comparable_timeframe_valleys)
             print(f"comparable_mapped_base_valleys({comparable_mapped_base_valleys.columns}):")

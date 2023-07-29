@@ -1,6 +1,7 @@
 import os
 
 import pandas as pd
+from pandas import Timestamp
 from plotly import graph_objects as plgo
 
 from Config import TopTYPE, config, TREND
@@ -185,10 +186,10 @@ def add_canal_lines(_boundaries, single_timeframe_peaks_n_valleys):
         _peaks = most_two_significant_tops(i, _boundary['end'], single_timeframe_peaks_n_valleys, TopTYPE.PEAK)
         _valleys = most_two_significant_tops(i, _boundary['end'], single_timeframe_peaks_n_valleys, TopTYPE.VALLEY)
         if _boundary['bull_bear_side'] == TREND.BULLISH.value:
-            canal_top = _peaks.iloc[0, 'high'].to_numpy()
+            canal_top = _peaks.iloc[0]['high']
             trend_tops = _valleys['low'].to_numpy()
         else:
-            canal_top = _valleys.iloc[0, 'low'].to_numpy()
+            canal_top = _valleys.iloc[0]['low']
             trend_tops = _peaks['high'].to_numpy()
         trend_acceleration = (trend_tops[1][1] - trend_tops[0][1]) / (trend_tops[1][0] - trend_tops[0][0])
         trend_base = trend_tops[0][1] - trend_tops[0][0] * trend_acceleration
@@ -237,10 +238,10 @@ MAX_NUMBER_OF_PLOT_SCATTERS = 50
 
 
 def plot_single_time_frame_trend_boundaries(ohlc: pd.DataFrame, peaks_n_valleys: pd.DataFrame, boundaries: pd.DataFrame,
-                                            name: str = '', do_not_show: bool = False,
+                                            name: str = '', show: bool = True,
                                             html_path: str = '') -> plgo.Figure:
     fig = plot_peaks_n_valleys(ohlc, peaks=peaks_only(peaks_n_valleys), valleys=valleys_only(peaks_n_valleys),
-                               name=name, do_not_show=True)
+                               name=name, show=True)
     # if boundaries is None:
     #     boundaries = multi_timeframe_trend_boundaries(multi_timeframe_candle_trend)
 
@@ -274,7 +275,7 @@ def plot_single_time_frame_trend_boundaries(ohlc: pd.DataFrame, peaks_n_valleys:
         figure_as_html = fig.to_html()
         with open(html_path, '+w') as f:
             f.write(figure_as_html)
-    if not do_not_show: fig.show()
+    if show: fig.show()
     return fig
 
 
@@ -306,11 +307,12 @@ def generate_multi_timeframe_trend_boundaries(date_range_str: str, file_path: st
     multi_timeframe_candle_trend = generate_multi_timeframe_candle_trend(date_range_str)
     # Generate multi-timeframe trend boundaries
     trend_boundaries = multi_timeframe_trend_boundaries(multi_timeframe_candle_trend, multi_timeframe_peaks_n_valleys)
+    # Plot multi-timeframe trend boundaries
+    plot_multi_timeframe_trend_boundaries(trend_boundaries)
     # Save multi-timeframe trend boundaries to a.zip file
     trend_boundaries.to_csv(os.path.join(file_path, f'multi_timeframe_trend_boundaries.{date_range_str}.zip'),
                             compression='zip')
-    # Plot multi-timeframe trend boundaries
-    plot_multi_timeframe_trend_boundaries(trend_boundaries)
+
 
 
 # def read_multi_timeframe_candle_trend(date_range_str: str):
