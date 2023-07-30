@@ -1,8 +1,7 @@
 # Steps of The Strategy
 
-1. Detect levels, their effective times and their strength
+1. Detect levels, their effective timeframe, boundary, and their strength
 2. Detect Rally/Base/Drop periods
-
 - sequence of 2 pairs of falling/rising peaks and valleys = Rally/Drop
 - sequential movement of 3 ATR is a rally/trend. is always covered by tops rally/drops?
 - \>3 sequential (spinning candles + gap \< spinning) = Base.(jozve-amin-hemmati-220-(KohanFx.com).pdf) .if \<3 it is a minor base. expand previous rally/drop range to cover minor bases and merge with next if it is from the same kind.
@@ -20,3 +19,9 @@ Supply and demand visible range luxalgo
 9. Put the order, Update SL according to price updates
 10. Do risk-free and manage position according to 1st, 2nd, and 3rd TPs
 11. of failed in 8 (>7) sequential trades shutdown for administrative inspection
+
+
+
+  test:
+  peaks or valleys should not be included in peaks or valleys of major timeframes
+  every boudary should include at least 2 peaks and 2 valleys???
