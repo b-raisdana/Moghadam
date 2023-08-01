@@ -1,7 +1,9 @@
 import os
 import typing
+
 import pandas as pd
 import talib as ta
+from pandas import Timedelta
 from plotly import graph_objects as plgo
 
 from Config import config
@@ -157,6 +159,23 @@ def read_file(date_range_str: str, data_frame_type: str, generator: typing.Calla
     return df
 
 
+def timedelta_to_str(input_time: typing.Union[str, Timedelta]) -> str:
+    if isinstance(input_time, str):
+        timedelta_obj = Timedelta(input_time)
+    elif isinstance(input_time, Timedelta):
+        timedelta_obj = input_time
+    else:
+        raise ValueError("Input should be either a pandas timedelta string or a pandas Timedelta object.")
+
+    total_minutes = timedelta_obj.total_seconds() // 60
+    hours = int(total_minutes // 60)
+    minutes = int(total_minutes % 60)
+
+    if hours == 0: hours = ''
+
+    return f"{hours}:{minutes}"
+
+
 def read_with_timeframe(data_frame_type, date_range_str, df, file_path, n_rows, skip_rows):
     df = pd.read_csv(os.path.join(file_path, f'{data_frame_type}.{date_range_str}.zip'), sep=',', header=0,
                      index_col='date', parse_dates=['date'], skiprows=skip_rows, nrows=n_rows)
@@ -210,7 +229,8 @@ def generate_ohlc(date_range_string: str):
 
 
 def single_timeframe(multi_timeframe_data: pd.DataFrame, timeframe):
-    if multi_timeframe_data.index.names[0] != 'timeframe':
+    if 'timeframe' not in multi_timeframe_data.index.names:
         raise Exception(
-            f'Level 0 of a multi_timeframe_data expected to be "timeframe" but indexes are [{multi_timeframe_data.index.names}]')
-    return multi_timeframe_data.loc[timeframe, :]
+            f'multi_timeframe_data expected to have "timeframe" in indexes:[{multi_timeframe_data.index.names}]')
+    single_timeframe_data: pd.DataFrame = multi_timeframe_data.loc[multi_timeframe_data.index.get_level_values('timeframe') == timeframe]
+    return single_timeframe_data.droplevel('timeframe')

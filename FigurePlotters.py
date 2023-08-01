@@ -1,5 +1,8 @@
 import os
+from typing import List
+
 import pandas as pd
+from IPython.core.display_functions import display
 from plotly import graph_objects as plgo
 from plotly.subplots import make_subplots
 
@@ -56,64 +59,82 @@ def plot_ohlc(data: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']),
     return fig
 
 
-def plot_multiple_figures(figures: [plgo.Figure], file_name, save=True, show=True,
+# def plot_multiple_figures(figures: [plgo.Figure], file_name, save=True, show=True,
+#                           path_of_plot: str = config.path_of_plots):
+#     """
+#     Save multiple Plotly figures to an HTML file.
+#
+#     Parameters:
+#         figures (list): A list of Plotly figure objects to be saved.
+#         file_name (str): The name of the output HTML file.
+#         show (bool): If True, displays the plots in the browser.
+#         save: If True, saves the plots as html file.
+#         path_of_plot: Optional to specify the path of the plots. Used for easier test cleanup.
+#     Returns:
+#         None
+#
+#     Sample usage:
+#         Suppose you have a list of Plotly figure objects named 'figures'
+#         batch_plot_to_html(figures, file_name='multi_timeframe_trend_boundaries.html', show=False)
+#     """
+#     # todo: test batch_plot_to_html
+#     # Create subplots with shared x-axis for better layout
+#     rows = len(figures)
+#     fig = make_subplots(rows=rows, cols=1, shared_xaxes=True)
+#
+#     # Add each figure to the subplots
+#     for i, figure in enumerate(figures):
+#         for trace in figure['data']:
+#             fig.add_trace(trace, row=i + 1, col=1)
+#
+#     # Update the layout to avoid overlap of subplots
+#     fig.update_layout(height=300 * rows, showlegend=False)
+#
+#     # Set x-axis title for the last subplot
+#     fig.update_xaxes(title_text="Time", row=rows, col=1)
+#
+#     # Show or save the HTML file
+#     if show:
+#         fig.show()
+#     if save:
+#         if not os.path.exists(path_of_plot):
+#             os.mkdir(path_of_plot)
+#         file_path = os.path.join(path_of_plot, file_name, '.html')
+#         fig.write_html(file_path)
+#
+#     return fig
+#     # # concatenated_body = ''
+#     # # body_children_of_figures = [BeautifulSoup(figure).body.findChildren() for figure in figures.to_html]
+#     # # final_figure = BeautifulSoup(figures[0])
+#     # # for child in body_children_of_figures:
+#     # #     final_figure.body.append(copy.copy(child))
+#     # # output_html = figures[0].to_html()
+#     # output_html = '<html><head></head><body>'
+#     # for fig in figures:
+#     #     output_html += plotly.io.to_html(fig, full_html=False)
+#     # output_html += '</body></html>'
+#     # with open(file_name, file_open_mode) as f:
+#     #     f.write(output_html)
+#     # if show:
+#     #     raise Exception('Not implemented')
+def plot_multiple_figures(figures: List[plgo.Figure], file_name: str, save: bool = True, show: bool = True,
                           path_of_plot: str = config.path_of_plots):
-    """
-    Save multiple Plotly figures to an HTML file.
-
-    Parameters:
-        figures (list): A list of Plotly figure objects to be saved.
-        file_name (str): The name of the output HTML file.
-        show (bool): If True, displays the plots in the browser.
-        save: If True, saves the plots as html file.
-        path_of_plot: Optional to specify the path of the plots. Used for easier test cleanup.
-    Returns:
-        None
-
-    Sample usage:
-        Suppose you have a list of Plotly figure objects named 'figures'
-        batch_plot_to_html(figures, file_name='multi_timeframe_trend_boundaries.html', show=False)
-    """
-    # todo: test batch_plot_to_html
-    # Create subplots with shared x-axis for better layout
-    rows = len(figures)
-    fig = make_subplots(rows=rows, cols=1, shared_xaxes=True)
-
-    # Add each figure to the subplots
+    figures_html = []
     for i, figure in enumerate(figures):
-        for trace in figure['data']:
-            fig.add_trace(trace, row=i + 1, col=1)
+        figures_html.append(figure.to_html())
 
-    # Update the layout to avoid overlap of subplots
-    fig.update_layout(height=300 * rows, showlegend=False)
+    combined_html = '<html><head></head><body>'
+    for i, figure_html in enumerate(figures_html):
+        combined_html += figure_html
+    combined_html += '</body></html>'
 
-    # Set x-axis title for the last subplot
-    fig.update_xaxes(title_text="Time", row=rows, col=1)
-
-    # Show or save the HTML file
-    if show:
-        fig.show()
     if save:
-        if not os.path.exists(path_of_plot):
-            os.mkdir(path_of_plot)
-        file_path = os.path.join(path_of_plot, file_name)
-        fig.write_html(file_path)
+        file_path = os.path.join(path_of_plot,f'{file_name}.html' )
+        with open(file_path, "w") as file:
+            file.write(combined_html)
+    if show: display(combined_html)  # Show the final HTML in the browser
 
-    return fig
-    # # concatenated_body = ''
-    # # body_children_of_figures = [BeautifulSoup(figure).body.findChildren() for figure in figures.to_html]
-    # # final_figure = BeautifulSoup(figures[0])
-    # # for child in body_children_of_figures:
-    # #     final_figure.body.append(copy.copy(child))
-    # # output_html = figures[0].to_html()
-    # output_html = '<html><head></head><body>'
-    # for fig in figures:
-    #     output_html += plotly.io.to_html(fig, full_html=False)
-    # output_html += '</body></html>'
-    # with open(file_name, file_open_mode) as f:
-    #     f.write(output_html)
-    # if show:
-    #     raise Exception('Not implemented')
+    return combined_html
 
 # def clone(el):
 #     if isinstance(el, NavigableString):

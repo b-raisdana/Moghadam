@@ -8,7 +8,8 @@ from Config import TopTYPE, config, TREND
 from DataPreparation import read_file, read_multi_timeframe_ohlc, \
     single_timeframe
 from FigurePlotters import plot_multiple_figures
-from PeaksValleys import plot_peaks_n_valleys, peaks_only, valleys_only, read_multi_timeframe_peaks_n_valleys
+from PeaksValleys import plot_peaks_n_valleys, peaks_only, valleys_only, read_multi_timeframe_peaks_n_valleys, \
+    major_peaks_n_valleys
 
 
 def insert_previous_n_next_tops(single_timeframe_peaks_n_valleys, ohlc):
@@ -141,16 +142,19 @@ def multi_timeframe_trend_boundaries(multi_timeframe_candle_trend: pd.DataFrame,
     #         time_boundaries['time_of_next'], 'time_of_previous'].tolist()
     #     time_boundaries.drop(columns=['time_of_next'])
     #     boundaries = pd.concat([boundaries, time_boundaries])
+    boundaries = pd.DataFrame()
     timeframes = multi_timeframe_candle_trend.index.unique(level=0)
     for timeframe in timeframes:
         single_timeframe_candle_trend = single_timeframe(multi_timeframe_candle_trend, timeframe)
-        single_timeframe_peaks_n_valleys = single_timeframe(multi_timeframe_peaks_n_valleys, timeframe)
+        single_timeframe_peaks_n_valleys = major_peaks_n_valleys(multi_timeframe_peaks_n_valleys, timeframe)
         _timeframe_trend_boundaries = single_timeframe_trend_boundaries(single_timeframe_candle_trend,
                                                                         single_timeframe_peaks_n_valleys)
+        _timeframe_trend_boundaries['timeframe'] = timeframe
         _timeframe_trend_boundaries.set_index('timeframe', append=True, inplace=True)
         _timeframe_trend_boundaries = _timeframe_trend_boundaries.swaplevel()
         boundaries = pd.concat([boundaries, _timeframe_trend_boundaries])
-    boundaries = boundaries[config.multi_timeframe_trend_boundaries_columns]
+    boundaries = boundaries[
+        [column for column in config.multi_timeframe_trend_boundaries_columns if column != 'timeframe']]
     return boundaries
 
 
@@ -162,7 +166,9 @@ def add_highest_high_n_lowest_low(_boundaries, single_timeframe_candle_trend):
         _boundaries['lowest_low'] = None
     for i, _boundary in _boundaries.iterrows():
         _boundaries.loc[i, 'highest_high'] = single_timeframe_candle_trend.loc[i:_boundary['end'], 'high'].max()
+        _boundaries.loc[i, 'high_time'] = single_timeframe_candle_trend.loc[i:_boundary['end'], 'high'].idxmax()
         _boundaries.loc[i, 'lowest_low'] = single_timeframe_candle_trend.loc[i:_boundary['end'], 'low'].min()
+        _boundaries.loc[i, 'low_time'] = single_timeframe_candle_trend.loc[i:_boundary['end'], 'low'].idxmax()
     return _boundaries
 
 
@@ -204,7 +210,7 @@ def single_timeframe_trend_boundaries(single_timeframe_candle_trend: pd.DataFram
                                       single_timeframe_peaks_n_valleys) -> pd.DataFrame:
     _boundaries = detect_boundaries(single_timeframe_candle_trend)
     _boundaries = add_highest_high_n_lowest_low(_boundaries, single_timeframe_candle_trend)
-    _boundaries = add_canal_lines(_boundaries, single_timeframe_peaks_n_valleys)
+    # _boundaries = add_canal_lines(_boundaries, single_timeframe_peaks_n_valleys)
     _boundaries = _boundaries[[i for i in config.multi_timeframe_trend_boundaries_columns if i != 'timeframe']]
     return _boundaries
 
@@ -231,47 +237,52 @@ def detect_boundaries(single_timeframe_candle_trend):
 
 def boundary_including_peaks_valleys(peaks_n_valleys: pd.DataFrame, boundary_start: pd.Timestamp,
                                      boundary_end: pd.Timestamp):
-    return peaks_n_valleys.loc[(peaks_n_valleys.index >= boundary_start) & (peaks_n_valleys.index <= boundary_end)]
+    return peaks_n_valleys.loc[(peaks_n_valleys.index.get_level_values('date') >= boundary_start) &
+                               (peaks_n_valleys.index.get_level_values('date') <= boundary_end)]
 
 
 MAX_NUMBER_OF_PLOT_SCATTERS = 50
 
 
-def plot_single_time_frame_trend_boundaries(ohlc: pd.DataFrame, peaks_n_valleys: pd.DataFrame, boundaries: pd.DataFrame,
-                                            name: str = '', show: bool = True,
-                                            html_path: str = '') -> plgo.Figure:
+def plot_single_timeframe_trend_boundaries(ohlc: pd.DataFrame, peaks_n_valleys: pd.DataFrame, boundaries: pd.DataFrame,
+                                           name: str = '', show: bool = True,
+                                           html_path: str = '', save: bool = True) -> plgo.Figure:
     fig = plot_peaks_n_valleys(ohlc, peaks=peaks_only(peaks_n_valleys), valleys=valleys_only(peaks_n_valleys),
-                               name=name, show=True)
-    # if boundaries is None:
-    #     boundaries = multi_timeframe_trend_boundaries(multi_timeframe_candle_trend)
-
+                               name=name, show=False, save=False)
     remained_number_of_scatters = MAX_NUMBER_OF_PLOT_SCATTERS
-    for timeframe in boundaries['timeframe'].unique():
-        if remained_number_of_scatters <= 0:
-            break
-        for boundary_index, boundary in boundaries.iterrows():
-            if boundary_index == Timestamp('2017-01-04 11:17:00'):
-                pass
-            boundary_peaks_n_valleys = boundary_including_peaks_valleys(peaks_n_valleys, boundary_index,
-                                                                        boundary['end'])
-            boundary_peaks = peaks_only(boundary_peaks_n_valleys)
-            boundary_valleys = valleys_only(boundary_peaks_n_valleys)
-            xs = [boundary_index] + boundary_peaks.index.tolist() + [boundary['end']] + \
-                 sorted(boundary_valleys.index.tolist(), reverse=True)
-            ys = [ohlc.loc[boundary_index, 'open']] + boundary_peaks['high'].values.tolist() + \
-                 [ohlc.loc[boundary['end'], 'close']] + sorted(boundary_valleys['low'].values.tolist(), reverse=True)
-            fill_color = 'green' if boundary['bull_bear_side'] == TREND.BULLISH.value else \
-                'red' if boundary['bull_bear_side'] == TREND.BEARISH.value else 'gray'
-            if remained_number_of_scatters > 0:
-                fig.add_scatter(x=xs, y=ys, mode="lines", fill="toself",  # fillcolor=fill_color,
-                                fillpattern=dict(fgopacity=0.5, shape='.'),
-                                name=f'{boundary_index} {timeframe}',
-                                line=dict(color=fill_color, width=config.timeframes.index(timeframe) + 1))
-                remained_number_of_scatters -= 1
-            else:
-                break
+    # for timeframe in config.timeframes:
 
-    if html_path != '':
+    # if remained_number_of_scatters <= 0:
+    #     log(f'MAX_NUMBER_OF_PLOT_SCATTERS({MAX_NUMBER_OF_PLOT_SCATTERS}) reached '
+    #         f'and we wont add more scatters to plot!')
+    #     break
+    for boundary_index, boundary in boundaries.iterrows():
+        if boundary_index == Timestamp('2017-01-04 11:17:00'):
+            pass
+        boundary_peaks_n_valleys = boundary_including_peaks_valleys(peaks_n_valleys, boundary_index,
+                                                                    boundary['end'])
+        boundary_peaks = peaks_only(boundary_peaks_n_valleys)
+        boundary_valleys = valleys_only(boundary_peaks_n_valleys)
+        xs = [boundary_index] + boundary_peaks.index.get_level_values('date').tolist() + [boundary['end']] + \
+             sorted(boundary_valleys.index.get_level_values('date').tolist(), reverse=True)
+        ys = [ohlc.loc[boundary_index, 'open']] + boundary_peaks['high'].values.tolist() + \
+             [ohlc.loc[boundary['end'], 'close']] + sorted(boundary_valleys['low'].values.tolist(), reverse=True)
+        fill_color = 'green' if boundary['bull_bear_side'] == TREND.BULLISH.value else \
+            'red' if boundary['bull_bear_side'] == TREND.BEARISH.value else 'gray'
+        if remained_number_of_scatters > 0:
+            fig.add_scatter(x=xs, y=ys, mode="lines", fill="toself",  # fillcolor=fill_color,
+                            fillpattern=dict(fgopacity=0.5, shape='.'),
+                            name=f"{boundary_index}",  # :(xs{[x.strftime('%m-%d|%H:%M') for x in xs]}, ys{ys})",
+                            line=dict(color=fill_color))
+            remained_number_of_scatters -= 1
+        else:
+            break
+
+    if save or html_path != '':
+        if html_path == '':
+            html_path = os.path.join(config.path_of_plots,
+                                     f'single_timeframe_trend_boundaries.{ohlc.index[0].strftime("%y-%m-%d.%H-%M")}T' \
+                                     f'{ohlc.index[-1].strftime("%y-%m-%d.%H-%M")}.html')
         figure_as_html = fig.to_html()
         with open(html_path, '+w') as f:
             f.write(figure_as_html)
@@ -283,36 +294,35 @@ def read_multi_timeframe_trend_boundaries(date_range_str: str):
     return read_file(date_range_str, 'multi_timeframe_trend_boundaries', generate_multi_timeframe_trend_boundaries)
 
 
-def plot_multi_timeframe_trend_boundaries(multi_time_frame_ohlc, multi_time_frame_peaks_n_valleys,
+def plot_multi_timeframe_trend_boundaries(multi_timeframe_ohlc, multi_timeframe_peaks_n_valleys,
                                           _multi_timeframe_trend_boundaries, show: bool = True):
     # todo: test plot_multi_timeframe_trend_boundaries
     figures = []
-    for _, timeframe in enumerate(_multi_timeframe_trend_boundaries['timeframe'].unique()):
-        _figure = plot_single_time_frame_trend_boundaries(
-            ohlc=single_timeframe(multi_time_frame_ohlc, timeframe),
-            peaks_n_valleys=single_timeframe(multi_time_frame_peaks_n_valleys, timeframe),
-            boundaries=_multi_timeframe_trend_boundaries[
-                _multi_timeframe_trend_boundaries[
-                    'timeframe'] == timeframe])
+    for _, timeframe in enumerate(config.timeframes):
+        _figure = plot_single_timeframe_trend_boundaries(
+            ohlc=single_timeframe(multi_timeframe_ohlc, timeframe),
+            peaks_n_valleys=major_peaks_n_valleys(multi_timeframe_peaks_n_valleys, timeframe),
+            boundaries=single_timeframe(_multi_timeframe_trend_boundaries, timeframe), show=False, save=False,
+            name=f'{timeframe} boundaries')
         figures.append(_figure)
     plot_multiple_figures(figures, file_name=f'multi_timeframe_trend_boundaries.'
-                                             f'{multi_time_frame_ohlc.index[0].strftime("%y-%m-%d.%H-%M")}T'
-                                             f'{multi_time_frame_ohlc.index[-1].strftime("%y-%m-%d.%H-%M")}'
-                                             f'.html', show=show)
+                                             f'{multi_timeframe_ohlc.index[0][1].strftime("%y-%m-%d.%H-%M")}T'
+                                             f'{multi_timeframe_ohlc.index[-1][1].strftime("%y-%m-%d.%H-%M")}.html',
+                          show=show)
 
 
 def generate_multi_timeframe_trend_boundaries(date_range_str: str, file_path: str = config.path_of_data):
+    multi_timeframe_ohlc = read_multi_timeframe_ohlc(date_range_str)
     multi_timeframe_peaks_n_valleys = read_multi_timeframe_peaks_n_valleys(date_range_str)
     # Generate multi-timeframe candle trend
     multi_timeframe_candle_trend = generate_multi_timeframe_candle_trend(date_range_str)
     # Generate multi-timeframe trend boundaries
     trend_boundaries = multi_timeframe_trend_boundaries(multi_timeframe_candle_trend, multi_timeframe_peaks_n_valleys)
     # Plot multi-timeframe trend boundaries
-    plot_multi_timeframe_trend_boundaries(trend_boundaries)
+    plot_multi_timeframe_trend_boundaries(multi_timeframe_ohlc, multi_timeframe_peaks_n_valleys, trend_boundaries)
     # Save multi-timeframe trend boundaries to a.zip file
     trend_boundaries.to_csv(os.path.join(file_path, f'multi_timeframe_trend_boundaries.{date_range_str}.zip'),
                             compression='zip')
-
 
 
 # def read_multi_timeframe_candle_trend(date_range_str: str):
@@ -380,9 +390,12 @@ def plot_multi_timeframe_candle_trend(multi_timeframe_candle_trend, multi_timefr
     _multi_timeframe_peaks = peaks_only(multi_timeframe_peaks_n_valleys)
     _multi_timeframe_valleys = valleys_only(multi_timeframe_peaks_n_valleys)
     for _, timeframe in enumerate(config.timeframes):
-        figures.append(plot_single_timeframe_candle_trend(ohlc, single_timeframe(multi_timeframe_candle_trend, timeframe) ,
-                                       single_timeframe(multi_timeframe_peaks_n_valleys, timeframe), show=True, save=True,
-                                       path_of_plot=path_of_plot, name=f'{timeframe} Candle Trend'))
+        figures.append(
+            plot_single_timeframe_candle_trend(ohlc, single_timeframe(multi_timeframe_candle_trend, timeframe),
+                                               major_peaks_n_valleys(multi_timeframe_peaks_n_valleys, timeframe),
+                                               show=True,
+                                               save=True,
+                                               path_of_plot=path_of_plot, name=f'{timeframe} Candle Trend'))
     plot_multiple_figures(figures, file_name='multi_timeframe_candle_trend', show=show, save=save,
                           path_of_plot=path_of_plot)
 

@@ -7,7 +7,7 @@ from pandas import Timestamp
 from plotly import graph_objects as plgo
 
 from Config import config, INFINITY_TIME_DELTA, TopTYPE
-from DataPreparation import read_file, read_multi_timeframe_ohlc, single_timeframe
+from DataPreparation import read_file, read_multi_timeframe_ohlc, single_timeframe, timedelta_to_str
 from FigurePlotters import plot_ohlc, plot_multiple_figures
 
 DEBUG = True
@@ -62,36 +62,30 @@ def calculate_strength(peaks_or_valleys: pd.DataFrame, mode: TopTYPE,
     if 'strength' not in peaks_or_valleys.columns:
         peaks_or_valleys['strength'] = INFINITY_TIME_DELTA
 
-    for i, _ in enumerate(peaks_or_valleys.index.values):
-        if DEBUG and peaks_or_valleys.index[i] == Timestamp('2017-01-04 11:17:00'):
+    for i, i_timestamp in enumerate(peaks_or_valleys.index.values):
+        if DEBUG and peaks_or_valleys.index[i] == Timestamp('2017-10-06 00:18:00'):
             pass
-        # _left_distance = INFINITY_TIME_DELTA
-        # _right_distance = INFINITY_TIME_DELTA
-
-        if peaks_or_valleys.index[i] > start_time_of_prices:
-            _left_distance = left_distance(peaks_or_valleys, i, mode)
+        if i_timestamp > start_time_of_prices:
+            _left_distance = left_distance(peaks_or_valleys, i, mode, ohlc_with_next_n_previous_high_lows)
             if _left_distance == INFINITY_TIME_DELTA:
                 _left_distance = peaks_or_valleys.index[i] - start_time_of_prices
-        if peaks_or_valleys.index[i] < end_time_of_prices:
-            _right_distance = right_distance(peaks_or_valleys, i, mode)
-        # if start_time_of_prices < peaks_or_valleys.index[i] < end_time_of_prices \
-        #         and _left_distance == INFINITY_TIME_DELTA:
-        #     peaks_or_valleys.loc[peaks_or_valleys.index[i], 'strength'] \
-        #         = min(peaks_or_valleys.index[i] - start_time_of_prices, _right_distance,
-        #               peaks_or_valleys.loc[peaks_or_valleys.index[i], 'strength'])  # min(i, len(prices) - i)
-        #     continue
-        # peaks_or_valleys.loc[peaks_or_valleys.index[i], 'strength'] = \
-        #     min(_left_distance, _right_distance, peaks_or_valleys.iloc[i]['strength'])
-        peaks_or_valleys.loc[peaks_or_valleys.index[i], 'strength'] = min(_left_distance, _right_distance)
+        if i_timestamp < end_time_of_prices:
+            _right_distance = right_distance(peaks_or_valleys, i, mode, ohlc_with_next_n_previous_high_lows)
+        if min(_left_distance, _right_distance) <= pd.to_timedelta(config.timeframes[0]):
+            raise Exception(
+                f'Strength expected to be greater than config.timeframes[0]({config.timeframes[0]}) which is '
+                f'min(_left_distance, _right_distance)=min({_left_distance},{_right_distance})'
+                f'={min(_left_distance, _right_distance)} @ "{i_timestamp}"')
+        peaks_or_valleys.loc[i_timestamp, 'strength'] = min(_left_distance, _right_distance)
     # output = pd.concat([peaks_or_valleys, reserved_peaks_or_valleys]).sort_index()
     return peaks_or_valleys
 
 
-def mask_of_greater_tops(peaks_valleys: pd.DataFrame, i: int, mode: TopTYPE):
+def mask_of_greater_tops(peaks_valleys: pd.DataFrame, needle: float, mode: TopTYPE):
     if mode == TopTYPE.PEAK:
-        return peaks_valleys['high'] > peaks_valleys.iloc[i]['high']
+        return peaks_valleys[peaks_valleys['high'] > needle['high']]
     else:  # mode == TopTYPE.VALLEY
-        return peaks_valleys['low'] < peaks_valleys.iloc[i]['low']
+        return peaks_valleys[peaks_valleys['low'] < needle['low']]
 
 
 # def left_valley_distance(prices: pd.DataFrame, peaks_valleys: pd.DataFrame, i: int,
@@ -108,14 +102,18 @@ def mask_of_greater_tops(peaks_valleys: pd.DataFrame, i: int, mode: TopTYPE):
 #         if len(higher_candles_after_left_nearest_lower_valley) == 0:
 #             left_distance = timedelta(0)
 #     return left_distance
-def left_distance(peaks_or_valleys: pd.DataFrame, location: int, mode: TopTYPE) -> pd.Timedelta:
-    left_lower_valleys = peaks_or_valleys.loc[:peaks_or_valleys.index[location],
-                         mask_of_greater_tops(peaks_or_valleys, location, mode)]
-    if len(left_lower_valleys.index.values) > 0:
-        _left_distance = peaks_or_valleys.index[location] - left_lower_valleys.index[-1]
+def left_distance(peaks_or_valleys: pd.DataFrame, location: int, mode: TopTYPE, ohlc: pd.DataFrame) -> pd.Timedelta:
+    if location == 0:
+        return INFINITY_TIME_DELTA
+    left_more_significant_tops = mask_of_greater_tops(ohlc[ohlc.index < peaks_or_valleys.index[location]],
+                                                      peaks_or_valleys.iloc[location],
+                                                      mode)
+    if len(left_more_significant_tops.index.values) > 0:
+        _left_distance = peaks_or_valleys.index[location] - left_more_significant_tops.index[-1]
         if _left_distance <= pd.to_timedelta(config.timeframes[0]):
             raise Exception(
-                f'left_distance({_left_distance}) expected to be greater than config.timeframes[0]:{config.timeframes[0]}')
+                f'left_distance({_left_distance}) expected to be greater than '
+                f'config.timeframes[0]:{config.timeframes[0]} @{location}={peaks_or_valleys.index[location]}')
         return _left_distance
     else:
         return INFINITY_TIME_DELTA
@@ -134,14 +132,17 @@ def left_distance(peaks_or_valleys: pd.DataFrame, location: int, mode: TopTYPE) 
 #         if len(higher_candles_before_right_nearest_lower_valley) == 0:
 #             right_distance = timedelta(0)
 #     return right_distance
-def right_distance(peaks_or_valleys: pd.DataFrame, location: int, mode: TopTYPE) -> pd.Timedelta:
-    right_tops = peaks_or_valleys.loc[peaks_or_valleys.index[location + 1]:,
-                 mask_of_greater_tops(peaks_or_valleys, location, mode)]
-    if len(right_tops.index.values) > 0:
-        _right_distance = right_tops.index[0] - peaks_or_valleys.index[location]
+def right_distance(peaks_or_valleys: pd.DataFrame, location: int, mode: TopTYPE, ohlc: pd.DataFrame) -> pd.Timedelta:
+    if location == len(peaks_or_valleys):
+        return INFINITY_TIME_DELTA
+    right_more_significant_tops = mask_of_greater_tops(ohlc[ohlc.index > peaks_or_valleys.index[location]],
+                                                       peaks_or_valleys.iloc[location], mode)
+    if len(right_more_significant_tops.index.values) > 0:
+        _right_distance = right_more_significant_tops.index[0] - peaks_or_valleys.index[location]
         if _right_distance <= pd.to_timedelta(config.timeframes[0]):
             raise Exception(
-                f'right_distance({_right_distance}) expected to be greater than config.timeframes[0]:{config.timeframes[0]}')
+                f'right_distance({_right_distance}) expected to be greater than '
+                f'config.timeframes[0]:{config.timeframes[0]} @{location}={peaks_or_valleys.index[location]}')
         return _right_distance
     else:
         return INFINITY_TIME_DELTA
@@ -234,7 +235,9 @@ def plot_peaks_n_valleys(ohlc: pd = pd.DataFrame(columns=['open', 'high', 'low',
     fig = plot_ohlc(ohlc, name=name, save=False, show=False)
     if len(peaks) > 0:
         _indexes, _labels = [], []
-        [(_indexes.append(_x[1]), _labels.append(f"{_x[0]}@{row['high']}")) for _x, row in peaks.iterrows()]
+        [(_indexes.append(_x[1]), _labels.append(
+            f"{_x[0]}/{timedelta_to_str(row['strength'])}@{_x[1].strftime('%m-%d|%H:%M')}={row['high']}"))
+         for _x, row in peaks.iterrows()]
         fig.add_scatter(x=_indexes, y=peaks['high'] + 1, mode="markers", name='P',
                         marker=dict(symbol="triangle-up", color="blue"), hovertemplate="%{text}", text=_labels)
         #                text=[
@@ -242,7 +245,9 @@ def plot_peaks_n_valleys(ohlc: pd = pd.DataFrame(columns=['open', 'high', 'low',
         #                   for _x in peaks.index.values]
     if len(valleys) > 0:
         _indexes, _labels = [], []
-        [(_indexes.append(_x[1]), _labels.append(f"{_x[0]}@{row['high']}")) for _x, row in valleys.iterrows()]
+        [(_indexes.append(_x[1]), _labels.append(
+            f"{_x[0]}({timedelta_to_str(row['strength'])})@{_x[1].strftime('%m-%d|%H:%M')}={row['low']}"))
+         for _x, row in valleys.iterrows()]
         fig.add_scatter(x=_indexes, y=valleys['low'] - 1, mode="markers", name='V',
                         marker=dict(symbol="triangle-down", color="blue"), hovertemplate="%{text}", text=_labels)
         fig.update_layout(hovermode='x unified')
@@ -250,10 +255,10 @@ def plot_peaks_n_valleys(ohlc: pd = pd.DataFrame(columns=['open', 'high', 'low',
     if save:
         figure_as_html = fig.to_html()
         if name == '':
-            name = f'peaks_n_valleys.{ohlc.index[0].strftime("%y-%m-%d.%H-%M")}T' \
-                   f'{ohlc.index[-1].strftime("%y-%m-%d.%H-%M")}'
-        with open(f'{name}.html', '+w') as f:
-            f.write(figure_as_html)
+            name = os.path.join(config.path_of_plots, f'peaks_n_valleys.{ohlc.index[0].strftime("%y-%m-%d.%H-%M")}T' \
+                                                      f'{ohlc.index[-1].strftime("%y-%m-%d.%H-%M")}.html')
+            with open(name, '+w') as f:
+                f.write(figure_as_html)
     return fig
 
 
@@ -325,22 +330,23 @@ def merge_tops(peaks: pd.DataFrame, valleys: pd.DataFrame) -> pd.DataFrame:
 
 def find_single_timeframe_peaks_n_valleys(ohlc: pd.DataFrame,
                                           sort_index: bool = True) -> pd.DataFrame:  # , max_cycles=100):
-    # ohlc = single_timeframe(ohlc, config.timeframes[0])
-    mask_of_sequence_of_same_high_lows = (ohlc['high'] == ohlc['high'].shift(1)) | (ohlc['low'] == ohlc['low'].shift(1))
-    sequence_of_same_high_lows = ohlc.loc[mask_of_sequence_of_same_high_lows].index
-    none_repeating_ohlc = ohlc.drop(mask_of_sequence_of_same_high_lows)
-    # ohlc['next_high'] = ohlc['high'].shift(-1)
-    # ohlc['previous_high'] = ohlc['high'].shift(1)
-    # ohlc['next_low'] = ohlc['low'].shift(-1)
-    # ohlc['previous_low'] = ohlc['low'].shift(1)
-    mask_of_peaks = (ohlc['high'] > ohlc['high'].shift(1)) & (ohlc['high'] > ohlc['high'].shift(-1))
-    _peaks = ohlc.loc[mask_of_peaks]
-    # _peaks['peak_or_valley'] = TopTYPE.PEAK.value
-    # _peaks = remove_sequence_of_same_value(_peaks)
-    # _valleys = ohlc.loc[(ohlc['low'] < ohlc['previous_low']) & (ohlc['low'] >= ohlc['next_low'])]
-    # _valleys['peak_or_valley'] = TopTYPE.VALLEY.value
-    mask_of_valleys = (ohlc['low'] < ohlc['low'].shift(1)) & (ohlc['low'] < ohlc['low'].shift(-1))
-    _valleys = ohlc.loc[mask_of_valleys]
+    mask_of_sequence_of_same_value = (ohlc['high'] == ohlc['high'].shift(1))
+    sequence_of_same_high_lows = ohlc.loc[mask_of_sequence_of_same_value].index
+    none_repeating_ohlc = ohlc.drop(sequence_of_same_high_lows)
+
+    mask_of_peaks = (none_repeating_ohlc['high'] > none_repeating_ohlc['high'].shift(1)) & (
+            none_repeating_ohlc['high'] > none_repeating_ohlc['high'].shift(-1))
+    _peaks = none_repeating_ohlc.loc[mask_of_peaks]
+    _peaks['peak_or_valley'] = TopTYPE.PEAK.value
+
+    mask_of_sequence_of_same_value = (ohlc['low'] == ohlc['low'].shift(1))
+    sequence_of_same_high_lows = ohlc.loc[mask_of_sequence_of_same_value].index
+    none_repeating_ohlc = ohlc.drop(sequence_of_same_high_lows)
+
+    mask_of_valleys = (none_repeating_ohlc['low'] < none_repeating_ohlc['low'].shift(1)) & (
+            none_repeating_ohlc['low'] < none_repeating_ohlc['low'].shift(-1))
+    _valleys = none_repeating_ohlc.loc[mask_of_valleys]
+    _valleys['peak_or_valley'] = TopTYPE.VALLEY.value
 
     _peaks_n_valleys = pd.concat([_peaks, _valleys])
     _peaks_n_valleys = _peaks_n_valleys.loc[:, ['open', 'high', 'low', 'close', 'volume', 'peak_or_valley']]
@@ -374,7 +380,8 @@ def plot_multi_timeframe_peaks_n_valleys(multi_timeframe_peaks_n_valleys, multi_
         figures.append(plot_peaks_n_valleys(single_timeframe(multi_timeframe_ohlc, timeframe),
                                             peaks=major_peaks_n_valleys(_multi_timeframe_peaks, timeframe),
                                             valleys=major_peaks_n_valleys(_multi_timeframe_valleys, timeframe),
-                                            name=f'{timeframe} Peaks n Valleys', show=True, save=False))
+                                            name=f'{timeframe} Peaks n Valleys', show=False, save=False))
+
     fig = plot_multiple_figures(figures, file_name='multi_timeframe_peaks_n_valleys', show=show, save=save,
                                 path_of_plot=path_of_plot)
     return fig
@@ -408,11 +415,11 @@ def generate_multi_timeframe_peaks_n_valleys(date_range_str, file_path: str = co
     multi_timeframe_ohlc = read_multi_timeframe_ohlc()
     _peaks_n_valleys = pd.DataFrame()
     # for _, timeframe in enumerate(config.timeframes):
-    time_ohlc = single_timeframe(multi_timeframe_ohlc, config.timeframes[0])
-    time_peaks_n_valleys = find_single_timeframe_peaks_n_valleys(time_ohlc, sort_index=False)
-    time_peaks_n_valleys = calculate_strength_of_peaks_n_valleys(time_ohlc, time_peaks_n_valleys)
+    base_ohlc = single_timeframe(multi_timeframe_ohlc, config.timeframes[0])
+    time_peaks_n_valleys = find_single_timeframe_peaks_n_valleys(base_ohlc, sort_index=False)
+    time_peaks_n_valleys = calculate_strength_of_peaks_n_valleys(base_ohlc, time_peaks_n_valleys)
     time_peaks_n_valleys['timeframe'] = [strength_to_timeframe(row['strength']) for index, row in
-                                         enumerate(time_peaks_n_valleys)]
+                                         time_peaks_n_valleys.iterrows()]
     time_peaks_n_valleys.set_index('timeframe', append=True, inplace=True)
     time_peaks_n_valleys = time_peaks_n_valleys.swaplevel()
     _peaks_n_valleys = pd.concat([_peaks_n_valleys, time_peaks_n_valleys])

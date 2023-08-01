@@ -51,8 +51,8 @@ class Config():
                                                                             'strength']  # 'strength',
         self.multi_timeframe_trend_boundaries_columns = ['timeframe', 'end', 'bull_bear_side',
                                                          'highest_high', 'lowest_low', 'high_time', 'low_time',
-                                                         'trend_line_acceleration', 'trend_line_base',
-                                                         'canal_line_acceleration', 'canal_line_base',
+                                                         # 'trend_line_acceleration', 'trend_line_base',
+                                                         # 'canal_line_acceleration', 'canal_line_base',
                                                          ]
 
         self.end_time = '2021-03-01 03:43:00'
