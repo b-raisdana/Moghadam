@@ -261,12 +261,16 @@ def plot_single_timeframe_trend_boundaries(ohlc: pd.DataFrame, peaks_n_valleys: 
             pass
         boundary_peaks_n_valleys = boundary_including_peaks_valleys(peaks_n_valleys, boundary_index,
                                                                     boundary['end'])
-        boundary_peaks = peaks_only(boundary_peaks_n_valleys)
-        boundary_valleys = valleys_only(boundary_peaks_n_valleys)
-        xs = [boundary_index] + boundary_peaks.index.get_level_values('date').tolist() + [boundary['end']] + \
-             sorted(boundary_valleys.index.get_level_values('date').tolist(), reverse=True)
-        ys = [ohlc.loc[boundary_index, 'open']] + boundary_peaks['high'].values.tolist() + \
-             [ohlc.loc[boundary['end'], 'close']] + sorted(boundary_valleys['low'].values.tolist(), reverse=True)
+        boundary_peaks = peaks_only(boundary_peaks_n_valleys)['high'].sort_index(level='date')
+        boundary_valleys = valleys_only(boundary_peaks_n_valleys)['low'].sort_index(level='date', ascending=False)
+        # xs = [boundary_index] + boundary_peaks.index.get_level_values('date').tolist() + [boundary['end']] + \
+        #      sorted(boundary_valleys.index.get_level_values('date').tolist(), reverse=True)
+        # ys = [ohlc.loc[boundary_index, 'open']] + boundary_peaks['high'].values.tolist() + \
+        #      [ohlc.loc[boundary['end'], 'close']] + sorted(boundary_valleys['low'].values.tolist(), reverse=True)
+        xs = [boundary_index] + boundary_peaks.index.get_level_values('date').tolist() + \
+             [boundary['end']] + boundary_valleys.index.get_level_values('date').tolist()
+        ys = [ohlc.loc[boundary_index, 'open']] + boundary_peaks.values.tolist() + \
+             [ohlc.loc[boundary['end'], 'close']] + boundary_valleys.values.tolist()
         fill_color = 'green' if boundary['bull_bear_side'] == TREND.BULLISH.value else \
             'red' if boundary['bull_bear_side'] == TREND.BEARISH.value else 'gray'
         if remained_number_of_scatters > 0:
@@ -301,8 +305,9 @@ def plot_multi_timeframe_trend_boundaries(multi_timeframe_ohlc, multi_timeframe_
     for _, timeframe in enumerate(config.timeframes):
         _figure = plot_single_timeframe_trend_boundaries(
             ohlc=single_timeframe(multi_timeframe_ohlc, timeframe),
-            peaks_n_valleys=major_peaks_n_valleys(multi_timeframe_peaks_n_valleys, timeframe),
-            boundaries=single_timeframe(_multi_timeframe_trend_boundaries, timeframe), show=False, save=False,
+            peaks_n_valleys=major_peaks_n_valleys(multi_timeframe_peaks_n_valleys, timeframe).sort_index(level='date'),
+            boundaries=single_timeframe(_multi_timeframe_trend_boundaries, timeframe).sort_index(level='date'),
+            show=False, save=False,
             name=f'{timeframe} boundaries')
         figures.append(_figure)
     plot_multiple_figures(figures, file_name=f'multi_timeframe_trend_boundaries.'
