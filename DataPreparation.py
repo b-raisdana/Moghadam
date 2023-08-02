@@ -1,21 +1,20 @@
 import os
-import typing
+from typing import Callable, Union
 
 import pandas as pd
 import talib as ta
 from pandas import Timedelta
 from plotly import graph_objects as plgo
 
-from Config import config
-from FigurePlotters import plot_ohlc, plot_multiple_figures
+from Config import config, CandleSize
+from FigurePlotters import plot_multiple_figures, DEBUG
 from helper import log
 
 
 def generate_test_ohlc():
     test_ohlc_ticks = pd.read_csv(f'{config.files_to_load[0]}.zip', sep=',', header=0, index_col='date',
                                   parse_dates=['date'], skiprows=range(1, 400320), nrows=1440)
-    file_name = f'ohlc.{test_ohlc_ticks.index[0].strftime("%y-%m-%d.%H-%M")}T' \
-                f'{test_ohlc_ticks.index[-1].strftime("%y-%m-%d.%H-%M")}.zip'
+    file_name = f'ohlc.{file_id(test_ohlc_ticks)}.zip'
     test_ohlc_ticks.to_csv(file_name, compression='zip')
 
 
@@ -26,7 +25,69 @@ def insert_atr(single_timeframe_ohlc: pd.DataFrame) -> pd.DataFrame:
     return single_timeframe_ohlc
 
 
-def plot_ohlca(ohlca: pd.DataFrame, date_range_str: str, save: bool = True, show: bool = True):
+def range_of_data(data: pd.DataFrame) -> str:
+    return f'{data.index.get_level_values("date")[0].strftime("%y-%m-%d.%H-%M")}T' \
+           f'{data.index.get_level_values("date")[-1].strftime("%y-%m-%d.%H-%M")}'
+
+
+def file_id(data: pd.DataFrame, name: str = '') -> str:
+    if name is None or name == '':
+        return f'{range_of_data(data)}'
+    else:
+        return f'{name}.{range_of_data(data)}'
+
+
+def plot_ohlc(ohlc: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']),
+              save: bool = False, name: str = '', show: bool = True) -> plgo.Figure:
+    """
+        Plot OHLC (Open, High, Low, Close) data as a candlestick chart.
+
+        Parameters:
+            ohlc (pd.DataFrame): A DataFrame containing OHLC data.
+            save (bool): If True, the plot is saved as an image file.
+            name (str): The name of the plot.
+            show (bool): If False, the plot will not be displayed.
+
+        Returns:
+            plgo.Figure: The Plotly figure object containing the OHLC candlestick chart.
+        """
+    import os
+    MAX_LEN_OF_DATA_FRAME_TO_PLOT = 50000
+    SAFE_LEN_OF_DATA_FRAME_TO_PLOT = 10000
+    if len(ohlc.index) > MAX_LEN_OF_DATA_FRAME_TO_PLOT:
+        raise Exception(f'Too many rows to plt ({len(ohlc.index),}>{MAX_LEN_OF_DATA_FRAME_TO_PLOT})')
+    if len(ohlc.index) > SAFE_LEN_OF_DATA_FRAME_TO_PLOT:
+        print(f'Plotting too much data will slow us down ({len(ohlc.index),}>{SAFE_LEN_OF_DATA_FRAME_TO_PLOT})')
+    if not os.path.isfile('kaleido.installed'):
+        print('kaleido not satisfied!')
+        try:
+            os.system('pip install -q condacolab')
+            import condacolab
+
+            if not condacolab.check():
+                condacolab.install()
+                os.system('conda install -c conda-forge python-kaleido')
+                os.system('echo "" > kaleido.installed')
+            else:
+                print('condacolab already satisfied')
+        except:
+            os.system('pip install -U kaleido')
+            os.system('echo "" > kaleido.installed')
+    if DEBUG: print(f'data({ohlc.shape})')
+    if DEBUG: print(ohlc)
+    fig = plgo.Figure(data=[plgo.Candlestick(x=ohlc.index.values,
+                                             open=ohlc['open'], high=ohlc['high'], low=ohlc['low'],
+                                             close=ohlc['close'],
+                                             )], ).update_yaxes(fixedrange=False).update_layout(yaxis_title=name)
+    if show: fig.show()
+    if save:
+        file_name = f'ohlc.{file_id(ohlc)}.html' if name == '' else f'ohlc.{name}.{file_id(ohlc)}.html'
+        save_figure(fig, file_name)
+
+    return fig
+
+
+def plot_ohlca(ohlca: pd.DataFrame, save: bool = True, show: bool = True, name: str = '') -> plgo.Figure:
     """
     Plot OHLC data with an additional ATR (Average True Range) boundary.
 
@@ -36,7 +97,6 @@ def plot_ohlca(ohlca: pd.DataFrame, date_range_str: str, save: bool = True, show
 
     Parameters:
         ohlca (pd.DataFrame): A DataFrame containing OHLC data along with the 'ATR' column representing the ATR values.
-        date_range_str (str): The date range string to identify the plot in the format 'YY-MM-DD.HH-MMTYY-MM-DD.HH-MM'.
         save (bool): If True, the plot is saved as an HTML file.
         show (bool): If True, the plot is displayed in the browser.
 
@@ -49,34 +109,56 @@ def plot_ohlca(ohlca: pd.DataFrame, date_range_str: str, save: bool = True, show
         plot_ohlca(ohlca, date_range_str)
     """
     # Calculate the middle of the boundary (average of open and close)
-    ohlca['boundary_mid'] = (ohlca['open'] + ohlca['close']) / 2
+    midpoints = (ohlca['high'] + ohlca['low']) / 2
 
     # Create a figure using the plot_ohlc function
-    fig = plot_ohlc(ohlca[['open', 'high', 'low', 'close']], save=False, name='')
+    fig = plot_ohlc(ohlca[['open', 'high', 'low', 'close']], show=False, save=False, name=name)
 
-    # Add scatter trace for the ATR boundary
-    fig.add_trace(
-        plgo.Scatter(
-            x=ohlca.index,
-            y=ohlca['boundary_mid'],
-            mode='lines',
-            line=dict(color='cray', width=ohlca['ATR'], dash='solid'),
-            fill='tozeroy',
-            fillcolor='rgba(128, 128, 128, 0.5)',  # 50% transparent cray color
-            name='ATR Boundary'
-        )
-    )
+    # Add the ATR boundaries
+    fig = add_atr_boundary(fig, ohlca.index, midpoints=midpoints, widths=CandleSize.Spinning.value[1] * ohlca['ATR'],
+                           name='Spinning')
+    fig = add_atr_boundary(fig, ohlca.index, midpoints=midpoints, widths=CandleSize.Standard.value[1] * ohlca['ATR'],
+                           name='Standard')
+    fig = add_atr_boundary(fig, ohlca.index, midpoints=midpoints, widths=CandleSize.Long.value[1] * ohlca['ATR'],
+                           name='Long')
 
     # Show the figure or write it to an HTML file
     if save:
-        if not os.path.exists(config.path_of_plots):
-            os.mkdir(config.path_of_plots)
-        file_name = f'ohlca.{date_range_str}.html'
-        file_path = os.path.join(config.path_of_plots, file_name)
-        fig.write_html(file_path)
+        file_name = f'ohlca.{file_id(ohlca, name)}.html'
+        save_figure(fig, file_name)
 
     if show:
         fig.show()
+    return fig
+
+
+def add_atr_boundary(fig: plgo.Figure, xs: pd.Series, midpoints: pd.Series, widths: pd.Series,
+                     transparency: float = 0.2, name: str = 'ATR') -> plgo.Figure:
+    xs = xs.tolist()
+    half_widths = widths.fillna(value=0).div(2)
+    upper_band: pd.Series = midpoints + half_widths
+    lower_band: pd.Series = midpoints - half_widths
+
+    return fig.add_trace(
+        plgo.Scatter(
+            x=xs + xs[::-1],
+            y=upper_band.tolist() + lower_band.tolist()[::-1],
+            mode='lines',
+            line=dict(color='gray', dash='solid', width=0.2),
+            fill='toself',
+            fillcolor=f'rgba(128, 128, 128, {transparency})',  # 50% transparent gray color
+            name=name
+        )
+    )
+
+
+def save_figure(fig, file_name: str, file_path: str = ''):
+    if not os.path.exists(config.path_of_plots):
+        os.mkdir(config.path_of_plots)
+    if file_path == '':
+        file_path = config.path_of_plots
+    file_path = os.path.join(file_path, file_name)
+    fig.write_html(file_path)
 
 
 def generate_ohlca(date_range_str: str, file_path: str = config.path_of_data) -> None:
@@ -88,12 +170,14 @@ def generate_ohlca(date_range_str: str, file_path: str = config.path_of_data) ->
     ohlca.to_csv(os.path.join(file_path, f'ohlca.{date_range_str}.zip'), compression='zip')
 
 
-def plot_multi_timeframe_ohlca(multi_timeframe_ohlca, date_range_str: str):
+def plot_multi_timeframe_ohlca(multi_timeframe_ohlca, name: str = '', show: bool = True, save: bool = True):
     # todo: test plot_multi_timeframe_ohlca
     figures = []
     for _, timeframe in enumerate(config.timeframes):
-        figures.append(plot_ohlca(single_timeframe(multi_timeframe_ohlca, timeframe)))
-    plot_multiple_figures(figures, file_name=f'multi_timeframe_ohlc.{date_range_str}.html')
+        figures.append(plot_ohlca(single_timeframe(multi_timeframe_ohlca, timeframe), show=False, save=False,
+                                  name=f'{timeframe} ohlca'))
+    plot_multiple_figures(figures, file_name=f'multi_timeframe_ohlca.{file_id(multi_timeframe_ohlca, name)}.html',
+                          save=save, show=show)
 
 
 def generate_multi_timeframe_ohlca(date_range_str: str = config.under_process_date_range,
@@ -141,7 +225,7 @@ def read_multi_timeframe_ohlc(date_range_str: str = config.under_process_date_ra
     return read_file(date_range_str, 'multi_timeframe_ohlc', generate_multi_timeframe_ohlc)
 
 
-def read_file(date_range_str: str, data_frame_type: str, generator: typing.Callable, skip_rows=None,
+def read_file(date_range_str: str, data_frame_type: str, generator: Callable, skip_rows=None,
               n_rows=None, file_path: str = config.path_of_data) -> pd.DataFrame:
     # todo: add cache to read_file
     df = None
@@ -159,7 +243,7 @@ def read_file(date_range_str: str, data_frame_type: str, generator: typing.Calla
     return df
 
 
-def timedelta_to_str(input_time: typing.Union[str, Timedelta]) -> str:
+def timedelta_to_str(input_time: Union[str, Timedelta]) -> str:
     if isinstance(input_time, str):
         timedelta_obj = Timedelta(input_time)
     elif isinstance(input_time, Timedelta):
@@ -232,5 +316,6 @@ def single_timeframe(multi_timeframe_data: pd.DataFrame, timeframe):
     if 'timeframe' not in multi_timeframe_data.index.names:
         raise Exception(
             f'multi_timeframe_data expected to have "timeframe" in indexes:[{multi_timeframe_data.index.names}]')
-    single_timeframe_data: pd.DataFrame = multi_timeframe_data.loc[multi_timeframe_data.index.get_level_values('timeframe') == timeframe]
+    single_timeframe_data: pd.DataFrame = multi_timeframe_data.loc[
+        multi_timeframe_data.index.get_level_values('timeframe') == timeframe]
     return single_timeframe_data.droplevel('timeframe')

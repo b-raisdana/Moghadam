@@ -64,8 +64,17 @@ class Config():
         self.path_of_logs = 'logs'
         self.path_of_test_plots = os.path.join('test_plots')
 
+        self.candles_max_size_spinning = 0.80
+        self.candles_max_size_standard = 0.80
+        self.candles_max_size_spinning = 0.80
+
         self.id = ""
 
+class CandleSize(Enum):
+    Spinning = (0.0, 0.80)
+    Standard = (0.80, 0.120)
+    Long = (1.20, 2.5)
+    Spike = (2.5, 999999999)
 
 class MyEncoder(json.JSONEncoder):
     def default(self, o):
