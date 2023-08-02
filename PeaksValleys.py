@@ -288,14 +288,6 @@ def valleys_only(peaks_n_valleys: pd.DataFrame) -> pd.DataFrame:
     return peaks_n_valleys[peaks_n_valleys['peak_or_valley'] == TopTYPE.VALLEY.value]
 
 
-def higher_or_eq_timeframe_peaks_n_valleys(peaks_n_valleys: pd.DataFrame, timeframe: str):
-    try:
-        index = config.timeframes.index(timeframe)
-    except ValueError as e:
-        raise Exception(f'timeframe:{timeframe} should be in [{config.timeframes}]!')
-    return peaks_n_valleys.loc[peaks_n_valleys.index.isin(config.timeframes[index:], level=0)]
-
-
 def merge_tops(peaks: pd.DataFrame, valleys: pd.DataFrame) -> pd.DataFrame:
     return pd.concat([peaks, valleys]).sort_index()
 
@@ -364,10 +356,19 @@ def major_peaks_n_valleys(multi_timeframe_peaks_n_valleys: pd.DataFrame, timefra
     Returns:
         pd.DataFrame: DataFrame containing rows with timeframe equal to or greater than the specified timeframe.
     """
-    timeframe_index = config.timeframes.index(timeframe)
-    relevant_timeframes = config.timeframes[timeframe_index:]
-    return multi_timeframe_peaks_n_valleys[
-        multi_timeframe_peaks_n_valleys.index.get_level_values('timeframe').isin(relevant_timeframes)]
+    return higher_or_eq_timeframe_peaks_n_valleys(multi_timeframe_peaks_n_valleys, timeframe)
+    # timeframe_index = config.timeframes.index(timeframe)
+    # relevant_timeframes = config.timeframes[timeframe_index:]
+    # return multi_timeframe_peaks_n_valleys[
+    #     multi_timeframe_peaks_n_valleys.index.get_level_values('timeframe').isin(relevant_timeframes)]
+
+
+def higher_or_eq_timeframe_peaks_n_valleys(peaks_n_valleys: pd.DataFrame, timeframe: str):
+    try:
+        index = config.timeframes.index(timeframe)
+    except ValueError as e:
+        raise Exception(f'timeframe:{timeframe} should be in [{config.timeframes}]!')
+    return peaks_n_valleys.loc[peaks_n_valleys.index.isin(config.timeframes[index:], level='timeframe')]
 
 
 def plot_multi_timeframe_peaks_n_valleys(multi_timeframe_peaks_n_valleys, multi_timeframe_ohlc, show=True, save=True,

@@ -8,7 +8,8 @@ if __name__ == "__main__":
     # ohlca = read_multi_timeframe_ohlca(config.under_process_date_range)
     # peaks_n_valleys = read_peaks_n_valleys(config.under_process_date_range)
     # candle_trend = candles_trend_multi_timeframe(ohlca, peaks_n_valleys)
-    generate_multi_timeframe_trend_boundaries(config.under_process_date_range)
+    generate_multi_timeframe_trend_boundaries(config.under_process_date_range, timeframe_short_list=['15min'])
     boundaries = read_multi_timeframe_trend_boundaries(config.under_process_date_range)
+    exit(0)
 
 
