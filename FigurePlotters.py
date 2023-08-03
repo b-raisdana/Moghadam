@@ -1,4 +1,5 @@
 import os
+import webbrowser
 from typing import List
 
 from IPython.core.display_functions import display
@@ -20,11 +21,11 @@ def plot_multiple_figures(figures: List[plgo.Figure], file_name: str, save: bool
         combined_html += figure_html
     combined_html += '</body></html>'
 
-    if save:
-        file_path = os.path.join(path_of_plot,f'{file_name}.html' )
-        with open(file_path, "w") as file:
-            file.write(combined_html)
-    if show: display(combined_html, raw=True, clear=True)  # Show the final HTML in the browser
+    file_path = os.path.join(path_of_plot,f'{file_name}.html' )
+    with open(file_path, "w") as file:
+        file.write(combined_html)
+    if show: webbrowser.open(f'file://{combined_html}')# display(combined_html, raw=True, clear=True)  # Show the final HTML in the browser
+    if not save: os.remove(combined_html)
 
     return combined_html
 

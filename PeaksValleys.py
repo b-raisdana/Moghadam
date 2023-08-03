@@ -1,17 +1,31 @@
 # import talib as ta
 import os
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 import pandas as pd
+import pandera
 from pandas import Timestamp
+import pandera as pa
 from plotly import graph_objects as plgo
 
 from Config import config, INFINITY_TIME_DELTA, TopTYPE
-from DataPreparation import read_file, read_multi_timeframe_ohlc, single_timeframe, timedelta_to_str, plot_ohlca, \
-    plot_ohlc, file_id, read_multi_timeframe_ohlca
+from DataPreparation import read_file, single_timeframe, timedelta_to_str, plot_ohlca, \
+    file_id, read_multi_timeframe_ohlca
 from FigurePlotters import plot_multiple_figures
 
 DEBUG = True
+
+
+class PeakValleys(pandera.DataFrameModel):
+    # should match with config.multi_timeframe_peaks_n_valleys_columns
+    date: pandera.typing.Index[datetime]
+    peak_or_valley: pandera.typing.Series[str]
+    strength: pandera.typing.Series[float]
+
+
+class MultiTimeframePeakValleys(PeakValleys):
+    # should match with config.multi_timeframe_peaks_n_valleys_columns
+    timeframe: pandera.typing.Index[str]
 
 
 # def zz_generate_peaks_n_valleys(date_range_string: str) -> None:

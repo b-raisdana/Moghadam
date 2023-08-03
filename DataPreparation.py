@@ -1,9 +1,11 @@
 import os
+from datetime import datetime
 from typing import Callable, Union
 
+import numpy as np
 import pandas as pd
 import talib as ta
-from pandas import Timedelta
+from pandas import Timedelta, DatetimeIndex
 from plotly import graph_objects as plgo
 
 from Config import config, CandleSize
@@ -150,6 +152,12 @@ def add_atr_boundary(fig: plgo.Figure, xs: pd.Series, midpoints: pd.Series, widt
             name=name
         )
     )
+
+
+def validate_no_timeframe(data: pd.DataFrame) -> pd.DataFrame:
+    if 'timeframe' in data.index.names:
+        raise Exception(f'timeframe found in Data(indexes:{data.index.names}, columns:{data.columns.names}')
+    return data
 
 
 def save_figure(fig, file_name: str, file_path: str = ''):
@@ -318,4 +326,36 @@ def single_timeframe(multi_timeframe_data: pd.DataFrame, timeframe):
             f'multi_timeframe_data expected to have "timeframe" in indexes:[{multi_timeframe_data.index.names}]')
     single_timeframe_data: pd.DataFrame = multi_timeframe_data.loc[
         multi_timeframe_data.index.get_level_values('timeframe') == timeframe]
-    return single_timeframe_data.droplevel('timeframe')
+    return validate_no_timeframe(single_timeframe_data.droplevel('timeframe'))
+
+
+def to_timeframe(time: Union[DatetimeIndex, datetime], timeframe: str) -> datetime:
+    """
+    Round the given datetime to the nearest time based on the specified timeframe.
+
+    Parameters:
+        time (datetime): The datetime to be rounded.
+        timeframe (str): The desired timeframe (e.g., '1min', '5min', '1H', etc.).
+
+    Returns:
+        datetime: The rounded datetime that corresponds to the nearest time within the specified timeframe.
+    """
+    # Calculate the timedelta for the specified timeframe
+    timeframe_timedelta = pd.to_timedelta(timeframe)
+
+    # Calculate the number of seconds in the timedelta
+    seconds_in_timeframe = timeframe_timedelta.total_seconds()
+    if isinstance(time, DatetimeIndex):
+        # Calculate the timestamp with the floor division
+        rounded_timestamp = ((time.view(np.int64) // 10 ** 9) // seconds_in_timeframe) * seconds_in_timeframe
+
+        # Convert the rounded timestamp back to datetime
+        rounded_time = pd.DatetimeIndex(rounded_timestamp*10**9)
+    elif isinstance(time, datetime):
+        # Calculate the timestamp with the floor division
+        rounded_timestamp = (time.timestamp() // seconds_in_timeframe) * seconds_in_timeframe
+
+        # Convert the rounded timestamp back to datetime
+        rounded_time = datetime.fromtimestamp(rounded_timestamp)
+
+    return rounded_time

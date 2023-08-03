@@ -6,6 +6,7 @@ numpy
 # conda install -c conda-forge ta-lib
 TA-Lib
 pytest
+pandera
 # beautifulsoup4
 
 # conda update --all
