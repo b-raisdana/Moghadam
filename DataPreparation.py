@@ -5,10 +5,10 @@ from typing import Callable, Union
 import numpy as np
 import pandas as pd
 import talib as ta
-from pandas import Timedelta, DatetimeIndex
+from pandas import Timedelta, DatetimeIndex, Timestamp
 from plotly import graph_objects as plgo
 
-from Config import config, CandleSize
+from Config import config, CandleSize, GLOBAL_CACHE
 from FigurePlotters import plot_multiple_figures, DEBUG
 from helper import log
 
@@ -350,12 +350,23 @@ def to_timeframe(time: Union[DatetimeIndex, datetime], timeframe: str) -> dateti
         rounded_timestamp = ((time.view(np.int64) // 10 ** 9) // seconds_in_timeframe) * seconds_in_timeframe
 
         # Convert the rounded timestamp back to datetime
-        rounded_time = pd.DatetimeIndex(rounded_timestamp*10**9)
-    elif isinstance(time, datetime):
-        # Calculate the timestamp with the floor division
+        rounded_time = pd.DatetimeIndex(rounded_timestamp * 10 ** 9)
+        for t in rounded_time:
+            if t not in GLOBAL_CACHE[f'ohlc_{timeframe}']:
+                raise Exception(f'Invalid time {t}!')
+    # elif isinstance(time, datetime):
+    #     # Calculate the timestamp with the floor division
+    #     rounded_timestamp = (time.timestamp() // seconds_in_timeframe) * seconds_in_timeframe
+    #
+    #     # Convert the rounded timestamp back to datetime
+    #     rounded_time = datetime.fromtimestamp(rounded_timestamp)
+    elif isinstance(time, Timestamp):
         rounded_timestamp = (time.timestamp() // seconds_in_timeframe) * seconds_in_timeframe
 
         # Convert the rounded timestamp back to datetime
-        rounded_time = datetime.fromtimestamp(rounded_timestamp)
-
+        rounded_time = pd.Timestamp(rounded_timestamp * 10 ** 9)
+        if rounded_time not in GLOBAL_CACHE[f'ohlc_{timeframe}']:
+            raise Exception(f'Invalid time {rounded_time}!')
+    else:
+        raise Exception(f'Invalid type of time:{type(time)}')
     return rounded_time

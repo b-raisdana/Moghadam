@@ -114,3 +114,5 @@ class TREND(Enum):
 class TopTYPE(Enum):
     PEAK = 'peak'
     VALLEY = 'valley'
+
+GLOBAL_CACHE = {}

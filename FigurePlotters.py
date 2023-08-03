@@ -24,7 +24,12 @@ def plot_multiple_figures(figures: List[plgo.Figure], file_name: str, save: bool
     file_path = os.path.join(path_of_plot,f'{file_name}.html' )
     with open(file_path, "w") as file:
         file.write(combined_html)
-    if show: webbrowser.open(f'file://{combined_html}')# display(combined_html, raw=True, clear=True)  # Show the final HTML in the browser
+    if show:
+        webbrowser.register('firefox',
+                            None,
+                            webbrowser.BackgroundBrowser("C://Program Files//Mozilla Firefox//firefox.exe"))
+        webbrowser.get('firefox').open(f'file://{file_path}')
+        # display(combined_html, raw=True, clear=True)  # Show the final HTML in the browser
     if not save: os.remove(combined_html)
 
     return combined_html
