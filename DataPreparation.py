@@ -83,7 +83,7 @@ def plot_ohlc(ohlc: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']),
                                              )], ).update_yaxes(fixedrange=False).update_layout(yaxis_title=name)
     if show: fig.show()
     if save:
-        file_name = f'ohlc.{file_id(ohlc)}.html' if name == '' else f'ohlc.{name}.{file_id(ohlc)}.html'
+        file_name = f'ohlc.{file_id(ohlc)}' if name == '' else f'ohlc.{name}.{file_id(ohlc)}'
         save_figure(fig, file_name)
 
     return fig
@@ -126,7 +126,7 @@ def plot_ohlca(ohlca: pd.DataFrame, save: bool = True, show: bool = True, name: 
 
     # Show the figure or write it to an HTML file
     if save:
-        file_name = f'ohlca.{file_id(ohlca, name)}.html'
+        file_name = f'ohlca.{file_id(ohlca, name)}'
         save_figure(fig, file_name)
 
     if show:
@@ -160,12 +160,32 @@ def validate_no_timeframe(data: pd.DataFrame) -> pd.DataFrame:
     return data
 
 
-def save_figure(fig, file_name: str, file_path: str = ''):
-    if not os.path.exists(config.path_of_plots):
-        os.mkdir(config.path_of_plots)
+def save_figure(fig: plgo.Figure, file_name: str, file_path: str = '') -> None:
+    """
+    Save a Plotly figure as an HTML file.
+
+    Parameters:
+        fig (plotly.graph_objects.Figure): The Plotly figure to be saved.
+        file_name (str): The name of the output HTML file (without extension).
+        file_path (str, optional): The path to the directory where the HTML file will be saved.
+                                  If not provided, the default path will be used.
+
+    Returns:
+        None
+
+    Example:
+        # Assuming you have a Plotly figure 'fig' and want to save it as 'my_plot.html'
+        save_figure(fig, file_name='my_plot')
+
+    Note:
+        This function uses the Plotly 'write_html' method to save the figure as an HTML file.
+    """
     if file_path == '':
         file_path = config.path_of_plots
-    file_path = os.path.join(file_path, file_name)
+    if not os.path.exists(file_path):
+        os.mkdir(file_path)
+
+    file_path = os.path.join(file_path, f'{file_name}.html')
     fig.write_html(file_path)
 
 
@@ -184,7 +204,7 @@ def plot_multi_timeframe_ohlca(multi_timeframe_ohlca, name: str = '', show: bool
     for _, timeframe in enumerate(config.timeframes):
         figures.append(plot_ohlca(single_timeframe(multi_timeframe_ohlca, timeframe), show=False, save=False,
                                   name=f'{timeframe} ohlca'))
-    plot_multiple_figures(figures, file_name=f'multi_timeframe_ohlca.{file_id(multi_timeframe_ohlca, name)}.html',
+    plot_multiple_figures(figures, name=f'multi_timeframe_ohlca.{file_id(multi_timeframe_ohlca, name)}',
                           save=save, show=show)
 
 
@@ -202,7 +222,7 @@ def plot_multi_timeframe_ohlc(multi_timeframe_ohlc, date_range_str):
     figures = []
     for _, timeframe in enumerate(config.timeframes):
         figures.append(plot_ohlc(single_timeframe(multi_timeframe_ohlc, timeframe)))
-    plot_multiple_figures(figures, file_name=f'multi_timeframe_ohlc.{date_range_str}.html')
+    plot_multiple_figures(figures, name=f'multi_timeframe_ohlc.{date_range_str}')
 
 
 def generate_multi_timeframe_ohlc(date_range_str: str, file_path: str = config.path_of_data):
@@ -370,3 +390,11 @@ def to_timeframe(time: Union[DatetimeIndex, datetime], timeframe: str) -> dateti
     else:
         raise Exception(f'Invalid type of time:{type(time)}')
     return rounded_time
+
+
+def test_index_match_timeframe(data: pd.DataFrame, timeframe: str):
+    for index_value, mapped_index_value in map(lambda x, y: (x, y), data.index, to_timeframe(data.index, timeframe)):
+        if index_value != mapped_index_value:
+            raise Exception(
+                f'In Data({data.columns.names}) found Index({index_value}) not align with timeframe:{timeframe}/{mapped_index_value}\n'
+                f'Indexes:{data.index.values}')

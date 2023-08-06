@@ -23,8 +23,8 @@ def clean_up_test_plots_directory():
 
 def test_save_to_html():
     # Test saving to HTML file without overwriting
-    file_name = 'test_save_to_html.html'
-    plot_multiple_figures(figures, file_name=file_name, show=False, path_of_plot=config.path_of_test_plots)
+    file_name = 'test_save_to_html'
+    plot_multiple_figures(figures, name=file_name, show=False, path_of_plot=config.path_of_test_plots)
 
     # Check if the file exists
     assert os.path.exists(os.path.join(config.path_of_test_plots, file_name))
@@ -40,8 +40,8 @@ def test_show_in_browser():
 
 def test_unique_file_names():
     # Test unique file names with timestamps
-    file_name = 'test_unique_file_names.html'
-    plot_multiple_figures(figures, file_name=file_name, show=False)
+    file_name = 'test_unique_file_names'
+    plot_multiple_figures(figures, name=file_name, show=False)
 
     # Check if the file exists with the timestamp appended
     file_exists = any(file_name in f for f in os.listdir(config.path_of_test_plots))

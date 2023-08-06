@@ -10,7 +10,7 @@ from Config import config
 DEBUG = False
 
 
-def plot_multiple_figures(figures: List[plgo.Figure], file_name: str, save: bool = True, show: bool = True,
+def plot_multiple_figures(figures: List[plgo.Figure], name: str, save: bool = True, show: bool = True,
                           path_of_plot: str = config.path_of_plots):
     figures_html = []
     for i, figure in enumerate(figures):
@@ -21,7 +21,7 @@ def plot_multiple_figures(figures: List[plgo.Figure], file_name: str, save: bool
         combined_html += figure_html
     combined_html += '</body></html>'
 
-    file_path = os.path.join(path_of_plot,f'{file_name}.html' )
+    file_path = os.path.join(path_of_plot,f'{name}.html')
     with open(file_path, "w") as file:
         file.write(combined_html)
     if show:

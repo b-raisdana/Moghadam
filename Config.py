@@ -35,7 +35,7 @@ class Config():
             '1H',  #: to_offset('1H'),
             '4H',  #: to_offset('4H'),
             '1D',  #: to_offset('1D'),
-            '1W',  #: to_offset('1W')
+            # '1W',  #: to_offset('1W')
         ]
         self.structure_timeframes = self.timeframes[2:]
         self.trigger_timeframes = self.timeframes[:-2]

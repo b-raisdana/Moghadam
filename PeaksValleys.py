@@ -10,7 +10,7 @@ from plotly import graph_objects as plgo
 
 from Config import config, INFINITY_TIME_DELTA, TopTYPE
 from DataPreparation import read_file, single_timeframe, timedelta_to_str, plot_ohlca, \
-    file_id, read_multi_timeframe_ohlca
+    file_id, read_multi_timeframe_ohlca, save_figure
 from FigurePlotters import plot_multiple_figures
 
 DEBUG = True
@@ -265,10 +265,11 @@ def plot_peaks_n_valleys(ohlca: pd = pd.DataFrame(columns=['open', 'high', 'low'
         fig.update_layout(hovermode='x unified')
     if show: fig.show()
     if save:
-        figure_as_html = fig.to_html()
-        file_name = os.path.join(config.path_of_plots, f'peaks_n_valleys.{file_id(ohlca, file_name)}.html')
-        with open(file_name, '+w') as f:
-            f.write(figure_as_html)
+        # figure_as_html = fig.to_html()
+        # file_name = os.path.join(config.path_of_plots, f'peaks_n_valleys.{file_id(ohlca, file_name)}')
+        # with open(file_name, '+w') as f:
+        #     f.write(figure_as_html)
+        save_figure(fig, f'peaks_n_valleys.{file_id(ohlca, file_name)}', )
     return fig
 
 
@@ -393,7 +394,7 @@ def plot_multi_timeframe_peaks_n_valleys(multi_timeframe_peaks_n_valleys, multi_
                                             valleys=major_peaks_n_valleys(_multi_timeframe_valleys, timeframe),
                                             file_name=f'{timeframe} Peaks n Valleys', show=False, save=False))
 
-    fig = plot_multiple_figures(figures, file_name='multi_timeframe_peaks_n_valleys', show=show, save=save,
+    fig = plot_multiple_figures(figures, name='multi_timeframe_peaks_n_valleys', show=show, save=save,
                                 path_of_plot=path_of_plot)
     return fig
 
