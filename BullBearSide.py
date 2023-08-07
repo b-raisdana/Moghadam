@@ -362,7 +362,7 @@ def trend_ATRs(single_timeframe_boundaries: pt.DataFrame[Boundary], ohlca: pt.Da
 
 
 def trend_strength(_boundaries: pt.DataFrame[Boundary]) -> pt.DataFrame[Boundary]:
-    _boundaries['strength'] = _boundaries['movement'] / (_boundaries['duration'] / config.base_time_delta)
+    return _boundaries['movement'] / (_boundaries['duration'] / config.base_time_delta)
 
 
 def trend_duration(_boundaries: pt.DataFrame[Boundary]) -> pt.Series[timedelta]:
