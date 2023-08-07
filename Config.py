@@ -7,6 +7,27 @@ from enum import Enum
 from typing import List
 
 
+class CandleSize(Enum):
+    Spinning = (0.0, 0.80)
+    Standard = (0.80, 0.120)
+    Long = (1.20, 2.5)
+    Spike = (2.5, 999999999)
+
+
+class TREND(Enum):
+    BULLISH = 'BULLISH_TREND'
+    BEARISH = 'BEARISH_TREND'
+    SIDE = 'SIDE_TREND'
+
+
+class TopTYPE(Enum):
+    PEAK = 'peak'
+    VALLEY = 'valley'
+
+
+GLOBAL_CACHE = {}
+
+
 class Config():
     def __init__(self):
         self.under_process_date_range = '17-10-06.00-00T17-10-06.23-59'
@@ -64,17 +85,20 @@ class Config():
         self.path_of_logs = 'logs'
         self.path_of_test_plots = os.path.join('test_plots')
 
-        self.candles_max_size_spinning = 0.80
-        self.candles_max_size_standard = 0.80
-        self.candles_max_size_spinning = 0.80
+        # self.candles_max_size_spinning = 0.80
+        # self.candles_max_size_standard = 0.80
+        # self.candles_max_size_spinning = 0.80
+
+        self.base_time_delta = timedelta(minutes=1)
+
+        self.momentum_trand_strength_factor = CandleSize.Long.value[0]
+
+        self.CandleSize = CandleSize.__dict__
+        self.TREND = TREND.__dict__
+        self.TopType = TopTYPE.__dict__
 
         self.id = ""
 
-class CandleSize(Enum):
-    Spinning = (0.0, 0.80)
-    Standard = (0.80, 0.120)
-    Long = (1.20, 2.5)
-    Spike = (2.5, 999999999)
 
 class MyEncoder(json.JSONEncoder):
     def default(self, o):
@@ -103,16 +127,3 @@ if not os.path.exists(dump_filename):
 config.id = config_digest
 
 INFINITY_TIME_DELTA = config.INFINITY_TIME_DELTA
-
-
-class TREND(Enum):
-    BULLISH = 'BULLISH_TREND'
-    BEARISH = 'BEARISH_TREND'
-    SIDE = 'SIDE_TREND'
-
-
-class TopTYPE(Enum):
-    PEAK = 'peak'
-    VALLEY = 'valley'
-
-GLOBAL_CACHE = {}

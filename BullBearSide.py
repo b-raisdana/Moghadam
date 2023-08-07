@@ -1,26 +1,35 @@
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List
 
 import pandas as pd
 import pandera
+import pandera.typing as pt
 from pandas import Timestamp
 from plotly import graph_objects as plgo
 
 import PeaksValleys
 from Config import TopTYPE, config, TREND
 from DataPreparation import read_file, read_multi_timeframe_ohlc, single_timeframe, file_id, save_figure, \
-    read_multi_timeframe_ohlca, to_timeframe
+    read_multi_timeframe_ohlca, to_timeframe, OHLCA
 from FigurePlotters import plot_multiple_figures
 from PeaksValleys import plot_peaks_n_valleys, peaks_only, valleys_only, read_multi_timeframe_peaks_n_valleys, \
     major_peaks_n_valleys
 from helper import log
 
 
-class BoundaryBase(pandera.DataFrameModel):
-    date: pandera.typing.Index[datetime]
-    bull_bear_side: pandera.typing.Series[str]
-    end: pandera.typing.Series[datetime]
+class Boundary(pandera.DataFrameModel):
+    date: pt.Index[datetime]
+    bull_bear_side: pt.Series[str]
+    end: pt.Series[datetime]
+    highest_high: pt.Series[float]
+    high_time: pt.Series[Timestamp]
+    lowest_low: pt.Series[float]
+    low_time: pt.Series[Timestamp]
+    movement: pt.Series[float]
+    strength: pt.Series[float]
+    ATR: pt.Series[float]
+    duration: pt.Series[timedelta]
 
 
 def insert_previous_n_next_tops(single_timeframe_peaks_n_valleys, ohlc):
@@ -183,9 +192,9 @@ def single_timeframe_candles_trend(ohlc: pd.DataFrame, single_timeframe_peaks_n_
 #     time_boundaries.drop(columns=['time_of_next'])
 #     boundaries = pd.concat([boundaries, time_boundaries])
 
-def add_previous_toward_trend_top_to_boundary(single_timeframe_boundaries: pandera.typing.DataFrame[BoundaryBase],
-                                              single_timeframe_peaks_n_valleys: pandera.typing.DataFrame[PeaksValleys],
-                                              timeframe: str) -> pandera.typing.DataFrame:
+def add_previous_toward_trend_top_to_boundary(single_timeframe_boundaries: pt.DataFrame[Boundary],
+                                              single_timeframe_peaks_n_valleys: pt.DataFrame[PeaksValleys],
+                                              timeframe: str) -> pt.DataFrame:
     """
     if trend is not side
         if trend is bullish
@@ -202,6 +211,7 @@ def add_previous_toward_trend_top_to_boundary(single_timeframe_boundaries: pande
                         'So we may have unexpected results after renaming DataFrame index to move boundary start.')
     single_timeframe_peaks = peaks_only(single_timeframe_peaks_n_valleys)
     single_timeframe_valleys = valleys_only(single_timeframe_peaks_n_valleys)
+    boundary_index: Timestamp
     for boundary_index, boundary in single_timeframe_boundaries.iterrows():
         # if boundary_index == Timestamp('2017-10-06 02:15:00'):
         #     pass
@@ -258,6 +268,7 @@ def previous_top_of_boundary(boundary_start: pd.Timestamp, single_timeframe_peak
 
 def multi_timeframe_trend_boundaries(multi_timeframe_candle_trend: pd.DataFrame,
                                      multi_timeframe_peaks_n_valleys: pd.DataFrame,
+                                     multi_timeframe_ohlca: pd.DataFrame,
                                      timeframe_shortlist: List['str'] = None):
     boundaries = pd.DataFrame()
     if timeframe_shortlist is None:
@@ -269,7 +280,10 @@ def multi_timeframe_trend_boundaries(multi_timeframe_candle_trend: pd.DataFrame,
             continue
         single_timeframe_peaks_n_valleys = major_peaks_n_valleys(multi_timeframe_peaks_n_valleys, timeframe)
         _timeframe_trend_boundaries = single_timeframe_trend_boundaries(single_timeframe_candle_trend,
-                                                                        single_timeframe_peaks_n_valleys, timeframe)
+                                                                        single_timeframe_peaks_n_valleys,
+                                                                        single_timeframe(multi_timeframe_ohlca,
+                                                                                         timeframe)
+                                                                        , timeframe)
         _timeframe_trend_boundaries['timeframe'] = timeframe
         _timeframe_trend_boundaries.set_index('timeframe', append=True, inplace=True)
         _timeframe_trend_boundaries = _timeframe_trend_boundaries.swaplevel()
@@ -280,12 +294,13 @@ def multi_timeframe_trend_boundaries(multi_timeframe_candle_trend: pd.DataFrame,
     return boundaries
 
 
-def add_highest_high_n_lowest_low(_boundaries, single_timeframe_candle_trend):
+def add_trend_tops(_boundaries, single_timeframe_candle_trend):
     if 'highest_high' not in _boundaries.columns:
-        # add highest_high to _boundaries.columns
         _boundaries['highest_high'] = None
     if 'lowest_low' not in _boundaries.columns:
         _boundaries['lowest_low'] = None
+    if 'movement' not in _boundaries.columns:
+        _boundaries['movement'] = None
     for i, _boundary in _boundaries.iterrows():
         _boundaries.loc[i, 'highest_high'] = single_timeframe_candle_trend.loc[i:_boundary['end'], 'high'].max()
         _boundaries.loc[i, 'high_time'] = single_timeframe_candle_trend.loc[i:_boundary['end'], 'high'].idxmax()
@@ -328,39 +343,110 @@ def add_canal_lines(_boundaries, single_timeframe_peaks_n_valleys):
     return _boundaries
 
 
+def filter_weak_trends(_boundaries: pt.DataFrame[Boundary]) -> pt.Series[bool]:
+    return _boundaries['strength'] < (_boundaries['ATR'] * config.momentum_trand_strength_factor)
+
+
+def trend_ATRs(single_timeframe_boundaries: pt.DataFrame[Boundary], ohlca: pt.DataFrame[OHLCA]):
+    _boundaries_ATRs = [boundary_ATRs(_boundary_index, _boundary['end'], ohlca) for _boundary_index, _boundary in
+                        single_timeframe_boundaries.iterrows()]
+
+    for _i, _ATRs in enumerate(_boundaries_ATRs):
+        if len(_ATRs) == 0:
+            raise Exception(f'Boundary with no ATRs! '
+                            f'({single_timeframe_boundaries.index[_i]}:{single_timeframe_boundaries.iloc[_i, "end"]})')
+    # min = [min(_ATRs) for _ATRs in _boundaries_ATRs]
+    # max = [max(_ATRs) for _ATRs in _boundaries_ATRs]
+    # average = [sum(_ATRs) / len(_ATRs) for _ATRs in _boundaries_ATRs]
+    return [sum(_ATRs) / len(_ATRs) for _ATRs in _boundaries_ATRs]
+
+
+def trend_strength(_boundaries: pt.DataFrame[Boundary]) -> pt.DataFrame[Boundary]:
+    _boundaries['strength'] = _boundaries['movement'] / (_boundaries['duration'] / config.base_time_delta)
+
+
+def trend_duration(_boundaries: pt.DataFrame[Boundary]) -> pt.Series[timedelta]:
+    return _boundaries['end'] - _boundaries.index
+
+
+def ignore_weak_trend(_boundaries: pt.DataFrame[Boundary]) -> pt.DataFrame[Boundary]:
+    """
+    Remove weak trends from the DataFrame.
+
+    Parameters:
+        _boundaries (pt.DataFrame[Boundary]): A DataFrame containing trend boundary data.
+
+    Returns:
+        pt.DataFrame[Boundary]: A DataFrame with weak trends removed.
+
+    Example:
+        # Assuming you have a DataFrame '_boundaries' with the required columns and data
+        filtered_boundaries = ignore_weak_trend(_boundaries)
+    """
+    filtered_boundaries = _boundaries.drop(filter_weak_trends(_boundaries))
+    return filtered_boundaries
+
+
+def trend_movement(_boundaries: pt.DataFrame[Boundary]) -> pt.Series[float]:
+    """
+        Calculate the trend movement as the difference between the highest high and the lowest low.
+
+        Parameters:
+            _boundaries (pd.DataFrame): A DataFrame containing trend boundary data.
+
+        Returns:
+            pd.Series: A Series containing the calculated trend movement values.
+
+        Example:
+            # Assuming you have a DataFrame '_boundaries' with the required columns
+            result = trend_movement(_boundaries)
+        """
+    return _boundaries['highest_high'] - _boundaries['lowest_low']
+
+
 def single_timeframe_trend_boundaries(single_timeframe_candle_trend: pd.DataFrame,
-                                      single_timeframe_peaks_n_valleys, timeframe: str) -> pd.DataFrame:
+                                      single_timeframe_peaks_n_valleys, ohlca: pt.DataFrame[OHLCA],
+                                      timeframe: str) -> pd.DataFrame:
     _boundaries = detect_boundaries(single_timeframe_candle_trend, timeframe)
-    _boundaries = add_highest_high_n_lowest_low(_boundaries, single_timeframe_candle_trend)
-    back_boundaries = _boundaries.copy()
+    _boundaries = add_trend_tops(_boundaries, single_timeframe_candle_trend)
+
     _boundaries = add_previous_toward_trend_top_to_boundary(_boundaries, single_timeframe_peaks_n_valleys, timeframe)
+    back_boundaries = _boundaries.copy()
+    _boundaries['movement'] = trend_movement(_boundaries)
+    _boundaries['ATR'] = trend_ATRs(_boundaries, ohlca=ohlca)
+    _boundaries['duration'] = trend_duration(_boundaries)
+    _boundaries['strength'] = trend_strength(_boundaries)
+
+    _boundaries = ignore_weak_trend(_boundaries)
     single_timeframe_ohlca = single_timeframe(read_multi_timeframe_ohlca(config.under_process_date_range), timeframe)
     plot_multiple_figures([
-        plot_single_timeframe_trend_boundaries(single_timeframe_ohlca, single_timeframe_peaks_n_valleys, back_boundaries, name=f'back_boundaries', save=False, show=False),
-        plot_single_timeframe_trend_boundaries(single_timeframe_ohlca, single_timeframe_peaks_n_valleys, _boundaries, name=f'modified_boundaries', save=False, show=False),
+        plot_single_timeframe_trend_boundaries(single_timeframe_ohlca, single_timeframe_peaks_n_valleys,
+                                               back_boundaries, name=f'back_boundaries', save=False, show=False),
+        plot_single_timeframe_trend_boundaries(single_timeframe_ohlca, single_timeframe_peaks_n_valleys, _boundaries,
+                                               name=f'modified_boundaries', save=False, show=False),
     ], name='compare after adding previous toward top')
     # _boundaries = add_canal_lines(_boundaries, single_timeframe_peaks_n_valleys)
     _boundaries = _boundaries[[i for i in config.multi_timeframe_trend_boundaries_columns if i != 'timeframe']]
     return _boundaries
 
 
-def detect_boundaries(single_timeframe_candle_trend, timeframe: str) -> pandera.typing.DataFrame[BoundaryBase]:
+def boundary_ATRs(_boundary_start: Timestamp, _boudary_end: Timestamp, ohlca: pt.DataFrame[OHLCA]) -> List[float]:
+    return ohlca.loc[_boundary_start:_boudary_end, 'ATR']
+
+
+def detect_boundaries(single_timeframe_candle_trend, timeframe: str) -> pt.DataFrame[Boundary]:
     if 'time_of_previous' not in single_timeframe_candle_trend.columns:
         single_timeframe_candle_trend['time_of_previous'] = None
     single_timeframe_candle_trend.loc[1:, 'time_of_previous'] = single_timeframe_candle_trend.index[:-1]
-    # single_timeframe_candle_trend['time_of_previous'] = single_timeframe_candle_trend.index.shift(-1, freq=timeframe)
     single_timeframe_candle_trend['previous_trend'] = single_timeframe_candle_trend['bull_bear_side'].shift(1)
     _boundaries = single_timeframe_candle_trend[
         single_timeframe_candle_trend['previous_trend'] != single_timeframe_candle_trend['bull_bear_side']]
     time_of_last_candle = single_timeframe_candle_trend.index.get_level_values('date')[-1]
-    # _boundaries['time_of_next'] = _boundaries.index.shift(-1, freq=timeframe)
     if 'end' not in single_timeframe_candle_trend.columns:
         single_timeframe_candle_trend['end'] = None
     _boundaries.loc[:-1, 'end'] = to_timeframe(_boundaries.index.get_level_values('date')[1:], timeframe)
-    # _boundaries.loc[:, 'time_of_next'] = _boundaries['time_of_next'].shift(-1)
     _boundaries.loc[_boundaries.index[-1], 'end'] = to_timeframe(time_of_last_candle, timeframe)
-    # _boundaries['end'] = single_timeframe_candle_trend.loc[_boundaries['time_of_next'], 'time_of_previous'] \
-    #     .tolist()
+    _boundaries['min_ATR'] = to_timeframe(time_of_last_candle, timeframe)
     return _boundaries[['bull_bear_side', 'end']]
 
 
@@ -436,8 +522,8 @@ def plot_multi_timeframe_trend_boundaries(multi_timeframe_ohlca, multi_timeframe
             name=f'{timeframe} boundaries')
         figures.append(_figure)
     plot_multiple_figures(figures, name=f'multi_timeframe_trend_boundaries.'
-                                             f'{multi_timeframe_ohlca.index[0][1].strftime("%y-%m-%d.%H-%M")}T'
-                                             f'{multi_timeframe_ohlca.index[-1][1].strftime("%y-%m-%d.%H-%M")}',
+                                        f'{multi_timeframe_ohlca.index[0][1].strftime("%y-%m-%d.%H-%M")}T'
+                                        f'{multi_timeframe_ohlca.index[-1][1].strftime("%y-%m-%d.%H-%M")}',
                           show=show, save=save)
 
 
@@ -449,7 +535,9 @@ def generate_multi_timeframe_trend_boundaries(date_range_str: str, file_path: st
     multi_timeframe_candle_trend = generate_multi_timeframe_candle_trend(date_range_str,
                                                                          timeframe_shortlist=timeframe_short_list)
     # Generate multi-timeframe trend boundaries
-    trend_boundaries = multi_timeframe_trend_boundaries(multi_timeframe_candle_trend, multi_timeframe_peaks_n_valleys,
+    trend_boundaries = multi_timeframe_trend_boundaries(multi_timeframe_candle_trend,
+                                                        multi_timeframe_peaks_n_valleys,
+                                                        multi_timeframe_ohlca,
                                                         timeframe_shortlist=timeframe_short_list)
     # Plot multi-timeframe trend boundaries
     plot_multi_timeframe_trend_boundaries(multi_timeframe_ohlca, multi_timeframe_peaks_n_valleys, trend_boundaries,
@@ -527,12 +615,7 @@ def plot_multi_timeframe_candle_trend(multi_timeframe_candle_trend, multi_timefr
                           path_of_plot=path_of_plot)
 
 
-def generate_multi_timeframe_candle_trend(date_range_str: str, timeframe_short_list: List[str] = None,
-                                          timeframe_shortlist: List['str'] = None):
-    # def candles_trend_multi_timeframe(ohlca: pd.DataFrame, peaks_n_valleys: pd.DataFrame) -> pd.DataFrame:
-    #     for timeframe in peaks_n_valleys['timeframe'].unique():
-    #         ohlca = candles_trend_single_timeframe(timeframe, ohlca, peaks_n_valleys)
-    #     return ohlca
+def generate_multi_timeframe_candle_trend(date_range_str: str, timeframe_shortlist: List['str'] = None):
     multi_timeframe_ohlc = read_multi_timeframe_ohlc(date_range_str)
     multi_timeframe_peaks_n_valleys = read_multi_timeframe_peaks_n_valleys(date_range_str).sort_index(level='date')
     multi_timeframe_candle_trend = pd.DataFrame()

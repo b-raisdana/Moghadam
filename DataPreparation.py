@@ -4,14 +4,28 @@ from typing import Callable, Union
 
 import numpy as np
 import pandas as pd
+import pandera
 import talib as ta
 from pandas import Timedelta, DatetimeIndex, Timestamp
 from plotly import graph_objects as plgo
+import pandera.typing as pt
 
 from Config import config, CandleSize, GLOBAL_CACHE
 from FigurePlotters import plot_multiple_figures, DEBUG
 from helper import log
 
+
+class OHLC(pandera.DataFrameModel):
+    date: pt.Index[datetime]
+    open: pt.Series[float]
+    close: pt.Series[float]
+    high: pt.Series[float]
+    low: pt.Series[float]
+    volume: pt.Series[float]
+
+
+class OHLCA(OHLC):
+    ATR: pt.Series[float]
 
 def generate_test_ohlc():
     test_ohlc_ticks = pd.read_csv(f'{config.files_to_load[0]}.zip', sep=',', header=0, index_col='date',
