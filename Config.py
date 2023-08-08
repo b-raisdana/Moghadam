@@ -91,11 +91,11 @@ class Config():
 
         self.base_time_delta = timedelta(minutes=1)
 
-        self.momentum_trand_strength_factor = CandleSize.Long.value[0]
+        self.momentum_trand_strength_factor = CandleSize.Standard.value[0]
 
-        self.CandleSize = CandleSize.__dict__
-        self.TREND = TREND.__dict__
-        self.TopType = TopTYPE.__dict__
+        # self.CandleSize = CandleSize.__dict__
+        # self.TREND = TREND.__dict__
+        # self.TopType = TopTYPE.__dict__
 
         self.id = ""
 

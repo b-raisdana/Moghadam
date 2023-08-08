@@ -299,13 +299,15 @@ def add_trend_tops(_boundaries, single_timeframe_candle_trend):
         _boundaries['highest_high'] = None
     if 'lowest_low' not in _boundaries.columns:
         _boundaries['lowest_low'] = None
-    if 'movement' not in _boundaries.columns:
-        _boundaries['movement'] = None
+    if 'high_time' not in _boundaries.columns:
+        _boundaries['high_time'] = None
+    if 'low_time' not in _boundaries.columns:
+        _boundaries['low_time'] = None
     for i, _boundary in _boundaries.iterrows():
         _boundaries.loc[i, 'highest_high'] = single_timeframe_candle_trend.loc[i:_boundary['end'], 'high'].max()
         _boundaries.loc[i, 'high_time'] = single_timeframe_candle_trend.loc[i:_boundary['end'], 'high'].idxmax()
         _boundaries.loc[i, 'lowest_low'] = single_timeframe_candle_trend.loc[i:_boundary['end'], 'low'].min()
-        _boundaries.loc[i, 'low_time'] = single_timeframe_candle_trend.loc[i:_boundary['end'], 'low'].idxmax()
+        _boundaries.loc[i, 'low_time'] = single_timeframe_candle_trend.loc[i:_boundary['end'], 'low'].idxmin()
     return _boundaries
 
 
@@ -361,11 +363,15 @@ def trend_ATRs(single_timeframe_boundaries: pt.DataFrame[Boundary], ohlca: pt.Da
     return [sum(_ATRs) / len(_ATRs) for _ATRs in _boundaries_ATRs]
 
 
-def trend_strength(_boundaries: pt.DataFrame[Boundary]) -> pt.DataFrame[Boundary]:
-    return _boundaries['movement'] / (_boundaries['duration'] / config.base_time_delta)
+def trend_strength(_boundaries: pt.DataFrame[Boundary], timefrmae) -> pt.DataFrame[Boundary]:
+    return _boundaries['movement'] / (_boundaries['duration'] / pd.to_timedelta(timefrmae))
 
 
 def trend_duration(_boundaries: pt.DataFrame[Boundary]) -> pt.Series[timedelta]:
+    durations = _boundaries['end'] - _boundaries.index
+    for index, duration in durations.items():
+        if not duration > timedelta(0):
+            raise Exception(f'Duration must be greater than zero. But @{index}={duration}. in: {_boundaries}')
     return _boundaries['end'] - _boundaries.index
 
 
@@ -383,8 +389,12 @@ def ignore_weak_trend(_boundaries: pt.DataFrame[Boundary]) -> pt.DataFrame[Bound
         # Assuming you have a DataFrame '_boundaries' with the required columns and data
         filtered_boundaries = ignore_weak_trend(_boundaries)
     """
-    filtered_boundaries = _boundaries.drop(filter_weak_trends(_boundaries))
-    return filtered_boundaries
+    # weak_boundaries = _boundaries.loc[filter_weak_trends(_boundaries) & (_boundaries['bull_bear_side'] != TREND.SIDE.value), 'bull_bear_side']
+    # weak_boundaries = _boundaries.loc[filter_weak_trends(_boundaries), 'bull_bear_side']
+    # filtered_boundaries = _boundaries.loc[_boundaries['strength'] < (
+    #             _boundaries['ATR'] * config.momentum_trand_strength_factor), 'bull_bear_side']
+    _boundaries.loc[filter_weak_trends(_boundaries), 'bull_bear_side'] = TREND.SIDE.value
+    return _boundaries
 
 
 def trend_movement(_boundaries: pt.DataFrame[Boundary]) -> pt.Series[float]:
@@ -407,16 +417,16 @@ def trend_movement(_boundaries: pt.DataFrame[Boundary]) -> pt.Series[float]:
 def single_timeframe_trend_boundaries(single_timeframe_candle_trend: pd.DataFrame,
                                       single_timeframe_peaks_n_valleys, ohlca: pt.DataFrame[OHLCA],
                                       timeframe: str) -> pd.DataFrame:
-    _boundaries = detect_boundaries(single_timeframe_candle_trend, timeframe)
+    _boundaries = detect_boundaries(single_timeframe_candle_trend.loc[ohlca['ATR'].first_valid_index():], timeframe)
     _boundaries = add_trend_tops(_boundaries, single_timeframe_candle_trend)
 
     _boundaries = add_previous_toward_trend_top_to_boundary(_boundaries, single_timeframe_peaks_n_valleys, timeframe)
-    back_boundaries = _boundaries.copy()
+
     _boundaries['movement'] = trend_movement(_boundaries)
     _boundaries['ATR'] = trend_ATRs(_boundaries, ohlca=ohlca)
     _boundaries['duration'] = trend_duration(_boundaries)
-    _boundaries['strength'] = trend_strength(_boundaries)
-
+    _boundaries['strength'] = trend_strength(_boundaries, timeframe)
+    back_boundaries = _boundaries.copy()
     _boundaries = ignore_weak_trend(_boundaries)
     single_timeframe_ohlca = single_timeframe(read_multi_timeframe_ohlca(config.under_process_date_range), timeframe)
     plot_multiple_figures([
@@ -447,6 +457,8 @@ def detect_boundaries(single_timeframe_candle_trend, timeframe: str) -> pt.DataF
     _boundaries.loc[:-1, 'end'] = to_timeframe(_boundaries.index.get_level_values('date')[1:], timeframe)
     _boundaries.loc[_boundaries.index[-1], 'end'] = to_timeframe(time_of_last_candle, timeframe)
     _boundaries['min_ATR'] = to_timeframe(time_of_last_candle, timeframe)
+    if _boundaries.iloc[-1]['end'] == _boundaries.index[-1]:
+        _boundaries.drop(_boundaries.index[-1], inplace=True)
     return _boundaries[['bull_bear_side', 'end']]
 
 
@@ -471,6 +483,7 @@ def plot_single_timeframe_trend_boundaries(single_timeframe_ohlca: pd.DataFrame,
             pass
         boundary_peaks_n_valleys = boundary_including_peaks_valleys(peaks_n_valleys, boundary_index,
                                                                     boundary['end'])
+        boundary_indexes = single_timeframe_ohlca.loc[boundary_index: boundary['end']].index
         boundary_peaks = peaks_only(boundary_peaks_n_valleys)['high'].sort_index(level='date')
         boundary_valleys = valleys_only(boundary_peaks_n_valleys)['low'].sort_index(level='date', ascending=False)
         xs = [boundary_index] + boundary_peaks.index.get_level_values('date').tolist() + \
@@ -479,11 +492,28 @@ def plot_single_timeframe_trend_boundaries(single_timeframe_ohlca: pd.DataFrame,
              [single_timeframe_ohlca.loc[boundary['end'], 'close']] + boundary_valleys.values.tolist()
         fill_color = 'green' if boundary['bull_bear_side'] == TREND.BULLISH.value else \
             'red' if boundary['bull_bear_side'] == TREND.BEARISH.value else 'gray'
+        text = f'Boundary: {boundary_index.strftime("%H:%M")}-{boundary["end"].strftime("%H:%M")}:'
+        if 'movement' in boundaries.columns.tolist():
+            text += f'\nM:{boundary["movement"]:.2f}'
+        if 'duration' in boundaries.columns.tolist():
+            text += f'D:{boundary["duration"]/timedelta(hours=1):.2f}h'
+        if 'strength' in boundaries.columns.tolist():
+            text += f'S:{boundary["strength"]:.2f}'
+        if 'ATR' in boundaries.columns.tolist():
+            text += f'ATR:{boundary["ATR"]:.2f}'
         if remained_number_of_scatters > 0:
-            fig.add_scatter(x=xs, y=ys, mode="lines", fill="toself",  # fillcolor=fill_color,
+            fig.add_scatter(x=xs, y=ys, fill="toself",  # fillcolor=fill_color,
                             fillpattern=dict(fgopacity=0.5, shape='.'),
-                            name=f"{boundary_index}",  # :(xs{[x.strftime('%m-%d|%H:%M') for x in xs]}, ys{ys})",
-                            line=dict(color=fill_color))
+                            name=f'Boundary: {boundary_index.strftime("%H:%M")}-{boundary["end"].strftime("%H:%M")}',
+                            line=dict(color=fill_color),
+                            mode='lines',  # +text',
+                            )
+            fig.add_scatter(x=boundary_indexes, y=single_timeframe_ohlca.loc[boundary_indexes, 'open'],
+                    mode='none',
+                    showlegend=False,
+                    text=text,
+                    hoverinfo='text')
+
             remained_number_of_scatters -= 1
         else:
             break

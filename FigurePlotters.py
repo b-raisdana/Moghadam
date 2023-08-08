@@ -25,10 +25,11 @@ def plot_multiple_figures(figures: List[plgo.Figure], name: str, save: bool = Tr
     with open(file_path, "w") as file:
         file.write(combined_html)
     if show:
+        full_path = os.path.abspath(file_path)
         webbrowser.register('firefox',
                             None,
                             webbrowser.BackgroundBrowser("C://Program Files//Mozilla Firefox//firefox.exe"))
-        webbrowser.get('firefox').open(f'file://{file_path}')
+        webbrowser.get('firefox').open(f'file://{full_path}')
         # display(combined_html, raw=True, clear=True)  # Show the final HTML in the browser
     if not save: os.remove(combined_html)
 

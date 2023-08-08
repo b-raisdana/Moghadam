@@ -138,6 +138,14 @@ def plot_ohlca(ohlca: pd.DataFrame, save: bool = True, show: bool = True, name: 
     fig = add_atr_boundary(fig, ohlca.index, midpoints=midpoints, widths=CandleSize.Long.value[1] * ohlca['ATR'],
                            name='Long')
 
+    fig.add_scatter(x=ohlca.index, y=midpoints,
+                    mode='none',
+                    showlegend=False,
+                    text=[f'ATR: {atr:0.1f}' for atr in ohlca['ATR']],
+                    hoverinfo='text')
+
+    fig.update_layout(hovermode='x unified')
+    # fig.add_scatter(x=ohlca.index, y=(ohlca['high']+ohlca['low'])/2, mode='text', text=f'ATR: {ohlca["ATR"]}')
     # Show the figure or write it to an HTML file
     if save:
         file_name = f'ohlca.{file_id(ohlca, name)}'
@@ -160,6 +168,7 @@ def add_atr_boundary(fig: plgo.Figure, xs: pd.Series, midpoints: pd.Series, widt
             x=xs + xs[::-1],
             y=upper_band.tolist() + lower_band.tolist()[::-1],
             mode='lines',
+            # hovertext=widths,
             line=dict(color='gray', dash='solid', width=0.2),
             fill='toself',
             fillcolor=f'rgba(128, 128, 128, {transparency})',  # 50% transparent gray color
@@ -358,6 +367,9 @@ def single_timeframe(multi_timeframe_data: pd.DataFrame, timeframe):
     if 'timeframe' not in multi_timeframe_data.index.names:
         raise Exception(
             f'multi_timeframe_data expected to have "timeframe" in indexes:[{multi_timeframe_data.index.names}]')
+    if timeframe not in config.timeframes:
+        raise Exception(
+            f'timeframe:{timeframe} is not in supported timeframes:{config.timeframes}')
     single_timeframe_data: pd.DataFrame = multi_timeframe_data.loc[
         multi_timeframe_data.index.get_level_values('timeframe') == timeframe]
     return validate_no_timeframe(single_timeframe_data.droplevel('timeframe'))
