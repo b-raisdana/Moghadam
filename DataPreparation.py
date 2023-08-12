@@ -273,7 +273,11 @@ def generate_multi_timeframe_ohlc(date_range_str: str, file_path: str = config.p
 
 
 def read_multi_timeframe_ohlc(date_range_str: str = config.under_process_date_range) -> pd.DataFrame:
-    return read_file(date_range_str, 'multi_timeframe_ohlc', generate_multi_timeframe_ohlc)
+    mult_timeframe_ohlc = read_file(date_range_str, 'multi_timeframe_ohlc', generate_multi_timeframe_ohlc)
+    for timeframe in config.timeframes:
+        GLOBAL_CACHE[f'valid_times_{timeframe}'] = \
+                    single_timeframe(mult_timeframe_ohlc, timeframe).index.get_level_values('date').tolist()
+    return mult_timeframe_ohlc
 
 
 def read_file(date_range_str: str, data_frame_type: str, generator: Callable, skip_rows=None,
@@ -344,7 +348,12 @@ def check_dataframe(dataframe: pd.DataFrame, columns: [str], raise_exception=Fal
 
 
 def read_multi_timeframe_ohlca(date_range_str: str = config.under_process_date_range) -> pd.DataFrame:
-    return read_file(date_range_str, 'multi_timeframe_ohlca', generate_multi_timeframe_ohlca)
+    mult_timeframe_ohlca = read_file(date_range_str, 'multi_timeframe_ohlca', generate_multi_timeframe_ohlca)
+    for timeframe in config.timeframes:
+        if f'valid_times_{timeframe}' not in GLOBAL_CACHE.keys():
+            GLOBAL_CACHE[f'valid_times_{timeframe}'] = \
+                        single_timeframe(mult_timeframe_ohlca, timeframe).index.get_level_values('date').tolist()
+    return mult_timeframe_ohlca
 
 
 def read_ohlca(date_range_string: str) -> pd.DataFrame:
@@ -398,7 +407,7 @@ def to_timeframe(time: Union[DatetimeIndex, datetime], timeframe: str) -> dateti
         # Convert the rounded timestamp back to datetime
         rounded_time = pd.DatetimeIndex(rounded_timestamp * 10 ** 9)
         for t in rounded_time:
-            if t not in GLOBAL_CACHE[f'ohlc_{timeframe}']:
+            if t not in GLOBAL_CACHE[f'valid_times_{timeframe}']:
                 raise Exception(f'Invalid time {t}!')
     # elif isinstance(time, datetime):
     #     # Calculate the timestamp with the floor division
@@ -411,7 +420,7 @@ def to_timeframe(time: Union[DatetimeIndex, datetime], timeframe: str) -> dateti
 
         # Convert the rounded timestamp back to datetime
         rounded_time = pd.Timestamp(rounded_timestamp * 10 ** 9)
-        if rounded_time not in GLOBAL_CACHE[f'ohlc_{timeframe}']:
+        if rounded_time not in GLOBAL_CACHE[f'valid_times_{timeframe}']:
             raise Exception(f'Invalid time {rounded_time}!')
     else:
         raise Exception(f'Invalid type of time:{type(time)}')
