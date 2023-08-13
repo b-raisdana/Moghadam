@@ -1,4 +1,4 @@
-from BullBearSide import read_multi_timeframe_trend_boundaries, generate_multi_timeframe_trend_boundaries
+from BullBearSide import read_multi_timeframe_trend_boundaries, generate_multi_timeframe_bull_bear_side_trends
 from Config import config, GLOBAL_CACHE
 from DataPreparation import read_multi_timeframe_ohlc, single_timeframe, read_multi_timeframe_ohlca, plot_ohlca
 from PeaksValleys import read_multi_timeframe_peaks_n_valleys

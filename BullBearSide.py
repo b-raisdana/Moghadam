@@ -266,10 +266,10 @@ def previous_top_of_boundary(boundary_start: pd.Timestamp, single_timeframe_peak
         raise Exception('Unhandled situation!')
 
 
-def multi_timeframe_trend_boundaries(multi_timeframe_candle_trend: pd.DataFrame,
-                                     multi_timeframe_peaks_n_valleys: pd.DataFrame,
-                                     multi_timeframe_ohlca: pd.DataFrame,
-                                     timeframe_shortlist: List['str'] = None):
+def multi_timeframe_bull_bear_side_trends(multi_timeframe_candle_trend: pd.DataFrame,
+                                          multi_timeframe_peaks_n_valleys: pd.DataFrame,
+                                          multi_timeframe_ohlca: pd.DataFrame,
+                                          timeframe_shortlist: List['str'] = None):
     boundaries = pd.DataFrame()
     if timeframe_shortlist is None:
         timeframe_shortlist = config.timeframes
@@ -279,11 +279,11 @@ def multi_timeframe_trend_boundaries(multi_timeframe_candle_trend: pd.DataFrame,
             log(f'multi_timeframe_candle_trend has no rows for timeframe:{timeframe}')
             continue
         single_timeframe_peaks_n_valleys = major_peaks_n_valleys(multi_timeframe_peaks_n_valleys, timeframe)
-        _timeframe_trend_boundaries = single_timeframe_trend_boundaries(single_timeframe_candle_trend,
-                                                                        single_timeframe_peaks_n_valleys,
-                                                                        single_timeframe(multi_timeframe_ohlca,
+        _timeframe_trend_boundaries = single_timeframe_bull_bear_side_trends(single_timeframe_candle_trend,
+                                                                             single_timeframe_peaks_n_valleys,
+                                                                             single_timeframe(multi_timeframe_ohlca,
                                                                                          timeframe)
-                                                                        , timeframe)
+                                                                             , timeframe)
         _timeframe_trend_boundaries['timeframe'] = timeframe
         _timeframe_trend_boundaries.set_index('timeframe', append=True, inplace=True)
         _timeframe_trend_boundaries = _timeframe_trend_boundaries.swaplevel()
@@ -421,9 +421,9 @@ def test_boundary_ATR(_boundaries: pt.DataFrame[Boundary]) -> bool:
     return True
 
 
-def single_timeframe_trend_boundaries(single_timeframe_candle_trend: pd.DataFrame,
-                                      single_timeframe_peaks_n_valleys, ohlca: pt.DataFrame[OHLCA],
-                                      timeframe: str) -> pd.DataFrame:
+def single_timeframe_bull_bear_side_trends(single_timeframe_candle_trend: pd.DataFrame,
+                                           single_timeframe_peaks_n_valleys, ohlca: pt.DataFrame[OHLCA],
+                                           timeframe: str) -> pd.DataFrame:
     single_timeframe_candle_trend = single_timeframe_candle_trend.loc[ohlca['ATR'].first_valid_index():]
     _boundaries = detect_boundaries(single_timeframe_candle_trend, timeframe)
     _boundaries = add_trend_tops(_boundaries, single_timeframe_candle_trend)
@@ -437,7 +437,9 @@ def single_timeframe_trend_boundaries(single_timeframe_candle_trend: pd.DataFram
     _boundaries['rate'] = trend_rate(_boundaries, timeframe)
     _boundaries['strength'] = trend_strength(_boundaries)
     back_boundaries = _boundaries.copy()
-    _boundaries = ignore_weak_trend(_boundaries)
+    # _boundaries = ignore_weak_trend(_boundaries)
+    # todo: test merge_overlapped_trends
+    _boundaries = merge_overlapped_trends(_boundaries)
     single_timeframe_ohlca = single_timeframe(read_multi_timeframe_ohlca(config.under_process_date_range), timeframe)
     plot_multiple_figures([
         plot_single_timeframe_trend_boundaries(single_timeframe_ohlca, single_timeframe_peaks_n_valleys,
@@ -546,7 +548,7 @@ def plot_single_timeframe_trend_boundaries(single_timeframe_ohlca: pd.DataFrame,
 
 
 def read_multi_timeframe_trend_boundaries(date_range_str: str):
-    return read_file(date_range_str, 'multi_timeframe_trend_boundaries', generate_multi_timeframe_trend_boundaries)
+    return read_file(date_range_str, 'multi_timeframe_trend_boundaries', generate_multi_timeframe_bull_bear_side_trends)
 
 
 def plot_multi_timeframe_trend_boundaries(multi_timeframe_ohlca, multi_timeframe_peaks_n_valleys,
@@ -569,18 +571,18 @@ def plot_multi_timeframe_trend_boundaries(multi_timeframe_ohlca, multi_timeframe
                           show=show, save=save)
 
 
-def generate_multi_timeframe_trend_boundaries(date_range_str: str, file_path: str = config.path_of_data,
-                                              timeframe_short_list: List['str'] = None):
+def generate_multi_timeframe_bull_bear_side_trends(date_range_str: str, file_path: str = config.path_of_data,
+                                                   timeframe_short_list: List['str'] = None):
     multi_timeframe_ohlca = read_multi_timeframe_ohlca(date_range_str)
     multi_timeframe_peaks_n_valleys = read_multi_timeframe_peaks_n_valleys(date_range_str)
     # Generate multi-timeframe candle trend
     multi_timeframe_candle_trend = generate_multi_timeframe_candle_trend(date_range_str,
                                                                          timeframe_shortlist=timeframe_short_list)
     # Generate multi-timeframe trend boundaries
-    trend_boundaries = multi_timeframe_trend_boundaries(multi_timeframe_candle_trend,
-                                                        multi_timeframe_peaks_n_valleys,
-                                                        multi_timeframe_ohlca,
-                                                        timeframe_shortlist=timeframe_short_list)
+    trend_boundaries = multi_timeframe_bull_bear_side_trends(multi_timeframe_candle_trend,
+                                                             multi_timeframe_peaks_n_valleys,
+                                                             multi_timeframe_ohlca,
+                                                             timeframe_shortlist=timeframe_short_list)
     # Plot multi-timeframe trend boundaries
     plot_multi_timeframe_trend_boundaries(multi_timeframe_ohlca, multi_timeframe_peaks_n_valleys, trend_boundaries,
                                           timeframe_shortlist=timeframe_short_list)
@@ -673,3 +675,68 @@ def generate_multi_timeframe_candle_trend(date_range_str: str, timeframe_shortli
         multi_timeframe_candle_trend = pd.concat([multi_timeframe_candle_trend, _timeframe_candle_trend])
     # multi_timeframe_candle_trend = multi_timeframe_candle_trend.sort_index()
     return multi_timeframe_candle_trend
+
+
+def merge_overlapped_trends():
+    """
+    overlapped_trends = trend of the same kind with at lease one candle in common.
+    if any trend covered by a trend of reverse direction, raise exception!
+    if any SIDE trend covered by a BULL/BEAR trend, drop the SIDE trend.
+    :return:
+    """
+    # todo: implement merge_overlapped_trends
+    raise Exception('Not implemented')
+
+def merge_retracing_trends():
+    """
+    if:
+        2 BULL/BEAR trends of the same direction separated only by at most one SIDE trend
+        SIDE trend movement is less than 1 ATR
+        SIDE trend duration is less than 3 full candles
+    then:
+        merge 2 BULL/BEAR trends together
+        remove SIDE trend
+    if 2 BULL/BEAR trends of the same direction
+    :return:
+    """
+    # todo: implement merge_retracing_trends
+    raise Exception('Not implemented')
+
+
+def generate_multi_timeframe_bull_bear_side_trend_pivots():
+    """
+    highest high of every Bullish and lowest low of every Bearish trend. for Trends
+            conditions:
+                >= 3 ATR
+                >= 1 ATR reverse movement after the most significant top before a trend with the same direction.
+                if a trend with the same direction before < 1 ATR return found, merge these together.
+            index = time of pivot candle (highest high for Bullish and lowest low for Bearish) mapped to timeframe
+            exact_time = exact time of pivot candle
+            timeframe = time frame of pivot candle
+            value = highest high for Bullish and lowest low for Bearish
+            inner_margin = [Bullish: high - ]/[Bearish: low +]
+                max(distance from nearest body of pivot and adjacent candles, 1 ATR in pivot timeframe)
+            outer_margin =
+    warning: if highest high is not the last peak of Bullish and lowest low is not the last Valley raise a warning log:
+                timeframe, trend start time (index), time of last top
+                time and high of highest high in Bullish and time and low of lowest low in Bearish,
+    :return:
+    """
+    merge_retracing_trends()
+    """
+        in all boundaries with movement >= 3 ATR:
+            if 
+                movement of next boundary >= 1 ATR
+                or distance of most significant peak to reverse high/low of next boundary >= 1 ATR 
+                or in boundary reverse tops after most significant top find distance of >= 1 ATR
+            then:
+                the boundary most significant top is a static level pivot.
+                if:
+                    the pivot is inside a previous active or inactive level of the same or higher timeframe:
+                then:
+                    do not addd as a new level and increase hit count of the previous level.
+                else:
+                    add a new level for the pivot   
+    """
+    # todo: complete generate_multi_timeframe_bull_bear_side_trend_pivots
+    raise Exception('Not implemented')
