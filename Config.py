@@ -9,7 +9,7 @@ from typing import List
 
 class CandleSize(Enum):
     Spinning = (0.0, 0.80)
-    Standard = (0.80, 0.120)
+    Standard = (0.80, 1.20)
     Long = (1.20, 2.5)
     Spike = (2.5, 999999999)
 
@@ -30,7 +30,7 @@ GLOBAL_CACHE = {}
 
 class Config():
     def __init__(self):
-        self.under_process_date_range = '17-10-06.00-00T17-10-06.23-59'
+        self.under_process_date_range = '17-12-29.00-00T17-12-31.23-59'
         self.files_to_load = [
             '17-01-01.0-01TO17-12-31.23-59.1min',
             '17-01-01.0-01TO17-12-31.23-59.5min',
@@ -70,11 +70,11 @@ class Config():
         self.multi_timeframe_ohlca_columns = self.ohlca_columns + ['timeframe']
         self.multi_timeframe_peaks_n_valleys_columns = self.ohlc_columns + ['timeframe', 'peak_or_valley',
                                                                             'strength']  # 'strength',
-        self.multi_timeframe_trend_boundaries_columns = ['timeframe', 'end', 'bull_bear_side',
-                                                         'highest_high', 'lowest_low', 'high_time', 'low_time',
-                                                         # 'trend_line_acceleration', 'trend_line_base',
-                                                         # 'canal_line_acceleration', 'canal_line_base',
-                                                         ]
+        self.multi_timeframe_bull_bear_side_trends_columns = ['timeframe', 'end', 'bull_bear_side',
+                                                              'highest_high', 'lowest_low', 'high_time', 'low_time',
+                                                              # 'trend_line_acceleration', 'trend_line_base',
+                                                              # 'canal_line_acceleration', 'canal_line_base',
+                                                              ]
 
         self.end_time = '2021-03-01 03:43:00'
 
@@ -91,7 +91,7 @@ class Config():
 
         self.base_time_delta = timedelta(minutes=1)
 
-        self.momentum_trand_strength_factor = 0.70 # CandleSize.Standard.value[0]
+        self.momentum_trand_strength_factor = 0.70  # CandleSize.Standard.value[0]
 
         # self.CandleSize = CandleSize.__dict__
         # self.TREND = TREND.__dict__

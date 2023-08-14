@@ -4,7 +4,7 @@ import shutil
 import plotly.graph_objects as go
 
 from Config import config
-from FigurePlotters import plot_multiple_figures
+from FigurePlotter import plot_multiple_figures
 
 # Create some sample Plotly figure objects for testing
 fig1 = go.Figure(go.Scatter(x=[1, 2, 3], y=[4, 5, 6]))

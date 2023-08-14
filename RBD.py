@@ -1,7 +1,7 @@
 import pandas as pd
 
 from Config import TopTYPE
-from PeaksValleys import merge_tops
+from PeakValley import merge_tops
 
 
 # todo: left uncompleted

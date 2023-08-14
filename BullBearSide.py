@@ -5,21 +5,21 @@ from typing import List
 import pandas as pd
 import pandera
 import pandera.typing as pt
-from pandas import Timestamp
-from plotly import graph_objects as plgo
+from pandas import Timestamp, to_timedelta
 
-import PeaksValleys
+from Candle import OHLCA, read_multi_timeframe_ohlc, read_multi_timeframe_ohlca
 from Config import TopTYPE, config, TREND
-from DataPreparation import read_file, read_multi_timeframe_ohlc, single_timeframe, file_id, save_figure, \
-    read_multi_timeframe_ohlca, to_timeframe, OHLCA
-from FigurePlotters import plot_multiple_figures
-from PeaksValleys import plot_peaks_n_valleys, peaks_only, valleys_only, read_multi_timeframe_peaks_n_valleys, \
-    major_peaks_n_valleys
+from DataPreparation import read_file, single_timeframe, to_timeframe
+from FigurePlotter.BullBearSide_plotter import plot_single_timeframe_bull_bear_side_trends, \
+    plot_multi_timeframe_bull_bear_side_trends
+from FigurePlotter.plotter import plot_multiple_figures
+from PeakValley import peaks_only, valleys_only, read_multi_timeframe_peaks_n_valleys, major_peaks_n_valleys, \
+    PeaksValleys
 from helper import log
 
 
-class Boundary(pandera.DataFrameModel):
-    date: pt.Index[datetime]
+class BullBearSide(pandera.DataFrameModel):
+    date: pt.Index[datetime]  # start
     bull_bear_side: pt.Series[str]
     end: pt.Series[datetime]
     highest_high: pt.Series[float]
@@ -33,35 +33,11 @@ class Boundary(pandera.DataFrameModel):
 
 
 def insert_previous_n_next_tops(single_timeframe_peaks_n_valleys, ohlc):
-    # Todo: Not tested!
-    # any 5min top is major to 1min candles so following condition is not right!
-    # if len(peaks_n_valleys['timeframe'].unique()) > 1:
-    #     raise Exception('Expected the peaks and valleys be grouped and filtered to see the same value for all rows.')
     ohlc = insert_previous_n_next_top(TopTYPE.PEAK, single_timeframe_peaks_n_valleys, ohlc)
     ohlc = insert_previous_n_next_top(TopTYPE.VALLEY, single_timeframe_peaks_n_valleys, ohlc)
     return ohlc
 
 
-# def insert_previous_n_next_top(top_type: TopTYPE, peaks_n_valleys, ohlc):
-#     tops = peaks_n_valleys[peaks_n_valleys['peak_or_valley'] == top_type.value]
-#     high_or_low = 'high' if top_type == TopTYPE.PEAK else 'low'
-#     for i in range(len(tops)):
-# if i == len(tops) - 1:
-#     for j in ohlc.loc[tops.index[i] < ohlc.index].index:
-#         ohlc.at[j, f'previous_{top_type.value}_index'] = tops.index[i]
-#         ohlc.at[j, f'previous_{top_type.value}_value'] = tops.iloc[i][high_or_low]
-# else:
-#     for j in ohlc.loc[(tops.index[i] < ohlc.index) & (ohlc.index <= tops.index[i + 1])].index:
-#         ohlc.at[j, f'previous_{top_type.value}_index'] = tops.index[i]
-#         ohlc.at[j, f'previous_{top_type.value}_value'] = tops.iloc[i][high_or_low]
-#     if i == 0:
-#         for j in ohlc.loc[ohlc.index <= tops.index[i]].index:
-#             ohlc.at[j, f'next_{top_type.value}_index'] = tops.index[i]
-#             ohlc.at[j, f'next_{top_type.value}_value'] = tops.iloc[i][high_or_low]
-#     else:
-#         for j in ohlc.loc[(tops.index[i - 1] < ohlc.index) & (ohlc.index <= tops.index[i])].index:
-#             ohlc.at[j, f'next_{top_type.value}_index'] = tops.index[i]
-#             ohlc.at[j, f'next_{top_type.value}_value'] = tops.iloc[i][high_or_low]
 def insert_previous_n_next_top(top_type: TopTYPE, peaks_n_valleys, ohlc):
     # Todo: Not tested!
     if f'previous_{top_type.value}_index' not in ohlc.columns:
@@ -92,48 +68,6 @@ def insert_previous_n_next_top(top_type: TopTYPE, peaks_n_valleys, ohlc):
     return ohlc
 
 
-# def single_timeframe_candles_trend(ohlc: pd.DataFrame, single_timeframe_peaks_n_valley: pd.DataFrame) -> pd.DataFrame:
-#     # Todo: Not tested!
-#     # if timeframe not in config.timeframes:
-#     #     raise Exception(f'Unsupported timeframe:{timeframe} expected to be from: [{config.timeframes}]')
-#     # _higher_or_eq_timeframe_peaks_n_valleys = higher_or_eq_timeframe_peaks_n_valleys(peaks_n_valley, timeframe)
-#     # if any([i not in ohlc.columns for i in
-#     #         [f'{j}_{k}' for j in ['previous', 'next'] for k in [e.value for e in TopTYPE]]]):
-#     #     ohlc = insert_previous_n_next_peaks_n_valleys(_higher_or_eq_timeframe_peaks_n_valleys, ohlc)
-#     # ohlc[f'bull_bear_side_{timeframe}'] = TREND.SIDE
-#     # ohlc.loc[
-#     #     (ohlc['next_valley_value'] > ohlc['previous_valley_value']) &
-#     #     (ohlc['next_peak_value'] > ohlc['previous_peak_value']) &
-#     #     (ohlc['next_peak_index'] > ohlc['next_valley_index'])  # the higher peak should be after higher valley
-#     #     , f'bull_bear_side_{timeframe}'] = TREND.BULLISH
-#     # ohlc.loc[
-#     #     (ohlc['next_peak_value'] < ohlc['previous_peak_value']) &
-#     #     (ohlc['next_valley_value'] < ohlc['previous_valley_value']) &
-#     #     (ohlc['next_peak_index'] > ohlc['next_valley_index'])  # the lower valley should be after lower peak
-#     #     , f'bull_bear_side_{timeframe}'] = TREND.BEARISH
-#     # return ohlc
-#     # if timeframe not in config.timeframes:
-#     #     raise Exception(f'Unsupported timeframe:{timeframe} expected to be from: [{config.timeframes}]')
-#     candle_trend = insert_previous_n_next_tops(single_timeframe_peaks_n_valley, ohlc)
-#     candle_trend['bull_bear_side'] = TREND.SIDE.value
-#     # candle_trend = pd.DataFrame([TREND.SIDE.value] * len(ohlc_with_previous_n_next_tops),
-#     #                             index=ohlc_with_previous_n_next_tops.index,
-#     #                             columns=['bull_bear_side'])
-#     candle_trend.loc[candle_trend.index[
-#         (candle_trend['next_valley_value'] > candle_trend[
-#             'previous_valley_value']) &
-#         (candle_trend['next_peak_value'] > candle_trend['previous_peak_value']) &
-#         (candle_trend['next_peak_index'] > candle_trend[
-#             'next_valley_index'])]  # the higher peak should be after higher valley
-#     , 'bull_bear_side'] = TREND.BULLISH.value
-#     candle_trend.loc[candle_trend.index[
-#         (candle_trend['next_peak_value'] < candle_trend['previous_peak_value']) &
-#         (candle_trend['next_valley_value'] < candle_trend[
-#             'previous_valley_value']) &
-#         (candle_trend['next_peak_index'] > candle_trend[
-#             'next_valley_index'])]  # the lower valley should be after lower peak
-#     , 'bull_bear_side'] = TREND.BEARISH.value
-#     return candle_trend
 def single_timeframe_candles_trend(ohlc: pd.DataFrame, single_timeframe_peaks_n_valley: pd.DataFrame) -> pd.DataFrame:
     # Todo: Not tested!
     candle_trend = insert_previous_n_next_tops(single_timeframe_peaks_n_valley, ohlc)
@@ -155,44 +89,7 @@ def single_timeframe_candles_trend(ohlc: pd.DataFrame, single_timeframe_peaks_n_
     return candle_trend
 
 
-# def multi_timeframe_trend_boundaries(multi_timeframe_candle_trend: pd.DataFrame,
-#                                      multi_timeframe_peaks_n_valleys: pd.DataFrame,
-#                                      timeframe_shortlist: List['str'] = None):
-# self.multi_timeframe_trend_boundaries_columns = ['timeframe', 'end', 'bull_bear_side',
-#                                                  'highest_hig', 'lowest_low', 'high_time', 'low_time',
-#                                                  'trend_line_acceleration', 'trend_line_base',
-#                                                  'canal_line_acceleration', 'canal_line_base',
-#                                                  ]
-# timeframes = [i.replace('bull_bear_side_', '') for i in multi_timeframe_candle_trend.columns if
-#                    i.startswith('bull_bear_side_')]
-# for _, timeframe in enumerate(config.structure_timeframes):
-#     if f'previous_bull_bear_side_{timeframe}' not in multi_timeframe_candle_trend.columns:
-#         raise Exception(
-#             f'previous_bull_bear_side_{timeframe} not found in candle_trend:({multi_timeframe_candle_trend.columns})')
-# boundaries = pd.DataFrame()
-# multi_timeframe_candle_trend['time_of_previous'] = multi_timeframe_candle_trend.index.shift(-1, freq='1min')
-# for timeframe in timeframes:
-#     zztodo: move effective time to a column to prevent multiple columns for different effective times.
-#     multi_timeframe_candle_trend.loc[timeframe, 'previous_bull_bear_side'] = multi_timeframe_candle_trend[
-#         f'bull_bear_side_{timeframe}'].shift(1)
-#     time_boundaries = multi_timeframe_candle_trend[
-#         multi_timeframe_candle_trend[f'previous_bull_bear_side_{timeframe}'] != multi_timeframe_candle_trend[
-#             f'bull_bear_side_{timeframe}']]
-#     time_boundaries['timeframe'] = timeframe
-#     time_boundaries['bull_bear_side'] = time_boundaries[f'bull_bear_side_{timeframe}']
-#     unnecessary_columns = [i for i in multi_timeframe_candle_trend.columns if
-#                            i.startswith('bull_bear_side_') or i.startswith('previous_bull_bear_side_')]
-#     time_boundaries.drop(columns=unnecessary_columns, inplace=True)
-#     time_of_last_candle = multi_timeframe_candle_trend.index[-1]
-#     time_boundaries.loc[:, 'time_of_next'] = time_boundaries.index
-#     time_boundaries.loc[:, 'time_of_next'] = time_boundaries['time_of_next'].shift(-1)
-#     time_boundaries.loc[time_boundaries.index[-1], 'time_of_next'] = time_of_last_candle
-#     time_boundaries.loc[:, 'end'] = multi_timeframe_candle_trend.loc[
-#         time_boundaries['time_of_next'], 'time_of_previous'].tolist()
-#     time_boundaries.drop(columns=['time_of_next'])
-#     boundaries = pd.concat([boundaries, time_boundaries])
-
-def add_previous_toward_trend_top_to_boundary(single_timeframe_boundaries: pt.DataFrame[Boundary],
+def add_previous_toward_trend_top_to_boundary(single_timeframe_boundaries: pt.DataFrame[BullBearSide],
                                               single_timeframe_peaks_n_valleys: pt.DataFrame[PeaksValleys],
                                               timeframe: str) -> pt.DataFrame:
     """
@@ -240,16 +137,16 @@ def add_previous_toward_trend_top_to_boundary(single_timeframe_boundaries: pt.Da
     return single_timeframe_boundaries
 
 
-def zz_next_top_of_boundary(boundary, single_timeframe_peaks_n_valleys, top_type: TopTYPE):
-    next_peak_after_boundary = single_timeframe_peaks_n_valleys[
-        (single_timeframe_peaks_n_valleys.index.get_level_values('date') > boundary.end) &
-        (single_timeframe_peaks_n_valleys.peak_or_valley == top_type.value)
-        ].head(1)
-    last_peak_inside_boundary = single_timeframe_peaks_n_valleys[
-        (single_timeframe_peaks_n_valleys.index.get_level_values('date') <= boundary.end) &
-        (single_timeframe_peaks_n_valleys.peak_or_valley == top_type.value)
-        ].tail(1)
-    return last_peak_inside_boundary, next_peak_after_boundary
+# def zz_next_top_of_boundary(boundary, single_timeframe_peaks_n_valleys, top_type: TopTYPE):
+#     next_peak_after_boundary = single_timeframe_peaks_n_valleys[
+#         (single_timeframe_peaks_n_valleys.index.get_level_values('date') > boundary.end) &
+#         (single_timeframe_peaks_n_valleys.peak_or_valley == top_type.value)
+#         ].head(1)
+#     last_peak_inside_boundary = single_timeframe_peaks_n_valleys[
+#         (single_timeframe_peaks_n_valleys.index.get_level_values('date') <= boundary.end) &
+#         (single_timeframe_peaks_n_valleys.peak_or_valley == top_type.value)
+#         ].tail(1)
+#     return last_peak_inside_boundary, next_peak_after_boundary
 
 
 def previous_top_of_boundary(boundary_start: pd.Timestamp, single_timeframe_peaks_or_valleys) \
@@ -279,17 +176,17 @@ def multi_timeframe_bull_bear_side_trends(multi_timeframe_candle_trend: pd.DataF
             log(f'multi_timeframe_candle_trend has no rows for timeframe:{timeframe}')
             continue
         single_timeframe_peaks_n_valleys = major_peaks_n_valleys(multi_timeframe_peaks_n_valleys, timeframe)
-        _timeframe_trend_boundaries = single_timeframe_bull_bear_side_trends(single_timeframe_candle_trend,
-                                                                             single_timeframe_peaks_n_valleys,
-                                                                             single_timeframe(multi_timeframe_ohlca,
-                                                                                         timeframe)
-                                                                             , timeframe)
-        _timeframe_trend_boundaries['timeframe'] = timeframe
-        _timeframe_trend_boundaries.set_index('timeframe', append=True, inplace=True)
-        _timeframe_trend_boundaries = _timeframe_trend_boundaries.swaplevel()
-        boundaries = pd.concat([boundaries, _timeframe_trend_boundaries])
+        _timeframe_trends = single_timeframe_bull_bear_side_trends(single_timeframe_candle_trend,
+                                                                   single_timeframe_peaks_n_valleys,
+                                                                   single_timeframe(multi_timeframe_ohlca,
+                                                                                    timeframe)
+                                                                   , timeframe)
+        _timeframe_trends['timeframe'] = timeframe
+        _timeframe_trends.set_index('timeframe', append=True, inplace=True)
+        _timeframe_trends = _timeframe_trends.swaplevel()
+        boundaries = pd.concat([boundaries, _timeframe_trends])
     boundaries = boundaries[
-        [column for column in config.multi_timeframe_trend_boundaries_columns if column != 'timeframe']]
+        [column for column in config.multi_timeframe_bull_bear_side_trends_columns if column != 'timeframe']]
 
     return boundaries
 
@@ -345,7 +242,7 @@ def add_canal_lines(_boundaries, single_timeframe_peaks_n_valleys):
     return _boundaries
 
 
-def trend_ATRs(single_timeframe_boundaries: pt.DataFrame[Boundary], ohlca: pt.DataFrame[OHLCA]):
+def trend_ATRs(single_timeframe_boundaries: pt.DataFrame[BullBearSide], ohlca: pt.DataFrame[OHLCA]):
     _boundaries_ATRs = [boundary_ATRs(_boundary_index, _boundary['end'], ohlca) for _boundary_index, _boundary in
                         single_timeframe_boundaries.iterrows()]
 
@@ -359,11 +256,11 @@ def trend_ATRs(single_timeframe_boundaries: pt.DataFrame[Boundary], ohlca: pt.Da
     return [sum(_ATRs[_ATRs.notnull()]) / len(_ATRs[_ATRs.notnull()]) for _ATRs in _boundaries_ATRs]
 
 
-def trend_rate(_boundaries: pt.DataFrame[Boundary], timeframe: str) -> pt.DataFrame[Boundary]:
+def trend_rate(_boundaries: pt.DataFrame[BullBearSide], timeframe: str) -> pt.DataFrame[BullBearSide]:
     return _boundaries['movement'] / (_boundaries['duration'] / pd.to_timedelta(timeframe))
 
 
-def trend_duration(_boundaries: pt.DataFrame[Boundary]) -> pt.Series[timedelta]:
+def trend_duration(_boundaries: pt.DataFrame[BullBearSide]) -> pt.Series[timedelta]:
     durations = _boundaries['end'] - _boundaries.index
     for index, duration in durations.items():
         if not duration > timedelta(0):
@@ -371,30 +268,26 @@ def trend_duration(_boundaries: pt.DataFrame[Boundary]) -> pt.Series[timedelta]:
     return _boundaries['end'] - _boundaries.index
 
 
-def ignore_weak_trend(_boundaries: pt.DataFrame[Boundary]) -> pt.DataFrame[Boundary]:
+def ignore_weak_trend(_boundaries: pt.DataFrame[BullBearSide]) -> pt.DataFrame[BullBearSide]:
     """
     Remove weak trends from the DataFrame.
 
     Parameters:
-        _boundaries (pt.DataFrame[Boundary]): A DataFrame containing trend boundary data.
+        _boundaries (pt.DataFrame[BullBearSide]): A DataFrame containing trend boundary data.
 
     Returns:
-        pt.DataFrame[Boundary]: A DataFrame with weak trends removed.
+        pt.DataFrame[BullBearSide]: A DataFrame with weak trends removed.
 
     Example:
         # Assuming you have a DataFrame '_boundaries' with the required columns and data
         filtered_boundaries = ignore_weak_trend(_boundaries)
     """
-    # weak_boundaries = _boundaries.loc[filter_weak_trends(_boundaries) & (_boundaries['bull_bear_side'] != TREND.SIDE.value), 'bull_bear_side']
-    # weak_boundaries = _boundaries.loc[filter_weak_trends(_boundaries), 'bull_bear_side']
-    # filtered_boundaries = _boundaries.loc[_boundaries['strength'] < (
-    #             _boundaries['ATR'] * config.momentum_trand_strength_factor), 'bull_bear_side']
     _boundaries.loc[_boundaries['strength'] < config.momentum_trand_strength_factor, 'bull_bear_side'] \
         = TREND.SIDE.value
     return _boundaries
 
 
-def trend_movement(_boundaries: pt.DataFrame[Boundary]) -> pt.Series[float]:
+def trend_movement(_boundaries: pt.DataFrame[BullBearSide]) -> pt.Series[float]:
     """
         Calculate the trend movement as the difference between the highest high and the lowest low.
 
@@ -415,7 +308,7 @@ def trend_strength(_boundaries):
     return _boundaries['rate'] / _boundaries['ATR']
 
 
-def test_boundary_ATR(_boundaries: pt.DataFrame[Boundary]) -> bool:
+def test_boundary_ATR(_boundaries: pt.DataFrame[BullBearSide]) -> bool:
     if _boundaries['ATR'].isnull().any():
         raise Exception(f'Nan ATR in: {_boundaries[_boundaries["ATR"].isna()]}')
     return True
@@ -428,7 +321,7 @@ def single_timeframe_bull_bear_side_trends(single_timeframe_candle_trend: pd.Dat
     _boundaries = detect_boundaries(single_timeframe_candle_trend, timeframe)
     _boundaries = add_trend_tops(_boundaries, single_timeframe_candle_trend)
 
-    _boundaries = add_previous_toward_trend_top_to_boundary(_boundaries, single_timeframe_peaks_n_valleys, timeframe)
+    # _boundaries = add_previous_toward_trend_top_to_boundary(_boundaries, single_timeframe_peaks_n_valleys, timeframe)
 
     _boundaries['movement'] = trend_movement(_boundaries)
     _boundaries['ATR'] = trend_ATRs(_boundaries, ohlca=ohlca)
@@ -439,16 +332,17 @@ def single_timeframe_bull_bear_side_trends(single_timeframe_candle_trend: pd.Dat
     back_boundaries = _boundaries.copy()
     # _boundaries = ignore_weak_trend(_boundaries)
     # todo: test merge_overlapped_trends
-    _boundaries = merge_overlapped_trends(_boundaries)
+    # _boundaries = merge_overlapped_single_timeframe_trends(_boundaries, timeframe)
     single_timeframe_ohlca = single_timeframe(read_multi_timeframe_ohlca(config.under_process_date_range), timeframe)
     plot_multiple_figures([
-        plot_single_timeframe_trend_boundaries(single_timeframe_ohlca, single_timeframe_peaks_n_valleys,
-                                               back_boundaries, name=f'back_boundaries', save=False, show=False),
-        plot_single_timeframe_trend_boundaries(single_timeframe_ohlca, single_timeframe_peaks_n_valleys, _boundaries,
-                                               name=f'modified_boundaries', save=False, show=False),
+        plot_single_timeframe_bull_bear_side_trends(single_timeframe_ohlca, single_timeframe_peaks_n_valleys,
+                                                    back_boundaries, name=f'back_boundaries', save=False, show=False),
+        plot_single_timeframe_bull_bear_side_trends(single_timeframe_ohlca, single_timeframe_peaks_n_valleys,
+                                                    _boundaries,
+                                                    name=f'modified_boundaries', save=False, show=False),
     ], name='compare after adding previous toward top')
     # _boundaries = add_canal_lines(_boundaries, single_timeframe_peaks_n_valleys)
-    _boundaries = _boundaries[[i for i in config.multi_timeframe_trend_boundaries_columns if i != 'timeframe']]
+    _boundaries = _boundaries[[i for i in config.multi_timeframe_bull_bear_side_trends_columns if i != 'timeframe']]
     return _boundaries
 
 
@@ -456,7 +350,7 @@ def boundary_ATRs(_boundary_start: Timestamp, _boudary_end: Timestamp, ohlca: pt
     return ohlca.loc[_boundary_start:_boudary_end, 'ATR']  # .fillna(0)
 
 
-def detect_boundaries(single_timeframe_candle_trend, timeframe: str) -> pt.DataFrame[Boundary]:
+def detect_boundaries(single_timeframe_candle_trend, timeframe: str) -> pt.DataFrame[BullBearSide]:
     if 'time_of_previous' not in single_timeframe_candle_trend.columns:
         single_timeframe_candle_trend['time_of_previous'] = None
     single_timeframe_candle_trend.loc[1:, 'time_of_previous'] = single_timeframe_candle_trend.index[:-1]
@@ -474,101 +368,9 @@ def detect_boundaries(single_timeframe_candle_trend, timeframe: str) -> pt.DataF
     return _boundaries[['bull_bear_side', 'end']]
 
 
-def boundary_including_peaks_valleys(peaks_n_valleys: pd.DataFrame, boundary_start: pd.Timestamp,
-                                     boundary_end: pd.Timestamp):
-    return peaks_n_valleys.loc[(peaks_n_valleys.index.get_level_values('date') >= boundary_start) &
-                               (peaks_n_valleys.index.get_level_values('date') <= boundary_end)]
-
-
-MAX_NUMBER_OF_PLOT_SCATTERS = 50
-
-
-def plot_single_timeframe_trend_boundaries(single_timeframe_ohlca: pd.DataFrame, peaks_n_valleys: pd.DataFrame,
-                                           boundaries: pd.DataFrame,
-                                           name: str = '', show: bool = True,
-                                           html_path: str = '', save: bool = True) -> plgo.Figure:
-    fig = plot_peaks_n_valleys(single_timeframe_ohlca, peaks=peaks_only(peaks_n_valleys),
-                               valleys=valleys_only(peaks_n_valleys), file_name=name, show=False, save=False)
-    remained_number_of_scatters = MAX_NUMBER_OF_PLOT_SCATTERS
-    for boundary_index, boundary in boundaries.iterrows():
-        if boundary_index == Timestamp('2017-01-04 11:17:00'):
-            pass
-        boundary_peaks_n_valleys = boundary_including_peaks_valleys(peaks_n_valleys, boundary_index,
-                                                                    boundary['end'])
-        boundary_indexes = single_timeframe_ohlca.loc[boundary_index: boundary['end']].index
-        boundary_peaks = peaks_only(boundary_peaks_n_valleys)['high'].sort_index(level='date')
-        boundary_valleys = valleys_only(boundary_peaks_n_valleys)['low'].sort_index(level='date', ascending=False)
-        xs = [boundary_index] + boundary_peaks.index.get_level_values('date').tolist() + \
-             [boundary['end']] + boundary_valleys.index.get_level_values('date').tolist()
-        ys = [single_timeframe_ohlca.loc[boundary_index, 'open']] + boundary_peaks.values.tolist() + \
-             [single_timeframe_ohlca.loc[boundary['end'], 'close']] + boundary_valleys.values.tolist()
-        fill_color = 'green' if boundary['bull_bear_side'] == TREND.BULLISH.value else \
-            'red' if boundary['bull_bear_side'] == TREND.BEARISH.value else 'gray'
-        text = f'{boundary["bull_bear_side"].replace("_TREND")}: ' \
-               f'{boundary_index.strftime("%H:%M")}-{boundary["end"].strftime("%H:%M")}:'
-        if 'movement' in boundaries.columns.tolist():
-            text += f'\nM:{boundary["movement"]:.2f}'
-        if 'duration' in boundaries.columns.tolist():
-            text += f'D:{boundary["duration"] / timedelta(hours=1):.2f}h'
-        if 'strength' in boundaries.columns.tolist():
-            text += f'S:{boundary["strength"]:.2f}'
-        if 'ATR' in boundaries.columns.tolist():
-            text += f'ATR:{boundary["ATR"]:.2f}'
-        if remained_number_of_scatters > 0:
-            fig.add_scatter(x=xs, y=ys, fill="toself",  # fillcolor=fill_color,
-                            fillpattern=dict(fgopacity=0.5, shape='.'),
-                            name=f'{boundary["bull_bear_side"].replace("_TREND")}: '
-                                 f'{boundary_index.strftime("%H:%M")}-{boundary["end"].strftime("%H:%M")}',
-                            line=dict(color=fill_color),
-                            mode='lines',  # +text',
-                            )
-            fig.add_scatter(x=boundary_indexes, y=single_timeframe_ohlca.loc[boundary_indexes, 'open'],
-                            mode='none',
-                            showlegend=False,
-                            text=text,
-                            hoverinfo='text')
-
-            remained_number_of_scatters -= 1
-        else:
-            break
-
-    if save or html_path != '':
-        file_name = f'single_timeframe_trend_boundaries.{file_id(single_timeframe_ohlca)}' if name == '' \
-            else f'single_timeframe_trend_boundaries.{name}.{file_id(single_timeframe_ohlca)}'
-        save_figure(fig, file_name, html_path)
-    # if html_path == '':
-    #     html_path = os.path.join(config.path_of_plots,
-    #                              f'single_timeframe_trend_boundaries.{range_of_data(ohlc)}.html')
-    # figure_as_html = fig.to_html()
-    # with open(html_path, '+w') as f:
-    #     f.write(figure_as_html)
-
-    if show: fig.show()
-    return fig
-
-
-def read_multi_timeframe_trend_boundaries(date_range_str: str):
-    return read_file(date_range_str, 'multi_timeframe_trend_boundaries', generate_multi_timeframe_bull_bear_side_trends)
-
-
-def plot_multi_timeframe_trend_boundaries(multi_timeframe_ohlca, multi_timeframe_peaks_n_valleys,
-                                          _multi_timeframe_trend_boundaries, show: bool = True, save: bool = True,
-                                          timeframe_shortlist: List['str'] = None):
-    figures = []
-    if timeframe_shortlist is None:
-        timeframe_shortlist = config.timeframes
-    for timeframe in timeframe_shortlist:
-        _figure = plot_single_timeframe_trend_boundaries(
-            single_timeframe_ohlca=single_timeframe(multi_timeframe_ohlca, timeframe),
-            peaks_n_valleys=major_peaks_n_valleys(multi_timeframe_peaks_n_valleys, timeframe).sort_index(level='date'),
-            boundaries=single_timeframe(_multi_timeframe_trend_boundaries, timeframe).sort_index(level='date'),
-            show=False, save=False,
-            name=f'{timeframe} boundaries')
-        figures.append(_figure)
-    plot_multiple_figures(figures, name=f'multi_timeframe_trend_boundaries.'
-                                        f'{multi_timeframe_ohlca.index[0][1].strftime("%y-%m-%d.%H-%M")}T'
-                                        f'{multi_timeframe_ohlca.index[-1][1].strftime("%y-%m-%d.%H-%M")}',
-                          show=show, save=save)
+def read_multi_timeframe_bull_bear_side_trends(date_range_str: str):
+    return read_file(date_range_str, 'multi_timeframe_bull_bear_side_trends',
+                     generate_multi_timeframe_bull_bear_side_trends)
 
 
 def generate_multi_timeframe_bull_bear_side_trends(date_range_str: str, file_path: str = config.path_of_data,
@@ -579,84 +381,16 @@ def generate_multi_timeframe_bull_bear_side_trends(date_range_str: str, file_pat
     multi_timeframe_candle_trend = generate_multi_timeframe_candle_trend(date_range_str,
                                                                          timeframe_shortlist=timeframe_short_list)
     # Generate multi-timeframe trend boundaries
-    trend_boundaries = multi_timeframe_bull_bear_side_trends(multi_timeframe_candle_trend,
-                                                             multi_timeframe_peaks_n_valleys,
-                                                             multi_timeframe_ohlca,
-                                                             timeframe_shortlist=timeframe_short_list)
+    trends = multi_timeframe_bull_bear_side_trends(multi_timeframe_candle_trend,
+                                                   multi_timeframe_peaks_n_valleys,
+                                                   multi_timeframe_ohlca,
+                                                   timeframe_shortlist=timeframe_short_list)
     # Plot multi-timeframe trend boundaries
-    plot_multi_timeframe_trend_boundaries(multi_timeframe_ohlca, multi_timeframe_peaks_n_valleys, trend_boundaries,
-                                          timeframe_shortlist=timeframe_short_list)
+    plot_multi_timeframe_bull_bear_side_trends(multi_timeframe_ohlca, multi_timeframe_peaks_n_valleys, trends,
+                                               timeframe_shortlist=timeframe_short_list)
     # Save multi-timeframe trend boundaries to a.zip file
-    trend_boundaries.to_csv(os.path.join(file_path, f'multi_timeframe_trend_boundaries.{date_range_str}.zip'),
-                            compression='zip')
-
-
-# def read_multi_timeframe_candle_trend(date_range_str: str):
-#     return read_file(date_range_str, 'multi_timeframe_candle_trend', generate_multi_timeframe_candle_trend)
-
-def plot_single_timeframe_candle_trend(ohlc: pd.DataFrame, single_timeframe_candle_trend: pd.DataFrame,
-                                       single_timeframe_peaks_n_valleys: pd.DataFrame, show=True, save=True,
-                                       path_of_plot=config.path_of_plots, name='Single Timeframe Candle Trend'):
-    """
-    Plot candlesticks with highlighted trends (Bullish, Bearish, Side).
-
-    The function uses the provided DataFrame containing candle trends and highlights the bars of candles based on
-    their trend. Bullish candles are displayed with 70% transparent green color, Bearish candles with 70% transparent red,
-    and Side candles with 70% transparent grey color.
-
-    Parameters:
-        ohlc (pd.DataFrame): DataFrame containing OHLC data.
-        single_timeframe_candle_trend (pd.DataFrame): DataFrame containing candle trend data.
-        single_timeframe_peaks_n_valleys (pd.DataFrame): DataFrame containing peaks and valleys data.
-        show (bool): If True, the plot will be displayed.
-        save (bool): If True, the plot will be saved as an HTML file.
-        path_of_plot (str): Path to save the plot.
-        name (str): The title of the figure.
-
-    Returns:
-        plgo.Figure: The Plotly figure object containing the plot with highlighted trends.
-    """
-    # Calculate the trend colors
-    trend_colors = single_timeframe_candle_trend['bull_bear_side'].map({
-        TREND.BULLISH.value: 'rgba(0, 128, 0, 0.7)',  # 70% transparent green for Bullish trend
-        TREND.BEARISH.value: 'rgba(255, 0, 0, 0.7)',  # 70% transparent red for Bearish trend
-        TREND.SIDE.value: 'rgba(128, 128, 128, 0.7)'  # 70% transparent grey for Side trend
-    })
-
-    # Create the figure using plot_peaks_n_valleys function
-    fig = plot_peaks_n_valleys(ohlc,
-                               peaks=peaks_only(single_timeframe_peaks_n_valleys),
-                               valleys=valleys_only(single_timeframe_peaks_n_valleys),
-                               file_name=f'{name} Peaks n Valleys')
-
-    # Update the bar trace with trend colors
-    fig.update_traces(marker=dict(color=trend_colors), selector=dict(type='bar'))
-
-    # Set the title of the figure
-    fig.update_layout(title_text=name)
-
-    # Show the figure or write it to an HTML file
-    if save: save_figure(fig, name, file_id(ohlc))
-    if show: fig.show()
-
-    return fig
-
-
-def plot_multi_timeframe_candle_trend(multi_timeframe_candle_trend, multi_timeframe_peaks_n_valleys, ohlc, show=True,
-                                      save=True, path_of_plot=config.path_of_plots):
-    # todo: test plot_multi_timeframe_candle_trend
-    figures = []
-    _multi_timeframe_peaks = peaks_only(multi_timeframe_peaks_n_valleys)
-    _multi_timeframe_valleys = valleys_only(multi_timeframe_peaks_n_valleys)
-    for _, timeframe in enumerate(config.timeframes):
-        figures.append(
-            plot_single_timeframe_candle_trend(ohlc, single_timeframe(multi_timeframe_candle_trend, timeframe),
-                                               major_peaks_n_valleys(multi_timeframe_peaks_n_valleys, timeframe),
-                                               show=True,
-                                               save=True,
-                                               path_of_plot=path_of_plot, name=f'{timeframe} Candle Trend'))
-    plot_multiple_figures(figures, name='multi_timeframe_candle_trend', show=show, save=save,
-                          path_of_plot=path_of_plot)
+    trends.to_csv(os.path.join(file_path, f'multi_timeframe_bull_bear_side_trends.{date_range_str}.zip'),
+                  compression='zip')
 
 
 def generate_multi_timeframe_candle_trend(date_range_str: str, timeframe_shortlist: List['str'] = None):
@@ -677,15 +411,251 @@ def generate_multi_timeframe_candle_trend(date_range_str: str, timeframe_shortli
     return multi_timeframe_candle_trend
 
 
-def merge_overlapped_trends():
+def merge_overlapped_single_timeframe_trends(trends: pt.DataFrame[BullBearSide], timeframe: str):
     """
-    overlapped_trends = trend of the same kind with at lease one candle in common.
-    if any trend covered by a trend of reverse direction, raise exception!
-    if any SIDE trend covered by a BULL/BEAR trend, drop the SIDE trend.
-    :return:
+    Merge overlapped trends.
+
+    If 2 trends of the same kind (BULLISH, BEARISH, SIDE already defined in TRENDS enum and compare values) overlapped
+    (have at least one candle in common) merge them.
+    If a SIDE trend overlaps with a BULLISH or BEARISH trend, we move the start (index) and end of SIDE trend to remove
+    overlap.
+    If a SIDE trend is completely covered by a BULLISH or BEARISH trend, remove the SIDE trend.
+    Just the start (index) of BULLISH/BEARISH trends can overlap with end of another BULLISH/BEARISH of the reverse
+    type. Else: raise exception.
+
+    :param timeframe:
+    :param trends: DataFrame containing trend data.
+                      Columns: ['end', 'direction']
+                      Index: 'start' timestamp of the trend
+    :return: Merged and cleaned trends DataFrame.
     """
-    # todo: implement merge_overlapped_trends
-    raise Exception('Not implemented')
+    # todo: test merge_overlapped_trends
+    # merged_trends = pd.DataFrame()
+    trends.sort_index(inplace=True)
+    for _idx in range(len(trends) - 1):
+        start = trends.index[_idx]
+        trend = trends.iloc[_idx]
+        end = trend['end']
+        direction = trend['bull_bear_side']
+        rest_of_trends = trends.loc[(trends.index != start) | ((trends.index == start) & (trends['end'] != end))]
+        # Find overlapping trends of the same kind
+        same_kind_overlaps = rest_of_trends[
+            (rest_of_trends.index <= end) & (rest_of_trends['end'] >= start) & (
+                        rest_of_trends['bull_bear_side'] == direction)
+            ]
+
+        trends_to_drop = []
+
+        # Merge overlapping trends of the same kind into one trend
+        if len(same_kind_overlaps) > 0:
+            """
+            date: pt.Index[datetime]  # start
+            bull_bear_side: pt.Series[str]
+            end: pt.Series[datetime]
+            highest_high: pt.Series[float]
+            high_time: pt.Series[Timestamp]
+            lowest_low: pt.Series[float]
+            low_time: pt.Series[Timestamp]
+            movement: pt.Series[float]
+            strength: pt.Series[float]
+            ATR: pt.Series[float]
+            duration: pt.Series[timedelta]
+            """
+            same_kind_overlaps.loc[start] = trend
+            trends_to_merge = same_kind_overlaps.sort_index()
+            start_of_merged = trends_to_merge.index[0]
+            end_of_merged = trends_to_merge['end'].max()
+            bull_bear_side_of_merged = direction
+            highest_high = trends_to_merge['highest_high'].max()
+            time_of_highest = trends_to_merge['highest_high'].idxmax()
+            high_time = trends_to_merge.loc[time_of_highest, 'high_time']
+            lowest_low = trends_to_merge['lowest_low'].min()
+            low_time = trends_to_merge.loc[trends_to_merge['low_time'].idxmin(), 'low_time']
+            movement = highest_high - lowest_low
+            duration = end_of_merged - start_of_merged
+            strength = movement / (duration / to_timedelta(timeframe))
+            atr = sum(trends_to_merge['ATR'] / trends_to_merge['duration'])
+            merged_trend = pd.Series({
+                'end': end_of_merged,
+                'bull_bear_side': bull_bear_side_of_merged,
+                'end': end_of_merged,
+                'highest_high': highest_high,
+                'high_time': high_time,
+                'lowest_low': lowest_low,
+                'low_time': low_time,
+                'movement': movement,
+                'strength': strength,
+                'ATR': atr,
+                'duration': duration,
+            })
+            trends.loc[start_of_merged] = merged_trend
+            trends_to_drop.append(trends_to_merge.index)
+    trends.drop(list(set(trends_to_drop)))
+    for _idx in range(len(trends) - 1):
+        start = trends.index[_idx]
+        trend = trends.iloc[_idx]
+        direction = trend['bull_bear_side']
+        rest_of_trends = trends.loc[(trends.index != start) | ((trends.index == start) & (trends['end'] != end))]
+        if direction == TREND.SIDE.value:
+
+            # Check if a SIDE trend overlaps with a BULLISH or BEARISH trend
+            new_start, new_end = start, trend['end']
+            start_overlapping_bull_bears = rest_of_trends[
+                (rest_of_trends.index <= start)
+                & (rest_of_trends['end'] > start)
+                # & (trends_df['bull_bear_side'].isin([TREND.BULLISH.value, TREND.BEARISH.value]))
+                ]
+            if len(start_overlapping_bull_bears) > 0:
+                # make sure none of SIDE trends overlaps with other SIDE trends
+                test_side_trend_not_overlapping_another_side(start, trend, start_overlapping_bull_bears)
+                new_start = start_overlapping_bull_bears['end'].max() + to_timedelta(timeframe)
+                trends.rename({start: new_start}, inplace=True)
+
+            end_overlapping_bull_bear = rest_of_trends[
+                (rest_of_trends.index <= trend['end'])
+                & (rest_of_trends['end'] > trend['end'])
+                # & (trends_df['bull_bear_side'].isin([TREND.BULLISH.value, TREND.BEARISH.value]))
+                ]
+
+            if len(end_overlapping_bull_bear) > 0:
+                # make sure none of SIDE trends overlaps with other SIDE trends
+                test_side_trend_not_overlapping_another_side(start, trend, end_overlapping_bull_bear)
+                new_end = end_overlapping_bull_bear.index.min() - to_timedelta(timeframe)
+                # trends.loc[(trends.index == start)&(trends['end']==trend['end']), 'end'] = new_end
+                trends.iloc[_idx]['end'] = new_end
+
+            # drop trend if end before start
+            if new_end <= new_start:
+                log(f'{bull_bear_side_repr(start, trend)} removed as covered by: '
+                    f'{[bull_bear_side_repr(o_start, o_trend) for o_start, o_trend in start_overlapping_bull_bears.iterrows()]}')
+                trends.drop(new_start)
+                continue
+
+            # drop SIDE trends completely covered by a BULLISH or BEARISH trend
+            covering_trends = rest_of_trends[(trends.index <= start) & (trends['end'] >= new_end)]
+            if len(covering_trends) > 0:
+                trends.drop(new_start)
+                continue
+
+    return trends
+
+
+def test_bull_bear_side_trends(trends: pt.DataFrame[BullBearSide]):
+    for start, trend in trends.iterrows():
+        end = trend['end']
+        direction = trend['bull_bear_side']
+
+        trend_overlaps = trends[
+            (trends.index <= end) & (trends['end'] >= start)
+            ]
+        if len(trend_overlaps) > 0:
+            # none of trends should overlap with another trend of same direction
+            if direction in trend_overlaps['bull_bear_side']:
+                _msg = f"{bull_bear_side_repr(start, trend)} overlaps with same direction trends:"
+                _msg = str.join([bull_bear_side_repr(o_start, o_trend) for o_start, o_trend in
+                                 trend_overlaps[trend_overlaps['bull_bear_side'] == direction].iterrows()])
+                raise Exception(_msg)
+            if TREND.SIDE.value in trend_overlaps['bull_bear_side']:
+                _msg = f"{bull_bear_side_repr(start, trend)} overlaps with SIDE trends:"
+                _msg = str.join([bull_bear_side_repr(o_start, o_trend) for o_start, o_trend in
+                                 trend_overlaps[trend_overlaps['bull_bear_side'] == direction].iterrows()])
+                raise Exception(_msg)
+            # at this point we are sure the trend only overlaps with a reverse BULL/BEAR trend
+            start_overlaps = trends[
+                (trends.index <= end) & (trends.index >= start)
+                ]
+            end_overlaps = trends[
+                (trends['end'] <= end) & (trends['end'] >= start)
+                ]
+            if len(start_overlaps) > 0:
+                if len(start_overlaps) > 1:
+                    raise Exception(f"{bull_bear_side_repr(start, trend)} have more than one start overlaps:"
+                                    f"{[bull_bear_side_repr(o_start, o_trend) for o_start, o_trend in start_overlaps]}")
+                if start != start_overlaps.iloc[0]['end']:
+                    raise Exception(f"start of {bull_bear_side_repr(start, trend)} does not match with end of "
+                                    f"{bull_bear_side_repr(start_overlaps.index[0], start_overlaps.iloc[0])}")
+            if len(end_overlaps) > 0:
+                if len(end_overlaps) > 1:
+                    raise Exception(f"{bull_bear_side_repr(start, trend)} have more than one end overlaps:"
+                                    f"{[bull_bear_side_repr(o_start, o_trend) for o_start, o_trend in end_overlaps]}")
+                if trend['end'] != end_overlaps.index[0]:
+                    raise Exception(f"end of {bull_bear_side_repr(start, trend)} does not match with start of "
+                                    f"{bull_bear_side_repr(end_overlaps.index[0], end_overlaps.iloc[0])}")
+
+
+def test_side_trend_not_overlapping_another_side(start: datetime, trend: pd.Series,
+                                                 overlapping_trends: pt.DataFrame[BullBearSide],
+                                                 raise_exception: bool = False):
+    if TREND.SIDE.value in overlapping_trends['bull_bear_side'].unique():
+        _message = f'{bull_bear_side_repr(start, trend)} overlaps with"'
+        for o_start, o_trend in overlapping_trends[overlapping_trends['bull_bear_side'] == TREND.SIDE.value]:
+            _message += bull_bear_side_repr(o_start, o_trend)
+        if raise_exception:
+            raise Exception(_message)
+        else:
+            log(_message)
+            return False
+    return True
+
+
+def bull_bear_side_repr(start: datetime, trend: pd.Series):
+    text = f'{trend["bull_bear_side"].replace("_TREND", "")}: ' \
+           f'{start.strftime("%H:%M")}-{trend["end"].strftime("%H:%M")}'
+    if 'movement' in trend.keys():
+        text += f'\nM:{trend["movement"]:.2f}'
+    if 'duration' in trend.keys():
+        text += f'D:{trend["duration"] / timedelta(hours=1):.2f}h'
+    if 'strength' in trend.keys():
+        text += f'S:{trend["strength"]:.2f}'
+    if 'ATR' in trend.keys():
+        text += f'ATR:{trend["ATR"]:.2f}'
+    return text
+
+
+# merged_trends = []
+#
+# for start, trend in trends_df.iterrows():
+#     end = trend['end']
+#     direction = trend['bull_bear_side']
+#
+#     # Find overlapping trends
+#     overlaps = trends_df[
+#         (trends_df.index <= end) & (trends_df['end'] >= start) & (trends_df['bull_bear_side'] == direction)
+#         ]
+#
+#     # Check for reverse direction overlaps
+#     reverse_direction = TREND.BULLISH.value if direction == TREND.BEARISH.value else TREND.BEARISH.value
+#     reverse_overlaps = trends_df[
+#         (trends_df.index <= end) & (trends_df['end'] >= start) & (trends_df['bull_bear_side'] == reverse_direction)
+#         ]
+#
+#     # Check if any overlapping trend covers the current trend
+#
+#     if len(reverse_overlaps) > 0:
+#         _message = f'{trend["bull_bear_side"].replace("_TREND", "")}: ' \
+#                    f'{start.strftime("%H:%M")}-{trend["end"].strftime("%H:%M")}' \
+#                    f" Reverse direction overlap with "
+#         for r_start, r_trend in reverse_overlaps.iterrows():
+#             _message += f'{r_trend["bull_bear_side"].replace("_TREND", "")}: ' \
+#                         f'{r_start.strftime("%H:%M")}-{r_trend["end"].strftime("%H:%M")}'
+#         log(_message)
+#         # raise Exception(_message )
+#
+#     # Check if any BULL/BEAR trend covers SIDE trends
+#     if direction == 'SIDE':
+#         covering_bull_bear = overlaps[overlaps['bull_bear_side'].isin([TREND.BULLISH.value, TREND.BEARISH.value])]
+#         if len(covering_bull_bear) > 0:
+#             continue  # Skip this SIDE trend
+#
+#     # Merge overlapping trends
+#     if len(overlaps) > 1:
+#         end = max(overlaps['end'].max(), end)
+#
+#     merged_trends.append({'start': start, 'end': end, 'bull_bear_side': direction})
+#
+# merged_trends_df = pd.DataFrame(merged_trends)
+# return merged_trends_df
+
 
 def merge_retracing_trends():
     """
