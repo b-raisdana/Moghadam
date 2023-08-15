@@ -6,6 +6,8 @@ from datetime import timedelta
 from enum import Enum
 from typing import List
 
+from helper import log
+
 
 class CandleSize(Enum):
     Spinning = (0.0, 0.80)

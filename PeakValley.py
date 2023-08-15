@@ -178,27 +178,39 @@ def merge_tops(peaks: pd.DataFrame, valleys: pd.DataFrame) -> pd.DataFrame:
     return pd.concat([peaks, valleys]).sort_index()
 
 
-def find_single_timeframe_peaks_n_valleys(ohlc: pd.DataFrame,
-                                          sort_index: bool = True) -> pd.DataFrame:  # , max_cycles=100):
-    mask_of_sequence_of_same_value = (ohlc['high'] == ohlc['high'].shift(1))
-    sequence_of_same_high_lows = ohlc.loc[mask_of_sequence_of_same_value].index
-    none_repeating_ohlc = ohlc.drop(sequence_of_same_high_lows)
-
+def find_peaks_n_valleys(base_ohlc: pd.DataFrame,
+                         sort_index: bool = True) -> pd.DataFrame:  # , max_cycles=100):
+    mask_of_sequence_of_same_value = (base_ohlc['high'] == base_ohlc['high'].shift(1))
+    list_to_check = mask_of_sequence_of_same_value.loc[lambda x: x == True]
+    list_of_same_high_lows_sequence = base_ohlc.loc[mask_of_sequence_of_same_value].index
+    list_to_check = list_of_same_high_lows_sequence
+    # if Timestamp('2017-12-27 06:22:00') in list_to_check:
+    #     pass
+    # if Timestamp('2017-12-27 06:23:00') in list_to_check:
+    #     pass
+    # if Timestamp('2017-12-27 06:24:00') in list_to_check:
+    #     pass
+    # if Timestamp('2017-12-27 06:28:00') in list_to_check:
+    #     pass
+    # if Timestamp('2017-12-27 06:29:00') in list_to_check:
+    #     pass
+    # if Timestamp('2017-12-27 06:30:00') in list_to_check:
+    #     pass
+    none_repeating_ohlc = base_ohlc.drop(list_of_same_high_lows_sequence)
     mask_of_peaks = (none_repeating_ohlc['high'] > none_repeating_ohlc['high'].shift(1)) & (
             none_repeating_ohlc['high'] > none_repeating_ohlc['high'].shift(-1))
     _peaks = none_repeating_ohlc.loc[mask_of_peaks].copy()
     _peaks['peak_or_valley'] = TopTYPE.PEAK.value
 
-    mask_of_sequence_of_same_value = (ohlc['low'] == ohlc['low'].shift(1))
-    sequence_of_same_high_lows = ohlc.loc[mask_of_sequence_of_same_value].index
-    none_repeating_ohlc = ohlc.drop(sequence_of_same_high_lows)
+    mask_of_sequence_of_same_value = (base_ohlc['low'] == base_ohlc['low'].shift(1))
+    list_of_same_high_lows_sequence = base_ohlc.loc[mask_of_sequence_of_same_value].index
+    none_repeating_ohlc = base_ohlc.drop(list_of_same_high_lows_sequence)
 
     mask_of_valleys = (none_repeating_ohlc['low'] < none_repeating_ohlc['low'].shift(1)) & (
             none_repeating_ohlc['low'] < none_repeating_ohlc['low'].shift(-1))
     _valleys = none_repeating_ohlc.loc[mask_of_valleys].copy()
     _valleys['peak_or_valley'] = TopTYPE.VALLEY.value
-
-    _peaks_n_valleys = pd.concat([_peaks, _valleys])
+    _peaks_n_valleys: pd.DataFrame = pd.concat([_peaks, _valleys])
     _peaks_n_valleys = _peaks_n_valleys.loc[:, ['open', 'high', 'low', 'close', 'volume', 'peak_or_valley']]
     return _peaks_n_valleys.sort_index() if sort_index else _peaks_n_valleys
 
@@ -250,21 +262,32 @@ def strength_to_timeframe(strength: timedelta):
     for i, timeframe in enumerate(config.timeframes):
         if pd.to_timedelta(timeframe) > strength:
             return config.timeframes[i - 1]
-
+    return config.timeframes[-1]
 
 def generate_multi_timeframe_peaks_n_valleys(date_range_str, file_path: str = config.path_of_data):
     multi_timeframe_ohlca = read_multi_timeframe_ohlca()
-    _peaks_n_valleys = pd.DataFrame()
     # for _, timeframe in enumerate(config.timeframes):
     base_ohlc = single_timeframe(multi_timeframe_ohlca, config.timeframes[0])
-    time_peaks_n_valleys = find_single_timeframe_peaks_n_valleys(base_ohlc, sort_index=False)
-    time_peaks_n_valleys = calculate_strength_of_peaks_n_valleys(base_ohlc, time_peaks_n_valleys)
-    time_peaks_n_valleys['timeframe'] = [strength_to_timeframe(row['strength']) for index, row in
-                                         time_peaks_n_valleys.iterrows()]
-    time_peaks_n_valleys.set_index('timeframe', append=True, inplace=True)
-    time_peaks_n_valleys = time_peaks_n_valleys.swaplevel()
-    _peaks_n_valleys = pd.concat([_peaks_n_valleys, time_peaks_n_valleys])
-    _peaks_n_valleys = _peaks_n_valleys.sort_index()
+    _peaks_n_valleys = find_peaks_n_valleys(base_ohlc, sort_index=False)
+    _peaks_n_valleys = calculate_strength_of_peaks_n_valleys(base_ohlc, _peaks_n_valleys)
+    _peaks_n_valleys['timeframe'] = [strength_to_timeframe(row['strength']) for index, row in
+                                     _peaks_n_valleys.iterrows()]
+    _peaks_n_valleys.set_index('timeframe', append=True, inplace=True)
+    _peaks_n_valleys = _peaks_n_valleys.swaplevel()
+    _peaks_n_valleys = _peaks_n_valleys.sort_index(level='date')
+    # list_to_check = _peaks_n_valleys.index.get_level_values(level='date')
+    # if Timestamp('2017-12-27 06:22:00') in list_to_check:
+    #     pass
+    # if Timestamp('2017-12-27 06:23:00') in list_to_check:
+    #     pass
+    # if Timestamp('2017-12-27 06:24:00') in list_to_check:
+    #     pass
+    # if Timestamp('2017-12-27 06:28:00') in list_to_check:
+    #     pass
+    # if Timestamp('2017-12-27 06:29:00') in list_to_check:
+    #     pass
+    # if Timestamp('2017-12-27 06:30:00') in list_to_check:
+    #     pass
     plot_multi_timeframe_peaks_n_valleys(_peaks_n_valleys, multi_timeframe_ohlca)
     _peaks_n_valleys.to_csv(os.path.join(file_path, f'multi_timeframe_peaks_n_valleys.{date_range_str}.zip'),
                             compression='zip')

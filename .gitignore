@@ -1,2 +1,4 @@
 /venv/
 .idea
+/ta-lib/
+/.pytest_cache/
