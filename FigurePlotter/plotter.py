@@ -22,7 +22,7 @@ def plot_multiple_figures(figures: List[plgo.Figure], name: str, save: bool = Tr
         combined_html += figure_html
     combined_html += '</body></html>'
 
-    file_path = os.path.join(path_of_plot,f'{name}.html')
+    file_path = os.path.join(path_of_plot, f'{name}.html')
     with open(file_path, "w") as file:
         file.write(combined_html)
     if show:
@@ -67,10 +67,26 @@ def save_figure(fig: plgo.Figure, file_name: str, file_path: str = '') -> None:
 
 
 def file_id(data: pd.DataFrame, name: str = '') -> str:
+    """
+        Generate a file identifier based on data's date range and an optional name.
+
+        This function generates a file identifier using the data's date range and an optional name parameter.
+        If the name parameter is not provided or is empty, the file identifier will consist of the date range only.
+        If a name parameter is provided, it will be appended to the beginning of the file identifier.
+
+        Parameters:
+            data (pd.DataFrame): The DataFrame for which to generate the file identifier.
+            name (str, optional): An optional name to be included in the file identifier.
+
+        Returns:
+            str: The generated file identifier.
+
+        Example:
+            # Assuming you have a DataFrame 'data' and want to generate a file identifier
+            identifier = file_id(data, name='my_data')
+            print(identifier)  # Output: 'my_data.yy-mm-dd.HH-MMTyy-mm-dd.HH-MM'
+        """
     if name is None or name == '':
         return f'{range_of_data(data)}'
     else:
         return f'{name}.{range_of_data(data)}'
-
-
-

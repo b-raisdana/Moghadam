@@ -53,7 +53,7 @@ def generate_multi_timeframe_ohlca(date_range_str: str = config.under_process_da
                                    file_path: str = config.path_of_data) -> None:
     multi_timeframe_ohlc = read_multi_timeframe_ohlc(date_range_str)
     multi_timeframe_ohlca = pd.DataFrame()
-    for timeframe in enumerate(config.timeframes):
+    for _, timeframe in enumerate(config.timeframes):
         _single_timeframe_ohlca = insert_atr(single_timeframe(multi_timeframe_ohlc, timeframe))
         _single_timeframe_ohlca['timeframe'] = timeframe
         _single_timeframe_ohlca.set_index('timeframe', append=True, inplace=True)

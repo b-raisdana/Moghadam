@@ -34,7 +34,9 @@ def calculate_strength(peaks_or_valleys: pd.DataFrame, mode: TopTYPE,
     start_time_of_prices = ohlc_with_next_n_previous_high_lows.index[0]
     end_time_of_prices = ohlc_with_next_n_previous_high_lows.index[-1]
     if 'strength' not in peaks_or_valleys.columns:
+        peaks_or_valleys = peaks_or_valleys.copy()
         peaks_or_valleys['strength'] = INFINITY_TIME_DELTA
+        # peaks_or_valleys['strength']=pd.Series([INFINITY_TIME_DELTA] * len(peaks_or_valleys), index=peaks_or_valleys.index)
 
     for i, i_timestamp in enumerate(peaks_or_valleys.index.values):
         if DEBUG and peaks_or_valleys.index[i] == Timestamp('2017-10-06 00:18:00'):
@@ -184,7 +186,7 @@ def find_single_timeframe_peaks_n_valleys(ohlc: pd.DataFrame,
 
     mask_of_peaks = (none_repeating_ohlc['high'] > none_repeating_ohlc['high'].shift(1)) & (
             none_repeating_ohlc['high'] > none_repeating_ohlc['high'].shift(-1))
-    _peaks = none_repeating_ohlc.loc[mask_of_peaks]
+    _peaks = none_repeating_ohlc.loc[mask_of_peaks].copy()
     _peaks['peak_or_valley'] = TopTYPE.PEAK.value
 
     mask_of_sequence_of_same_value = (ohlc['low'] == ohlc['low'].shift(1))
@@ -193,7 +195,7 @@ def find_single_timeframe_peaks_n_valleys(ohlc: pd.DataFrame,
 
     mask_of_valleys = (none_repeating_ohlc['low'] < none_repeating_ohlc['low'].shift(1)) & (
             none_repeating_ohlc['low'] < none_repeating_ohlc['low'].shift(-1))
-    _valleys = none_repeating_ohlc.loc[mask_of_valleys]
+    _valleys = none_repeating_ohlc.loc[mask_of_valleys].copy()
     _valleys['peak_or_valley'] = TopTYPE.VALLEY.value
 
     _peaks_n_valleys = pd.concat([_peaks, _valleys])
@@ -235,7 +237,8 @@ def plot_multi_timeframe_peaks_n_valleys(multi_timeframe_peaks_n_valleys, multi_
                                             valleys=major_peaks_n_valleys(_multi_timeframe_valleys, timeframe),
                                             file_name=f'{timeframe} Peaks n Valleys', show=False, save=False))
 
-    fig = plot_multiple_figures(figures, name='multi_timeframe_peaks_n_valleys', show=show, save=save,
+    fig = plot_multiple_figures(figures, name=f'multi_timeframe_peaks_n_valleys{file_id(multi_timeframe_ohlca)}',
+                                show=show, save=save,
                                 path_of_plot=path_of_plot)
     return fig
 

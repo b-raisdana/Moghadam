@@ -30,7 +30,7 @@ GLOBAL_CACHE = {}
 
 class Config():
     def __init__(self):
-        self.under_process_date_range = '17-12-29.00-00T17-12-31.23-59'
+        self.under_process_date_range = '17-12-24.00-00T17-12-31.23-59'
         self.files_to_load = [
             '17-01-01.0-01TO17-12-31.23-59.1min',
             '17-01-01.0-01TO17-12-31.23-59.5min',
@@ -112,11 +112,11 @@ myEncoder = MyEncoder()
 DEBUG = False
 config = Config()
 config_as_json = myEncoder.encode(config)
-if DEBUG: print(str(config_as_json))
+if DEBUG: log(str(config_as_json))
 config_digest = str.translate(base64.b64encode(hashlib.md5(config_as_json.encode('utf-8')).digest())
                               .decode('ascii'), {ord('+'): '', ord('/'): '', ord('='): '', })
 
-if DEBUG: print(config_digest)
+if DEBUG: log(config_digest)
 dump_filename = os.path.join(config.path_of_logs, f'Config.{config_digest}.json')
 if not os.path.exists(config.path_of_logs):
     os.makedirs(config.path_of_logs)

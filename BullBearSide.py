@@ -5,14 +5,12 @@ from typing import List
 import pandas as pd
 import pandera
 import pandera.typing as pt
-from pandas import Timestamp, to_timedelta
+from pandas import Timestamp
 
 from Candle import OHLCA, read_multi_timeframe_ohlc, read_multi_timeframe_ohlca
 from Config import TopTYPE, config, TREND
 from DataPreparation import read_file, single_timeframe, to_timeframe
-from FigurePlotter.BullBearSide_plotter import plot_single_timeframe_bull_bear_side_trends, \
-    plot_multi_timeframe_bull_bear_side_trends
-from FigurePlotter.plotter import plot_multiple_figures
+from FigurePlotter.BullBearSide_plotter import plot_multi_timeframe_bull_bear_side_trends
 from PeakValley import peaks_only, valleys_only, read_multi_timeframe_peaks_n_valleys, major_peaks_n_valleys, \
     PeaksValleys
 from helper import log
@@ -184,7 +182,8 @@ def multi_timeframe_bull_bear_side_trends(multi_timeframe_candle_trend: pd.DataF
         _timeframe_trends['timeframe'] = timeframe
         _timeframe_trends.set_index('timeframe', append=True, inplace=True)
         _timeframe_trends = _timeframe_trends.swaplevel()
-        boundaries = pd.concat([boundaries, _timeframe_trends])
+        if len(_timeframe_trends) > 0:
+            boundaries = pd.concat([boundaries, _timeframe_trends])
     boundaries = boundaries[
         [column for column in config.multi_timeframe_bull_bear_side_trends_columns if column != 'timeframe']]
 
@@ -253,6 +252,7 @@ def trend_ATRs(single_timeframe_boundaries: pt.DataFrame[BullBearSide], ohlca: p
     # min = [min(_ATRs) for _ATRs in _boundaries_ATRs]
     # max = [max(_ATRs) for _ATRs in _boundaries_ATRs]
     # average = [sum(_ATRs) / len(_ATRs) for _ATRs in _boundaries_ATRs]
+
     return [sum(_ATRs[_ATRs.notnull()]) / len(_ATRs[_ATRs.notnull()]) for _ATRs in _boundaries_ATRs]
 
 
@@ -317,6 +317,8 @@ def test_boundary_ATR(_boundaries: pt.DataFrame[BullBearSide]) -> bool:
 def single_timeframe_bull_bear_side_trends(single_timeframe_candle_trend: pd.DataFrame,
                                            single_timeframe_peaks_n_valleys, ohlca: pt.DataFrame[OHLCA],
                                            timeframe: str) -> pd.DataFrame:
+    if ohlca['ATR'].first_valid_index() is None:
+        return pd.DataFrame()
     single_timeframe_candle_trend = single_timeframe_candle_trend.loc[ohlca['ATR'].first_valid_index():]
     _boundaries = detect_boundaries(single_timeframe_candle_trend, timeframe)
     _boundaries = add_trend_tops(_boundaries, single_timeframe_candle_trend)
@@ -329,24 +331,28 @@ def single_timeframe_bull_bear_side_trends(single_timeframe_candle_trend: pd.Dat
     _boundaries['duration'] = trend_duration(_boundaries)
     _boundaries['rate'] = trend_rate(_boundaries, timeframe)
     _boundaries['strength'] = trend_strength(_boundaries)
-    back_boundaries = _boundaries.copy()
+    # back_boundaries = _boundaries.copy()
     # _boundaries = ignore_weak_trend(_boundaries)
     # todo: test merge_overlapped_trends
     # _boundaries = merge_overlapped_single_timeframe_trends(_boundaries, timeframe)
     single_timeframe_ohlca = single_timeframe(read_multi_timeframe_ohlca(config.under_process_date_range), timeframe)
-    plot_multiple_figures([
-        plot_single_timeframe_bull_bear_side_trends(single_timeframe_ohlca, single_timeframe_peaks_n_valleys,
-                                                    back_boundaries, name=f'back_boundaries', save=False, show=False),
-        plot_single_timeframe_bull_bear_side_trends(single_timeframe_ohlca, single_timeframe_peaks_n_valleys,
-                                                    _boundaries,
-                                                    name=f'modified_boundaries', save=False, show=False),
-    ], name='compare after adding previous toward top')
+    # plot_multiple_figures([
+    #     plot_single_timeframe_bull_bear_side_trends(single_timeframe_ohlca, single_timeframe_peaks_n_valleys,
+    #                                                 back_boundaries, name=f'back_boundaries', save=False, show=False),
+    #     plot_single_timeframe_bull_bear_side_trends(single_timeframe_ohlca, single_timeframe_peaks_n_valleys,
+    #                                                 _boundaries,
+    #                                                 name=f'modified_boundaries', save=False, show=False),
+    # ], name='compare after adding previous toward top')
     # _boundaries = add_canal_lines(_boundaries, single_timeframe_peaks_n_valleys)
     _boundaries = _boundaries[[i for i in config.multi_timeframe_bull_bear_side_trends_columns if i != 'timeframe']]
     return _boundaries
 
 
 def boundary_ATRs(_boundary_start: Timestamp, _boudary_end: Timestamp, ohlca: pt.DataFrame[OHLCA]) -> List[float]:
+    _boundary_ATRs = ohlca.loc[_boundary_start:_boudary_end, 'ATR']
+    if len(_boundary_ATRs[_boundary_ATRs.notnull()]) <= 0:
+        raise Exception(f'Boundaries expected to be generated over candles with ATR but in '
+                        f'{_boundary_start}-{_boudary_end} there is not any valid ATR!')
     return ohlca.loc[_boundary_start:_boudary_end, 'ATR']  # .fillna(0)
 
 
@@ -411,193 +417,6 @@ def generate_multi_timeframe_candle_trend(date_range_str: str, timeframe_shortli
     return multi_timeframe_candle_trend
 
 
-def merge_overlapped_single_timeframe_trends(trends: pt.DataFrame[BullBearSide], timeframe: str):
-    """
-    Merge overlapped trends.
-
-    If 2 trends of the same kind (BULLISH, BEARISH, SIDE already defined in TRENDS enum and compare values) overlapped
-    (have at least one candle in common) merge them.
-    If a SIDE trend overlaps with a BULLISH or BEARISH trend, we move the start (index) and end of SIDE trend to remove
-    overlap.
-    If a SIDE trend is completely covered by a BULLISH or BEARISH trend, remove the SIDE trend.
-    Just the start (index) of BULLISH/BEARISH trends can overlap with end of another BULLISH/BEARISH of the reverse
-    type. Else: raise exception.
-
-    :param timeframe:
-    :param trends: DataFrame containing trend data.
-                      Columns: ['end', 'direction']
-                      Index: 'start' timestamp of the trend
-    :return: Merged and cleaned trends DataFrame.
-    """
-    # todo: test merge_overlapped_trends
-    # merged_trends = pd.DataFrame()
-    trends.sort_index(inplace=True)
-    for _idx in range(len(trends) - 1):
-        start = trends.index[_idx]
-        trend = trends.iloc[_idx]
-        end = trend['end']
-        direction = trend['bull_bear_side']
-        rest_of_trends = trends.loc[(trends.index != start) | ((trends.index == start) & (trends['end'] != end))]
-        # Find overlapping trends of the same kind
-        same_kind_overlaps = rest_of_trends[
-            (rest_of_trends.index <= end) & (rest_of_trends['end'] >= start) & (
-                        rest_of_trends['bull_bear_side'] == direction)
-            ]
-
-        trends_to_drop = []
-
-        # Merge overlapping trends of the same kind into one trend
-        if len(same_kind_overlaps) > 0:
-            """
-            date: pt.Index[datetime]  # start
-            bull_bear_side: pt.Series[str]
-            end: pt.Series[datetime]
-            highest_high: pt.Series[float]
-            high_time: pt.Series[Timestamp]
-            lowest_low: pt.Series[float]
-            low_time: pt.Series[Timestamp]
-            movement: pt.Series[float]
-            strength: pt.Series[float]
-            ATR: pt.Series[float]
-            duration: pt.Series[timedelta]
-            """
-            same_kind_overlaps.loc[start] = trend
-            trends_to_merge = same_kind_overlaps.sort_index()
-            start_of_merged = trends_to_merge.index[0]
-            end_of_merged = trends_to_merge['end'].max()
-            bull_bear_side_of_merged = direction
-            highest_high = trends_to_merge['highest_high'].max()
-            time_of_highest = trends_to_merge['highest_high'].idxmax()
-            high_time = trends_to_merge.loc[time_of_highest, 'high_time']
-            lowest_low = trends_to_merge['lowest_low'].min()
-            low_time = trends_to_merge.loc[trends_to_merge['low_time'].idxmin(), 'low_time']
-            movement = highest_high - lowest_low
-            duration = end_of_merged - start_of_merged
-            strength = movement / (duration / to_timedelta(timeframe))
-            atr = sum(trends_to_merge['ATR'] / trends_to_merge['duration'])
-            merged_trend = pd.Series({
-                'end': end_of_merged,
-                'bull_bear_side': bull_bear_side_of_merged,
-                'end': end_of_merged,
-                'highest_high': highest_high,
-                'high_time': high_time,
-                'lowest_low': lowest_low,
-                'low_time': low_time,
-                'movement': movement,
-                'strength': strength,
-                'ATR': atr,
-                'duration': duration,
-            })
-            trends.loc[start_of_merged] = merged_trend
-            trends_to_drop.append(trends_to_merge.index)
-    trends.drop(list(set(trends_to_drop)))
-    for _idx in range(len(trends) - 1):
-        start = trends.index[_idx]
-        trend = trends.iloc[_idx]
-        direction = trend['bull_bear_side']
-        rest_of_trends = trends.loc[(trends.index != start) | ((trends.index == start) & (trends['end'] != end))]
-        if direction == TREND.SIDE.value:
-
-            # Check if a SIDE trend overlaps with a BULLISH or BEARISH trend
-            new_start, new_end = start, trend['end']
-            start_overlapping_bull_bears = rest_of_trends[
-                (rest_of_trends.index <= start)
-                & (rest_of_trends['end'] > start)
-                # & (trends_df['bull_bear_side'].isin([TREND.BULLISH.value, TREND.BEARISH.value]))
-                ]
-            if len(start_overlapping_bull_bears) > 0:
-                # make sure none of SIDE trends overlaps with other SIDE trends
-                test_side_trend_not_overlapping_another_side(start, trend, start_overlapping_bull_bears)
-                new_start = start_overlapping_bull_bears['end'].max() + to_timedelta(timeframe)
-                trends.rename({start: new_start}, inplace=True)
-
-            end_overlapping_bull_bear = rest_of_trends[
-                (rest_of_trends.index <= trend['end'])
-                & (rest_of_trends['end'] > trend['end'])
-                # & (trends_df['bull_bear_side'].isin([TREND.BULLISH.value, TREND.BEARISH.value]))
-                ]
-
-            if len(end_overlapping_bull_bear) > 0:
-                # make sure none of SIDE trends overlaps with other SIDE trends
-                test_side_trend_not_overlapping_another_side(start, trend, end_overlapping_bull_bear)
-                new_end = end_overlapping_bull_bear.index.min() - to_timedelta(timeframe)
-                # trends.loc[(trends.index == start)&(trends['end']==trend['end']), 'end'] = new_end
-                trends.iloc[_idx]['end'] = new_end
-
-            # drop trend if end before start
-            if new_end <= new_start:
-                log(f'{bull_bear_side_repr(start, trend)} removed as covered by: '
-                    f'{[bull_bear_side_repr(o_start, o_trend) for o_start, o_trend in start_overlapping_bull_bears.iterrows()]}')
-                trends.drop(new_start)
-                continue
-
-            # drop SIDE trends completely covered by a BULLISH or BEARISH trend
-            covering_trends = rest_of_trends[(trends.index <= start) & (trends['end'] >= new_end)]
-            if len(covering_trends) > 0:
-                trends.drop(new_start)
-                continue
-
-    return trends
-
-
-def test_bull_bear_side_trends(trends: pt.DataFrame[BullBearSide]):
-    for start, trend in trends.iterrows():
-        end = trend['end']
-        direction = trend['bull_bear_side']
-
-        trend_overlaps = trends[
-            (trends.index <= end) & (trends['end'] >= start)
-            ]
-        if len(trend_overlaps) > 0:
-            # none of trends should overlap with another trend of same direction
-            if direction in trend_overlaps['bull_bear_side']:
-                _msg = f"{bull_bear_side_repr(start, trend)} overlaps with same direction trends:"
-                _msg = str.join([bull_bear_side_repr(o_start, o_trend) for o_start, o_trend in
-                                 trend_overlaps[trend_overlaps['bull_bear_side'] == direction].iterrows()])
-                raise Exception(_msg)
-            if TREND.SIDE.value in trend_overlaps['bull_bear_side']:
-                _msg = f"{bull_bear_side_repr(start, trend)} overlaps with SIDE trends:"
-                _msg = str.join([bull_bear_side_repr(o_start, o_trend) for o_start, o_trend in
-                                 trend_overlaps[trend_overlaps['bull_bear_side'] == direction].iterrows()])
-                raise Exception(_msg)
-            # at this point we are sure the trend only overlaps with a reverse BULL/BEAR trend
-            start_overlaps = trends[
-                (trends.index <= end) & (trends.index >= start)
-                ]
-            end_overlaps = trends[
-                (trends['end'] <= end) & (trends['end'] >= start)
-                ]
-            if len(start_overlaps) > 0:
-                if len(start_overlaps) > 1:
-                    raise Exception(f"{bull_bear_side_repr(start, trend)} have more than one start overlaps:"
-                                    f"{[bull_bear_side_repr(o_start, o_trend) for o_start, o_trend in start_overlaps]}")
-                if start != start_overlaps.iloc[0]['end']:
-                    raise Exception(f"start of {bull_bear_side_repr(start, trend)} does not match with end of "
-                                    f"{bull_bear_side_repr(start_overlaps.index[0], start_overlaps.iloc[0])}")
-            if len(end_overlaps) > 0:
-                if len(end_overlaps) > 1:
-                    raise Exception(f"{bull_bear_side_repr(start, trend)} have more than one end overlaps:"
-                                    f"{[bull_bear_side_repr(o_start, o_trend) for o_start, o_trend in end_overlaps]}")
-                if trend['end'] != end_overlaps.index[0]:
-                    raise Exception(f"end of {bull_bear_side_repr(start, trend)} does not match with start of "
-                                    f"{bull_bear_side_repr(end_overlaps.index[0], end_overlaps.iloc[0])}")
-
-
-def test_side_trend_not_overlapping_another_side(start: datetime, trend: pd.Series,
-                                                 overlapping_trends: pt.DataFrame[BullBearSide],
-                                                 raise_exception: bool = False):
-    if TREND.SIDE.value in overlapping_trends['bull_bear_side'].unique():
-        _message = f'{bull_bear_side_repr(start, trend)} overlaps with"'
-        for o_start, o_trend in overlapping_trends[overlapping_trends['bull_bear_side'] == TREND.SIDE.value]:
-            _message += bull_bear_side_repr(o_start, o_trend)
-        if raise_exception:
-            raise Exception(_message)
-        else:
-            log(_message)
-            return False
-    return True
-
-
 def bull_bear_side_repr(start: datetime, trend: pd.Series):
     text = f'{trend["bull_bear_side"].replace("_TREND", "")}: ' \
            f'{start.strftime("%H:%M")}-{trend["end"].strftime("%H:%M")}'
@@ -610,51 +429,6 @@ def bull_bear_side_repr(start: datetime, trend: pd.Series):
     if 'ATR' in trend.keys():
         text += f'ATR:{trend["ATR"]:.2f}'
     return text
-
-
-# merged_trends = []
-#
-# for start, trend in trends_df.iterrows():
-#     end = trend['end']
-#     direction = trend['bull_bear_side']
-#
-#     # Find overlapping trends
-#     overlaps = trends_df[
-#         (trends_df.index <= end) & (trends_df['end'] >= start) & (trends_df['bull_bear_side'] == direction)
-#         ]
-#
-#     # Check for reverse direction overlaps
-#     reverse_direction = TREND.BULLISH.value if direction == TREND.BEARISH.value else TREND.BEARISH.value
-#     reverse_overlaps = trends_df[
-#         (trends_df.index <= end) & (trends_df['end'] >= start) & (trends_df['bull_bear_side'] == reverse_direction)
-#         ]
-#
-#     # Check if any overlapping trend covers the current trend
-#
-#     if len(reverse_overlaps) > 0:
-#         _message = f'{trend["bull_bear_side"].replace("_TREND", "")}: ' \
-#                    f'{start.strftime("%H:%M")}-{trend["end"].strftime("%H:%M")}' \
-#                    f" Reverse direction overlap with "
-#         for r_start, r_trend in reverse_overlaps.iterrows():
-#             _message += f'{r_trend["bull_bear_side"].replace("_TREND", "")}: ' \
-#                         f'{r_start.strftime("%H:%M")}-{r_trend["end"].strftime("%H:%M")}'
-#         log(_message)
-#         # raise Exception(_message )
-#
-#     # Check if any BULL/BEAR trend covers SIDE trends
-#     if direction == 'SIDE':
-#         covering_bull_bear = overlaps[overlaps['bull_bear_side'].isin([TREND.BULLISH.value, TREND.BEARISH.value])]
-#         if len(covering_bull_bear) > 0:
-#             continue  # Skip this SIDE trend
-#
-#     # Merge overlapping trends
-#     if len(overlaps) > 1:
-#         end = max(overlaps['end'].max(), end)
-#
-#     merged_trends.append({'start': start, 'end': end, 'bull_bear_side': direction})
-#
-# merged_trends_df = pd.DataFrame(merged_trends)
-# return merged_trends_df
 
 
 def merge_retracing_trends():

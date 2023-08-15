@@ -65,10 +65,10 @@ def test_timeframe_switching():
             #                                peaks=_mapped_peaks_from_base)
             # plot_ohlc_with_peaks_n_valleys(ohlc=_timeframe_ohlc_ticks, name=f'_timeframe_ohlc_ticks {config.times[i]}',
             #                                peaks=_timeframe_peaks, valleys=_timeframe_valleys)
-            print(f"comparable_timeframe_peaks({comparable_timeframe_peaks.columns}):")
-            print(comparable_timeframe_peaks)
-            print(f"comparable_mapped_base_peaks({comparable_mapped_base_peaks.columns}):")
-            print(comparable_mapped_base_peaks)
+            log(f"comparable_timeframe_peaks({comparable_timeframe_peaks.columns}):")
+            log(comparable_timeframe_peaks)
+            log(f"comparable_mapped_base_peaks({comparable_mapped_base_peaks.columns}):")
+            log(comparable_mapped_base_peaks)
             raise e
 
         _mapped_valleys_from_base = base_valleys[base_valleys['timeframe'].isin(config.timeframes[i:])]
@@ -85,10 +85,10 @@ def test_timeframe_switching():
             #                      valleys=_mapped_valleys_from_base)
             # plot_peaks_n_valleys(ohlc=_timeframe_ohlc_ticks, name=f'_timeframe_ohlc_ticks {config.timeframes[i]}',
             #                      peaks=_timeframe_peaks, valleys=_timeframe_valleys)
-            print(f"comparable_timeframe_valleys({comparable_timeframe_valleys.columns}):")
-            print(comparable_timeframe_valleys)
-            print(f"comparable_mapped_base_valleys({comparable_mapped_base_valleys.columns}):")
-            print(comparable_mapped_base_valleys)
+            log(f"comparable_timeframe_valleys({comparable_timeframe_valleys.columns}):")
+            log(comparable_timeframe_valleys)
+            log(f"comparable_mapped_base_valleys({comparable_mapped_base_valleys.columns}):")
+            log(comparable_mapped_base_valleys)
             raise e
 
 
@@ -101,10 +101,10 @@ def test_every_peak_is_found():
                 assert base_peaks.loc[base_ohlc_ticks.index[i]]['high'] == base_ohlc_ticks.iloc[i]['high']
             except Exception as e:
                 pass
-                print("base_peaks[base_ohlc_ticks.index[i]]['high']")
-                print(base_peaks[base_ohlc_ticks.index[i]]['high'])
-                print("base_ohlc_ticks.iloc[i]['high']")
-                print(base_ohlc_ticks.iloc[i]['high'])
+                log("base_peaks[base_ohlc_ticks.index[i]]['high']")
+                log(base_peaks[base_ohlc_ticks.index[i]]['high'])
+                log("base_ohlc_ticks.iloc[i]['high']")
+                log(base_ohlc_ticks.iloc[i]['high'])
                 raise e
 
 

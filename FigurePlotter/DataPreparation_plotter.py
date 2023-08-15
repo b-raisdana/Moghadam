@@ -4,6 +4,7 @@ from plotly import graph_objects as plgo
 from Config import config, CandleSize
 from DataPreparation import single_timeframe
 from FigurePlotter.plotter import plot_multiple_figures, file_id, DEBUG, save_figure
+from helper import log
 
 
 def plot_multi_timeframe_ohlca(multi_timeframe_ohlca, name: str = '', show: bool = True, save: bool = True):
@@ -20,7 +21,8 @@ def plot_multi_timeframe_ohlc(multi_timeframe_ohlc, date_range_str):
     # todo: test plot_multi_timeframe_ohlc
     figures = []
     for _, timeframe in enumerate(config.timeframes):
-        figures.append(plot_ohlc(single_timeframe(multi_timeframe_ohlc, timeframe), show=False, save=False))
+        figures.append(plot_ohlc(single_timeframe(multi_timeframe_ohlc, timeframe), show=False, save=False,
+                                 name=f'{timeframe} ohlc'))
     plot_multiple_figures(figures, name=f'multi_timeframe_ohlc.{date_range_str}')
 
 
@@ -44,9 +46,10 @@ def plot_ohlc(ohlc: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']),
     if len(ohlc.index) > MAX_LEN_OF_DATA_FRAME_TO_PLOT:
         raise Exception(f'Too many rows to plt ({len(ohlc.index),}>{MAX_LEN_OF_DATA_FRAME_TO_PLOT})')
     if len(ohlc.index) > SAFE_LEN_OF_DATA_FRAME_TO_PLOT:
-        print(f'Plotting too much data will slow us down ({len(ohlc.index),}>{SAFE_LEN_OF_DATA_FRAME_TO_PLOT})')
-    if not os.path.isfile('../kaleido.installed'):
-        print('kaleido not satisfied!')
+        log(f'Plotting too much data will slow us down ({len(ohlc.index),}>{SAFE_LEN_OF_DATA_FRAME_TO_PLOT})')
+    kaleido_install_lock_file_path =  'kaleido.installed'
+    if not os.path.isfile(kaleido_install_lock_file_path):
+        log('kaleido not satisfied!')
         try:
             os.system('pip install -q condacolab')
             import condacolab
@@ -54,21 +57,21 @@ def plot_ohlc(ohlc: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']),
             if not condacolab.check():
                 condacolab.install()
                 os.system('conda install -c conda-forge python-kaleido')
-                os.system('echo "" > kaleido.installed')
+                os.system(f'echo "" > {kaleido_install_lock_file_path}')
             else:
-                print('condacolab already satisfied')
+                log('condacolab already satisfied')
         except:
             os.system('pip install -U kaleido')
-            os.system('echo "" > kaleido.installed')
-    if DEBUG: print(f'data({ohlc.shape})')
-    if DEBUG: print(ohlc)
+            os.system(f'echo "" > {kaleido_install_lock_file_path}')
+    if DEBUG: log(f'data({ohlc.shape})')
+    if DEBUG: log(ohlc)
     fig = plgo.Figure(data=[plgo.Candlestick(x=ohlc.index.values,
                                              open=ohlc['open'], high=ohlc['high'], low=ohlc['low'],
                                              close=ohlc['close'],
                                              )], ).update_yaxes(fixedrange=False).update_layout(yaxis_title=name)
     if show: fig.show()
     if save:
-        file_name = f'ohlc.{file_id(ohlc)}' if name == '' else f'ohlc.{name}.{file_id(ohlc)}'
+        file_name = f'ohlc.{file_id(ohlc, name)}'
         save_figure(fig, file_name)
 
     return fig
@@ -103,11 +106,11 @@ def plot_ohlca(ohlca: pd.DataFrame, save: bool = True, show: bool = True, name: 
 
     # Add the ATR boundaries
     fig = add_atr_scatter(fig, ohlca.index, midpoints=midpoints, widths=CandleSize.Spinning.value[1] * ohlca['ATR'],
-                          name='Spinning')
-    fig = add_atr_scatter(fig, ohlca.index, midpoints=midpoints, widths=CandleSize.Standard.value[1] * ohlca['ATR'],
                           name='Standard')
-    fig = add_atr_scatter(fig, ohlca.index, midpoints=midpoints, widths=CandleSize.Long.value[1] * ohlca['ATR'],
+    fig = add_atr_scatter(fig, ohlca.index, midpoints=midpoints, widths=CandleSize.Standard.value[1] * ohlca['ATR'],
                           name='Long')
+    fig = add_atr_scatter(fig, ohlca.index, midpoints=midpoints, widths=CandleSize.Long.value[1] * ohlca['ATR'],
+                          name='Spike')
 
     fig.add_scatter(x=ohlca.index, y=midpoints,
                     mode='none',

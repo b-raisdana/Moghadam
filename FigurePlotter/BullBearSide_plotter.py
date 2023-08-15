@@ -10,7 +10,7 @@ from DataPreparation import single_timeframe
 from FigurePlotter.plotter import file_id, save_figure, plot_multiple_figures
 from PeakValley import plot_peaks_n_valleys, peaks_only, valleys_only, major_peaks_n_valleys
 
-MAX_NUMBER_OF_PLOT_SCATTERS = 50
+MAX_NUMBER_OF_PLOT_SCATTERS = 1000
 def plot_single_timeframe_bull_bear_side_trends(single_timeframe_ohlca: pd.DataFrame, peaks_n_valleys: pd.DataFrame,
                                                 boundaries: pd.DataFrame,
                                                 name: str = '', show: bool = True,
@@ -61,8 +61,7 @@ def plot_single_timeframe_bull_bear_side_trends(single_timeframe_ohlca: pd.DataF
             break
 
     if save or html_path != '':
-        file_name = f'single_timeframe_bull_bear_side_trends.{file_id(single_timeframe_ohlca)}' if name == '' \
-            else f'single_timeframe_bull_bear_side_trends.{name}.{file_id(single_timeframe_ohlca)}'
+        file_name = f'single_timeframe_bull_bear_side_trends.{file_id(single_timeframe_ohlca, name)}'
         save_figure(fig, file_name, html_path)
 
     if show: fig.show()
