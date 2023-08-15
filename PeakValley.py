@@ -275,23 +275,9 @@ def generate_multi_timeframe_peaks_n_valleys(date_range_str, file_path: str = co
     _peaks_n_valleys.set_index('timeframe', append=True, inplace=True)
     _peaks_n_valleys = _peaks_n_valleys.swaplevel()
     _peaks_n_valleys = _peaks_n_valleys.sort_index(level='date')
-    # list_to_check = _peaks_n_valleys.index.get_level_values(level='date')
-    # if Timestamp('2017-12-27 06:22:00') in list_to_check:
-    #     pass
-    # if Timestamp('2017-12-27 06:23:00') in list_to_check:
-    #     pass
-    # if Timestamp('2017-12-27 06:24:00') in list_to_check:
-    #     pass
-    # if Timestamp('2017-12-27 06:28:00') in list_to_check:
-    #     pass
-    # if Timestamp('2017-12-27 06:29:00') in list_to_check:
-    #     pass
-    # if Timestamp('2017-12-27 06:30:00') in list_to_check:
-    #     pass
     plot_multi_timeframe_peaks_n_valleys(_peaks_n_valleys, multi_timeframe_ohlca)
     _peaks_n_valleys.to_csv(os.path.join(file_path, f'multi_timeframe_peaks_n_valleys.{date_range_str}.zip'),
                             compression='zip')
-    # return _peaks_n_valleys
 
 
 def calculate_strength_of_peaks_n_valleys(time_ohlc, time_peaks_n_valleys):
