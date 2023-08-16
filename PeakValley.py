@@ -9,9 +9,10 @@ from plotly import graph_objects as plgo
 
 from Candle import read_multi_timeframe_ohlca
 from Config import config, INFINITY_TIME_DELTA, TopTYPE
-from DataPreparation import read_file, single_timeframe, timedelta_to_str
+from DataPreparation import read_file, single_timeframe, df_timedelta_to_str
 from FigurePlotter.DataPreparation_plotter import plot_ohlca
 from FigurePlotter.plotter import save_figure, file_id, plot_multiple_figures
+from helper import measure_time
 
 DEBUG = True
 
@@ -108,6 +109,7 @@ def map_strength_to_frequency(peaks_valleys: pd.DataFrame) -> pd.DataFrame:
     return peaks_valleys
 
 
+@measure_time
 def plot_peaks_n_valleys(ohlca: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close', 'ATR']),
                          peaks: pd = pd.DataFrame(columns=['high', 'timeframe']),
                          valleys: pd = pd.DataFrame(columns=['low', 'timeframe']),
@@ -130,14 +132,14 @@ def plot_peaks_n_valleys(ohlca: pd = pd.DataFrame(columns=['open', 'high', 'low'
     if len(peaks) > 0:
         _indexes, _labels = [], []
         [(_indexes.append(_x[1]), _labels.append(
-            f"{_x[0]}/{timedelta_to_str(row['strength'])}@{_x[1].strftime('%m-%d|%H:%M')}={row['high']}"))
+            f"{_x[0]}/{df_timedelta_to_str(row['strength'])}@{_x[1].strftime('%m-%d|%H:%M')}={row['high']}"))
          for _x, row in peaks.iterrows()]
         fig.add_scatter(x=_indexes, y=peaks['high'] + 1, mode="markers", name='P',
                         marker=dict(symbol="triangle-up", color="blue"), hovertemplate="%{text}", text=_labels)
     if len(valleys) > 0:
         _indexes, _labels = [], []
         [(_indexes.append(_x[1]), _labels.append(
-            f"{_x[0]}({timedelta_to_str(row['strength'])})@{_x[1].strftime('%m-%d|%H:%M')}={row['low']}"))
+            f"{_x[0]}({df_timedelta_to_str(row['strength'])})@{_x[1].strftime('%m-%d|%H:%M')}={row['low']}"))
          for _x, row in valleys.iterrows()]
         fig.add_scatter(x=_indexes, y=valleys['low'] - 1, mode="markers", name='V',
                         marker=dict(symbol="triangle-down", color="blue"), hovertemplate="%{text}", text=_labels)
@@ -237,6 +239,7 @@ def higher_or_eq_timeframe_peaks_n_valleys(peaks_n_valleys: pd.DataFrame, timefr
     return peaks_n_valleys.loc[peaks_n_valleys.index.isin(config.timeframes[index:], level='timeframe')]
 
 
+@measure_time
 def plot_multi_timeframe_peaks_n_valleys(multi_timeframe_peaks_n_valleys, multi_timeframe_ohlca, show=True, save=True,
                                          path_of_plot=config.path_of_plots):
     # todo: test plot_multi_timeframe_peaks_n_valleys
@@ -263,6 +266,7 @@ def strength_to_timeframe(strength: timedelta):
         if pd.to_timedelta(timeframe) > strength:
             return config.timeframes[i - 1]
     return config.timeframes[-1]
+
 
 def generate_multi_timeframe_peaks_n_valleys(date_range_str, file_path: str = config.path_of_data):
     multi_timeframe_ohlca = read_multi_timeframe_ohlca()

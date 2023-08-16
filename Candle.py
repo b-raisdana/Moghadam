@@ -1,4 +1,5 @@
 import os
+import time
 from datetime import datetime
 
 import pandas as pd
@@ -7,7 +8,7 @@ import talib as ta
 from pandera import typing as pt
 
 from Config import config, GLOBAL_CACHE
-from DataPreparation import check_dataframe, read_file, single_timeframe
+from DataPreparation import check_dataframe, read_file, single_timeframe, timedelta_to_str
 from FigurePlotter.DataPreparation_plotter import plot_ohlca, plot_multi_timeframe_ohlca, plot_multi_timeframe_ohlc
 from FigurePlotter.plotter import file_id
 from helper import log
@@ -59,7 +60,7 @@ def generate_multi_timeframe_ohlca(date_range_str: str = config.under_process_da
         _single_timeframe_ohlca.set_index('timeframe', append=True, inplace=True)
         _single_timeframe_ohlca = _single_timeframe_ohlca.swaplevel()
         multi_timeframe_ohlca = pd.concat([_single_timeframe_ohlca, multi_timeframe_ohlca])
-    multi_timeframe_ohlc.sort_index(level='date',inplace=True)
+    multi_timeframe_ohlc.sort_index(level='date', inplace=True)
     plot_multi_timeframe_ohlca(multi_timeframe_ohlca)
     multi_timeframe_ohlca.to_csv(os.path.join(file_path, f'multi_timeframe_ohlca.{date_range_str}.zip'),
                                  compression='zip')

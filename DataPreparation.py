@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Callable, Union
 
 import numpy as np
@@ -7,6 +7,7 @@ import pandas as pd
 from pandas import Timedelta, DatetimeIndex, Timestamp
 
 from Config import config, GLOBAL_CACHE
+from helper import log
 
 
 def range_of_data(data: pd.DataFrame) -> str:
@@ -68,6 +69,7 @@ def read_file(date_range_str: str, data_frame_type: str, generator: Callable, sk
         or the DataFrame does not match the expected columns, the generator function is called to create the DataFrame.
     """
     # todo: add cache to read_file
+    start_time = datetime.now()
     df = None
     try:
         df = read_with_timeframe(data_frame_type, date_range_str, file_path, n_rows, skip_rows)
@@ -80,10 +82,13 @@ def read_file(date_range_str: str, data_frame_type: str, generator: Callable, sk
         df = read_with_timeframe(data_frame_type, date_range_str, file_path, n_rows, skip_rows)
         if not check_dataframe(df, getattr(config, data_frame_type + '_columns')):
             raise Exception(f'Failed to generate {data_frame_type}! {data_frame_type}.columns:{df.columns}')
+        log(f'generate {data_frame_type} executed in {timedelta_to_str(datetime.now() - start_time, milliseconds=True)}s')
+    else:
+        log(f'read {data_frame_type} executed in {timedelta_to_str(datetime.now() - start_time, milliseconds=True)}s')
     return df
 
 
-def timedelta_to_str(input_time: Union[str, Timedelta]) -> str:
+def df_timedelta_to_str(input_time: Union[str, Timedelta], hours=True, ignore_zero: bool = True) -> str:
     """
     Convert a pandas timedelta string or a pandas Timedelta object into a human-readable string representation.
 
@@ -94,6 +99,8 @@ def timedelta_to_str(input_time: Union[str, Timedelta]) -> str:
     Parameters:
         input_time (Union[str, Timedelta]): The input timedelta, which can be a pandas timedelta string or a
                                            pandas Timedelta object.
+        hours (bool, optional): If True (default), includes hours in the output. If False, only includes minutes.
+        ignore_zero (bool, optional): If True (default), removes zero values from the output.
 
     Returns:
         str: A string representation of the input timedelta in the format "hours:minutes".
@@ -104,12 +111,12 @@ def timedelta_to_str(input_time: Union[str, Timedelta]) -> str:
     Example:
         # Convert a timedelta string to a human-readable string
         time_str = "2 days 03:30:00"
-        result = timedelta_to_str(time_str)  # Result: "51:30"
+        result = df_timedelta_to_str(time_str)  # Result: "51:30"
 
         # Convert a Timedelta object to a human-readable string
         import pandas as pd
         time_delta = pd.Timedelta(days=2, hours=3, minutes=30)
-        result = timedelta_to_str(time_delta)  # Result: "51:30"
+        result = df_timedelta_to_str(time_delta)  # Result: "51:30"
     """
     if isinstance(input_time, str):
         timedelta_obj = Timedelta(input_time)
@@ -119,12 +126,77 @@ def timedelta_to_str(input_time: Union[str, Timedelta]) -> str:
         raise ValueError("Input should be either a pandas timedelta string or a pandas Timedelta object.")
 
     total_minutes = timedelta_obj.total_seconds() // 60
-    hours = int(total_minutes // 60)
-    minutes = int(total_minutes % 60)
+    if hours:
+        _hours = int(total_minutes // 60)
+    _minutes = int(total_minutes % 60)
 
-    if hours == 0: hours = ''
+    if ignore_zero:
+        _tuple = (_hours, _minutes)
+        _tuple = (v if v > 0 else '' for v in _tuple)
+        _hours, _minutes = _tuple
 
-    return f"{hours}:{minutes}"
+    return f"{_hours}:{_minutes}"
+
+
+def timedelta_to_str(time_delta: timedelta, hours: bool = True, minutes: bool = True, seconds: bool = False,
+                     milliseconds: bool = False, microseconds: bool = False, ignore_zero: bool = True) -> str:
+    """
+        Convert a pandas timedelta string or a pandas Timedelta object into a human-readable string representation.
+
+        This function takes a pandas timedelta string, a pandas Timedelta object, or a datetime.timedelta object
+        and converts it into a string format of hours, minutes, seconds, milliseconds, and/or microseconds.
+        If the input is a string, it is converted to a Timedelta object. The resulting string represents the time
+        components specified by the function parameters.
+
+        Parameters:
+            time_delta (timedelta): The input timedelta, which should be a timedelta.
+            hours (bool, optional): If True (default), includes hours in the output. If False, excludes hours.
+            minutes (bool, optional): If True (default), includes minutes in the output. If False, excludes minutes.
+            seconds (bool, optional): If True, includes seconds in the output. Default is False.
+            milliseconds (bool, optional): If True, includes milliseconds in the output. Default is False.
+            microseconds (bool, optional): If True, includes microseconds in the output. Default is False.
+            ignore_zero (bool, optional): If True (default), removes zero values from the output.
+
+        Returns:
+            str: A string representation of the input timedelta in the specified format "hours:minutes:seconds:milliseconds".
+
+        Raises:
+            ValueError: If the input is not a pandas timedelta string, a pandas Timedelta object, or a datetime.timedelta object.
+
+        Example:
+            # Convert a timedelta string to a human-readable string
+            time_str = "2 days 03:30:45.123456"
+            result = timedelta_to_str(time_str, hours=True, minutes=True, seconds=True, milliseconds=True, microseconds=True)
+            # Result: "51:30:45:123456"
+
+            # Convert a Timedelta object to a human-readable string
+            import pandas as pd
+            time_delta = pd.Timedelta(days=2, hours=3, minutes=30, seconds=45, milliseconds=123, microseconds=456)
+            result = timedelta_to_str(time_delta, hours=True, minutes=True, seconds=True, milliseconds=True, microseconds=True)
+            # Result: "51:30:45:123456"
+        """
+    _hours, _minutes, _seconds, _seconds_fraction = [''] * 4
+    remained_seconds = time_delta.total_seconds()
+    if hours:
+        _hours = int(remained_seconds // 60 * 60)
+        remained_seconds -= _hours * 60 * 60
+    if minutes:
+        _minutes = int(remained_seconds // 60)
+        remained_seconds -= _minutes * 60
+    if seconds:
+        _seconds = int(remained_seconds // 1)
+        remained_seconds -= _seconds
+    if microseconds:
+        _seconds_fraction = int(remained_seconds // 0.000001) * 0.000001
+    elif milliseconds:
+        _seconds_fraction = int(remained_seconds // 0.001) * 0.001
+        # remained_seconds -= _milliseconds
+    if ignore_zero:
+        _tuple = (_hours, _minutes, _seconds, _seconds_fraction)
+        _tuple = tuple([v if (v == '' or v > 0) else '' for v in _tuple])
+        _hours, _minutes, _seconds, _seconds_fraction = _tuple
+    result = f'{_hours}:{_minutes}:{_seconds}:{_seconds_fraction}'
+    return result
 
 
 def read_with_timeframe(data_frame_type: str, date_range_str: str, file_path: str, n_rows: int,

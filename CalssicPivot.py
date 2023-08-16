@@ -73,6 +73,11 @@ def update_levels():
     update_inactive_levels()
 
 
+def generate_multi_timeframe_anti_pattern_tops_pivots():
+    # tops of timeframe which the timeframe is its pattern timeframe
+    raise Exception('Not implemented')
+
+
 def generate_multi_timeframe_pivot_levels(multi_timeframe_ohlca, multi_timeframe_peaks_n_valleys: pd.DataFrame):
     """
     definition of pivot:
@@ -97,5 +102,6 @@ def generate_multi_timeframe_pivot_levels(multi_timeframe_ohlca, multi_timeframe
     """
     generate_multi_timeframe_bull_bear_side_trend_pivots()
     generate_multi_timeframe_color_trend_pivots()
+    generate_multi_timeframe_anti_pattern_tops_pivots()
     update_levels()
 

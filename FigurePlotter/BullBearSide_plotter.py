@@ -9,8 +9,12 @@ from Config import TREND, config
 from DataPreparation import single_timeframe
 from FigurePlotter.plotter import file_id, save_figure, plot_multiple_figures
 from PeakValley import plot_peaks_n_valleys, peaks_only, valleys_only, major_peaks_n_valleys
+from helper import measure_time
 
 MAX_NUMBER_OF_PLOT_SCATTERS = 1000
+
+
+@measure_time
 def plot_single_timeframe_bull_bear_side_trends(single_timeframe_ohlca: pd.DataFrame, peaks_n_valleys: pd.DataFrame,
                                                 boundaries: pd.DataFrame,
                                                 name: str = '', show: bool = True,
@@ -67,9 +71,10 @@ def plot_single_timeframe_bull_bear_side_trends(single_timeframe_ohlca: pd.DataF
     if show: fig.show()
     return fig
 
-
+@measure_time
 def plot_multi_timeframe_bull_bear_side_trends(multi_timeframe_ohlca, multi_timeframe_peaks_n_valleys,
-                                               _multi_timeframe_bull_bear_side_trends, show: bool = True, save: bool = True,
+                                               _multi_timeframe_bull_bear_side_trends, show: bool = True,
+                                               save: bool = True,
                                                timeframe_shortlist: List['str'] = None):
     figures = []
     if timeframe_shortlist is None:

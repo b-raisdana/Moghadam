@@ -50,9 +50,9 @@ def merge_overlapped_single_timeframe_trends(trends: pt.DataFrame[BullBearSide],
             date: pt.Index[datetime]  # start
             bull_bear_side: pt.Series[str]
             end: pt.Series[datetime]
-            highest_high: pt.Series[float]
+            internal_high: pt.Series[float]
             high_time: pt.Series[Timestamp]
-            lowest_low: pt.Series[float]
+            internal_low: pt.Series[float]
             low_time: pt.Series[Timestamp]
             movement: pt.Series[float]
             strength: pt.Series[float]
@@ -64,12 +64,12 @@ def merge_overlapped_single_timeframe_trends(trends: pt.DataFrame[BullBearSide],
             start_of_merged = trends_to_merge.index[0]
             end_of_merged = trends_to_merge['end'].max()
             bull_bear_side_of_merged = direction
-            highest_high = trends_to_merge['highest_high'].max()
-            time_of_highest = trends_to_merge['highest_high'].idxmax()
+            internal_high = trends_to_merge['internal_high'].max()
+            time_of_highest = trends_to_merge['internal_high'].idxmax()
             high_time = trends_to_merge.loc[time_of_highest, 'high_time']
-            lowest_low = trends_to_merge['lowest_low'].min()
+            internal_low = trends_to_merge['internal_low'].min()
             low_time = trends_to_merge.loc[trends_to_merge['low_time'].idxmin(), 'low_time']
-            movement = highest_high - lowest_low
+            movement = internal_high - internal_low
             duration = end_of_merged - start_of_merged
             strength = movement / (duration / to_timedelta(timeframe))
             atr = sum(trends_to_merge['ATR'] / trends_to_merge['duration'])
@@ -77,9 +77,9 @@ def merge_overlapped_single_timeframe_trends(trends: pt.DataFrame[BullBearSide],
                 'end': end_of_merged,
                 'bull_bear_side': bull_bear_side_of_merged,
                 'end': end_of_merged,
-                'highest_high': highest_high,
+                'internal_high': internal_high,
                 'high_time': high_time,
-                'lowest_low': lowest_low,
+                'internal_low': internal_low,
                 'low_time': low_time,
                 'movement': movement,
                 'strength': strength,

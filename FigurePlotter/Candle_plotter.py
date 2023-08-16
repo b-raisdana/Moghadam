@@ -4,8 +4,10 @@ from Config import config, TREND
 from DataPreparation import single_timeframe
 from FigurePlotter.plotter import save_figure, file_id, plot_multiple_figures
 from PeakValley import plot_peaks_n_valleys, peaks_only, valleys_only, major_peaks_n_valleys
+from helper import measure_time
 
 
+@measure_time
 def plot_single_timeframe_candle_trend(ohlc: pd.DataFrame, single_timeframe_candle_trend: pd.DataFrame,
                                        single_timeframe_peaks_n_valleys: pd.DataFrame, show=True, save=True,
                                        path_of_plot=config.path_of_plots, name='Single Timeframe Candle Trend'):
@@ -54,6 +56,7 @@ def plot_single_timeframe_candle_trend(ohlc: pd.DataFrame, single_timeframe_cand
     return fig
 
 
+@measure_time
 def plot_multi_timeframe_candle_trend(multi_timeframe_candle_trend, multi_timeframe_peaks_n_valleys, ohlc, show=True,
                                       save=True, path_of_plot=config.path_of_plots):
     # todo: test plot_multi_timeframe_candle_trend

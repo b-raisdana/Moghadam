@@ -4,9 +4,10 @@ from plotly import graph_objects as plgo
 from Config import config, CandleSize
 from DataPreparation import single_timeframe
 from FigurePlotter.plotter import plot_multiple_figures, file_id, DEBUG, save_figure
-from helper import log
+from helper import log, measure_time
 
 
+@measure_time
 def plot_multi_timeframe_ohlca(multi_timeframe_ohlca, name: str = '', show: bool = True, save: bool = True):
     # todo: test plot_multi_timeframe_ohlca
     figures = []
@@ -17,6 +18,7 @@ def plot_multi_timeframe_ohlca(multi_timeframe_ohlca, name: str = '', show: bool
                           save=save, show=show)
 
 
+@measure_time
 def plot_multi_timeframe_ohlc(multi_timeframe_ohlc, date_range_str):
     # todo: test plot_multi_timeframe_ohlc
     figures = []
@@ -26,6 +28,7 @@ def plot_multi_timeframe_ohlc(multi_timeframe_ohlc, date_range_str):
     plot_multiple_figures(figures, name=f'multi_timeframe_ohlc.{date_range_str}')
 
 
+@measure_time
 def plot_ohlc(ohlc: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']),
               save: bool = False, name: str = '', show: bool = True) -> plgo.Figure:
     """
@@ -47,7 +50,7 @@ def plot_ohlc(ohlc: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']),
         raise Exception(f'Too many rows to plt ({len(ohlc.index),}>{MAX_LEN_OF_DATA_FRAME_TO_PLOT})')
     if len(ohlc.index) > SAFE_LEN_OF_DATA_FRAME_TO_PLOT:
         log(f'Plotting too much data will slow us down ({len(ohlc.index),}>{SAFE_LEN_OF_DATA_FRAME_TO_PLOT})')
-    kaleido_install_lock_file_path =  'kaleido.installed'
+    kaleido_install_lock_file_path = 'kaleido.installed'
     if not os.path.isfile(kaleido_install_lock_file_path):
         log('kaleido not satisfied!')
         try:
@@ -76,7 +79,7 @@ def plot_ohlc(ohlc: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']),
 
     return fig
 
-
+@measure_time
 def plot_ohlca(ohlca: pd.DataFrame, save: bool = True, show: bool = True, name: str = '') -> plgo.Figure:
     """
     Plot OHLC data with an additional ATR (Average True Range) boundary.
