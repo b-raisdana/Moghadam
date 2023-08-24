@@ -18,13 +18,13 @@ def log(log_message, severity=LogSeverity.WARNING, stack_trace: bool = True) -> 
 
 def measure_time(func):
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def _measure_time(*args, **kwargs):
         start_time = time.time()
-        log(f"{func.__name__} started")
+        log(f"{func.__name__} started", stack_trace=False)
         result = func(*args, **kwargs)
         end_time = time.time()
         execution_time = end_time - start_time
-        log(f"{func.__name__} executed in {execution_time:.6f} seconds")
+        log(f"{func.__name__} executed in {execution_time:.6f} seconds", stack_trace=False)
         return result
 
-    return wrapper
+    return _measure_time

@@ -217,6 +217,7 @@ def find_peaks_n_valleys(base_ohlc: pd.DataFrame,
     return _peaks_n_valleys.sort_index() if sort_index else _peaks_n_valleys
 
 
+# @measure_time
 def major_peaks_n_valleys(multi_timeframe_peaks_n_valleys: pd.DataFrame, timeframe: str) -> pd.DataFrame:
     """
     Filter rows from multi_timeframe_peaks_n_valleys with a timeframe equal to or greater than the specified timeframe.

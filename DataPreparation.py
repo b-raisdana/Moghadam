@@ -82,9 +82,10 @@ def read_file(date_range_str: str, data_frame_type: str, generator: Callable, sk
         df = read_with_timeframe(data_frame_type, date_range_str, file_path, n_rows, skip_rows)
         if not check_dataframe(df, getattr(config, data_frame_type + '_columns')):
             raise Exception(f'Failed to generate {data_frame_type}! {data_frame_type}.columns:{df.columns}')
-        log(f'generate {data_frame_type} executed in {timedelta_to_str(datetime.now() - start_time, milliseconds=True)}s')
+        # log(f'generate {data_frame_type} executed in {timedelta_to_str(datetime.now() - start_time, milliseconds=True)}s')
     else:
-        log(f'read {data_frame_type} executed in {timedelta_to_str(datetime.now() - start_time, milliseconds=True)}s')
+        # log(f'read {data_frame_type} executed in {timedelta_to_str(datetime.now() - start_time, milliseconds=True)}s')
+        pass
     return df
 
 
@@ -249,6 +250,7 @@ def check_dataframe(dataframe: pd.DataFrame, columns: [str], raise_exception=Fal
     return True
 
 
+# @measure_time
 def single_timeframe(multi_timeframe_data: pd.DataFrame, timeframe):
     if 'timeframe' not in multi_timeframe_data.index.names:
         raise Exception(

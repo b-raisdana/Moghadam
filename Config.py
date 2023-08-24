@@ -72,8 +72,29 @@ class Config():
         self.multi_timeframe_ohlca_columns = self.ohlca_columns + ['timeframe']
         self.multi_timeframe_peaks_n_valleys_columns = self.ohlc_columns + ['timeframe', 'peak_or_valley',
                                                                             'strength']  # 'strength',
+
+        self.multi_timeframe_candle_trend_columns = [
+            'timeframe',
+            'date',
+            'open',
+            'close',
+            'low',
+            'high',
+            'volume',
+            'previous_peak_index',
+            'previous_peak_value',
+            'next_peak_index',
+            'next_peak_value',
+            'previous_valley_index',
+            'previous_valley_value',
+            'next_valley_index',
+            'next_valley_value',
+            'bull_bear_side',
+        ]
         self.multi_timeframe_bull_bear_side_trends_columns = ['timeframe', 'end', 'bull_bear_side',
                                                               'internal_high', 'internal_low', 'high_time', 'low_time',
+                                                              'start_value_of_movement', 'end_value_of_movement',
+                                                              'start_time_of_movement', 'end_time_of_movement',
                                                               # 'trend_line_acceleration', 'trend_line_base',
                                                               # 'canal_line_acceleration', 'canal_line_base',
                                                               ]

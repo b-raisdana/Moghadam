@@ -9,9 +9,9 @@ from Config import TREND, config
 from DataPreparation import single_timeframe
 from FigurePlotter.plotter import file_id, save_figure, plot_multiple_figures
 from PeakValley import plot_peaks_n_valleys, peaks_only, valleys_only, major_peaks_n_valleys
-from helper import measure_time
+from helper import measure_time, log
 
-MAX_NUMBER_OF_PLOT_SCATTERS = 1000
+MAX_NUMBER_OF_PLOT_SCATTERS = 5000
 
 
 @measure_time
@@ -60,7 +60,13 @@ def plot_single_timeframe_bull_bear_side_trends(single_timeframe_ohlca: pd.DataF
                             text=text,
                             hoverinfo='text')
 
-            remained_number_of_scatters -= 1
+            if 'start_value_of_movement' in boundaries.columns:
+                fig.add_scatter(x=[boundary['start_time_of_movement'], boundary['end_time_of_movement']],
+                                y=[boundary['start_value_of_movement'], boundary['end_value_of_movement']],
+                                line=dict(color=fill_color))
+            else:
+                log(f'movement not found in boundaries:{boundaries.columns}', stack_trace=False)
+            remained_number_of_scatters -= 2
         else:
             break
 
