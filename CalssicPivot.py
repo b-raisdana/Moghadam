@@ -1,7 +1,27 @@
-import pandas as pd
+from datetime import datetime
 
-from BullBearSide import generate_multi_timeframe_bull_bear_side_trend_pivots
+import pandas as pd
+import pandera
+from pandera import typing as pt
+
+from BullBearSidePivot import generate_multi_timeframe_bull_bear_side_pivots
 from ColorTrend import generate_multi_timeframe_color_trend_pivots
+from DataPreparation import MultiTimeframe
+
+
+class Pivot(pandera.DataFrameModel):
+    date: pt.Index[datetime]
+    movement_leg: pt.Series[datetime]
+    return_leg: pt.Series[datetime]
+    level: pt.Series[float]
+    internal_margin: pt.Series[float]
+    external_margin: pt.Series[float]
+    is_active: pt.Series[bool]
+    hit: pt.Series[int]
+
+
+class MultiTimeframePivot(Pivot, MultiTimeframe):
+    pass
 
 
 def level_hit_count():
@@ -100,8 +120,7 @@ def generate_multi_timeframe_pivot_levels(multi_timeframe_ohlca, multi_timeframe
             timeframe of trend
             timeframe of top
     """
-    generate_multi_timeframe_bull_bear_side_trend_pivots()
+    generate_multi_timeframe_bull_bear_side_pivots()
     generate_multi_timeframe_color_trend_pivots()
     generate_multi_timeframe_anti_pattern_tops_pivots()
     update_levels()
-

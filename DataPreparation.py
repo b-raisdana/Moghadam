@@ -1,13 +1,17 @@
 import os
 from datetime import datetime, timedelta
-from typing import Callable, Union
-
+from typing import Callable, Union, List
 import numpy as np
 import pandas as pd
+import pandera
 from pandas import Timedelta, DatetimeIndex, Timestamp
+from pandera import typing as pt
 
-from Config import config, GLOBAL_CACHE
-from helper import log
+from Config import config, GLOBAL_CACHE, CandleSize
+
+
+class MultiTimeframe(pandera.DataFrameModel):
+    timeframe: pt.Index[str]
 
 
 def range_of_data(data: pd.DataFrame) -> str:
@@ -314,3 +318,7 @@ def validate_no_timeframe(data: pd.DataFrame) -> pd.DataFrame:
     if 'timeframe' in data.index.names:
         raise Exception(f'timeframe found in Data(indexes:{data.index.names}, columns:{data.columns.names}')
     return data
+
+
+def tolerance(_list: List):
+    return _list * CandleSize.Standard[0]
