@@ -60,9 +60,9 @@ def plot_single_timeframe_bull_bear_side_trends(single_timeframe_ohlca: pd.DataF
                             text=text,
                             hoverinfo='text')
 
-            if 'start_value_of_movement' in boundaries.columns:
-                fig.add_scatter(x=[_trend['start_time_of_movement'], _trend['end_time_of_movement']],
-                                y=[_trend['start_value_of_movement'], _trend['end_value_of_movement']],
+            if 'movement_start_value' in boundaries.columns:
+                fig.add_scatter(x=[_trend['movement_start_time'], _trend['movement_end_time']],
+                                y=[_trend['movement_start_value'], _trend['movement_end_value']],
                                 line=dict(color=fill_color))
             else:
                 log(f'movement not found in boundaries:{boundaries.columns}', stack_trace=False)

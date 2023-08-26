@@ -321,4 +321,4 @@ def validate_no_timeframe(data: pd.DataFrame) -> pd.DataFrame:
 
 
 def tolerance(_list: List):
-    return _list * CandleSize.Standard[0]
+    return _list * CandleSize.Standard.value[0]

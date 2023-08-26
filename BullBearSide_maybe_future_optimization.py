@@ -4,12 +4,13 @@ import pandas as pd
 from pandas import to_timedelta
 from pandera import typing as pt
 
-from BullBearSide import BullBearSide, bull_bear_side_repr
+from BullBearSide import bull_bear_side_repr
+from Model.BullBearSide import BullBearSide
 from Config import TREND
 from helper import log
 
 
-def merge_overlapped_single_timeframe_trends(trends: pt.DataFrame[BullBearSide], timeframe: str):
+def zz_merge_overlapped_single_timeframe_trends(trends: pt.DataFrame[BullBearSide], timeframe: str):
     """
     Merge overlapped trends.
 

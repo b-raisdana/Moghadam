@@ -91,10 +91,11 @@ class Config():
             'next_valley_value',
             'bull_bear_side',
         ]
-        self.multi_timeframe_bull_bear_side_trends_columns = ['timeframe', 'end', 'bull_bear_side',
+        self.multi_timeframe_bull_bear_side_trends_columns = ['timeframe', 'end', 'bull_bear_side', 'ATR',
                                                               'internal_high', 'internal_low', 'high_time', 'low_time',
-                                                              'start_value_of_movement', 'end_value_of_movement',
-                                                              'start_time_of_movement', 'end_time_of_movement',
+                                                              'movement_start_value', 'movement_end_value',
+                                                              'movement_start_time', 'movement_end_time',
+                                                              'movement',
                                                               # 'trend_line_acceleration', 'trend_line_base',
                                                               # 'canal_line_acceleration', 'canal_line_base',
                                                               ]

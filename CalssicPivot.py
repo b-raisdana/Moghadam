@@ -1,27 +1,7 @@
-from datetime import datetime
-
 import pandas as pd
-import pandera
-from pandera import typing as pt
 
 from BullBearSidePivot import generate_multi_timeframe_bull_bear_side_pivots
 from ColorTrend import generate_multi_timeframe_color_trend_pivots
-from DataPreparation import MultiTimeframe
-
-
-class Pivot(pandera.DataFrameModel):
-    date: pt.Index[datetime]
-    movement_leg: pt.Series[datetime]
-    return_leg: pt.Series[datetime]
-    level: pt.Series[float]
-    internal_margin: pt.Series[float]
-    external_margin: pt.Series[float]
-    is_active: pt.Series[bool]
-    hit: pt.Series[int]
-
-
-class MultiTimeframePivot(Pivot, MultiTimeframe):
-    pass
 
 
 def level_hit_count():

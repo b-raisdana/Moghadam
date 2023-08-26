@@ -8,7 +8,7 @@ from helper import log, measure_time
 
 
 @measure_time
-def plot_multi_timeframe_ohlca(multi_timeframe_ohlca, name: str = '', show: bool = True, save: bool = True):
+def plot_multi_timeframe_ohlca(multi_timeframe_ohlca, name: str = '', show: bool = True, save: bool = True) -> None:
     # todo: test plot_multi_timeframe_ohlca
     figures = []
     for _, timeframe in enumerate(config.timeframes):
@@ -28,7 +28,7 @@ def plot_multi_timeframe_ohlc(multi_timeframe_ohlc, date_range_str):
     plot_multiple_figures(figures, name=f'multi_timeframe_ohlc.{date_range_str}')
 
 
-@measure_time
+# @measure_time
 def plot_ohlc(ohlc: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']),
               save: bool = False, name: str = '', show: bool = True) -> plgo.Figure:
     """
@@ -78,6 +78,7 @@ def plot_ohlc(ohlc: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']),
         save_figure(fig, file_name)
 
     return fig
+
 
 @measure_time
 def plot_ohlca(ohlca: pd.DataFrame, save: bool = True, show: bool = True, name: str = '') -> plgo.Figure:
