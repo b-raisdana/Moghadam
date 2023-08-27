@@ -70,8 +70,7 @@ class Config():
         self.ohlca_columns: List = self.ohlc_columns + ['ATR']
         self.multi_timeframe_ohlc_columns = self.ohlc_columns + ['timeframe']
         self.multi_timeframe_ohlca_columns = self.ohlca_columns + ['timeframe']
-        self.multi_timeframe_peaks_n_valleys_columns = self.ohlc_columns + ['timeframe', 'peak_or_valley',
-                                                                            'strength']  # 'strength',
+        self.multi_timeframe_peaks_n_valleys_columns = ['timeframe', 'peak_or_valley', 'strength'] # remove OHLC data
 
         self.multi_timeframe_candle_trend_columns = [
             'timeframe',

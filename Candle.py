@@ -44,7 +44,7 @@ def insert_atr(single_timeframe_ohlc: pd.DataFrame) -> pd.DataFrame:
 def generate_ohlca(date_range_str: str, file_path: str = config.path_of_data) -> None:
     # if not input_file_path.startswith('ohlc') or input_file_path.startswith('ohlca'):
     #     raise Exception('input_file expected to start with "ohlc" and does not start with "ohlca"!')
-    ohlc = pd.read_csv(f'ohlc.{date_range_str}.zip', sep=',', header=0, index_col='date', parse_dates=['date'])
+    ohlc = read_ohlc(date_range_str)
     ohlca = insert_atr(ohlc)
     plot_ohlca(ohlca)
     ohlca.to_csv(os.path.join(file_path, f'ohlca.{date_range_str}.zip'), compression='zip')

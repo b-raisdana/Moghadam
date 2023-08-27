@@ -629,6 +629,8 @@ def previous_trend(trends: pt.DataFrame[BullBearSide]):
     return _previous_trends, _previous_trends_movement
 
 
+
+
 def single_timeframe_bull_bear_side_trends(single_timeframe_candle_trend: pd.DataFrame,
                                            single_timeframe_peaks_n_valleys, ohlca: pt.DataFrame[OHLCA],
                                            timeframe: str) -> pd.DataFrame:
@@ -647,25 +649,6 @@ def single_timeframe_bull_bear_side_trends(single_timeframe_candle_trend: pd.Dat
     _trends['duration'] = trend_duration(_trends)
     _trends['rate'] = trend_rate(_trends, timeframe)
     _trends['strength'] = trend_strength(_trends)
-    # _trends['previous_trend'] = previous_trend(_trends)
-    # _trends.loc[_trends['previous_trend'].notna(), 'previous_trend_movement'] = (
-    #     _trends.loc)[_trends['previous_trend'].notna(), 'movement']
-
-    # back_boundaries = _trends.copy()
-    # _trends = ignore_weak_trend(_trends)
-    # todo: test merge_overlapped_trends
-    # _trends = merge_overlapped_single_timeframe_trends(_trends, timeframe)
-
-    # single_timeframe_ohlca = single_timeframe(read_multi_timeframe_ohlca(config.under_process_date_range), timeframe)
-
-    # plot_multiple_figures([
-    #     plot_single_timeframe_bull_bear_side_trends(single_timeframe_ohlca, single_timeframe_peaks_n_valleys,
-    #                                                 back_boundaries, name=f'back_boundaries', save=False, show=False),
-    #     plot_single_timeframe_bull_bear_side_trends(single_timeframe_ohlca, single_timeframe_peaks_n_valleys,
-    #                                                 _trends,
-    #                                                 name=f'modified_boundaries', save=False, show=False),
-    # ], name='compare after adding previous toward top')
-    # _trends = add_canal_lines(_trends, single_timeframe_peaks_n_valleys)
     _trends = _trends[[i for i in config.multi_timeframe_bull_bear_side_trends_columns if i != 'timeframe']]
     return _trends
 

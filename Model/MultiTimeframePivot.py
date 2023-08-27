@@ -1,6 +1,9 @@
+import pandera
+from pandera import typing as pt
+
 from DataPreparation import MultiTimeframe
 from Model.Pivot import Pivot
 
 
-class MultiTimeframePivot(MultiTimeframe, Pivot):
-    pass
+class MultiTimeframePivot(Pivot, MultiTimeframe):
+    hit: pt.Series[int] = pandera.Field()
