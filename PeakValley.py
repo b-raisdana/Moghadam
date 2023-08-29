@@ -128,21 +128,26 @@ def plot_peaks_n_valleys(ohlca: pd = pd.DataFrame(columns=['open', 'high', 'low'
         Returns:
             plgo.Figure: The Plotly figure object containing the candlestick plot with peaks and valleys highlighted.
         """
-    fig = plot_ohlca(ohlca, name=file_name, save=False, show=False)
+    fig = plot_ohlca(ohlca, name='ohlca', save=False, show=False)
     if len(peaks) > 0:
-        _indexes, _labels = [], []
-        [(_indexes.append(_x[1]), _labels.append(
-            f"{_x[0]}/{df_timedelta_to_str(row['strength'])}@{_x[1].strftime('%m-%d|%H:%M')}={row['high']}"))
-         for _x, row in peaks.iterrows()]
-        fig.add_scatter(x=_indexes, y=peaks['high'] + 1, mode="markers", name='P',
+        for timeframe in config.timeframes:
+            _indexes, _labels = [], []
+            timeframe_peaks = single_timeframe(peaks, timeframe)
+            [(_indexes.append(_x), _labels.append(
+                f"{timeframe}/{df_timedelta_to_str(row['strength'])}@{_x.strftime('%m-%d|%H:%M')}={row['high']}"))
+             for _x, row in timeframe_peaks.iterrows()]
+            fig.add_scatter(x=_indexes, y=timeframe_peaks['high'] + 1, mode="markers", name=f'P{timeframe}',
                         marker=dict(symbol="triangle-up", color="blue"), hovertemplate="%{text}", text=_labels)
     if len(valleys) > 0:
-        _indexes, _labels = [], []
-        [(_indexes.append(_x[1]), _labels.append(
-            f"{_x[0]}({df_timedelta_to_str(row['strength'])})@{_x[1].strftime('%m-%d|%H:%M')}={row['low']}"))
-         for _x, row in valleys.iterrows()]
-        fig.add_scatter(x=_indexes, y=valleys['low'] - 1, mode="markers", name='V',
-                        marker=dict(symbol="triangle-down", color="blue"), hovertemplate="%{text}", text=_labels)
+        for timeframe in config.timeframes:
+            timeframe_valleys = single_timeframe(valleys, timeframe)
+            _indexes, _labels = [], []
+            [(_indexes.append(_x), _labels.append(
+                f"{timeframe}({df_timedelta_to_str(row['strength'])})@{_x.strftime('%m-%d|%H:%M')}={row['low']}"))
+             for _x, row in timeframe_valleys.iterrows()]
+            fig.add_scatter(x=_indexes, y=timeframe_valleys['low'] - 1, mode="markers", name=f'V{timeframe}',
+                            legendgroup=timeframe,
+                            marker=dict(symbol="triangle-down", color="blue"), hovertemplate="%{text}", text=_labels)
         fig.update_layout(hovermode='x unified')
     if show: fig.show()
     if save:

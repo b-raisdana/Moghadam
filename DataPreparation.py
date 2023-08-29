@@ -1,13 +1,14 @@
 import os
 from datetime import datetime, timedelta
 from typing import Callable, Union, List
+
 import numpy as np
 import pandas as pd
 import pandera
 from pandas import Timedelta, DatetimeIndex, Timestamp
 from pandera import typing as pt
 
-from Config import config, GLOBAL_CACHE, CandleSize
+from Config import config, GLOBAL_CACHE
 
 
 class MultiTimeframe(pandera.DataFrameModel):
@@ -320,5 +321,5 @@ def validate_no_timeframe(data: pd.DataFrame) -> pd.DataFrame:
     return data
 
 
-def tolerance(_list: List):
-    return _list * CandleSize.Standard.value[0]
+def expected_movement_size(_list: List):
+    return _list  # * CandleSize.Standard.value[0]

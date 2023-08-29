@@ -7,7 +7,7 @@ from pandera import typing as pt
 from BullBearSide import read_multi_timeframe_bull_bear_side_trends, previous_trend
 from Candle import read_multi_timeframe_ohlca
 from Config import config, TopTYPE
-from DataPreparation import single_timeframe, tolerance, to_timeframe
+from DataPreparation import single_timeframe, expected_movement_size, to_timeframe
 from FigurePlotter.Pivot_plotter import plot_multi_timeframe_bull_bear_side_pivots
 from Model.MultiTimeframePivot import MultiTimeframePivot
 from Model.Pivot import Pivot
@@ -15,7 +15,8 @@ from PeakValley import read_multi_timeframe_peaks_n_valleys, major_peaks_n_valle
 from helper import measure_time, log
 
 
-def pivots_level_n_margins(pivot_peaks_or_valleys, _type: TopTYPE, _pivots, timeframe, timeframe_ohlca) \
+def pivots_level_n_margins(pivot_peaks_or_valleys, _type: TopTYPE, _pivots, timeframe,
+                           timeframe_ohlca, trigger_timeframe_ohlca) \
         -> pt.DataFrame[Pivot]:
     """
         Processes the pivot data to determine levels, margins, and other metrics.
@@ -68,7 +69,7 @@ def pivots_level_n_margins(pivot_peaks_or_valleys, _type: TopTYPE, _pivots, time
             pivot_times_mapped_to_timeframe, ['open', 'close']] \
             .apply(choose_body_operator, axis='columns').tolist()
 
-    pivots_atr = timeframe_ohlca.loc[pivot_times_mapped_to_timeframe, 'ATR'].tolist()
+    pivots_atr = trigger_timeframe_ohlca.loc[pivot_times_mapped_to_timeframe, 'ATR'].tolist()
 
     if _type.value == TopTYPE.PEAK.value:
         _pivots.loc[pivot_times, 'ATR_margin'] = [level - atr for level, atr in
@@ -92,6 +93,26 @@ def update_hits(multi_timeframe_pivots):
     log('Todo: implement update_hits')
     multi_timeframe_pivots['hit'] = 0
     return multi_timeframe_pivots
+
+
+def shift_time(timeframe, shifter):
+    index = config.timeframes.index(timeframe)
+    if type(shifter) == int:
+        return config.timeframes[index + shifter]
+    elif type(shifter) == str:
+        if shifter not in config.timeframe_shifter.keys():
+            raise Exception(f'Shifter expected be in [{config.timeframe_shifter.keys()}]')
+        return config.timeframes[index + config.timeframe_shifter[shifter]]
+    else:
+        raise Exception(f'shifter expected be int or str got type({type(shifter)}) in {shifter}')
+
+
+def trigger_timeframe(timeframe):
+    return shift_time(timeframe, config.timeframe_shifter['trigger'])
+
+
+def pattern_timeframe(timeframe):
+    return shift_time(timeframe, config.timeframe_shifter['pattern'])
 
 
 def multi_timeframe_bull_bear_side_pivots(date_range_str: str = config.under_process_date_range) \
@@ -121,20 +142,22 @@ def multi_timeframe_bull_bear_side_pivots(date_range_str: str = config.under_pro
     for timeframe in config.structure_timeframes[::-1]:
         single_timeframe_peaks_n_valleys = major_peaks_n_valleys(multi_timeframe_peaks_n_valleys, timeframe)
         timeframe_ohlca = single_timeframe(multi_timeframe_ohlca, timeframe)
+        trigger_timeframe_ohlca = single_timeframe(multi_timeframe_ohlca, trigger_timeframe(timeframe))
         timeframe_trends = single_timeframe(multi_timeframe_trends, timeframe)
+        _expected_movement_size = expected_movement_size(timeframe_trends['ATR'])
         if len(timeframe_trends) > 0:
             timeframe_trends['previous_trend'], timeframe_trends['previous_trend_movement'] = previous_trend(
                 timeframe_trends)
             _pivot_trends = timeframe_trends[
-                (timeframe_trends['movement'] > tolerance(timeframe_trends['ATR']))
-                & (timeframe_trends['previous_trend_movement'] > tolerance(timeframe_trends['ATR']) * 3)
+                (timeframe_trends['movement'] > _expected_movement_size)
+                & (timeframe_trends['previous_trend_movement'] > _expected_movement_size * 3)
                 ]
             _pivot_trends = _pivot_trends.groupby('movement_start_time', group_keys=False).apply(
                 lambda x: x.loc[x['movement_start_time'].idxmax()])
             if len(_pivot_trends) > 0:
                 _pivot_top_indexes = timeframe_trends.loc[
-                    (timeframe_trends['movement'] > tolerance(timeframe_trends['ATR']))
-                    & (timeframe_trends['previous_trend_movement'] > tolerance(timeframe_trends['ATR']) * 3)
+                    (timeframe_trends['movement'] > _expected_movement_size)
+                    & (timeframe_trends['previous_trend_movement'] > _expected_movement_size * 3)
                     , 'movement_start_time'
                 ].unique()
 
@@ -152,10 +175,12 @@ def multi_timeframe_bull_bear_side_pivots(date_range_str: str = config.under_pro
                     single_timeframe_peaks_n_valleys.index.get_level_values('date').isin(_pivots.index)]
 
                 pivot_peaks = peaks_only(pivot_peaks_and_valleys)
-                _pivots = pivots_level_n_margins(pivot_peaks, TopTYPE.PEAK, _pivots, timeframe, timeframe_ohlca)
+                _pivots = pivots_level_n_margins(pivot_peaks, TopTYPE.PEAK, _pivots, timeframe, timeframe_ohlca
+                                                 , trigger_timeframe_ohlca)
 
                 pivot_valleys = valleys_only(pivot_peaks_and_valleys)
-                _pivots = pivots_level_n_margins(pivot_valleys, TopTYPE.VALLEY, _pivots, timeframe, timeframe_ohlca)
+                _pivots = pivots_level_n_margins(pivot_valleys, TopTYPE.VALLEY, _pivots, timeframe, timeframe_ohlca
+                                                 , trigger_timeframe_ohlca)
 
                 _pivots = find_major_pivot_overlap(_pivots, multi_timeframe_pivots)
                 _pivots = _pivots.astype({
@@ -238,4 +263,5 @@ def generate_multi_timeframe_bull_bear_side_pivots(date_range_str: str = config.
                     add a new level for the pivot   
     """
     # todo: complete generate_multi_timeframe_bull_bear_side_trend_pivots
-    raise Exception('Not implemented')
+    log('Not finished?')
+    # raise Exception('Not implemented')

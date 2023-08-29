@@ -1,6 +1,7 @@
 from BullBearSide import generate_multi_timeframe_bull_bear_side_trends
 from BullBearSidePivot import generate_multi_timeframe_bull_bear_side_pivots
 from Config import config
+from PeakValley import generate_multi_timeframe_peaks_n_valleys
 
 if __name__ == "__main__":
     # generate_multi_timeframe_peaks_n_valleys(config.under_process_date_range)

@@ -69,9 +69,9 @@ def plot_ohlc(ohlc: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']),
     if DEBUG: log(f'data({ohlc.shape})')
     if DEBUG: log(ohlc)
     fig = plgo.Figure(data=[plgo.Candlestick(x=ohlc.index.values,
-                                             open=ohlc['open'], high=ohlc['high'], low=ohlc['low'],
-                                             close=ohlc['close'],
-                                             )], ).update_yaxes(fixedrange=False).update_layout(yaxis_title=name)
+                                             open=ohlc['open'], high=ohlc['high'], low=ohlc['low'], close=ohlc['close']
+                                             , name=name
+                                             )]).update_yaxes(fixedrange=False).update_layout(yaxis_title=name)
     if show: fig.show()
     if save:
         file_name = f'ohlc.{file_id(ohlc, name)}'
@@ -104,7 +104,6 @@ def plot_ohlca(ohlca: pd.DataFrame, save: bool = True, show: bool = True, name: 
     """
     # Calculate the middle of the boundary (average of open and close)
     midpoints = (ohlca['high'] + ohlca['low']) / 2
-
     # Create a figure using the plot_ohlc function
     fig = plot_ohlc(ohlca[['open', 'high', 'low', 'close']], show=False, save=False, name=name)
 

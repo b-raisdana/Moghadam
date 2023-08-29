@@ -19,12 +19,18 @@ class BasePivot(pandera.DataFrameModel):
     overlapped_with_major_timeframe: pt.Series[str] = pandera.Field(nullable=True)
 
     @staticmethod
-    def repr(start_time: datetime, pivot_timeframe: str, pivot_info) -> str:
-        output = (f"Pivot {pivot_info['level']}={pivot_timeframe}@{start_time}"
-                  f"[{pivot_info['internal_margin']}-{pivot_info['external_margin']}]("
-                  f"M{abs(pivot_info['movement_start_value'] - pivot_info['level'])}"
-                  f"R{abs(pivot_info['return_end_value'] - pivot_info['level'])}"
+    def description(start_time: datetime, pivot_timeframe: str, pivot_info) -> str:
+        output = (f"Pivot {pivot_info['level']:.0f}={pivot_timeframe}@{start_time.strftime('%m-%d.%H:%M')}"
+                  f"[{pivot_info['internal_margin']:.0f}-{pivot_info['external_margin']:.0f}]("
+                  f"M{abs(pivot_info['movement_start_value'] - pivot_info['level']):.0f}"
+                  f"R{abs(pivot_info['return_end_value'] - pivot_info['level']):.0f}"
                   f"H{pivot_info['hit']}")
+        if len(pivot_info['overlapped_with_major_timeframe'] or '') > 0:
+            output += f"O{pivot_info['overlapped_with_major_timeframe']}"
+        return output
+    @staticmethod
+    def name(start_time: datetime, pivot_timeframe: str, pivot_info) -> str:
+        output = f"Pivot {pivot_info['level']:.0f}={pivot_timeframe}@{start_time.strftime('%m-%d.%H:%M')}"
         if len(pivot_info['overlapped_with_major_timeframe'] or '') > 0:
             output += f"O{pivot_info['overlapped_with_major_timeframe']}"
         return output
