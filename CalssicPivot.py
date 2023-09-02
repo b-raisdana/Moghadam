@@ -2,6 +2,9 @@ import pandas as pd
 
 from BullBearSidePivot import generate_multi_timeframe_bull_bear_side_pivots
 from ColorTrend import generate_multi_timeframe_color_trend_pivots
+from Config import config
+from DataPreparation import single_timeframe
+from PeakValley import read_multi_timeframe_peaks_n_valleys
 
 
 def level_hit_count():
@@ -73,8 +76,53 @@ def update_levels():
     update_inactive_levels()
 
 
+def pivot_exact_overlapped(pivot_time, multi_timeframe_pivots):
+    # new_pivots['overlapped_with_major_timeframe'] = None
+    if not len(multi_timeframe_pivots) > 0:
+        return None
+
+    # for pivot_time, pivot in new_pivots.iterrows():
+    overlapping_major_timeframes = \
+        multi_timeframe_pivots[multi_timeframe_pivots.index.get_level_values('date') == pivot_time]
+    if len(overlapping_major_timeframes) > 0:
+        root_pivot = overlapping_major_timeframes[
+            multi_timeframe_pivots['overlapped_with_major_timeframe'].isna()
+        ]
+        if len(root_pivot) == 1:
+            # new_pivots.loc[pivot_time, 'overlapped_with_major_timeframe'] = \
+            return root_pivot.index.get_level_values('timeframe')[0]
+        else:
+            raise Exception(f'Expected to find only one root_pivot but found({len(root_pivot)}):{root_pivot}')
+    # return new_pivots
+    raise Exception(f'Expected to find a root_pivot but found zero')
+
+
+def pivot_hit(pivot_time, pivot_info, multi_timeframe_pivots):
+    active_pivots = multi_timeframe_pivots[multi_timeframe_pivots['deactivation_time'] > pivot_time]
+    margin_top = active_pivots['internal_margin','external_margin'].min(axis='column')
+    margin_bottom = active_pivots['internal_margin','external_margin'].max(axis='column')
+    hit_pivots = active_pivots[
+        (pivot_info['level'] > margin_bottom)
+        & (pivot_info['level'] < margin_top)
+    ]
+    if not len(hit_pivots) > 0:
+        return None
+    original_pivot = hit_pivots[hit_pivots['is_a_heat'].isnull()]
+    return hit_pivots.index
+
+def anti_pattern_tops_pivots(date_range_str):
+    _multi_timeframe_peaks_n_valleys = read_multi_timeframe_peaks_n_valleys(date_range_str)
+    for _timeframe in config.structure_timeframes[::-1][1:]:
+        _pivots = single_timeframe(_multi_timeframe_peaks_n_valleys, _timeframe)
+        _pivots['level'] = _pivots['']
+        _pivots = _pivots.loc[:,None]
+
+
+
 def generate_multi_timeframe_anti_pattern_tops_pivots():
     # tops of timeframe which the timeframe is its pattern timeframe
+    for _timeframe in config.structure_timeframes[::-1][1:]:
+
     raise Exception('Not implemented')
 
 

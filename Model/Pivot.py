@@ -5,11 +5,12 @@ from pandas import Timestamp
 from pandera import typing as pt
 
 
-class BasePivot(pandera.DataFrameModel):
-    movement_start_time: pt.Series[Timestamp]
-    movement_start_value: pt.Series[float]
-    return_end_time: pt.Series[Timestamp]
-    return_end_value: pt.Series[float]
+class Pivot(pandera.DataFrameModel):
+    date: pt.Index[Timestamp]
+    movement_start_time: pt.Series[Timestamp] = pandera.Field(nullable=True)
+    movement_start_value: pt.Series[float] = pandera.Field(nullable=True)
+    return_end_time: pt.Series[Timestamp] = pandera.Field(nullable=True)
+    return_end_value: pt.Series[float] = pandera.Field(nullable=True)
     level: pt.Series[float]
     internal_margin: pt.Series[float]
     external_margin: pt.Series[float]
@@ -28,13 +29,10 @@ class BasePivot(pandera.DataFrameModel):
         if len(pivot_info['overlapped_with_major_timeframe'] or '') > 0:
             output += f"O{pivot_info['overlapped_with_major_timeframe']}"
         return output
+
     @staticmethod
     def name(start_time: datetime, pivot_timeframe: str, pivot_info) -> str:
         output = f"Pivot {pivot_info['level']:.0f}={pivot_timeframe}@{start_time.strftime('%m-%d.%H:%M')}"
         if len(pivot_info['overlapped_with_major_timeframe'] or '') > 0:
             output += f"O{pivot_info['overlapped_with_major_timeframe']}"
         return output
-
-
-class Pivot(BasePivot):
-    date: pt.Index[Timestamp]

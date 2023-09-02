@@ -20,7 +20,7 @@ def plot_single_timeframe_bull_bear_side_trends(single_timeframe_ohlca: pd.DataF
                                                 name: str = '', show: bool = True,
                                                 html_path: str = '', save: bool = True) -> plgo.Figure:
     fig = plot_peaks_n_valleys(single_timeframe_ohlca, peaks=peaks_only(peaks_n_valleys),
-                               valleys=valleys_only(peaks_n_valleys), file_name=name, show=False, save=False)
+                               valleys=valleys_only(peaks_n_valleys), name=name, show=False, save=False)
     remained_number_of_scatters = MAX_NUMBER_OF_PLOT_SCATTERS
     for _start, _trend in boundaries.iterrows():
         if _start == Timestamp('2017-01-04 11:17:00'):

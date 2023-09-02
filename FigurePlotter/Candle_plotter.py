@@ -41,7 +41,7 @@ def plot_single_timeframe_candle_trend(ohlc: pd.DataFrame, single_timeframe_cand
     fig = plot_peaks_n_valleys(ohlc,
                                peaks=peaks_only(single_timeframe_peaks_n_valleys),
                                valleys=valleys_only(single_timeframe_peaks_n_valleys),
-                               file_name=f'{name} Peaks n Valleys')
+                               name=f'{name} Peaks n Valleys')
 
     # Update the bar trace with trend colors
     fig.update_traces(marker=dict(color=trend_colors), selector=dict(type='bar'))

@@ -5,6 +5,7 @@ import pandas as pd
 from pandera import typing as pt
 
 from BullBearSide import read_multi_timeframe_bull_bear_side_trends, previous_trend
+from CalssicPivot import pivot_exact_overlapped
 from Candle import read_multi_timeframe_ohlca
 from Config import config, TopTYPE
 from DataPreparation import single_timeframe, expected_movement_size, to_timeframe
@@ -155,13 +156,20 @@ def multi_timeframe_bull_bear_side_pivots(date_range_str: str = config.under_pro
             _pivot_trends = _pivot_trends.groupby('movement_start_time', group_keys=False).apply(
                 lambda x: x.loc[x['movement_start_time'].idxmax()])
             if len(_pivot_trends) > 0:
-                _pivot_top_indexes = timeframe_trends.loc[
+                """
+                start of a trend considered as a Pivot if:
+                    the movement of trend is > _expected_movement_size
+                    the movement of previous trend is > _expected_movement_size * 3
+                """
+
+                # start of a trend considered as a Pivot if the movement of previous trend is > _expected_movement_size * 3
+                _pivot_indexes = timeframe_trends.loc[
                     (timeframe_trends['movement'] > _expected_movement_size)
                     & (timeframe_trends['previous_trend_movement'] > _expected_movement_size * 3)
                     , 'movement_start_time'
                 ].unique()
 
-                _pivots = (pd.DataFrame(data={'date': _pivot_top_indexes, 'deactivation_time': None, 'hit': None})
+                _pivots = (pd.DataFrame(data={'date': _pivot_indexes, 'deactivation_time': None, 'hit': None})
                            .set_index('date'))
                 _pivots['activation_time'] = _pivots.index
                 _pivots['movement_start_time'] = \
@@ -171,6 +179,7 @@ def multi_timeframe_bull_bear_side_pivots(date_range_str: str = config.under_pro
                 _pivots['return_end_time'] = _pivot_trends['movement_end_time'].to_list()
                 _pivots['return_end_value'] = _pivot_trends['movement_end_value'].to_list()
 
+                # find the Peaks and Valleys align with the Pivot
                 pivot_peaks_and_valleys = single_timeframe_peaks_n_valleys.loc[
                     single_timeframe_peaks_n_valleys.index.get_level_values('date').isin(_pivots.index)]
 
@@ -181,8 +190,9 @@ def multi_timeframe_bull_bear_side_pivots(date_range_str: str = config.under_pro
                 pivot_valleys = valleys_only(pivot_peaks_and_valleys)
                 _pivots = pivots_level_n_margins(pivot_valleys, TopTYPE.VALLEY, _pivots, timeframe, timeframe_ohlca
                                                  , trigger_timeframe_ohlca)
-
-                _pivots = find_major_pivot_overlap(_pivots, multi_timeframe_pivots)
+                for pivot_time, pivot in _pivots.iterrows():
+                    _pivots.loc[pivot_time, 'overlapped_with_major_timeframe'] = \
+                        pivot_exact_overlapped(pivot_time, multi_timeframe_pivots)
                 _pivots = _pivots.astype({
                     'movement_start_time': np.datetime64,
                     'return_end_time': np.datetime64,
@@ -193,6 +203,7 @@ def multi_timeframe_bull_bear_side_pivots(date_range_str: str = config.under_pro
                 Pivot.validate(_pivots)
 
                 _pivots['timeframe'] = timeframe
+                _pivots['deactivation_time'] = _pivots.index + 256 * pd.to_timedelta(timeframe)
                 _pivots.set_index('timeframe', append=True, inplace=True)
                 _pivots = _pivots.swaplevel()
                 multi_timeframe_pivots = pd.concat([_pivots, multi_timeframe_pivots])
@@ -200,24 +211,6 @@ def multi_timeframe_bull_bear_side_pivots(date_range_str: str = config.under_pro
 
     MultiTimeframePivot.validate(multi_timeframe_pivots)
     return multi_timeframe_pivots
-
-
-def find_major_pivot_overlap(new_pivots, multi_timeframe_pivots):
-    new_pivots['overlapped_with_major_timeframe'] = None
-    if len(multi_timeframe_pivots) > 0:
-        for pivot_time, pivot in new_pivots.iterrows():
-            overlapping_major_timeframes = \
-                multi_timeframe_pivots[multi_timeframe_pivots.index.get_level_values('date') == pivot_time]
-            if len(overlapping_major_timeframes) > 0:
-                root_pivot = overlapping_major_timeframes[
-                    multi_timeframe_pivots['overlapped_with_major_timeframe'].isna()
-                ]
-                if len(root_pivot) == 1:
-                    new_pivots.loc[pivot_time, 'overlapped_with_major_timeframe'] = \
-                        root_pivot.index.get_level_values('timeframe')[0]
-                else:
-                    raise Exception(f'Expected to find only one root_pivot but found({len(root_pivot)}):{root_pivot}')
-    return new_pivots
 
 
 @measure_time

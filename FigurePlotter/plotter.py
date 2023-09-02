@@ -1,6 +1,7 @@
+import colorsys
 import os
 import webbrowser
-from typing import List
+from typing import List, Tuple
 
 import pandas as pd
 from plotly import graph_objects as plgo
@@ -92,3 +93,11 @@ def file_id(data: pd.DataFrame, name: str = '') -> str:
         return f'{range_of_data(data)}'
     else:
         return f'{name}.{range_of_data(data)}'
+
+
+def timeframe_color(timeframe: str) -> str:
+
+    h = (config.timeframes.index(timeframe)*20 + 120) % 360
+    s, b = (1, 1)
+    r, g, b = [int(x * 255) for x in colorsys.hsv_to_rgb(h / 360, s, b)]
+    return f'rgb({r},{g},{b})'
