@@ -6,6 +6,8 @@ from datetime import timedelta
 from enum import Enum
 from typing import List
 
+import pandas as pd
+
 from helper import log
 
 
@@ -102,6 +104,8 @@ class Config():
         self.end_time = '2021-03-01 03:43:00'
 
         self.INFINITY_TIME_DELTA = timedelta(days=10 * 365)
+
+
 
         self.path_of_data = 'data'
         self.path_of_plots = os.path.join(self.path_of_data, 'plots')

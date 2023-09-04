@@ -1,13 +1,19 @@
-import pandas as pd
+import datetime
 
-from BullBearSidePivot import generate_multi_timeframe_bull_bear_side_pivots
+import pandas as pd
+from pandera import typing as pt
+
+from BullBearSidePivot import generate_multi_timeframe_bull_bear_side_pivots, pivot_margins
+from Candle import read_multi_timeframe_ohlca, OHLC
 from ColorTrend import generate_multi_timeframe_color_trend_pivots
-from Config import config
-from DataPreparation import single_timeframe
+from Config import config, TopTYPE
+from DataPreparation import single_timeframe, trigger_timeframe, anti_pattern_timeframe
+from Model.MultiTimeframePivot import MultiTimeframePivot
 from PeakValley import read_multi_timeframe_peaks_n_valleys
 
 
-def level_hit_count():
+def update_hit(level_index, level_info, multi_timeframe_pivots: pt.DataFrame[MultiTimeframePivot]) \
+        -> pt.DataFrame[MultiTimeframePivot]:
     """
     number of pivots:
         after activation time
@@ -17,27 +23,42 @@ def level_hit_count():
 
     :return:
     """
-    raise Exception('Not implemented')
+    multi_timeframe_pivots = update_inactive_levels(multi_timeframe_pivots)
+    active_multi_timeframe_pivots = multi_timeframe_pivots[multi_timeframe_pivots['deactivated_at'].isnull()]
+    pivots_low_margin = active_multi_timeframe_pivots['internal_margin', 'external_margin'].min()
+    pivots_high_margin = active_multi_timeframe_pivots['internal_margin', 'external_margin'].max()
+    overlapping_pivots = active_multi_timeframe_pivots[
+        (level_info['level'] >= pivots_low_margin)
+        & (level_info['level'] <= pivots_high_margin)
+        ]
+    root_overlapping_pivots = overlapping_pivots[overlapping_pivots['is_overlap_of'].isnull()].sort_index(level='date')
+    root_overlapping_pivot = root_overlapping_pivots[-1]
+    active_multi_timeframe_pivots.loc[level_index, 'is_overlap_of'] = root_overlapping_pivot.index
+    active_multi_timeframe_pivots.loc[root_overlapping_pivot.index, 'hit'] += 1
+    if root_overlapping_pivot['hit'] > config.LEVEL_MAX_HIT:
+        active_multi_timeframe_pivots.loc[root_overlapping_pivot.index, 'deactivated_at'] = level_index
+
+    return multi_timeframe_pivots
 
 
-def update_active_levels():
+def update_active_levels(multi_timeframe_pivots: pt.DataFrame[MultiTimeframePivot]) \
+        -> pt.DataFrame[MultiTimeframePivot]:
     """
         hit_count = number of pivots:
             after activation time
             between inner_margin and outer_margin of level
         if hit_count > 2: mark level as inactive.
     """
-    raise Exception('Not implemented')
+    for pivot_index, pivot_info in multi_timeframe_pivots:
+        multi_timeframe_pivots = update_hit(pivot_index, pivot_info, multi_timeframe_pivots)
+    return multi_timeframe_pivots
 
 
-def archive_cold_levels():
-    """
-            archive levels which have been inactive for more than 16^2 intervals
-    """
-    raise Exception('Not implemented')
 
 
-def reactivated_passed_levels():
+
+def reactivated_passed_levels(_time, ohlc: pt.DataFrame[OHLC], multi_timeframe_pivots: pt.DataFrame[MultiTimeframePivot]) \
+        -> pt.DataFrame[MultiTimeframePivot]:
     """
         if price moved from inner_margin to outer_margin: reset hit count to 0 and mark level as active
         for any of inactive levels:
@@ -47,18 +68,37 @@ def reactivated_passed_levels():
                 reactivate level
     :return:
     """
+    inactive_pivots = multi_timeframe_pivots[
+        multi_timeframe_pivots['archived_at'].isnull()
+        & (not multi_timeframe_pivots['deactivated_at'].isnull())
+    ].sort_values(by='deactivated_at')
+    for inactive_pivot_index, _ in inactive_pivots.iterrows():
+        filtered_ohlc = ohlc[inactive_pivot_index:_time]
+        
     raise Exception('Not implemented')
 
 
-def update_inactive_levels():
+def archive_cold_levels(_time, multi_timeframe_pivots: pt.DataFrame[MultiTimeframePivot]) \
+        -> pt.DataFrame[MultiTimeframePivot]:
+    for pivot_time, pivot_info in multi_timeframe_pivots.iterrows():
+        if _time > pivot_info['ttl']:
+            multi_timeframe_pivots.loc[pivot_time, 'archived_at'] = pivot_info['ttl']
+    return multi_timeframe_pivots
+
+
+def update_inactive_levels(update__time, ohlc: pt.DataFrame[OHLC],
+                           multi_timeframe_pivots: pt.DataFrame[MultiTimeframePivot]) \
+        -> pt.DataFrame[MultiTimeframePivot]:
     """
         archive levels which have been inactive for more than 16^2 intervals
         if price moved from inner_margin to outer_margin: reset hit count to 0 and mark level as active
     :return:
     """
     # todo: test update_inactive_levels
-    archive_cold_levels()
-    reactivated_passed_levels()
+    multi_timeframe_pivots = archive_cold_levels(update__time, multi_timeframe_pivots)
+    multi_timeframe_pivots = reactivated_passed_levels(multi_timeframe_pivots)
+
+    return multi_timeframe_pivots
 
 
 def update_levels():
@@ -72,12 +112,14 @@ def update_levels():
     :return:
     """
     # todo: test update_levels
+    for time in range(start_time + pd.to_datetime(timeframe), end_time, pd.to_datetime(timeframe)):
+
     update_active_levels()
     update_inactive_levels()
 
 
 def pivot_exact_overlapped(pivot_time, multi_timeframe_pivots):
-    # new_pivots['overlapped_with_major_timeframe'] = None
+    # new_pivots['is_overlap_of'] = None
     if not len(multi_timeframe_pivots) > 0:
         return None
 
@@ -86,10 +128,10 @@ def pivot_exact_overlapped(pivot_time, multi_timeframe_pivots):
         multi_timeframe_pivots[multi_timeframe_pivots.index.get_level_values('date') == pivot_time]
     if len(overlapping_major_timeframes) > 0:
         root_pivot = overlapping_major_timeframes[
-            multi_timeframe_pivots['overlapped_with_major_timeframe'].isna()
+            multi_timeframe_pivots['is_overlap_of'].isna()
         ]
         if len(root_pivot) == 1:
-            # new_pivots.loc[pivot_time, 'overlapped_with_major_timeframe'] = \
+            # new_pivots.loc[pivot_time, 'is_overlap_of'] = \
             return root_pivot.index.get_level_values('timeframe')[0]
         else:
             raise Exception(f'Expected to find only one root_pivot but found({len(root_pivot)}):{root_pivot}')
@@ -97,31 +139,44 @@ def pivot_exact_overlapped(pivot_time, multi_timeframe_pivots):
     raise Exception(f'Expected to find a root_pivot but found zero')
 
 
-def pivot_hit(pivot_time, pivot_info, multi_timeframe_pivots):
-    active_pivots = multi_timeframe_pivots[multi_timeframe_pivots['deactivation_time'] > pivot_time]
-    margin_top = active_pivots['internal_margin','external_margin'].min(axis='column')
-    margin_bottom = active_pivots['internal_margin','external_margin'].max(axis='column')
-    hit_pivots = active_pivots[
-        (pivot_info['level'] > margin_bottom)
-        & (pivot_info['level'] < margin_top)
-    ]
-    if not len(hit_pivots) > 0:
-        return None
-    original_pivot = hit_pivots[hit_pivots['is_a_heat'].isnull()]
-    return hit_pivots.index
+def level_ttl(timeframe) -> datetime.timedelta:
+    return 256 * pd.to_timedelta(timeframe)
 
-def anti_pattern_tops_pivots(date_range_str):
+
+def anti_pattern_tops_pivots(date_range_str) -> pt.DataFrame[MultiTimeframePivot]:
     _multi_timeframe_peaks_n_valleys = read_multi_timeframe_peaks_n_valleys(date_range_str)
-    for _timeframe in config.structure_timeframes[::-1][1:]:
-        _pivots = single_timeframe(_multi_timeframe_peaks_n_valleys, _timeframe)
-        _pivots['level'] = _pivots['']
-        _pivots = _pivots.loc[:,None]
+    _multi_timeframe_ohlca = read_multi_timeframe_ohlca(date_range_str)
+    multi_timeframe_pivots = pd.DataFrame()
+    for timeframe in config.structure_timeframes[::-1][1:]:
+        _pivots = single_timeframe(_multi_timeframe_peaks_n_valleys, anti_pattern_timeframe(timeframe))
+        timeframe_ohlca = single_timeframe(_multi_timeframe_ohlca, timeframe)
+        trigger_timeframe_ohlca = single_timeframe(_multi_timeframe_ohlca, trigger_timeframe(timeframe))
+
+        _pivots.loc[_pivots['peak_or_valley'] == TopTYPE.PEAK.value, 'level'] = _pivots['high']
+        _pivots.loc[_pivots['peak_or_valley'] == TopTYPE.VALLEY.value, 'level'] = _pivots['low']
+        _pivots[_pivots['peak_or_valley'] == TopTYPE.PEAK.value, ['internal_margin', 'external_margin']] = \
+            pivot_margins(_pivots, TopTYPE.PEAK, _pivots,
+                          timeframe_ohlca, timeframe, trigger_timeframe_ohlca)
+        _pivots[_pivots['peak_or_valley'] == TopTYPE.VALLEY.value, ['internal_margin', 'external_margin']] = \
+            pivot_margins(_pivots, TopTYPE.VALLEY, _pivots,
+                          timeframe_ohlca, timeframe, trigger_timeframe_ohlca)
+        _pivots['activation_time'] = _pivots.index
+        _pivots['ttl'] = _pivots.index + level_ttl(timeframe)
+        _pivots['hit'] = 0  # update_hits(multi_timeframe_pivots)
+        _pivots['is_overlap_of'] = [
+            pivot_exact_overlapped(_pivots.index[i], multi_timeframe_pivots)
+            for i in range(_pivots)
+        ]
+
+        if len(_pivots) > 0:
+            _pivots = MultiTimeframePivot.validate(_pivots)
+            multi_timeframe_pivots = pd.concat([multi_timeframe_pivots, _pivots])
+    return multi_timeframe_pivots
 
 
-
-def generate_multi_timeframe_anti_pattern_tops_pivots():
+def generate_multi_timeframe_anti_pattern_tops_pivots(date_range_str: str = config.under_process_date_range):
     # tops of timeframe which the timeframe is its pattern timeframe
-    for _timeframe in config.structure_timeframes[::-1][1:]:
+    _anti_pattern_tops_pivots = anti_pattern_tops_pivots(date_range_str)
 
     raise Exception('Not implemented')
 

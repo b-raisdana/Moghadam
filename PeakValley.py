@@ -4,6 +4,7 @@ from datetime import timedelta, datetime
 
 import pandas as pd
 import pandera
+import pandera.typing as pt
 from pandas import Timestamp
 from plotly import graph_objects as plgo
 
@@ -300,5 +301,6 @@ def calculate_strength_of_peaks_n_valleys(time_ohlc, time_peaks_n_valleys):
     return pd.concat([peaks, valleys]).sort_index()
 
 
-def read_multi_timeframe_peaks_n_valleys(date_range_str: str = config.under_process_date_range):
+def read_multi_timeframe_peaks_n_valleys(date_range_str: str = config.under_process_date_range) \
+        -> pt.DataFrame[PeaksValleys]:
     return read_file(date_range_str, 'multi_timeframe_peaks_n_valleys', generate_multi_timeframe_peaks_n_valleys)

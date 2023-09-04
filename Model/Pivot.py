@@ -15,9 +15,11 @@ class Pivot(pandera.DataFrameModel):
     internal_margin: pt.Series[float]
     external_margin: pt.Series[float]
     activation_time: pt.Series[Timestamp]
-    deactivation_time: pt.Series[Timestamp] = pandera.Field(nullable=True)
+    ttl: pt.Series[Timestamp]  # = pandera.Field(nullable=True)
+    deactivated_at: pt.Series[Timestamp] = pandera.Field(nullable=True)
+    archived_at: pt.Series[Timestamp] = pandera.Field(nullable=True)
     hit: pt.Series[float] = pandera.Field(nullable=True, coerce=True)
-    overlapped_with_major_timeframe: pt.Series[str] = pandera.Field(nullable=True)
+    is_overlap_of: pt.Series[str] = pandera.Field(nullable=True)
 
     @staticmethod
     def description(start_time: datetime, pivot_timeframe: str, pivot_info) -> str:
@@ -26,13 +28,13 @@ class Pivot(pandera.DataFrameModel):
                   f"M{abs(pivot_info['movement_start_value'] - pivot_info['level']):.0f}"
                   f"R{abs(pivot_info['return_end_value'] - pivot_info['level']):.0f}"
                   f"H{pivot_info['hit']}")
-        if len(pivot_info['overlapped_with_major_timeframe'] or '') > 0:
-            output += f"O{pivot_info['overlapped_with_major_timeframe']}"
+        if len(pivot_info['is_overlap_of'] or '') > 0:
+            output += f"O{pivot_info['is_overlap_of']}"
         return output
 
     @staticmethod
     def name(start_time: datetime, pivot_timeframe: str, pivot_info) -> str:
         output = f"Pivot {pivot_info['level']:.0f}={pivot_timeframe}@{start_time.strftime('%m-%d.%H:%M')}"
-        if len(pivot_info['overlapped_with_major_timeframe'] or '') > 0:
-            output += f"O{pivot_info['overlapped_with_major_timeframe']}"
+        if len(pivot_info['is_overlap_of'] or '') > 0:
+            output += f"O{pivot_info['is_overlap_of']}"
         return output

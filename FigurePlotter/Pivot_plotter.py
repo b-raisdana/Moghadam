@@ -21,7 +21,7 @@ class Pivot(pandera.DataFrameModel):
     external_margin: pt.Series[float]
     is_active: pt.Series[bool]
     hit: pt.Series[int]
-    overlapped_with_major_timeframe: pt.Series[bool]
+    is_overlap_of: pt.Series[bool]
 
 
 class MultiTimeframePivot(Pivot, MultiTimeframe):
@@ -57,13 +57,13 @@ def plot_multi_timeframe_bull_bear_side_pivots(multi_timeframe_pivots: pt.DataFr
             legendgroup=pivot_name, showlegend=False, hoverinfo='none',
         )
         # draw the level line
-        if pd.isnull(pivot_info['deactivation_time']):
-            raise Exception(f'Every level should have a deactivation_time bit in {pivot_timeframe}, {pivot_start},'
-                            f' {pivot_info} deactivation_time is Null')
+        if pd.isnull(pivot_info['ttl']):
+            raise Exception(f'Every level should have a ttl bit in {pivot_timeframe}, {pivot_start},'
+                            f' {pivot_info} ttl is Null')
         #     level_end_time = end_time
         # else:
-        #     level_end_time = pivot_info['deactivation_time']
-        level_end_time = min(pivot_info['deactivation_time'], end_time)
+        #     level_end_time = pivot_info['ttl']
+        level_end_time = min(pivot_info['ttl'], end_time)
         fig.add_scatter(
             x=[pivot_info['activation_time'], level_end_time],
             y=[pivot_info['level'], pivot_info['level']],

@@ -323,3 +323,27 @@ def validate_no_timeframe(data: pd.DataFrame) -> pd.DataFrame:
 
 def expected_movement_size(_list: List):
     return _list  # * CandleSize.Standard.value[0]
+
+
+def shift_time(timeframe, shifter):
+    index = config.timeframes.index(timeframe)
+    if type(shifter) == int:
+        return config.timeframes[index + shifter]
+    elif type(shifter) == str:
+        if shifter not in config.timeframe_shifter.keys():
+            raise Exception(f'Shifter expected be in [{config.timeframe_shifter.keys()}]')
+        return config.timeframes[index + config.timeframe_shifter[shifter]]
+    else:
+        raise Exception(f'shifter expected be int or str got type({type(shifter)}) in {shifter}')
+
+
+def trigger_timeframe(timeframe):
+    return shift_time(timeframe, config.timeframe_shifter['trigger'])
+
+
+def pattern_timeframe(timeframe):
+    return shift_time(timeframe, config.timeframe_shifter['pattern'])
+
+
+def anti_pattern_timeframe(timeframe):
+    return shift_time(timeframe, -config.timeframe_shifter['pattern'])
