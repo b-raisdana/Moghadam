@@ -307,7 +307,7 @@ def to_timeframe(time: Union[DatetimeIndex, datetime], timeframe: str) -> dateti
     return rounded_time
 
 
-def test_index_match_timeframe(data: pd.DataFrame, timeframe: str):
+def zz_test_index_match_timeframe(data: pd.DataFrame, timeframe: str):
     for index_value, mapped_index_value in map(lambda x, y: (x, y), data.index, to_timeframe(data.index, timeframe)):
         if index_value != mapped_index_value:
             raise Exception(
@@ -337,6 +337,37 @@ def shift_time(timeframe, shifter):
         raise Exception(f'shifter expected be int or str got type({type(shifter)}) in {shifter}')
 
 
+from collections import ChainMap
+
+
+def all_annotations(cls) -> ChainMap:
+    """Returns a dictionary-like ChainMap that includes annotations for all
+       attributes defined in cls or inherited from superclasses."""
+    all_classes_list = [c.__annotations__ for c in cls.__mro__ if hasattr(c, '__annotations__')]
+    annotations = {}
+    for single_class_annotations in all_classes_list:
+        for attr_name, attr_type in single_class_annotations.items():
+            if attr_name not in ['date', 'timeframe', 'Config'] and '__' not in attr_name:
+                annotations[attr_name] = attr_type
+    return annotations # ChainMap(*(c.__annotations__ for c in cls.__mro__ if '__annotations__' in c.__dict__))
+
+
+def cast_and_validate(data, ModelClass: pandera.DataFrameModel):
+    as_types = {}
+    _all_annotations = all_annotations(ModelClass)
+
+    for attr_name, attr_type in _all_annotations.items():
+        # if attr_name in ['date', 'timeframe']:
+        #     continue
+        if 'Timestamp' in str(attr_type):
+            as_types[attr_name] = np.datetime64
+    if len(as_types) > 0:
+        data = data.astype(as_types)
+    ModelClass.validate(data, lazy=True)
+    data = data[[column for column in ModelClass.__fields__.keys() if column not in ['timeframe', 'date']]]
+    return data
+
+
 def trigger_timeframe(timeframe):
     return shift_time(timeframe, config.timeframe_shifter['trigger'])
 
@@ -347,3 +378,7 @@ def pattern_timeframe(timeframe):
 
 def anti_pattern_timeframe(timeframe):
     return shift_time(timeframe, -config.timeframe_shifter['pattern'])
+
+
+def anti_trigger_timeframe(timeframe):
+    return shift_time(timeframe, -config.timeframe_shifter['trigger'])

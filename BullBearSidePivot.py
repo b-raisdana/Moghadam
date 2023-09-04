@@ -5,14 +5,14 @@ import pandas as pd
 from pandera import typing as pt
 
 from BullBearSide import read_multi_timeframe_bull_bear_side_trends, previous_trend
-from CalssicPivot import pivot_exact_overlapped, level_ttl, update_hits
 from Candle import read_multi_timeframe_ohlca
 from Config import config, TopTYPE
-from DataPreparation import single_timeframe, expected_movement_size, to_timeframe, trigger_timeframe
-from FigurePlotter.Pivot_plotter import plot_multi_timeframe_bull_bear_side_pivots
+from DataPreparation import single_timeframe, expected_movement_size, to_timeframe, trigger_timeframe, read_file
+from FigurePlotter.Pivot_plotter import plot_multi_timeframe_pivots
 from Model.MultiTimeframePivot import MultiTimeframePivot
 from Model.Pivot import Pivot
 from PeakValley import read_multi_timeframe_peaks_n_valleys, major_peaks_n_valleys, peaks_only, valleys_only
+from Pivots import pivot_exact_overlapped, level_ttl
 from helper import measure_time, log
 
 
@@ -57,9 +57,8 @@ def single_timeframe_pivots_level_n_margins(single_timeframe_pivot_peaks_or_vall
     pivot_times = single_timeframe_pivot_peaks_or_valleys.index.get_level_values('date')
     _pivots.loc[pivot_times, 'level'] = single_timeframe_pivot_peaks_or_valleys[level_key].tolist()
 
-    _pivots[['internal_margin', 'external_margin']] = \
-        pivot_margins(_pivots, _type, single_timeframe_pivot_peaks_or_valleys,
-                      timeframe_ohlca, timeframe, trigger_timeframe_ohlca)
+    _pivots = pivot_margins(_pivots, _type, single_timeframe_pivot_peaks_or_valleys, timeframe_ohlca, timeframe,
+                            trigger_timeframe_ohlca)
 
     return _pivots
 
@@ -76,7 +75,7 @@ def pivot_margins(pivots, _type: TopTYPE, pivot_peaks_or_valleys, timeframe_ohlc
         choose_body_operator = min
         internal_func = max
 
-    pivot_times = pivots.index
+    pivot_times = pivot_peaks_or_valleys.index.get_level_values('date')
     pivot_times_mapped_to_timeframe = [to_timeframe(pivot_time, timeframe) for pivot_time in pivot_times]
 
     if _type.value == TopTYPE.PEAK.value:
@@ -95,15 +94,15 @@ def pivot_margins(pivots, _type: TopTYPE, pivot_peaks_or_valleys, timeframe_ohlc
     else:
         pivots.loc[pivot_times, 'ATR_margin'] = pivot_peaks_or_valleys[level_key].add(pivots_atr).tolist()
 
-    internal_margin = pivots.loc[pivot_times, ['nearest_body', 'ATR_margin']].apply(
+    pivots.loc[pivot_times, 'internal_margin'] = pivots.loc[pivot_times, ['nearest_body', 'ATR_margin']].apply(
         internal_func, axis='columns').tolist()
 
     if _type.value == TopTYPE.PEAK.value:
-        external_margin = pivots.loc[pivot_times, 'level'].add(pivots_atr).tolist()
+        pivots.loc[pivot_times, 'external_margin'] = pivots.loc[pivot_times, 'level'].add(pivots_atr).tolist()
     else:
-        external_margin = [level - atr for level, atr in zip(pivots.loc[pivot_times, 'level'].to_list(), pivots_atr)]
-
-    return internal_margin, external_margin
+        pivots.loc[pivot_times, 'external_margin'] = \
+            [level - atr for level, atr in zip(pivots['level'].to_list(), pivots_atr)]
+    return pivots
 
 
 def multi_timeframe_bull_bear_side_pivots(date_range_str: str = config.under_process_date_range) \
@@ -182,28 +181,35 @@ def multi_timeframe_bull_bear_side_pivots(date_range_str: str = config.under_pro
                 _pivots = single_timeframe_pivots_level_n_margins(pivot_valleys, TopTYPE.VALLEY, _pivots, timeframe,
                                                                   timeframe_ohlca
                                                                   , trigger_timeframe_ohlca)
-                for pivot_time, pivot in _pivots.iterrows():
-                    _pivots.loc[pivot_time, 'is_overlap_of'] = \
-                        pivot_exact_overlapped(pivot_time, multi_timeframe_pivots)
+                _pivots['ttl'] = _pivots.index + level_ttl(timeframe)
+                _pivots['deactivated_at'] = None
+                _pivots['archived_at'] = None
                 _pivots = _pivots.astype({
                     'movement_start_time': np.datetime64,
                     'return_end_time': np.datetime64,
                     'activation_time': np.datetime64,
                     'ttl': np.datetime64,
+                    'deactivated_at': np.datetime64,
+                    'archived_at': np.datetime64,
                     # 'is_overlap_of': str,
                 })
                 Pivot.validate(_pivots)
-
+                _pivots = _pivots[[column
+                                   for column in Pivot.__fields__.keys() if column not in ['timeframe', 'date']]]
                 _pivots['timeframe'] = timeframe
-                
-                _pivots['ttl'] = _pivots.index + level_ttl(timeframe)
                 _pivots.set_index('timeframe', append=True, inplace=True)
                 _pivots = _pivots.swaplevel()
                 multi_timeframe_pivots = pd.concat([_pivots, multi_timeframe_pivots])
-    multi_timeframe_pivots = update_hits(multi_timeframe_pivots)
-
     MultiTimeframePivot.validate(multi_timeframe_pivots)
     return multi_timeframe_pivots
+
+
+def read_multi_timeframe_bull_bear_side_pivots(date_range_str: str = config.under_process_date_range) \
+        -> pt.DataFrame[MultiTimeframePivot]:
+    result = read_file(date_range_str, 'multi_timeframe_bull_bear_side_pivots',
+                       generate_multi_timeframe_bull_bear_side_pivots)
+    MultiTimeframePivot.validate(result)
+    return result
 
 
 @measure_time
@@ -228,7 +234,7 @@ def generate_multi_timeframe_bull_bear_side_pivots(date_range_str: str = config.
     :return:
     """
     multi_timeframe_pivots = multi_timeframe_bull_bear_side_pivots(date_range_str)
-    plot_multi_timeframe_bull_bear_side_pivots(multi_timeframe_pivots)
+    plot_multi_timeframe_pivots(multi_timeframe_pivots)
     multi_timeframe_pivots.to_csv(
         os.path.join(file_path, f'multi_timeframe_bull_bear_side_pivots.{date_range_str}.zip'),
         compression='zip')

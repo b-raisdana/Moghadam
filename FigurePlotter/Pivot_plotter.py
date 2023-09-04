@@ -1,10 +1,11 @@
+import pandas as pd
 from pandera import typing as pt
 from plotly import graph_objects as plgo
-import pandas as pd
 
-from Candle import read_ohlca
+from Candle import read_multi_timeframe_ohlc
 from Config import config
-from FigurePlotter.DataPreparation_plotter import plot_ohlca
+from DataPreparation import single_timeframe
+from FigurePlotter.DataPreparation_plotter import plot_ohlc
 from FigurePlotter.plotter import save_figure, file_id, timeframe_color
 from Model.MultiTimeframePivot import MultiTimeframePivot
 from Model.Pivot import Pivot
@@ -29,25 +30,39 @@ class MultiTimeframePivot(Pivot, MultiTimeframe):
 """
 
 
-def plot_multi_timeframe_bull_bear_side_pivots(multi_timeframe_pivots: pt.DataFrame[MultiTimeframePivot],
-                                               date_range_string: str = config.under_process_date_range,
-                                               name: str = '', show: bool = True,
-                                               html_path: str = '', save: bool = True) -> plgo.Figure:
+def plot_multi_timeframe_pivots(multi_timeframe_pivots: pt.DataFrame[MultiTimeframePivot],
+                                date_range_string: str = config.under_process_date_range,
+                                name: str = '', show: bool = True,
+                                html_path: str = '', save: bool = True) -> plgo.Figure:
     # Create the figure using plot_peaks_n_valleys function
-    base_ohlca = read_ohlca(date_range_string)
-    end_time = base_ohlca.index[-1]
-    fig = plot_ohlca(ohlca=base_ohlca, show=False, save=False, name=f'ohlca{config.timeframes[0]}')
+    multi_timeframe_ohlc = read_multi_timeframe_ohlc(date_range_string)
+    end_time = max(multi_timeframe_ohlc.index.get_level_values('date'))
+    base_ohlc = single_timeframe(multi_timeframe_ohlc, config.timeframes[0])
+    fig = plot_ohlc(ohlc=base_ohlc, show=False, save=False, name=f'ohlca{config.timeframes[0]}')
+    for timeframe in config.timeframes[1:]:
+        ohlc = single_timeframe(multi_timeframe_ohlc, timeframe)
+        fig.add_trace(plgo.Candlestick(x=ohlc.index,
+                                       open=ohlc['open'],
+                                       high=ohlc['high'],
+                                       low=ohlc['low'],
+                                       close=ohlc['close'], name=f'ohlca{timeframe}'))
+
     multi_timeframe_pivots.sort_index(level='date', inplace=True)
     for (pivot_timeframe, pivot_start), pivot_info in multi_timeframe_pivots.iterrows():
         pivot_name = Pivot.name(pivot_start, pivot_timeframe, pivot_info)
         pivot_description = Pivot.description(pivot_start, pivot_timeframe, pivot_info)
         # add movement and return paths
-        fig.add_scatter(x=[
-            pivot_info['movement_start_time'], pivot_start, pivot_info['return_end_time']],
-            y=[pivot_info['movement_start_value'], pivot_info['level'], pivot_info['return_end_value']],
-            name=pivot_name, line=dict(color='cyan', width=0.5), mode='lines',  # +text',
-            legendgroup=pivot_name, showlegend=False, hoverinfo='none',
-        )
+        if (hasattr(pivot_info, 'movement_start_time')
+                and hasattr(pivot_info, 'return_end_time')
+                and hasattr(pivot_info, 'movement_start_value')
+                and hasattr(pivot_info, 'return_end_value')
+        ):
+            fig.add_scatter(x=[
+                pivot_info['movement_start_time'], pivot_start, pivot_info['return_end_time']],
+                y=[pivot_info['movement_start_value'], pivot_info['level'], pivot_info['return_end_value']],
+                name=pivot_name, line=dict(color='cyan', width=0.5), mode='lines',  # +text',
+                legendgroup=pivot_name, showlegend=False, hoverinfo='none',
+            )
 
         # add a dotted line from creating time of level to the activation time
         fig.add_scatter(
@@ -78,10 +93,10 @@ def plot_multi_timeframe_bull_bear_side_pivots(multi_timeframe_pivots: pt.DataFr
                pivot_info['internal_margin'], pivot_info['internal_margin']],
             fill="toself", fillpattern=dict(fgopacity=0.85),
             name=pivot_name, line=dict(color=timeframe_color(pivot_timeframe), width=0), mode='lines',  # +text',
-            legendgroup=pivot_name, # hoverinfo='text', text=pivot_description,
+            legendgroup=pivot_name,  # hoverinfo='text', text=pivot_description,
         )
     if save or html_path != '':
-        file_name = f'multi_timeframe_bull_bear_side_pivots.{file_id(base_ohlca, name)}'
+        file_name = f'multi_timeframe_bull_bear_side_pivots.{file_id(base_ohlc, name)}'
         save_figure(fig, file_name, html_path)
 
     if show: fig.show()

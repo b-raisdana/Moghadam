@@ -1,3 +1,5 @@
+def read_multi_timeframe_color_trend_pivots():
+    raise Exception('Not implemented!')
 def generate_multi_timeframe_color_trend_pivots():
     """
         trend pivots:

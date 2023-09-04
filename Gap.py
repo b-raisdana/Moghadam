@@ -1,6 +1,6 @@
 import pandas as pd
 
-from CalssicPivot import generate_multi_timeframe_pivot_levels
+from ClassicPivot import generate_multi_timeframe_pivot_levels
 
 
 def generate_multi_timeframe_gap_levels():
