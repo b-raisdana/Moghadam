@@ -1,30 +1,15 @@
 import os
-import time
-from datetime import datetime
 
 import pandas as pd
-import pandera
 import talib as ta
 from pandera import typing as pt
 
 from Config import config, GLOBAL_CACHE
-from DataPreparation import check_dataframe, read_file, single_timeframe, timedelta_to_str
+from DataPreparation import read_file, single_timeframe
 from FigurePlotter.DataPreparation_plotter import plot_ohlca, plot_multi_timeframe_ohlca, plot_multi_timeframe_ohlc
 from FigurePlotter.plotter import file_id
-from helper import log
-
-
-class OHLC(pandera.DataFrameModel):
-    date: pt.Index[datetime]
-    open: pt.Series[float]
-    close: pt.Series[float]
-    high: pt.Series[float]
-    low: pt.Series[float]
-    volume: pt.Series[float]
-
-
-class OHLCA(OHLC):
-    ATR: pt.Series[float]
+from Model.MultiTimeframeOHLC import MultiTimeframeOHLC, OHLC
+from Model.MultiTimeframeOHLCA import MultiTimeframeOHLCA, OHLCA
 
 
 def generate_test_ohlc():
@@ -90,37 +75,39 @@ def generate_multi_timeframe_ohlc(date_range_str: str, file_path: str = config.p
                                 compression='zip')
 
 
-def check_multi_timeframe_ohlca_columns(multi_timeframe_ohlca: pd.DataFrame, raise_exception=False) -> bool:
-    return check_dataframe(multi_timeframe_ohlca, config.multi_timeframe_ohlca_columns, raise_exception)
+# def zz_check_multi_timeframe_ohlca_columns(multi_timeframe_ohlca: pd.DataFrame, raise_exception=False) -> bool:
+#     return check_dataframe(multi_timeframe_ohlca, config.multi_timeframe_ohlca_columns, raise_exception)
 
 
-def read_multi_timeframe_ohlc(date_range_str: str = config.under_process_date_range) -> pd.DataFrame:
-    mult_timeframe_ohlc = read_file(date_range_str, 'multi_timeframe_ohlc', generate_multi_timeframe_ohlc)
+def read_multi_timeframe_ohlc(date_range_str: str = config.under_process_date_range) \
+        -> pt.DataFrame[MultiTimeframeOHLC]:
+    result = read_file(date_range_str, 'multi_timeframe_ohlc', generate_multi_timeframe_ohlc,
+                       MultiTimeframeOHLC)
     for timeframe in config.timeframes:
         GLOBAL_CACHE[f'valid_times_{timeframe}'] = \
-            single_timeframe(mult_timeframe_ohlc, timeframe).index.get_level_values('date').tolist()
-    return mult_timeframe_ohlc
+            single_timeframe(result, timeframe).index.get_level_values('date').tolist()
+    return result
 
 
-def read_multi_timeframe_ohlca(date_range_str: str = config.under_process_date_range) -> pd.DataFrame:
-    mult_timeframe_ohlca = read_file(date_range_str, 'multi_timeframe_ohlca', generate_multi_timeframe_ohlca)
+def read_multi_timeframe_ohlca(date_range_str: str = config.under_process_date_range) \
+        -> pt.DataFrame[MultiTimeframeOHLCA]:
+    result = read_file(date_range_str, 'multi_timeframe_ohlca', generate_multi_timeframe_ohlca,
+                       MultiTimeframeOHLCA)
     for timeframe in config.timeframes:
         if f'valid_times_{timeframe}' not in GLOBAL_CACHE.keys():
             GLOBAL_CACHE[f'valid_times_{timeframe}'] = \
-                single_timeframe(mult_timeframe_ohlca, timeframe).index.get_level_values('date').tolist()
-    return mult_timeframe_ohlca
+                single_timeframe(result, timeframe).index.get_level_values('date').tolist()
+    return result
 
 
 def read_ohlca(date_range_string: str) -> pd.DataFrame:
-    return read_file(date_range_string, 'ohlca', generate_ohlca)
+    result = read_file(date_range_string, 'ohlca', generate_ohlca, OHLC)
+    return result
 
 
 def read_ohlc(date_range_string: str) -> pd.DataFrame:
-    # try:
-    return read_file(date_range_string, 'ohlc', generate_ohlc)
-    # except:
-    #     log(f'Failed to load ohlc.{date_range_string} try to load ohlca.{date_range_string}')
-    #     return read_file(date_range_string, 'ohlca', generate_ohlc)
+    result = read_file(date_range_string, 'ohlc', generate_ohlc, OHLCA)
+    return result
 
 
 def generate_ohlc(date_range_string: str):

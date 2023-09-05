@@ -68,38 +68,38 @@ class Config():
         self.trigger_dept = 16
 
         self.dept_of_analysis = 3
-        self.ohlc_columns = ['open', 'high', 'low', 'close', 'volume']
-        self.ohlca_columns: List = self.ohlc_columns + ['ATR']
-        self.multi_timeframe_ohlc_columns = self.ohlc_columns + ['timeframe']
-        self.multi_timeframe_ohlca_columns = self.ohlca_columns + ['timeframe']
-        self.multi_timeframe_peaks_n_valleys_columns = ['timeframe', 'peak_or_valley', 'strength'] # remove OHLC data
-
-        self.multi_timeframe_candle_trend_columns = [
-            'timeframe',
-            'date',
-            'open',
-            'close',
-            'low',
-            'high',
-            'volume',
-            'previous_peak_index',
-            'previous_peak_value',
-            'next_peak_index',
-            'next_peak_value',
-            'previous_valley_index',
-            'previous_valley_value',
-            'next_valley_index',
-            'next_valley_value',
-            'bull_bear_side',
-        ]
-        self.multi_timeframe_bull_bear_side_trends_columns = ['timeframe', 'end', 'bull_bear_side', 'ATR',
-                                                              'internal_high', 'internal_low', 'high_time', 'low_time',
-                                                              'movement_start_value', 'movement_end_value',
-                                                              'movement_start_time', 'movement_end_time',
-                                                              'movement',
-                                                              # 'trend_line_acceleration', 'trend_line_base',
-                                                              # 'canal_line_acceleration', 'canal_line_base',
-                                                              ]
+        # self.ohlc_columns = ['open', 'high', 'low', 'close', 'volume']
+        # self.ohlca_columns: List = self.ohlc_columns + ['ATR']
+        # self.multi_timeframe_ohlc_columns = self.ohlc_columns + ['timeframe']
+        # self.multi_timeframe_ohlca_columns = self.ohlca_columns + ['timeframe']
+        # self.multi_timeframe_peaks_n_valleys_columns = ['timeframe', 'peak_or_valley', 'strength'] # remove OHLC data
+        #
+        # self.multi_timeframe_candle_trend_columns = [
+        #     'timeframe',
+        #     'date',
+        #     'open',
+        #     'close',
+        #     'low',
+        #     'high',
+        #     'volume',
+        #     'previous_peak_index',
+        #     'previous_peak_value',
+        #     'next_peak_index',
+        #     'next_peak_value',
+        #     'previous_valley_index',
+        #     'previous_valley_value',
+        #     'next_valley_index',
+        #     'next_valley_value',
+        #     'bull_bear_side',
+        # ]
+        # self.multi_timeframe_bull_bear_side_trends_columns = ['timeframe', 'end', 'bull_bear_side', 'ATR',
+        #                                                       'internal_high', 'internal_low', 'high_time', 'low_time',
+        #                                                       'movement_start_value', 'movement_end_value',
+        #                                                       'movement_start_time', 'movement_end_time',
+        #                                                       'movement',
+        #                                                       # 'trend_line_acceleration', 'trend_line_base',
+        #                                                       # 'canal_line_acceleration', 'canal_line_base',
+        #                                                       ]
 
         self.end_time = '2021-03-01 03:43:00'
 
@@ -133,6 +133,8 @@ class MyEncoder(json.JSONEncoder):
             return o.__dict__
         except AttributeError:
             return str(o)
+        except Exception as e:
+            raise e
 
 
 myEncoder = MyEncoder()

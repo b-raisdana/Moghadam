@@ -10,7 +10,7 @@ class LogSeverity(Enum):
 
 
 def log(log_message, severity=LogSeverity.WARNING, stack_trace: bool = True) -> None:
-    print(f'{severity.value}@{datetime.datetime.now().strftime("%m-%dT%H:%M:%S")}#{log_message}')
+    print(f'{severity.value}@{datetime.datetime.now().strftime("%m-%d.%H:%M:%S")}#{log_message}')
     if stack_trace:
         stack = traceback.extract_stack(limit=2 + 1)[:-1]  # Remove the last item
         traceback.print_list(stack)

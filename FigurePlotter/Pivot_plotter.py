@@ -75,9 +75,6 @@ def plot_multi_timeframe_pivots(multi_timeframe_pivots: pt.DataFrame[MultiTimefr
         if pd.isnull(pivot_info['ttl']):
             raise Exception(f'Every level should have a ttl bit in {pivot_timeframe}, {pivot_start},'
                             f' {pivot_info} ttl is Null')
-        #     level_end_time = end_time
-        # else:
-        #     level_end_time = pivot_info['ttl']
         level_end_time = min(pivot_info['ttl'], end_time)
         fig.add_scatter(
             x=[pivot_info['activation_time'], level_end_time],
@@ -96,7 +93,7 @@ def plot_multi_timeframe_pivots(multi_timeframe_pivots: pt.DataFrame[MultiTimefr
             legendgroup=pivot_name,  # hoverinfo='text', text=pivot_description,
         )
     if save or html_path != '':
-        file_name = f'multi_timeframe_bull_bear_side_pivots.{file_id(base_ohlc, name)}'
+        file_name = f'{file_id(base_ohlc, name)}'
         save_figure(fig, file_name, html_path)
 
     if show: fig.show()

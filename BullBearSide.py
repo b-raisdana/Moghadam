@@ -4,17 +4,19 @@ from typing import Tuple, List
 
 import numpy as np
 import pandas as pd
-import pandera
 import pandera.typing as pt
 from pandas import Timestamp
 
 import PeakValley
-from Candle import read_multi_timeframe_ohlc, read_multi_timeframe_ohlca, OHLCA, OHLC
+from Candle import read_multi_timeframe_ohlc, read_multi_timeframe_ohlca
 from Config import TopTYPE, config, TREND
-from DataPreparation import read_file, single_timeframe, to_timeframe
+from DataPreparation import read_file, single_timeframe, to_timeframe, cast_and_validate
 from FigurePlotter.BullBearSide_plotter import plot_multi_timeframe_bull_bear_side_trends
 from Model.BullBearSide import BullBearSide
 from Model.MultiTimeframeBullBearSide import MultiTimeframeBullBearSide
+from Model.MultiTimeframeCandleTrend import MultiTimeframeCandleTrend
+from Model.MultiTimeframeOHLC import OHLC
+from Model.MultiTimeframeOHLCA import OHLCA
 from PeakValley import peaks_only, valleys_only, read_multi_timeframe_peaks_n_valleys, major_peaks_n_valleys
 from helper import log, measure_time
 
@@ -443,18 +445,19 @@ def multi_timeframe_bull_bear_side_trends(multi_timeframe_candle_trend: pd.DataF
         _timeframe_trends = _timeframe_trends.swaplevel().sort_index()
         if len(_timeframe_trends) > 0:
             trends = pd.concat([trends, _timeframe_trends])
-    trends = trends[
-        [column for column in config.multi_timeframe_bull_bear_side_trends_columns if column != 'timeframe']]
-    trends = trends.astype({
-        'end': np.datetime64,
-        'bull_bear_side': "string",
-        'ATR': np.float64,
-        'internal_high':  np.float64, 'internal_low':  np.float64, 'high_time': np.datetime64, 'low_time': np.datetime64,
-        'movement_start_value': 'float', 'movement_end_value': 'float',
-        'movement_start_time': np.datetime64, 'movement_end_time': np.datetime64,
-        'movement': 'float'
-    })
-    MultiTimeframeBullBearSide.validate(trends)
+    # trends = trends[
+    #     [column for column in config.multi_timeframe_bull_bear_side_trends_columns if column != 'timeframe']]
+    # trends = trends.astype({
+    #     'end': np.datetime64,
+    #     'bull_bear_side': "string",
+    #     'ATR': np.float64,
+    #     'internal_high': np.float64, 'internal_low': np.float64, 'high_time': np.datetime64, 'low_time': np.datetime64,
+    #     'movement_start_value': 'float', 'movement_end_value': 'float',
+    #     'movement_start_time': np.datetime64, 'movement_end_time': np.datetime64,
+    #     'movement': 'float'
+    # })
+    # MultiTimeframeBullBearSide.validate(trends)
+    trends = cast_and_validate(trends, MultiTimeframeBullBearSide)
     return trends
 
 
@@ -629,8 +632,6 @@ def previous_trend(trends: pt.DataFrame[BullBearSide]):
     return _previous_trends, _previous_trends_movement
 
 
-
-
 def single_timeframe_bull_bear_side_trends(single_timeframe_candle_trend: pd.DataFrame,
                                            single_timeframe_peaks_n_valleys, ohlca: pt.DataFrame[OHLCA],
                                            timeframe: str) -> pd.DataFrame:
@@ -649,7 +650,8 @@ def single_timeframe_bull_bear_side_trends(single_timeframe_candle_trend: pd.Dat
     _trends['duration'] = trend_duration(_trends)
     _trends['rate'] = trend_rate(_trends, timeframe)
     _trends['strength'] = trend_strength(_trends)
-    _trends = _trends[[i for i in config.multi_timeframe_bull_bear_side_trends_columns if i != 'timeframe']]
+    _trends = cast_and_validate(_trends, MultiTimeframeCandleTrend)
+    # _trends = _trends[[i for i in config.multi_timeframe_bull_bear_side_trends_columns if i != 'timeframe']]
     return _trends
 
 
@@ -686,25 +688,49 @@ def detect_trends(single_timeframe_candle_trend, timeframe: str) -> pt.DataFrame
 
 
 def read_multi_timeframe_bull_bear_side_trends(date_range_str: str) -> pt.DataFrame[MultiTimeframeBullBearSide]:
-    result = read_file(date_range_str, 'multi_timeframe_bull_bear_side_trends',
-                       generate_multi_timeframe_bull_bear_side_trends)
-    result = result.astype({
-        'end': np.datetime64,
-        'bull_bear_side': "string",
-        'ATR': np.float64,
-        'internal_high': np.float64, 'internal_low': np.float64, 'high_time': np.datetime64, 'low_time': np.datetime64,
-        'movement_start_value': 'float', 'movement_end_value': 'float',
-        'movement_start_time': np.datetime64, 'movement_end_time': np.datetime64,
-        'movement': 'float'
-    })
-
-    MultiTimeframeBullBearSide.validate(result)
+    result = read_file(
+        date_range_str,
+        'multi_timeframe_bull_bear_side_trends',
+        generate_multi_timeframe_bull_bear_side_trends,
+        MultiTimeframeBullBearSide)
+    # result = result.astype({
+    #     'end': np.datetime64,
+    #     'bull_bear_side': "string",
+    #     'ATR': np.float64,
+    #     'internal_high': np.float64, 'internal_low': np.float64, 'high_time': np.datetime64, 'low_time': np.datetime64,
+    #     'movement_start_value': 'float', 'movement_end_value': 'float',
+    #     'movement_start_time': np.datetime64, 'movement_end_time': np.datetime64,
+    #     'movement': 'float'
+    # })
+    #
+    # MultiTimeframeBullBearSide.validate(result)
     return result
 
 
+"""
+class Pivot(pandera.DataFrameModel):
+    date: pt.Index[datetime]
+    movement_start_time: pt.Series[datetime]
+    movement_start_value: pt.Series[datetime]
+    return_end_time: pt.Series[datetime]
+    return_end_value: pt.Series[datetime]
+    level: pt.Series[float]
+    internal_margin: pt.Series[float]
+    external_margin: pt.Series[float]
+    is_active: pt.Series[bool]
+    hit: pt.Series[int]
+    is_overlap_of: pt.Series[bool]
+
+
+class MultiTimeframePivot(Pivot, MultiTimeframe):
+    pass
+"""
+
+
 def read_multi_timeframe_candle_trend(date_range_str):
-    return read_file(date_range_str, 'multi_timeframe_candle_trend',
-                     generate_multi_timeframe_candle_trend)
+    result = read_file(date_range_str, 'multi_timeframe_candle_trend', generate_multi_timeframe_candle_trend,
+                       MultiTimeframeCandleTrend)
+    return result
 
 
 @measure_time

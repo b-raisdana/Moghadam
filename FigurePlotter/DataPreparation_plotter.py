@@ -28,7 +28,7 @@ def plot_multi_timeframe_ohlc(multi_timeframe_ohlc, date_range_str):
     plot_multiple_figures(figures, name=f'multi_timeframe_ohlc.{date_range_str}')
 
 
-# @measure_time
+@measure_time
 def plot_ohlc(ohlc: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']),
               save: bool = False, name: str = '', show: bool = True) -> plgo.Figure:
     """
@@ -51,21 +51,21 @@ def plot_ohlc(ohlc: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']),
     if len(ohlc.index) > SAFE_LEN_OF_DATA_FRAME_TO_PLOT:
         log(f'Plotting too much data will slow us down ({len(ohlc.index),}>{SAFE_LEN_OF_DATA_FRAME_TO_PLOT})')
     kaleido_install_lock_file_path = 'kaleido.installed'
-    if not os.path.isfile(kaleido_install_lock_file_path):
-        log('kaleido not satisfied!')
-        try:
-            os.system('pip install -q condacolab')
-            import condacolab
-
-            if not condacolab.check():
-                condacolab.install()
-                os.system('conda install -c conda-forge python-kaleido')
-                os.system(f'echo "" > {kaleido_install_lock_file_path}')
-            else:
-                log('condacolab already satisfied')
-        except:
-            os.system('pip install -U kaleido')
-            os.system(f'echo "" > {kaleido_install_lock_file_path}')
+    # if not os.path.isfile(kaleido_install_lock_file_path):
+    #     log('kaleido not satisfied!')
+    #     try:
+    #         os.system('pip install -q condacolab')
+    #         import condacolab
+    #
+    #         if not condacolab.check():
+    #             condacolab.install()
+    #             os.system('conda install -c conda-forge python-kaleido')
+    #             os.system(f'echo "" > {kaleido_install_lock_file_path}')
+    #         else:
+    #             log('condacolab already satisfied')
+    #     except:
+    #         os.system('pip install -U kaleido')
+    #         os.system(f'echo "" > {kaleido_install_lock_file_path}')
     if DEBUG: log(f'data({ohlc.shape})')
     if DEBUG: log(ohlc)
     fig = plgo.Figure(data=[plgo.Candlestick(x=ohlc.index.values,

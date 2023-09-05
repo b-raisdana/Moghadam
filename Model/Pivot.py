@@ -24,7 +24,7 @@ class Pivot(pandera.DataFrameModel):
 
     @staticmethod
     def description(start_time: datetime, pivot_timeframe: str, pivot_info) -> str:
-        output = (f"Pivot {pivot_info['level']:.0f}={pivot_timeframe}@{start_time.strftime('%m-%d.%H:%M')}"
+        output = (f"Pivot {pivot_info['level']:.0f}={pivot_timeframe}@{start_time.strftime('%m/%d.%H:%M')}"
                   f"[{pivot_info['internal_margin']:.0f}-{pivot_info['external_margin']:.0f}](")
 
         if hasattr(pivot_info, 'movement_start_value'):
@@ -39,7 +39,7 @@ class Pivot(pandera.DataFrameModel):
 
     @staticmethod
     def name(start_time: datetime, pivot_timeframe: str, pivot_info) -> str:
-        output = f"Pivot {pivot_info['level']:.0f}={pivot_timeframe}@{start_time.strftime('%m-%d.%H:%M')}"
+        output = f"Pivot {pivot_info['level']:.0f}={pivot_timeframe}@{start_time.strftime('%m/%d.%H:%M')}"
         if len(pivot_info['is_overlap_of'] or '') > 0:
             output += f"O{pivot_info['is_overlap_of']}"
         return output

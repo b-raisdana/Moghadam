@@ -1,5 +1,6 @@
 import os
 from datetime import datetime, timedelta
+from functools import cache
 from typing import Callable, Union, List
 
 import numpy as np
@@ -9,6 +10,7 @@ from pandas import Timedelta, DatetimeIndex, Timestamp
 from pandera import typing as pt
 
 from Config import config, GLOBAL_CACHE
+from helper import measure_time
 
 
 class MultiTimeframe(pandera.DataFrameModel):
@@ -38,8 +40,9 @@ def range_of_data(data: pd.DataFrame) -> str:
            f'{data.index.get_level_values("date")[-1].strftime("%y-%m-%d.%H-%M")}'
 
 
-def read_file(date_range_str: str, data_frame_type: str, generator: Callable, skip_rows=None,
-              n_rows=None, file_path: str = config.path_of_data) -> pd.DataFrame:
+@cache
+def read_file(date_range_str: str, data_frame_type: str, generator: Callable, CasterModel: pandera.DataFrameModel
+              , skip_rows=None, n_rows=None, file_path: str = config.path_of_data) -> pd.DataFrame:
     """
     Read data from a file and return a DataFrame. If the file does not exist or the DataFrame does not
     match the expected columns, the generator function is used to create the DataFrame.
@@ -73,24 +76,31 @@ def read_file(date_range_str: str, data_frame_type: str, generator: Callable, sk
         This function first attempts to read the file based on the provided parameters. If the file is not found
         or the DataFrame does not match the expected columns, the generator function is called to create the DataFrame.
     """
-    # todo: add cache to read_file
-    start_time = datetime.now()
     df = None
     try:
         df = read_with_timeframe(data_frame_type, date_range_str, file_path, n_rows, skip_rows)
-    except Exception as e:
+    except FileNotFoundError as e:
         pass
-    if (data_frame_type + '_columns') not in config.__dir__():
-        raise Exception(data_frame_type + '_columns not defined in configuration!')
-    if df is None or not check_dataframe(df, getattr(config, data_frame_type + '_columns')):
+    except Exception as e:
+        raise e
+    # if (data_frame_type + '_columns') not in config.__dir__():
+    #     raise Exception(data_frame_type + '_columns not defined in configuration!')
+    # if df is None or not check_dataframe(df, getattr(config, data_frame_type + '_columns')):
+    #     generator(date_range_str)
+    #     df = read_with_timeframe(data_frame_type, date_range_str, file_path, n_rows, skip_rows)
+    #     if not check_dataframe(df, getattr(config, data_frame_type + '_columns')):
+    #         raise Exception(f'Failed to generate {data_frame_type}! {data_frame_type}.columns:{df.columns}')
+    #     # log(f'generate {data_frame_type} executed in {timedelta_to_str(datetime.now() - start_time, milliseconds=True)}s')
+
+    if df is None or not cast_and_validate(df, CasterModel, return_bool=True):
         generator(date_range_str)
         df = read_with_timeframe(data_frame_type, date_range_str, file_path, n_rows, skip_rows)
-        if not check_dataframe(df, getattr(config, data_frame_type + '_columns')):
-            raise Exception(f'Failed to generate {data_frame_type}! {data_frame_type}.columns:{df.columns}')
-        # log(f'generate {data_frame_type} executed in {timedelta_to_str(datetime.now() - start_time, milliseconds=True)}s')
+        df = cast_and_validate(df, CasterModel)
+        # if not cast_and_validate(df, CasterModel, return_bool = True):
+        #     raise Exception(f'Failed to generate {data_frame_type}! {data_frame_type}.columns:{df.columns}')
     else:
         # log(f'read {data_frame_type} executed in {timedelta_to_str(datetime.now() - start_time, milliseconds=True)}s')
-        pass
+        df = cast_and_validate(df, CasterModel)
     return df
 
 
@@ -126,7 +136,7 @@ def df_timedelta_to_str(input_time: Union[str, Timedelta], hours=True, ignore_ze
     """
     if isinstance(input_time, str):
         timedelta_obj = Timedelta(input_time)
-    elif isinstance(input_time, Timedelta):
+    elif isinstance(input_time, Timedelta) or isinstance(input_time, np.timedelta64):
         timedelta_obj = input_time
     else:
         raise ValueError("Input should be either a pandas timedelta string or a pandas Timedelta object.")
@@ -236,26 +246,26 @@ def read_with_timeframe(data_frame_type: str, date_range_str: str, file_path: st
     return df
 
 
-def check_dataframe(dataframe: pd.DataFrame, columns: [str], raise_exception=False):
-    try:
-        dataframe.columns
-    except NameError:
-        if raise_exception:
-            raise Exception(
-                f'The DataFrame does not have columns:{dataframe}')
-        else:
-            return False
-    for _column in columns:
-        if _column not in list(dataframe.columns) + list(dataframe.index.names):
-            if raise_exception:
-                raise Exception(
-                    f'The DataFrame expected to contain {_column} but have these columns:{dataframe.columns}')
-            else:
-                return False
-    return True
+# def zz_check_dataframe(dataframe: pd.DataFrame, columns: [str], raise_exception=False):
+#     try:
+#         dataframe.columns
+#     except NameError:
+#         if raise_exception:
+#             raise Exception(
+#                 f'The DataFrame does not have columns:{dataframe}')
+#         else:
+#             return False
+#     for _column in columns:
+#         if _column not in list(dataframe.columns) + list(dataframe.index.names):
+#             if raise_exception:
+#                 raise Exception(
+#                     f'The DataFrame expected to contain {_column} but have these columns:{dataframe.columns}')
+#             else:
+#                 return False
+#     return True
 
 
-# @measure_time
+@measure_time
 def single_timeframe(multi_timeframe_data: pd.DataFrame, timeframe):
     if 'timeframe' not in multi_timeframe_data.index.names:
         raise Exception(
@@ -349,21 +359,32 @@ def all_annotations(cls) -> ChainMap:
         for attr_name, attr_type in single_class_annotations.items():
             if attr_name not in ['date', 'timeframe', 'Config'] and '__' not in attr_name:
                 annotations[attr_name] = attr_type
-    return annotations # ChainMap(*(c.__annotations__ for c in cls.__mro__ if '__annotations__' in c.__dict__))
+    return annotations  # ChainMap(*(c.__annotations__ for c in cls.__mro__ if '__annotations__' in c.__dict__))
 
 
-def cast_and_validate(data, ModelClass: pandera.DataFrameModel):
+def cast_and_validate(data, ModelClass: pandera.DataFrameModel, return_bool: bool = False):
     as_types = {}
     _all_annotations = all_annotations(ModelClass)
 
     for attr_name, attr_type in _all_annotations.items():
-        # if attr_name in ['date', 'timeframe']:
-        #     continue
         if 'Timestamp' in str(attr_type):
             as_types[attr_name] = np.datetime64
+        if 'timedelta' in str(attr_type):
+            as_types[attr_name] = np.timedelta64
+            # as_types[attr_name] = pandera.typing.Timedelta
     if len(as_types) > 0:
         data = data.astype(as_types)
-    ModelClass.validate(data, lazy=True)
+    if return_bool:
+        try:
+            ModelClass.validate(data, lazy=True)
+        except pandera.errors.SchemaErrors as exc:
+            return False
+        except Exception as e:
+            raise e
+    else:
+        ModelClass.validate(data, lazy=True)
+    if return_bool:
+        return True
     data = data[[column for column in ModelClass.__fields__.keys() if column not in ['timeframe', 'date']]]
     return data
 

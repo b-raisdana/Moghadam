@@ -5,7 +5,8 @@ from pandera import typing as pt
 
 from BullBearSidePivot import pivot_margins, \
     read_multi_timeframe_bull_bear_side_pivots
-from Candle import read_multi_timeframe_ohlca, OHLC
+from Candle import read_multi_timeframe_ohlca
+from Model.MultiTimeframeOHLC import OHLC
 from Config import config, TopTYPE
 from DataPreparation import single_timeframe, trigger_timeframe, read_file, \
     anti_trigger_timeframe, cast_and_validate
@@ -123,17 +124,17 @@ def tops_pivots(date_range_str) -> pt.DataFrame[MultiTimeframePivot]:
 
 def read_multi_timeframe_top_pivots(date_range_str: str = config.under_process_date_range):
     result = read_file(date_range_str, 'multi_timeframe_top_pivots',
-                       generate_multi_timeframe_top_pivots)
-    MultiTimeframePivot.validate(result)
+                       generate_multi_timeframe_top_pivots, MultiTimeframePivot)
     return result
 
 
-def generate_multi_timeframe_top_pivots(date_range_str: str = config.under_process_date_range):
+def generate_multi_timeframe_top_pivots(date_range_str: str = config.under_process_date_range,
+                                        file_path: str=config.path_of_data):
     # tops of timeframe which the timeframe is its pattern timeframe
     _tops_pivots = tops_pivots(date_range_str)
-    plot_multi_timeframe_pivots(_tops_pivots)
+    plot_multi_timeframe_pivots(_tops_pivots, name='multi_timeframe_top_pivots')
     _tops_pivots.to_csv(
-        os.path.join(f'multi_timeframe_bull_bear_side_pivots.{date_range_str}.zip'),
+        os.path.join(file_path, f'multi_timeframe_bull_bear_side_pivots.{date_range_str}.zip'),
         compression='zip')
 
 

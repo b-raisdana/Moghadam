@@ -158,7 +158,7 @@ def multi_timeframe_bull_bear_side_pivots(date_range_str: str = config.under_pro
                     , 'movement_start_time'
                 ].unique()
 
-                _pivots = (pd.DataFrame(data={'date': _pivot_indexes, 'ttl': None, 'hit': None})
+                _pivots = (pd.DataFrame(data={'date': _pivot_indexes, 'ttl': None, 'hit': 0})
                            .set_index('date'))
                 _pivots['activation_time'] = _pivots.index
                 _pivots['movement_start_time'] = \
@@ -184,6 +184,7 @@ def multi_timeframe_bull_bear_side_pivots(date_range_str: str = config.under_pro
                 _pivots['ttl'] = _pivots.index + level_ttl(timeframe)
                 _pivots['deactivated_at'] = None
                 _pivots['archived_at'] = None
+                _pivots['is_overlap_of'] = None
                 _pivots = _pivots.astype({
                     'movement_start_time': np.datetime64,
                     'return_end_time': np.datetime64,
@@ -207,8 +208,7 @@ def multi_timeframe_bull_bear_side_pivots(date_range_str: str = config.under_pro
 def read_multi_timeframe_bull_bear_side_pivots(date_range_str: str = config.under_process_date_range) \
         -> pt.DataFrame[MultiTimeframePivot]:
     result = read_file(date_range_str, 'multi_timeframe_bull_bear_side_pivots',
-                       generate_multi_timeframe_bull_bear_side_pivots)
-    MultiTimeframePivot.validate(result)
+                       generate_multi_timeframe_bull_bear_side_pivots< MultiTimeframePivot)
     return result
 
 
@@ -234,7 +234,7 @@ def generate_multi_timeframe_bull_bear_side_pivots(date_range_str: str = config.
     :return:
     """
     multi_timeframe_pivots = multi_timeframe_bull_bear_side_pivots(date_range_str)
-    plot_multi_timeframe_pivots(multi_timeframe_pivots)
+    plot_multi_timeframe_pivots(multi_timeframe_pivots, name='multi_timeframe_bull_bear_side_pivots')
     multi_timeframe_pivots.to_csv(
         os.path.join(file_path, f'multi_timeframe_bull_bear_side_pivots.{date_range_str}.zip'),
         compression='zip')
