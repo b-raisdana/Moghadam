@@ -21,7 +21,7 @@ from PeakValley import peaks_only, valleys_only, read_multi_timeframe_peaks_n_va
 from helper import log, measure_time
 
 
-@measure_time
+# @measure_time
 def insert_previous_n_next_tops(single_timeframe_peaks_n_valleys, ohlc):
     ohlc = insert_previous_n_next_top(TopTYPE.PEAK, single_timeframe_peaks_n_valleys, ohlc)
     ohlc = insert_previous_n_next_top(TopTYPE.VALLEY, single_timeframe_peaks_n_valleys, ohlc)
@@ -420,7 +420,7 @@ def next_top_of_boundary(boundary_end: pd.Timestamp, boundary, single_timeframe_
     #     raise Exception('Unhandled situation!')
 
 
-@measure_time
+# @measure_time
 def multi_timeframe_bull_bear_side_trends(multi_timeframe_candle_trend: pd.DataFrame,
                                           multi_timeframe_peaks_n_valleys: pd.DataFrame,
                                           multi_timeframe_ohlca: pd.DataFrame,
@@ -650,7 +650,7 @@ def single_timeframe_bull_bear_side_trends(single_timeframe_candle_trend: pd.Dat
     _trends['duration'] = trend_duration(_trends)
     _trends['rate'] = trend_rate(_trends, timeframe)
     _trends['strength'] = trend_strength(_trends)
-    _trends = cast_and_validate(_trends, MultiTimeframeCandleTrend)
+    _trends = cast_and_validate(_trends, BullBearSide)
     # _trends = _trends[[i for i in config.multi_timeframe_bull_bear_side_trends_columns if i != 'timeframe']]
     return _trends
 
@@ -733,7 +733,7 @@ def read_multi_timeframe_candle_trend(date_range_str):
     return result
 
 
-@measure_time
+# @measure_time
 def generate_multi_timeframe_bull_bear_side_trends(date_range_str: str, file_path: str = config.path_of_data,
                                                    timeframe_short_list: List['str'] = None):
     multi_timeframe_ohlca = read_multi_timeframe_ohlca(date_range_str)
@@ -753,7 +753,7 @@ def generate_multi_timeframe_bull_bear_side_trends(date_range_str: str, file_pat
                   compression='zip')
 
 
-@measure_time
+# @measure_time
 def generate_multi_timeframe_candle_trend(date_range_str: str, timeframe_shortlist: List['str'] = None,
                                           file_path: str = config.path_of_data):
     multi_timeframe_ohlc = read_multi_timeframe_ohlc(date_range_str)
@@ -762,8 +762,8 @@ def generate_multi_timeframe_candle_trend(date_range_str: str, timeframe_shortli
     if timeframe_shortlist is None:
         timeframe_shortlist = config.timeframes
     for timeframe in timeframe_shortlist:  # peaks_n_valleys.index.unique(level='timeframe'):
-        log(f'single_timeframe_candles_trend(single_timeframe(multi_timeframe_ohlc, {timeframe}),'
-            f'major_peaks_n_valleys(multi_timeframe_peaks_n_valleys, {timeframe})')
+        # log(f'single_timeframe_candles_trend(single_timeframe(multi_timeframe_ohlc, {timeframe}),'
+        #     f'major_peaks_n_valleys(multi_timeframe_peaks_n_valleys, {timeframe})')
         _timeframe_candle_trend = \
             single_timeframe_candles_trend(single_timeframe(multi_timeframe_ohlc, timeframe),
                                            major_peaks_n_valleys(multi_timeframe_peaks_n_valleys, timeframe))

@@ -13,7 +13,7 @@ from helper import measure_time
 DEBUG = False
 
 
-@measure_time
+# @measure_time
 def plot_multiple_figures(figures: List[plgo.Figure], name: str, save: bool = True, show: bool = True,
                           path_of_plot: str = config.path_of_plots):
     figures_html = []

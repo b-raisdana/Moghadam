@@ -212,7 +212,7 @@ def read_multi_timeframe_bull_bear_side_pivots(date_range_str: str = config.unde
     return result
 
 
-@measure_time
+# @measure_time
 def generate_multi_timeframe_bull_bear_side_pivots(date_range_str: str = config.under_process_date_range,
                                                    file_path: str = config.path_of_data):
     """

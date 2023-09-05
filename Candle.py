@@ -69,7 +69,7 @@ def generate_multi_timeframe_ohlc(date_range_str: str, file_path: str = config.p
         _timeframe_ohlc.set_index('timeframe', append=True, inplace=True)
         _timeframe_ohlc = _timeframe_ohlc.swaplevel()
         multi_timeframe_ohlc = pd.concat([multi_timeframe_ohlc, _timeframe_ohlc])
-    multi_timeframe_ohlc = multi_timeframe_ohlc.sort_index()
+    multi_timeframe_ohlc.sort_index(inplace=True)
     plot_multi_timeframe_ohlc(multi_timeframe_ohlc, date_range_str)
     multi_timeframe_ohlc.to_csv(os.path.join(file_path, f'multi_timeframe_ohlc.{date_range_str}.zip'),
                                 compression='zip')
@@ -101,12 +101,12 @@ def read_multi_timeframe_ohlca(date_range_str: str = config.under_process_date_r
 
 
 def read_ohlca(date_range_string: str) -> pd.DataFrame:
-    result = read_file(date_range_string, 'ohlca', generate_ohlca, OHLC)
+    result = read_file(date_range_string, 'ohlca', generate_ohlca, OHLCA)
     return result
 
 
 def read_ohlc(date_range_string: str) -> pd.DataFrame:
-    result = read_file(date_range_string, 'ohlc', generate_ohlc, OHLCA)
+    result = read_file(date_range_string, 'ohlc', generate_ohlc, OHLC)
     return result
 
 

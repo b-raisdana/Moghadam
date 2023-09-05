@@ -14,7 +14,7 @@ from helper import measure_time, log
 MAX_NUMBER_OF_PLOT_SCATTERS = 5000
 
 
-@measure_time
+# @measure_time
 def plot_single_timeframe_bull_bear_side_trends(single_timeframe_ohlca: pd.DataFrame, peaks_n_valleys: pd.DataFrame,
                                                 boundaries: pd.DataFrame,
                                                 name: str = '', show: bool = True,
@@ -77,7 +77,7 @@ def plot_single_timeframe_bull_bear_side_trends(single_timeframe_ohlca: pd.DataF
     if show: fig.show()
     return fig
 
-@measure_time
+# @measure_time
 def plot_multi_timeframe_bull_bear_side_trends(multi_timeframe_ohlca, multi_timeframe_peaks_n_valleys,
                                                _multi_timeframe_bull_bear_side_trends, show: bool = True,
                                                save: bool = True,

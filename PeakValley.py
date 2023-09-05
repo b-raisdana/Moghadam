@@ -1,57 +1,45 @@
 # import talib as ta
 import os
-from datetime import timedelta
 
 import numpy as np
 import pandas as pd
-import pandera
 import pandera.typing as pt
 from pandas import Timestamp
 from plotly import graph_objects as plgo
 
 from Candle import read_multi_timeframe_ohlca
 from Config import config, INFINITY_TIME_DELTA, TopTYPE
-from DataPreparation import read_file, single_timeframe, df_timedelta_to_str, cast_and_validate, MultiTimeframe
+from DataPreparation import read_file, single_timeframe, df_timedelta_to_str, cast_and_validate
 from FigurePlotter.DataPreparation_plotter import plot_ohlca
 from FigurePlotter.plotter import save_figure, file_id, plot_multiple_figures, timeframe_color
-from Model.MultiTimeframeOHLC import OHLC
-from helper import measure_time
-
-DEBUG = True
+from Model.MultiTimeframePeakValleys import PeaksValleys, MultiTimeframePeakValleys
 
 
-class PeaksValleys(OHLC):
-    peak_or_valley: pandera.typing.Series[str]
-    strength: pandera.typing.Series[np.timedelta64]
-
-
-class MultiTimeframePeakValleys(PeaksValleys, MultiTimeframe):
-    pass
-
-
-def calculate_strength(peaks_or_valleys: pd.DataFrame, mode: TopTYPE,
-                       ohlc_with_next_n_previous_high_lows: pd.DataFrame):
+def calculate_strength(peaks_or_valleys: pd.DataFrame, mode: TopTYPE, ohlc: pd.DataFrame):
     # todo: test calculate_strength
-    start_time_of_prices = ohlc_with_next_n_previous_high_lows.index[0]
-    end_time_of_prices = ohlc_with_next_n_previous_high_lows.index[-1]
+    start_time_of_prices = ohlc.index[0]
+    end_time_of_prices = ohlc.index[-1]
     if 'strength' not in peaks_or_valleys.columns:
         peaks_or_valleys = peaks_or_valleys.copy()
         peaks_or_valleys['strength'] = INFINITY_TIME_DELTA
 
     for i, i_timestamp in enumerate(peaks_or_valleys.index.values):
-        if DEBUG and peaks_or_valleys.index[i] == Timestamp('2017-10-06 00:18:00'):
+        if peaks_or_valleys.index[i] == Timestamp('2017-10-06 00:18:00'):
             pass
         if i_timestamp > start_time_of_prices:
-            _left_distance = left_distance(peaks_or_valleys, i, mode, ohlc_with_next_n_previous_high_lows)
+            _left_distance = left_distance(peaks_or_valleys, i, mode, ohlc)
             if _left_distance == INFINITY_TIME_DELTA:
                 _left_distance = peaks_or_valleys.index[i] - start_time_of_prices
         if i_timestamp < end_time_of_prices:
-            _right_distance = right_distance(peaks_or_valleys, i, mode, ohlc_with_next_n_previous_high_lows)
+            _right_distance = right_distance(peaks_or_valleys, i, mode, ohlc)
         if min(_left_distance, _right_distance) < pd.to_timedelta(config.timeframes[0]):
             raise Exception(
                 f'Strength expected to be greater than or equal {config.timeframes[0]} but is '
                 f'min({_left_distance},{_right_distance})={min(_left_distance, _right_distance)} @ "{i_timestamp}"')
         peaks_or_valleys.loc[i_timestamp, 'strength'] = min(_left_distance, _right_distance)
+        peaks_or_valleys.astype({
+            'strength': np.timedelta64
+        })
     # output = pd.concat([peaks_or_valleys, reserved_peaks_or_valleys]).sort_index()
     return peaks_or_valleys
 
@@ -108,7 +96,7 @@ def map_strength_to_frequency(peaks_valleys: pd.DataFrame) -> pd.DataFrame:
     return peaks_valleys
 
 
-@measure_time
+# @measure_time
 def plot_peaks_n_valleys(ohlca: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close', 'ATR']),
                          peaks: pd = pd.DataFrame(columns=['high', 'timeframe']),
                          valleys: pd = pd.DataFrame(columns=['low', 'timeframe']),
@@ -225,7 +213,7 @@ def find_peaks_n_valleys(base_ohlc: pd.DataFrame,
     return _peaks_n_valleys.sort_index() if sort_index else _peaks_n_valleys
 
 
-@measure_time
+# @measure_time
 def major_peaks_n_valleys(multi_timeframe_peaks_n_valleys: pd.DataFrame, timeframe: str) -> pd.DataFrame:
     """
     Filter rows from multi_timeframe_peaks_n_valleys with a timeframe equal to or greater than the specified timeframe.
@@ -237,7 +225,8 @@ def major_peaks_n_valleys(multi_timeframe_peaks_n_valleys: pd.DataFrame, timefra
     Returns:
         pd.DataFrame: DataFrame containing rows with timeframe equal to or greater than the specified timeframe.
     """
-    return higher_or_eq_timeframe_peaks_n_valleys(multi_timeframe_peaks_n_valleys, timeframe)
+    result = higher_or_eq_timeframe_peaks_n_valleys(multi_timeframe_peaks_n_valleys, timeframe)
+    return result
 
 
 def higher_or_eq_timeframe_peaks_n_valleys(peaks_n_valleys: pd.DataFrame, timeframe: str):
@@ -247,10 +236,12 @@ def higher_or_eq_timeframe_peaks_n_valleys(peaks_n_valleys: pd.DataFrame, timefr
         raise Exception(f'timeframe:{timeframe} should be in [{config.timeframes}]!')
     except Exception as e:
         raise e
-    return peaks_n_valleys.loc[peaks_n_valleys.index.isin(config.timeframes[index:], level='timeframe')]
+    # result = peaks_n_valleys.loc[peaks_n_valleys.index.isin(config.timeframes[index:], level='timeframe')]
+    result = peaks_n_valleys.loc[peaks_n_valleys.index.get_level_values('timeframe').isin(config.timeframes[index:])]
+    return result
 
 
-@measure_time
+# @measure_time
 def plot_multi_timeframe_peaks_n_valleys(multi_timeframe_peaks_n_valleys, date_range_str: str, show=True, save=True,
                                          path_of_plot=config.path_of_plots):
     multi_timeframe_ohlca = read_multi_timeframe_ohlca(date_range_str)
@@ -303,6 +294,9 @@ def multi_timeframe_peaks_n_valleys(date_range_str) \
     base_ohlc = single_timeframe(multi_timeframe_ohlca, config.timeframes[0])
     _peaks_n_valleys = find_peaks_n_valleys(base_ohlc, sort_index=False)
     _peaks_n_valleys = calculate_strength_of_peaks_n_valleys(base_ohlc, _peaks_n_valleys)
+    _peaks_n_valleys.astype({
+        'strength': np.timedelta64
+    })
     # _peaks_n_valleys['timeframe'] = [strength_to_timeframe(row['strength']) for index, row in
     #                                  _peaks_n_valleys.iterrows()]
     _peaks_n_valleys = top_timeframe(_peaks_n_valleys)

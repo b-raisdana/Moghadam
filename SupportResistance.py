@@ -1,11 +1,3 @@
-import pandera.typing as pt
-import pandas as pd
-
-from PeakValley import PeaksValleys
-from Config import config
-from DataPreparation import to_timeframe
-from PeakValley import major_peaks_n_valleys
-
 #
 # def active_tops(multi_timeframe_peaks_n_valleys: pt.DataFrame[PeaksValleys]):
 #     _levels = pd.DataFrame(columns=['end', 'hits', 'ATR', 'breakout', 'margin', 'width'], index=['timeframe', 'date'])

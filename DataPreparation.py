@@ -1,4 +1,5 @@
 import os
+import string
 from datetime import datetime, timedelta
 from functools import cache
 from typing import Callable, Union, List
@@ -10,7 +11,7 @@ from pandas import Timedelta, DatetimeIndex, Timestamp
 from pandera import typing as pt
 
 from Config import config, GLOBAL_CACHE
-from helper import measure_time
+from helper import measure_time, log
 
 
 class MultiTimeframe(pandera.DataFrameModel):
@@ -40,7 +41,7 @@ def range_of_data(data: pd.DataFrame) -> str:
            f'{data.index.get_level_values("date")[-1].strftime("%y-%m-%d.%H-%M")}'
 
 
-@cache
+# @cache
 def read_file(date_range_str: str, data_frame_type: str, generator: Callable, CasterModel: pandera.DataFrameModel
               , skip_rows=None, n_rows=None, file_path: str = config.path_of_data) -> pd.DataFrame:
     """
@@ -96,10 +97,7 @@ def read_file(date_range_str: str, data_frame_type: str, generator: Callable, Ca
         generator(date_range_str)
         df = read_with_timeframe(data_frame_type, date_range_str, file_path, n_rows, skip_rows)
         df = cast_and_validate(df, CasterModel)
-        # if not cast_and_validate(df, CasterModel, return_bool = True):
-        #     raise Exception(f'Failed to generate {data_frame_type}! {data_frame_type}.columns:{df.columns}')
     else:
-        # log(f'read {data_frame_type} executed in {timedelta_to_str(datetime.now() - start_time, milliseconds=True)}s')
         df = cast_and_validate(df, CasterModel)
     return df
 
@@ -265,7 +263,7 @@ def read_with_timeframe(data_frame_type: str, date_range_str: str, file_path: st
 #     return True
 
 
-@measure_time
+# @measure_time
 def single_timeframe(multi_timeframe_data: pd.DataFrame, timeframe):
     if 'timeframe' not in multi_timeframe_data.index.names:
         raise Exception(
@@ -367,22 +365,29 @@ def cast_and_validate(data, ModelClass: pandera.DataFrameModel, return_bool: boo
     _all_annotations = all_annotations(ModelClass)
 
     for attr_name, attr_type in _all_annotations.items():
-        if 'Timestamp' in str(attr_type):
+        if 'timestamp' in str(attr_type).lower() and 'timestamp' not in str(data.dtypes.loc[attr_name]).lower():
             as_types[attr_name] = np.datetime64
-        if 'timedelta' in str(attr_type):
-            as_types[attr_name] = np.timedelta64
+        elif 'timedelta' in str(attr_type).lower() and 'timedelta' not in str(data.dtypes.loc[attr_name]).lower():
+            as_types[attr_name] = 'timedelta64'
             # as_types[attr_name] = pandera.typing.Timedelta
+        elif 'pandera.typing.pandas.Series' in str(attr_type):
+            astype = str(attr_type).replace('pandera.typing.pandas.Series[','').replace(']','')
+            trans_table = str.maketrans('', '', string.digits)
+            astype = astype.translate(trans_table)
+            if astype not in str(data.dtypes.loc[attr_name]).lower():
+                as_types[attr_name] = astype
     if len(as_types) > 0:
         data = data.astype(as_types)
     if return_bool:
         try:
             ModelClass.validate(data, lazy=True)
         except pandera.errors.SchemaErrors as exc:
+            log(exc.schema_errors)
             return False
         except Exception as e:
             raise e
     else:
-        ModelClass.validate(data, lazy=True)
+        ModelClass.validate(data, lazy=True, )
     if return_bool:
         return True
     data = data[[column for column in ModelClass.__fields__.keys() if column not in ['timeframe', 'date']]]
