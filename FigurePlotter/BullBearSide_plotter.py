@@ -14,7 +14,6 @@ from helper import measure_time, log
 MAX_NUMBER_OF_PLOT_SCATTERS = 5000
 
 
-# @measure_time
 def plot_single_timeframe_bull_bear_side_trends(single_timeframe_ohlca: pd.DataFrame, peaks_n_valleys: pd.DataFrame,
                                                 boundaries: pd.DataFrame,
                                                 name: str = '', show: bool = True,
@@ -26,14 +25,14 @@ def plot_single_timeframe_bull_bear_side_trends(single_timeframe_ohlca: pd.DataF
         if _start == Timestamp('2017-01-04 11:17:00'):
             pass
         trend_peaks_n_valleys = boundary_including_peaks_valleys(peaks_n_valleys, _start,
-                                                                    _trend['end'])
+                                                                 _trend['end'])
         included_candles = single_timeframe_ohlca.loc[_start: _trend['end']].index
         trend_peaks = peaks_only(trend_peaks_n_valleys)['high'].sort_index(level='date')
         trend_valleys = valleys_only(trend_peaks_n_valleys)['low'].sort_index(level='date', ascending=False)
         xs = [_start] + trend_peaks.index.get_level_values('date').tolist() + \
-             [_trend['end']] + trend_valleys.index.get_level_values('date').tolist()
+             [_trend['end']] + trend_valleys.index.get_level_values('date').tolist()[::-1]
         ys = [single_timeframe_ohlca.loc[_start, 'open']] + trend_peaks.values.tolist() + \
-             [single_timeframe_ohlca.loc[_trend['end'], 'close']] + trend_valleys.values.tolist()
+             [single_timeframe_ohlca.loc[_trend['end'], 'close']] + trend_valleys.values.tolist()[::-1]
         fill_color = 'green' if _trend['bull_bear_side'] == TREND.BULLISH.value else \
             'red' if _trend['bull_bear_side'] == TREND.BEARISH.value else 'gray'
         text = f'{_trend["bull_bear_side"].replace("_TREND", "")}: ' \
@@ -53,17 +52,24 @@ def plot_single_timeframe_bull_bear_side_trends(single_timeframe_ohlca: pd.DataF
                                  f'{_start.strftime("%H:%M")}-{_trend["end"].strftime("%H:%M")}',
                             line=dict(color=fill_color),
                             mode='lines',  # +text',
+                            legendgroup=f'{_trend["bull_bear_side"].replace("_TREND", "")}: '
+                                        f'{_start.strftime("%H:%M")}-{_trend["end"].strftime("%H:%M")}',
                             )
             fig.add_scatter(x=included_candles, y=single_timeframe_ohlca.loc[included_candles, 'open'],
                             mode='none',
                             showlegend=False,
                             text=text,
+                            legendgroup=f'{_trend["bull_bear_side"].replace("_TREND", "")}: '
+                                        f'{_start.strftime("%H:%M")}-{_trend["end"].strftime("%H:%M")}',
                             hoverinfo='text')
 
             if 'movement_start_value' in boundaries.columns:
                 fig.add_scatter(x=[_trend['movement_start_time'], _trend['movement_end_time']],
                                 y=[_trend['movement_start_value'], _trend['movement_end_value']],
-                                line=dict(color=fill_color))
+                                line=dict(color=fill_color),
+                                legendgroup=f'{_trend["bull_bear_side"].replace("_TREND", "")}: '
+                                            f'{_start.strftime("%H:%M")}-{_trend["end"].strftime("%H:%M")}',
+                                )
             else:
                 log(f'movement not found in boundaries:{boundaries.columns}', stack_trace=False)
             remained_number_of_scatters -= 2
@@ -77,7 +83,8 @@ def plot_single_timeframe_bull_bear_side_trends(single_timeframe_ohlca: pd.DataF
     if show: fig.show()
     return fig
 
-# @measure_time
+
+@measure_time
 def plot_multi_timeframe_bull_bear_side_trends(multi_timeframe_ohlca, multi_timeframe_peaks_n_valleys,
                                                _multi_timeframe_bull_bear_side_trends, show: bool = True,
                                                save: bool = True,

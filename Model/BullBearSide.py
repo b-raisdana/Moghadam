@@ -1,8 +1,7 @@
-from datetime import datetime, timedelta
-
 import pandera
 from pandas import Timestamp
-from pandera import typing as pt, Column
+from pandera import typing as pt
+
 
 class BaseBullBearSide(pandera.DataFrameModel):
     bull_bear_side: pt.Series[str]

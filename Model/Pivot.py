@@ -7,10 +7,7 @@ from pandera import typing as pt
 
 class Pivot(pandera.DataFrameModel):
     date: pt.Index[Timestamp]
-    # movement_start_time: pt.Series[Timestamp] = pandera.Field(nullable=True)
-    # movement_start_value: pt.Series[float] = pandera.Field(nullable=True)
-    # return_end_time: pt.Series[Timestamp] = pandera.Field(nullable=True)
-    # return_end_value: pt.Series[float] = pandera.Field(nullable=True)
+
     level: pt.Series[float]
     internal_margin: pt.Series[float]
     external_margin: pt.Series[float]
@@ -18,7 +15,7 @@ class Pivot(pandera.DataFrameModel):
     ttl: pt.Series[Timestamp]  # = pandera.Field(nullable=True)
     deactivated_at: pt.Series[Timestamp] = pandera.Field(nullable=True)
     archived_at: pt.Series[Timestamp] = pandera.Field(nullable=True)
-    hit: pt.Series[float] = pandera.Field(nullable=True, coerce=True)
+    hit: pt.Series[int] = pandera.Field(nullable=True, coerce=True)
     is_overlap_of: pt.Series[str] = pandera.Field(nullable=True)
 
 
@@ -43,3 +40,9 @@ class Pivot(pandera.DataFrameModel):
         if len(pivot_info['is_overlap_of'] or '') > 0:
             output += f"O{pivot_info['is_overlap_of']}"
         return output
+
+class BullBearSidePivot(Pivot):
+    movement_start_time: pt.Series[Timestamp] = pandera.Field(nullable=True)
+    movement_start_value: pt.Series[float] = pandera.Field(nullable=True)
+    return_end_time: pt.Series[Timestamp] = pandera.Field(nullable=True)
+    return_end_value: pt.Series[float] = pandera.Field(nullable=True)

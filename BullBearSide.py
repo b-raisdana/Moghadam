@@ -270,21 +270,21 @@ def previous_top_of_boundary(boundary_start: pd.Timestamp, boundary: pd.Series, 
     # todo: eliminate .sort_index(level='date')
     previous_tops = single_timeframe_peaks_or_valleys.loc[
         single_timeframe_peaks_or_valleys.index.get_level_values('date') < boundary_start
-        ].sort_index(level='date', ascending=False)
+        ].sort_index(level='date')
     if len(previous_tops) == 0:
         return None, None
     if trend == TREND.BULLISH:
-        if previous_tops.iloc[0]['low'] > boundary['internal_low']:
+        if previous_tops.iloc[-1]['low'] > boundary['internal_low']:
             return None, None
-        for top_i_index in range(len(previous_tops) - 1):
-            if previous_tops.iloc[top_i_index + 1]['low'] > previous_tops.iloc[top_i_index]['low']:
+        for top_i_index in range(len(previous_tops) - 1, 0, -1):
+            if previous_tops.iloc[top_i_index - 1]['low'] > previous_tops.iloc[top_i_index]['low']:
                 index_of_best_top_before_boundary = previous_tops.index[top_i_index]
                 break
     elif trend == TREND.BEARISH:
-        if previous_tops.iloc[0]['high'] < boundary['internal_high']:
+        if previous_tops.iloc[-1]['high'] < boundary['internal_high']:
             return None, None
-        for top_i_index in range(len(previous_tops) - 1):
-            if previous_tops.iloc[top_i_index + 1]['high'] < previous_tops.iloc[top_i_index]['high']:
+        for top_i_index in range(len(previous_tops) - 1, 0, -1):
+            if previous_tops.iloc[top_i_index - 1]['high'] < previous_tops.iloc[top_i_index]['high']:
                 index_of_best_top_before_boundary = previous_tops.index[top_i_index]
                 break
     else:
@@ -640,10 +640,7 @@ def single_timeframe_bull_bear_side_trends(single_timeframe_candle_trend: pd.Dat
     single_timeframe_candle_trend = single_timeframe_candle_trend.loc[ohlca['ATR'].first_valid_index():]
     _trends = detect_trends(single_timeframe_candle_trend, timeframe)
     _trends = add_trend_tops(_trends, single_timeframe_peaks_n_valleys, ohlca)
-    # _trends = add_trend_tops(_trends, single_timeframe_candle_trend)
-
     _trends = add_toward_top_to_trend(_trends, single_timeframe_peaks_n_valleys, timeframe)
-
     _trends['movement'] = trend_movement(_trends)
     _trends['ATR'] = trend_ATRs(_trends, ohlca=ohlca)
     test_boundary_ATR(_trends)
@@ -733,12 +730,15 @@ def read_multi_timeframe_candle_trend(date_range_str):
     return result
 
 
-# @measure_time
+@measure_time
 def generate_multi_timeframe_bull_bear_side_trends(date_range_str: str, file_path: str = config.path_of_data,
                                                    timeframe_short_list: List['str'] = None):
+    
     multi_timeframe_ohlca = read_multi_timeframe_ohlca(date_range_str)
+    
     multi_timeframe_peaks_n_valleys = read_multi_timeframe_peaks_n_valleys(date_range_str)
     # Generate multi-timeframe candle trend
+    
     multi_timeframe_candle_trend = read_multi_timeframe_candle_trend(date_range_str)
     # Generate multi-timeframe trend boundaries
     trends = multi_timeframe_bull_bear_side_trends(multi_timeframe_candle_trend,
@@ -753,7 +753,7 @@ def generate_multi_timeframe_bull_bear_side_trends(date_range_str: str, file_pat
                   compression='zip')
 
 
-# @measure_time
+@measure_time
 def generate_multi_timeframe_candle_trend(date_range_str: str, timeframe_shortlist: List['str'] = None,
                                           file_path: str = config.path_of_data):
     multi_timeframe_ohlc = read_multi_timeframe_ohlc(date_range_str)

@@ -7,7 +7,7 @@ from FigurePlotter.plotter import plot_multiple_figures, file_id, DEBUG, save_fi
 from helper import log, measure_time
 
 
-# @measure_time
+@measure_time
 def plot_multi_timeframe_ohlca(multi_timeframe_ohlca, name: str = '', show: bool = True, save: bool = True) -> None:
     # todo: test plot_multi_timeframe_ohlca
     figures = []

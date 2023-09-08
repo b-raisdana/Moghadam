@@ -26,7 +26,7 @@ def plot_multiple_figures(figures: List[plgo.Figure], name: str, save: bool = Tr
     combined_html += '</body></html>'
 
     file_path = os.path.join(path_of_plot, f'{name}.html')
-    with open(file_path, "w") as file:
+    with open(file_path, "w", encoding="utf-8") as file:
         file.write(combined_html)
     if show:
         full_path = os.path.abspath(file_path)

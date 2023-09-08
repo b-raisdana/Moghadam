@@ -13,6 +13,7 @@ from DataPreparation import read_file, single_timeframe, df_timedelta_to_str, ca
 from FigurePlotter.DataPreparation_plotter import plot_ohlca
 from FigurePlotter.plotter import save_figure, file_id, plot_multiple_figures, timeframe_color
 from Model.MultiTimeframePeakValleys import PeaksValleys, MultiTimeframePeakValleys
+from helper import log, measure_time
 
 
 def calculate_strength(peaks_or_valleys: pd.DataFrame, mode: TopTYPE, ohlc: pd.DataFrame):
@@ -37,26 +38,28 @@ def calculate_strength(peaks_or_valleys: pd.DataFrame, mode: TopTYPE, ohlc: pd.D
                 f'Strength expected to be greater than or equal {config.timeframes[0]} but is '
                 f'min({_left_distance},{_right_distance})={min(_left_distance, _right_distance)} @ "{i_timestamp}"')
         peaks_or_valleys.loc[i_timestamp, 'strength'] = min(_left_distance, _right_distance)
-        peaks_or_valleys.astype({
-            'strength': np.timedelta64
-        })
+        # peaks_or_valleys['strength'] = pd.Timedelta(peaks_or_valleys['strength'])
+        # peaks_or_valleys.astype({
+        #     'strength': 'timedelta64[s]'
+        # })
     # output = pd.concat([peaks_or_valleys, reserved_peaks_or_valleys]).sort_index()
     return peaks_or_valleys
 
 
-def mask_of_greater_tops(peaks_valleys: pd.DataFrame, needle: float, mode: TopTYPE):
+def mask_of_grater_tops(peaks_valleys: pd.DataFrame, needle: float, mode: TopTYPE):
     if mode == TopTYPE.PEAK:
         return peaks_valleys[peaks_valleys['high'] > needle['high']]
     else:  # mode == TopTYPE.VALLEY
         return peaks_valleys[peaks_valleys['low'] < needle['low']]
 
 
-def left_distance(peaks_or_valleys: pd.DataFrame, location: int, mode: TopTYPE, ohlc: pd.DataFrame) -> np.timedelta64:
+def left_distance(peaks_or_valleys: pd.DataFrame, location: int, mode: TopTYPE, ohlc: pd.DataFrame) \
+        -> pt.Timedelta:
     if location == 0:
         return INFINITY_TIME_DELTA
-    left_more_significant_tops = mask_of_greater_tops(ohlc[ohlc.index < peaks_or_valleys.index[location]],
-                                                      peaks_or_valleys.iloc[location],
-                                                      mode)
+    left_more_significant_tops = mask_of_grater_tops(ohlc[ohlc.index < peaks_or_valleys.index[location]],
+                                                     peaks_or_valleys.iloc[location],
+                                                     mode)
     if len(left_more_significant_tops.index.values) > 0:
         _left_distance = peaks_or_valleys.index[location] - left_more_significant_tops.index[-1]
         if _left_distance <= pd.to_timedelta(config.timeframes[0]):
@@ -68,11 +71,12 @@ def left_distance(peaks_or_valleys: pd.DataFrame, location: int, mode: TopTYPE, 
         return INFINITY_TIME_DELTA
 
 
-def right_distance(peaks_or_valleys: pd.DataFrame, location: int, mode: TopTYPE, ohlc: pd.DataFrame) -> np.timedelta64:
+def right_distance(peaks_or_valleys: pd.DataFrame, location: int, mode: TopTYPE, ohlc: pd.DataFrame) \
+        -> pt.Timedelta:
     if location == len(peaks_or_valleys):
         return INFINITY_TIME_DELTA
-    right_more_significant_tops = mask_of_greater_tops(ohlc[ohlc.index > peaks_or_valleys.index[location]],
-                                                       peaks_or_valleys.iloc[location], mode)
+    right_more_significant_tops = mask_of_grater_tops(ohlc[ohlc.index > peaks_or_valleys.index[location]],
+                                                      peaks_or_valleys.iloc[location], mode)
     if len(right_more_significant_tops.index.values) > 0:
         _right_distance = right_more_significant_tops.index[0] - peaks_or_valleys.index[location]
         if _right_distance <= pd.to_timedelta(config.timeframes[0]):
@@ -121,7 +125,7 @@ def plot_peaks_n_valleys(ohlca: pd = pd.DataFrame(columns=['open', 'high', 'low'
             _indexes, _labels = [], []
             timeframe_peaks = single_timeframe(peaks, timeframe)
             [(_indexes.append(_x), _labels.append(
-                f"{timeframe}/{df_timedelta_to_str(row['strength'])}@{_x.strftime('%m/%d.%H:%M')}={row['high']}"))
+                f"{timeframe}({df_timedelta_to_str(row['strength'])}@{_x.strftime('%m/%d %H:%M')})={int(row['high'])}"))
              for _x, row in timeframe_peaks.iterrows()]
             fig.add_scatter(x=_indexes, y=timeframe_peaks['high'] + 1, mode="markers", name=f'P{timeframe}',
                             marker=dict(symbol="triangle-up", color=timeframe_color(timeframe)),
@@ -131,7 +135,7 @@ def plot_peaks_n_valleys(ohlca: pd = pd.DataFrame(columns=['open', 'high', 'low'
             timeframe_valleys = single_timeframe(valleys, timeframe)
             _indexes, _labels = [], []
             [(_indexes.append(_x), _labels.append(
-                f"{timeframe}({df_timedelta_to_str(row['strength'])})@{_x.strftime('%m/%d.%H:%M')}={row['low']}"))
+                f"{timeframe}({df_timedelta_to_str(row['strength'])}@{_x.strftime('%m/%d %H:%M')})={int(row['low'])}"))
              for _x, row in timeframe_valleys.iterrows()]
             fig.add_scatter(x=_indexes, y=timeframe_valleys['low'] - 1, mode="markers", name=f'V{timeframe}',
                             legendgroup=timeframe,
@@ -292,10 +296,13 @@ def multi_timeframe_peaks_n_valleys(date_range_str) \
     multi_timeframe_ohlca = read_multi_timeframe_ohlca(date_range_str)
 
     base_ohlc = single_timeframe(multi_timeframe_ohlca, config.timeframes[0])
+
     _peaks_n_valleys = find_peaks_n_valleys(base_ohlc, sort_index=False)
+
     _peaks_n_valleys = calculate_strength_of_peaks_n_valleys(base_ohlc, _peaks_n_valleys)
-    _peaks_n_valleys.astype({
-        'strength': np.timedelta64
+
+    _peaks_n_valleys = _peaks_n_valleys.astype({
+        'strength': 'timedelta64[s]'
     })
     # _peaks_n_valleys['timeframe'] = [strength_to_timeframe(row['strength']) for index, row in
     #                                  _peaks_n_valleys.iterrows()]
@@ -309,13 +316,16 @@ def multi_timeframe_peaks_n_valleys(date_range_str) \
     return _peaks_n_valleys
 
 
+@measure_time
 def generate_multi_timeframe_peaks_n_valleys(date_range_str, file_path: str = config.path_of_data):
     _peaks_n_valleys = multi_timeframe_peaks_n_valleys(date_range_str)
+
     plot_multi_timeframe_peaks_n_valleys(_peaks_n_valleys, date_range_str)
     _peaks_n_valleys.to_csv(os.path.join(file_path, f'multi_timeframe_peaks_n_valleys.{date_range_str}.zip'),
                             compression='zip')
 
 
+@measure_time
 def calculate_strength_of_peaks_n_valleys(time_ohlc, time_peaks_n_valleys):
     peaks = calculate_strength(peaks_only(time_peaks_n_valleys), TopTYPE.PEAK, time_ohlc)
     valleys = calculate_strength(valleys_only(time_peaks_n_valleys), TopTYPE.VALLEY, time_ohlc)

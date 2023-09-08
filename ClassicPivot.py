@@ -14,6 +14,7 @@ from FigurePlotter.Pivot_plotter import plot_multi_timeframe_pivots
 from Model.MultiTimeframePivot import MultiTimeframePivot
 from PeakValley import read_multi_timeframe_peaks_n_valleys
 from Pivots import pivot_exact_overlapped, level_ttl, update_hit
+from helper import measure_time
 
 
 def update_active_levels(multi_timeframe_pivots: pt.DataFrame[MultiTimeframePivot]) \
@@ -128,8 +129,9 @@ def read_multi_timeframe_top_pivots(date_range_str: str = config.under_process_d
     return result
 
 
+@measure_time
 def generate_multi_timeframe_top_pivots(date_range_str: str = config.under_process_date_range,
-                                        file_path: str=config.path_of_data):
+                                        file_path: str = config.path_of_data):
     # tops of timeframe which the timeframe is its pattern timeframe
     _tops_pivots = tops_pivots(date_range_str)
     plot_multi_timeframe_pivots(_tops_pivots, name='multi_timeframe_top_pivots')
@@ -138,6 +140,7 @@ def generate_multi_timeframe_top_pivots(date_range_str: str = config.under_proce
         compression='zip')
 
 
+@measure_time
 def generate_multi_timeframe_pivot_levels(date_range_str: str = config.under_process_date_range):
     """
     definition of pivot:

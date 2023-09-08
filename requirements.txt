@@ -1,10 +1,11 @@
+# conda install -c conda-forge python-kaleido
 kaleido
-pandas~=1.5.3
-plotly~=5.9.0
+pandas
+plotly
 pydantic
 numpy
 # conda install -c conda-forge ta-lib
-TA-Lib
+TA-Lib~=0.4.19
 pytest
 pandera
 # beautifulsoup4

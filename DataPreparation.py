@@ -134,7 +134,9 @@ def df_timedelta_to_str(input_time: Union[str, Timedelta], hours=True, ignore_ze
     """
     if isinstance(input_time, str):
         timedelta_obj = Timedelta(input_time)
-    elif isinstance(input_time, Timedelta) or isinstance(input_time, np.timedelta64):
+    elif (isinstance(input_time, Timedelta)
+          or isinstance(input_time, np.timedelta64)
+          or isinstance(input_time, pt.Timedelta)):
         timedelta_obj = input_time
     else:
         raise ValueError("Input should be either a pandas timedelta string or a pandas Timedelta object.")
@@ -366,15 +368,15 @@ def cast_and_validate(data, ModelClass: pandera.DataFrameModel, return_bool: boo
 
     for attr_name, attr_type in _all_annotations.items():
         if 'timestamp' in str(attr_type).lower() and 'timestamp' not in str(data.dtypes.loc[attr_name]).lower():
-            as_types[attr_name] = np.datetime64
+            as_types[attr_name] = 'datetime64[s]'
         elif 'timedelta' in str(attr_type).lower() and 'timedelta' not in str(data.dtypes.loc[attr_name]).lower():
-            as_types[attr_name] = 'timedelta64'
+            as_types[attr_name] = 'timedelta64[s]'
             # as_types[attr_name] = pandera.typing.Timedelta
         elif 'pandera.typing.pandas.Series' in str(attr_type):
             astype = str(attr_type).replace('pandera.typing.pandas.Series[','').replace(']','')
             trans_table = str.maketrans('', '', string.digits)
             astype = astype.translate(trans_table)
-            if astype not in str(data.dtypes.loc[attr_name]).lower():
+            if astype != 'str' and astype not in str(data.dtypes.loc[attr_name]).lower():
                 as_types[attr_name] = astype
     if len(as_types) > 0:
         data = data.astype(as_types)

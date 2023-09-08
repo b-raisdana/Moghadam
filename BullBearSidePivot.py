@@ -7,10 +7,11 @@ from pandera import typing as pt
 from BullBearSide import read_multi_timeframe_bull_bear_side_trends, previous_trend
 from Candle import read_multi_timeframe_ohlca
 from Config import config, TopTYPE
-from DataPreparation import single_timeframe, expected_movement_size, to_timeframe, trigger_timeframe, read_file
+from DataPreparation import single_timeframe, expected_movement_size, to_timeframe, trigger_timeframe, read_file, \
+    cast_and_validate
 from FigurePlotter.Pivot_plotter import plot_multi_timeframe_pivots
 from Model.MultiTimeframePivot import MultiTimeframePivot
-from Model.Pivot import Pivot
+from Model.Pivot import Pivot, BullBearSidePivot
 from PeakValley import read_multi_timeframe_peaks_n_valleys, major_peaks_n_valleys, peaks_only, valleys_only
 from Pivots import pivot_exact_overlapped, level_ttl
 from helper import measure_time, log
@@ -125,11 +126,17 @@ def multi_timeframe_bull_bear_side_pivots(date_range_str: str = config.under_pro
                 time and high of highest high in Bullish and time and low of lowest low in Bearish,
     :return:
     """
+    
     multi_timeframe_trends = read_multi_timeframe_bull_bear_side_trends(date_range_str)
+    
     multi_timeframe_peaks_n_valleys = read_multi_timeframe_peaks_n_valleys(date_range_str)
+    
     multi_timeframe_ohlca = read_multi_timeframe_ohlca(date_range_str)
+    
     multi_timeframe_pivots = pd.DataFrame()
+    
     for timeframe in config.structure_timeframes[::-1]:
+        
         single_timeframe_peaks_n_valleys = major_peaks_n_valleys(multi_timeframe_peaks_n_valleys, timeframe)
         timeframe_ohlca = single_timeframe(multi_timeframe_ohlca, timeframe)
         trigger_timeframe_ohlca = single_timeframe(multi_timeframe_ohlca, trigger_timeframe(timeframe))
@@ -185,23 +192,13 @@ def multi_timeframe_bull_bear_side_pivots(date_range_str: str = config.under_pro
                 _pivots['deactivated_at'] = None
                 _pivots['archived_at'] = None
                 _pivots['is_overlap_of'] = None
-                _pivots = _pivots.astype({
-                    'movement_start_time': np.datetime64,
-                    'return_end_time': np.datetime64,
-                    'activation_time': np.datetime64,
-                    'ttl': np.datetime64,
-                    'deactivated_at': np.datetime64,
-                    'archived_at': np.datetime64,
-                    # 'is_overlap_of': str,
-                })
-                Pivot.validate(_pivots)
-                _pivots = _pivots[[column
-                                   for column in Pivot.__fields__.keys() if column not in ['timeframe', 'date']]]
+                _pivots = cast_and_validate(_pivots, BullBearSidePivot)
                 _pivots['timeframe'] = timeframe
                 _pivots.set_index('timeframe', append=True, inplace=True)
                 _pivots = _pivots.swaplevel()
                 multi_timeframe_pivots = pd.concat([_pivots, multi_timeframe_pivots])
-    MultiTimeframePivot.validate(multi_timeframe_pivots)
+    # MultiTimeframePivot.validate(multi_timeframe_pivots)
+    multi_timeframe_pivots = cast_and_validate(multi_timeframe_pivots, MultiTimeframePivot)
     return multi_timeframe_pivots
 
 
@@ -212,7 +209,7 @@ def read_multi_timeframe_bull_bear_side_pivots(date_range_str: str = config.unde
     return result
 
 
-# @measure_time
+@measure_time
 def generate_multi_timeframe_bull_bear_side_pivots(date_range_str: str = config.under_process_date_range,
                                                    file_path: str = config.path_of_data):
     """
@@ -233,6 +230,7 @@ def generate_multi_timeframe_bull_bear_side_pivots(date_range_str: str = config.
                 time and high of highest high in Bullish and time and low of lowest low in Bearish,
     :return:
     """
+    
     multi_timeframe_pivots = multi_timeframe_bull_bear_side_pivots(date_range_str)
     plot_multi_timeframe_pivots(multi_timeframe_pivots, name='multi_timeframe_bull_bear_side_pivots')
     multi_timeframe_pivots.to_csv(

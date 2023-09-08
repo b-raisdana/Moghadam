@@ -9,6 +9,7 @@ from FigurePlotter.DataPreparation_plotter import plot_ohlc
 from FigurePlotter.plotter import save_figure, file_id, timeframe_color
 from Model.MultiTimeframePivot import MultiTimeframePivot
 from Model.Pivot import Pivot
+from helper import measure_time
 
 """
 class Pivot(pandera.DataFrameModel):
@@ -30,6 +31,7 @@ class MultiTimeframePivot(Pivot, MultiTimeframe):
 """
 
 
+@measure_time
 def plot_multi_timeframe_pivots(multi_timeframe_pivots: pt.DataFrame[MultiTimeframePivot],
                                 date_range_string: str = config.under_process_date_range,
                                 name: str = '', show: bool = True,

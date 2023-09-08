@@ -7,7 +7,7 @@ from PeakValley import plot_peaks_n_valleys, peaks_only, valleys_only, major_pea
 from helper import measure_time
 
 
-# @measure_time
+@measure_time
 def plot_single_timeframe_candle_trend(ohlc: pd.DataFrame, single_timeframe_candle_trend: pd.DataFrame,
                                        single_timeframe_peaks_n_valleys: pd.DataFrame, show=True, save=True,
                                        path_of_plot=config.path_of_plots, name='Single Timeframe Candle Trend'):

@@ -10,6 +10,7 @@ from FigurePlotter.DataPreparation_plotter import plot_ohlca, plot_multi_timefra
 from FigurePlotter.plotter import file_id
 from Model.MultiTimeframeOHLC import MultiTimeframeOHLC, OHLC
 from Model.MultiTimeframeOHLCA import MultiTimeframeOHLCA, OHLCA
+from helper import measure_time
 
 
 def generate_test_ohlc():
@@ -26,6 +27,7 @@ def insert_atr(single_timeframe_ohlc: pd.DataFrame) -> pd.DataFrame:
     return single_timeframe_ohlc
 
 
+@measure_time
 def generate_ohlca(date_range_str: str, file_path: str = config.path_of_data) -> None:
     # if not input_file_path.startswith('ohlc') or input_file_path.startswith('ohlca'):
     #     raise Exception('input_file expected to start with "ohlc" and does not start with "ohlca"!')
@@ -35,6 +37,7 @@ def generate_ohlca(date_range_str: str, file_path: str = config.path_of_data) ->
     ohlca.to_csv(os.path.join(file_path, f'ohlca.{date_range_str}.zip'), compression='zip')
 
 
+@measure_time
 def generate_multi_timeframe_ohlca(date_range_str: str = config.under_process_date_range,
                                    file_path: str = config.path_of_data) -> None:
     multi_timeframe_ohlc = read_multi_timeframe_ohlc(date_range_str)
@@ -50,7 +53,7 @@ def generate_multi_timeframe_ohlca(date_range_str: str = config.under_process_da
     multi_timeframe_ohlca.to_csv(os.path.join(file_path, f'multi_timeframe_ohlca.{date_range_str}.zip'),
                                  compression='zip')
 
-
+@measure_time
 def generate_multi_timeframe_ohlc(date_range_str: str, file_path: str = config.path_of_data):
     ohlc = read_ohlc(date_range_str)
     # ohlc['timeframe '] = config.timeframes[0]

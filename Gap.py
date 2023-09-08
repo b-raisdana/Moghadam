@@ -1,8 +1,10 @@
 import pandas as pd
 
 from ClassicPivot import generate_multi_timeframe_pivot_levels
+from helper import measure_time
 
 
+@measure_time
 def generate_multi_timeframe_gap_levels():
     """
         FTR:
@@ -23,6 +25,7 @@ def generate_multi_timeframe_gap_levels():
     raise Exception('Not implemented')
 
 
+@measure_time
 def generate_multi_timeframe_pivots(multi_timeframe_ohlca: pd.DataFrame, multi_timeframe_peaks_n_valleys: pd.DataFrame):
     generate_multi_timeframe_pivot_levels()
     generate_multi_timeframe_gap_levels()
