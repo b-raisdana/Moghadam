@@ -28,9 +28,9 @@ def plot_multi_timeframe_ohlc(multi_timeframe_ohlc, date_range_str):
     plot_multiple_figures(figures, name=f'multi_timeframe_ohlc.{date_range_str}')
 
 
-# @measure_time
+@measure_time
 def plot_ohlc(ohlc: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']),
-              save: bool = False, name: str = '', show: bool = True) -> plgo.Figure:
+              save: bool = True, name: str = '', show: bool = True) -> plgo.Figure:
     """
         Plot OHLC (Open, High, Low, Close) data as a candlestick chart.
 
@@ -43,13 +43,13 @@ def plot_ohlc(ohlc: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']),
         Returns:
             plgo.Figure: The Plotly figure object containing the OHLC candlestick chart.
         """
-    import os
-    MAX_LEN_OF_DATA_FRAME_TO_PLOT = 50000
-    SAFE_LEN_OF_DATA_FRAME_TO_PLOT = 10000
-    if len(ohlc.index) > MAX_LEN_OF_DATA_FRAME_TO_PLOT:
-        raise Exception(f'Too many rows to plt ({len(ohlc.index),}>{MAX_LEN_OF_DATA_FRAME_TO_PLOT})')
-    if len(ohlc.index) > SAFE_LEN_OF_DATA_FRAME_TO_PLOT:
-        log(f'Plotting too much data will slow us down ({len(ohlc.index),}>{SAFE_LEN_OF_DATA_FRAME_TO_PLOT})')
+    # MAX_LEN_OF_DATA_FRAME_TO_PLOT = 50000
+    # SAFE_LEN_OF_DATA_FRAME_TO_PLOT = 10000
+    # if len(ohlc.index) > MAX_LEN_OF_DATA_FRAME_TO_PLOT:
+    #     raise Exception(f'Too many rows to plt ({len(ohlc.index),}>{MAX_LEN_OF_DATA_FRAME_TO_PLOT})')
+    # if len(ohlc.index) > SAFE_LEN_OF_DATA_FRAME_TO_PLOT:
+    #     log(f'Plotting too much data will slow us down ({len(ohlc.index),}>{SAFE_LEN_OF_DATA_FRAME_TO_PLOT})')
+
     kaleido_install_lock_file_path = 'kaleido.installed'
     # if not os.path.isfile(kaleido_install_lock_file_path):
     #     log('kaleido not satisfied!')

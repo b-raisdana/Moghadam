@@ -5,9 +5,10 @@ plotly
 pydantic
 numpy
 # conda install -c conda-forge ta-lib
-TA-Lib~=0.4.19
+# TA-Lib~=0.4.19
 pytest
 pandera
+ccxt
 # beautifulsoup4
 
 # conda update --all

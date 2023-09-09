@@ -3,16 +3,16 @@ import os
 import pandas as pd
 from pandera import typing as pt
 
-from BullBearSidePivot import pivot_margins, \
-    read_multi_timeframe_bull_bear_side_pivots
+from BullBearSidePivot import read_multi_timeframe_bull_bear_side_pivots
+from PivotsHelper import peaks_or_valleys_pivots_level_n_margins, pivot_margins, pivots_level_n_margins
 from Candle import read_multi_timeframe_ohlca
-from Model.MultiTimeframeOHLC import OHLC
+from Model.MultiTimeframeOHLC import OHLCV
 from Config import config, TopTYPE
 from DataPreparation import single_timeframe, trigger_timeframe, read_file, \
-    anti_trigger_timeframe, cast_and_validate
+    anti_trigger_timeframe, cast_and_validate, anti_pattern_timeframe
 from FigurePlotter.Pivot_plotter import plot_multi_timeframe_pivots
 from Model.MultiTimeframePivot import MultiTimeframePivot
-from PeakValley import read_multi_timeframe_peaks_n_valleys
+from PeakValley import read_multi_timeframe_peaks_n_valleys, peaks_only, valleys_only
 from Pivots import pivot_exact_overlapped, level_ttl, update_hit
 from helper import measure_time
 
@@ -30,7 +30,7 @@ def update_active_levels(multi_timeframe_pivots: pt.DataFrame[MultiTimeframePivo
     return multi_timeframe_pivots
 
 
-def reactivated_passed_levels(_time, ohlc: pt.DataFrame[OHLC],
+def reactivated_passed_levels(_time, ohlc: pt.DataFrame[OHLCV],
                               multi_timeframe_pivots: pt.DataFrame[MultiTimeframePivot]) \
         -> pt.DataFrame[MultiTimeframePivot]:
     """
@@ -60,7 +60,7 @@ def archive_cold_levels(_time, multi_timeframe_pivots: pt.DataFrame[MultiTimefra
     return multi_timeframe_pivots
 
 
-def update_inactive_levels(update__time, ohlc: pt.DataFrame[OHLC],
+def update_inactive_levels(update__time, ohlc: pt.DataFrame[OHLCV],
                            multi_timeframe_pivots: pt.DataFrame[MultiTimeframePivot]) \
         -> pt.DataFrame[MultiTimeframePivot]:
     """
@@ -101,11 +101,7 @@ def tops_pivots(date_range_str) -> pt.DataFrame[MultiTimeframePivot]:
         _pivots = single_timeframe(_multi_timeframe_peaks_n_valleys, anti_trigger_timeframe(timeframe))
         timeframe_ohlca = single_timeframe(_multi_timeframe_ohlca, timeframe)
         trigger_timeframe_ohlca = single_timeframe(_multi_timeframe_ohlca, trigger_timeframe(timeframe))
-
-        _pivots.loc[_pivots['peak_or_valley'] == TopTYPE.PEAK.value, 'level'] = _pivots['high']
-        _pivots.loc[_pivots['peak_or_valley'] == TopTYPE.VALLEY.value, 'level'] = _pivots['low']
-        _pivots = pivot_margins(_pivots, TopTYPE.PEAK, _pivots, timeframe_ohlca, timeframe, trigger_timeframe_ohlca)
-        _pivots = pivot_margins(_pivots, TopTYPE.VALLEY, _pivots, timeframe_ohlca, timeframe, trigger_timeframe_ohlca)
+        _pivots = pivots_level_n_margins(_pivots, _pivots, timeframe, timeframe_ohlca, trigger_timeframe_ohlca)
         _pivots['activation_time'] = _pivots.index
         _pivots['ttl'] = _pivots.index + level_ttl(timeframe)
         _pivots['hit'] = 0  # update_hits(multi_timeframe_pivots)
@@ -115,7 +111,7 @@ def tops_pivots(date_range_str) -> pt.DataFrame[MultiTimeframePivot]:
 
         if len(_pivots) > 0:
             # _pivots = cast_and_validate(_pivots, Pivot)
-            _pivots['timeframe'] = timeframe
+            _pivots['timeframe'] = anti_pattern_timeframe(timeframe)
             _pivots.set_index('timeframe', append=True, inplace=True)
             _pivots = _pivots.swaplevel()
             multi_timeframe_pivots = pd.concat([multi_timeframe_pivots, _pivots])

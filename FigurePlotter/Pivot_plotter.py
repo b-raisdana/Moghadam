@@ -40,14 +40,14 @@ def plot_multi_timeframe_pivots(multi_timeframe_pivots: pt.DataFrame[MultiTimefr
     multi_timeframe_ohlc = read_multi_timeframe_ohlc(date_range_string)
     end_time = max(multi_timeframe_ohlc.index.get_level_values('date'))
     base_ohlc = single_timeframe(multi_timeframe_ohlc, config.timeframes[0])
-    fig = plot_ohlc(ohlc=base_ohlc, show=False, save=False, name=f'ohlca{config.timeframes[0]}')
+    fig = plot_ohlc(ohlc=base_ohlc, show=False, save=False, name=f'ohlc{config.timeframes[0]}')
     for timeframe in config.timeframes[1:]:
         ohlc = single_timeframe(multi_timeframe_ohlc, timeframe)
         fig.add_trace(plgo.Candlestick(x=ohlc.index,
                                        open=ohlc['open'],
                                        high=ohlc['high'],
                                        low=ohlc['low'],
-                                       close=ohlc['close'], name=f'ohlca{timeframe}'))
+                                       close=ohlc['close'], name=f'ohlc{timeframe}'))
 
     multi_timeframe_pivots.sort_index(level='date', inplace=True)
     for (pivot_timeframe, pivot_start), pivot_info in multi_timeframe_pivots.iterrows():

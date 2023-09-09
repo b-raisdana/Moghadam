@@ -31,7 +31,7 @@ def pivot_exact_overlapped(pivot_time, multi_timeframe_pivots):
 
 
 def level_ttl(timeframe) -> datetime.timedelta:
-    return 256 * pd.to_timedelta(timeframe)
+    return 512 * pd.to_timedelta(timeframe)
 
 
 def update_hit(level_index, level_info, multi_timeframe_pivots: pt.DataFrame[MultiTimeframePivot]) \

@@ -6,10 +6,12 @@ from pandera import typing as pt
 
 from Config import config, GLOBAL_CACHE
 from DataPreparation import read_file, single_timeframe
-from FigurePlotter.DataPreparation_plotter import plot_ohlca, plot_multi_timeframe_ohlca, plot_multi_timeframe_ohlc
+from FigurePlotter.DataPreparation_plotter import plot_ohlca, plot_multi_timeframe_ohlca, plot_multi_timeframe_ohlc, \
+    plot_ohlc
 from FigurePlotter.plotter import file_id
-from Model.MultiTimeframeOHLC import MultiTimeframeOHLC, OHLC
+from Model.MultiTimeframeOHLC import MultiTimeframeOHLCV, OHLCV
 from Model.MultiTimeframeOHLCA import MultiTimeframeOHLCA, OHLCA
+from fetch_ohlcv import fetch_ohlcv_by_range
 from helper import measure_time
 
 
@@ -53,6 +55,7 @@ def generate_multi_timeframe_ohlca(date_range_str: str = config.under_process_da
     multi_timeframe_ohlca.to_csv(os.path.join(file_path, f'multi_timeframe_ohlca.{date_range_str}.zip'),
                                  compression='zip')
 
+
 @measure_time
 def generate_multi_timeframe_ohlc(date_range_str: str, file_path: str = config.path_of_data):
     ohlc = read_ohlc(date_range_str)
@@ -83,9 +86,9 @@ def generate_multi_timeframe_ohlc(date_range_str: str, file_path: str = config.p
 
 
 def read_multi_timeframe_ohlc(date_range_str: str = config.under_process_date_range) \
-        -> pt.DataFrame[MultiTimeframeOHLC]:
+        -> pt.DataFrame[MultiTimeframeOHLCV]:
     result = read_file(date_range_str, 'multi_timeframe_ohlc', generate_multi_timeframe_ohlc,
-                       MultiTimeframeOHLC)
+                       MultiTimeframeOHLCV)
     for timeframe in config.timeframes:
         GLOBAL_CACHE[f'valid_times_{timeframe}'] = \
             single_timeframe(result, timeframe).index.get_level_values('date').tolist()
@@ -109,10 +112,20 @@ def read_ohlca(date_range_string: str) -> pd.DataFrame:
 
 
 def read_ohlc(date_range_string: str) -> pd.DataFrame:
-    result = read_file(date_range_string, 'ohlc', generate_ohlc, OHLC)
+    result = read_file(date_range_string, 'ohlc', generate_ohlc, OHLCV)
     return result
 
 
-def generate_ohlc(date_range_string: str):
-    raise Exception('Not implemented so we expect the file exists.')
-    original_prices = pd.read_csv('17-01-01.0-01TO17-12-31.23-59.1min.zip')
+@measure_time
+def generate_ohlc(date_range_string: str = config.under_process_date_range,
+                  file_path: str = config.path_of_data):
+    # raise Exception('Not implemented so we expect the file exists.')
+    # original_prices = pd.read_csv('17-01-01.0-01TO17-12-31.23-59.1min.zip')
+    raw_ohlcv = fetch_ohlcv_by_range(date_range_string)
+    df = pd.DataFrame(raw_ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
+    df['date'] = pd.to_datetime(df['timestamp'], unit='ms')
+    df.set_index('date', inplace=True)
+    df.drop(columns=['timestamp'], inplace=True)
+    plot_ohlc(ohlc=df)
+    df.to_csv(os.path.join(file_path, f'ohlc.{date_range_string}.zip'),
+              compression='zip')

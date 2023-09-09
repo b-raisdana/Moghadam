@@ -2,10 +2,10 @@ import pandera
 from pandera import typing as pt
 
 from DataPreparation import MultiTimeframe
-from Model.MultiTimeframeOHLC import OHLC
+from Model.MultiTimeframeOHLC import OHLCV
 
 
-class PeaksValleys(OHLC):
+class PeaksValleys(OHLCV):
     peak_or_valley: pandera.typing.Series[str]
     strength: pt.Timedelta  # pandera.typing.Series[np.timedelta64]
 

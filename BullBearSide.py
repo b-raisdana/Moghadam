@@ -15,7 +15,7 @@ from FigurePlotter.BullBearSide_plotter import plot_multi_timeframe_bull_bear_si
 from Model.BullBearSide import BullBearSide
 from Model.MultiTimeframeBullBearSide import MultiTimeframeBullBearSide
 from Model.MultiTimeframeCandleTrend import MultiTimeframeCandleTrend
-from Model.MultiTimeframeOHLC import OHLC
+from Model.MultiTimeframeOHLC import OHLCV
 from Model.MultiTimeframeOHLCA import OHLCA
 from PeakValley import peaks_only, valleys_only, read_multi_timeframe_peaks_n_valleys, major_peaks_n_valleys
 from helper import log, measure_time
@@ -461,7 +461,7 @@ def multi_timeframe_bull_bear_side_trends(multi_timeframe_candle_trend: pd.DataF
     return trends
 
 
-def add_trend_tops(_boundaries, single_timeframe_peak_n_valley: pt.DataFrame[PeakValley], ohlc: pt.DataFrame[OHLC]):
+def add_trend_tops(_boundaries, single_timeframe_peak_n_valley: pt.DataFrame[PeakValley], ohlc: pt.DataFrame[OHLCV]):
     if 'internal_high' not in _boundaries.columns:
         _boundaries['internal_high'] = None
     if 'internal_low' not in _boundaries.columns:

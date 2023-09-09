@@ -1,7 +1,6 @@
 import os
 import string
 from datetime import datetime, timedelta
-from functools import cache
 from typing import Callable, Union, List
 
 import numpy as np
@@ -11,7 +10,7 @@ from pandas import Timedelta, DatetimeIndex, Timestamp
 from pandera import typing as pt
 
 from Config import config, GLOBAL_CACHE
-from helper import measure_time, log
+from helper import log
 
 
 class MultiTimeframe(pandera.DataFrameModel):
@@ -373,10 +372,11 @@ def cast_and_validate(data, ModelClass: pandera.DataFrameModel, return_bool: boo
             as_types[attr_name] = 'timedelta64[s]'
             # as_types[attr_name] = pandera.typing.Timedelta
         elif 'pandera.typing.pandas.Series' in str(attr_type):
-            astype = str(attr_type).replace('pandera.typing.pandas.Series[','').replace(']','')
+            astype = str(attr_type).replace('pandera.typing.pandas.Series[', '').replace(']', '')
             trans_table = str.maketrans('', '', string.digits)
             astype = astype.translate(trans_table)
-            if astype != 'str' and astype not in str(data.dtypes.loc[attr_name]).lower():
+            if (astype != 'str' and
+                    attr_name in data.columns and astype not in str(data.dtypes.loc[attr_name]).lower()):
                 as_types[attr_name] = astype
     if len(as_types) > 0:
         data = data.astype(as_types)
@@ -397,16 +397,24 @@ def cast_and_validate(data, ModelClass: pandera.DataFrameModel, return_bool: boo
 
 
 def trigger_timeframe(timeframe):
+    if config.timeframes.index(timeframe) < -config.timeframe_shifter['trigger']:
+        raise Exception(f'{timeframe} has not a trigger time!')
     return shift_time(timeframe, config.timeframe_shifter['trigger'])
 
 
 def pattern_timeframe(timeframe):
+    if config.timeframes.index(timeframe) < -config.timeframe_shifter['pattern']:
+        raise Exception(f'{timeframe} has not a pattern time!')
     return shift_time(timeframe, config.timeframe_shifter['pattern'])
 
 
 def anti_pattern_timeframe(timeframe):
+    if config.timeframes.index(timeframe) > len(config.timeframes) + config.timeframe_shifter['pattern'] - 1:
+        raise Exception(f'{timeframe} has not an anit pattern time!')
     return shift_time(timeframe, -config.timeframe_shifter['pattern'])
 
 
 def anti_trigger_timeframe(timeframe):
+    if config.timeframes.index(timeframe) > len(config.timeframes) + config.timeframe_shifter['trigger'] - 1:
+        raise Exception(f'{timeframe} has not an anit trigger time!')
     return shift_time(timeframe, -config.timeframe_shifter['trigger'])

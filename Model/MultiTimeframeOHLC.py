@@ -7,7 +7,7 @@ from pandera import typing as pt
 from DataPreparation import MultiTimeframe
 
 
-class OHLC(pandera.DataFrameModel):
+class OHLCV(pandera.DataFrameModel):
     date: pt.Index[Timestamp]
     open: pt.Series[float]
     close: pt.Series[float]
@@ -16,5 +16,5 @@ class OHLC(pandera.DataFrameModel):
     volume: pt.Series[float]
 
 
-class MultiTimeframeOHLC(OHLC, MultiTimeframe):
+class MultiTimeframeOHLCV(OHLCV, MultiTimeframe):
     pass
