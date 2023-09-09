@@ -28,7 +28,7 @@ def plot_multi_timeframe_ohlc(multi_timeframe_ohlc, date_range_str):
     plot_multiple_figures(figures, name=f'multi_timeframe_ohlc.{date_range_str}')
 
 
-@measure_time
+# @measure_time
 def plot_ohlc(ohlc: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']),
               save: bool = True, name: str = '', show: bool = True) -> plgo.Figure:
     """
