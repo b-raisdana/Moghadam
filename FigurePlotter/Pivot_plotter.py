@@ -33,11 +33,11 @@ class MultiTimeframePivot(Pivot, MultiTimeframe):
 
 @measure_time
 def plot_multi_timeframe_pivots(multi_timeframe_pivots: pt.DataFrame[MultiTimeframePivot],
-                                date_range_string: str = config.under_process_date_range,
+                                date_range_str: str = None,
                                 name: str = '', show: bool = True,
                                 html_path: str = '', save: bool = True) -> plgo.Figure:
     # Create the figure using plot_peaks_n_valleys function
-    multi_timeframe_ohlc = read_multi_timeframe_ohlc(date_range_string)
+    multi_timeframe_ohlc = read_multi_timeframe_ohlc(date_range_str)
     end_time = max(multi_timeframe_ohlc.index.get_level_values('date'))
     base_ohlc = single_timeframe(multi_timeframe_ohlc, config.timeframes[0])
     fig = plot_ohlc(ohlc=base_ohlc, show=False, save=False, name=f'ohlc{config.timeframes[0]}')

@@ -3,7 +3,8 @@ from pandas import Timestamp
 from pandera import typing as pt
 
 
-class BaseBullBearSide(pandera.DataFrameModel):
+class BullBearSide(pandera.DataFrameModel):
+    date: pt.Index[Timestamp]  # start
     bull_bear_side: pt.Series[str]
     end: pt.Series[Timestamp]
     internal_high: pt.Series[float]
@@ -20,5 +21,4 @@ class BaseBullBearSide(pandera.DataFrameModel):
     movement_end_time: pt.Series[Timestamp] = pandera.Field(nullable=True)
 
 
-class BullBearSide(BaseBullBearSide):
-    date: pt.Index[Timestamp]  # start
+

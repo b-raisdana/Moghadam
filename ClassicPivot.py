@@ -119,16 +119,17 @@ def tops_pivots(date_range_str) -> pt.DataFrame[MultiTimeframePivot]:
     return multi_timeframe_pivots
 
 
-def read_multi_timeframe_top_pivots(date_range_str: str = config.under_process_date_range):
+def read_multi_timeframe_top_pivots(date_range_str: str = None):
     result = read_file(date_range_str, 'multi_timeframe_top_pivots',
                        generate_multi_timeframe_top_pivots, MultiTimeframePivot)
     return result
 
 
 @measure_time
-def generate_multi_timeframe_top_pivots(date_range_str: str = config.under_process_date_range,
-                                        file_path: str = config.path_of_data):
+def generate_multi_timeframe_top_pivots(date_range_str: str = None, file_path: str = config.path_of_data):
     # tops of timeframe which the timeframe is its pattern timeframe
+    if date_range_str is None:
+        date_range_str = config.under_process_date_range
     _tops_pivots = tops_pivots(date_range_str)
     plot_multi_timeframe_pivots(_tops_pivots, name='multi_timeframe_top_pivots')
     _tops_pivots.to_csv(
@@ -137,7 +138,7 @@ def generate_multi_timeframe_top_pivots(date_range_str: str = config.under_proce
 
 
 @measure_time
-def generate_multi_timeframe_pivot_levels(date_range_str: str = config.under_process_date_range):
+def generate_multi_timeframe_pivot_levels(date_range_str: str = None):
     """
     definition of pivot:
         highest high of every Bullish and lowest low of every Bearish trend. for Trends
@@ -159,8 +160,10 @@ def generate_multi_timeframe_pivot_levels(date_range_str: str = config.under_pro
             timeframe of trend
             timeframe of top
     """
-    multi_timeframe_bull_bear_side_pivots = read_multi_timeframe_bull_bear_side_pivots()
-    multi_timeframe_anti_pattern_tops_pivots = read_multi_timeframe_top_pivots()
+    if date_range_str is None:
+        date_range_str = config.under_process_date_range
+    multi_timeframe_bull_bear_side_pivots = read_multi_timeframe_bull_bear_side_pivots(date_range_str)
+    multi_timeframe_anti_pattern_tops_pivots = read_multi_timeframe_top_pivots(date_range_str)
     # multi_timeframe_color_trend_pivots = read_multi_timeframe_color_trend_pivots()
     multi_timeframe_pivots = pd.concat([
         multi_timeframe_bull_bear_side_pivots,

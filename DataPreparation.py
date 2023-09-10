@@ -76,6 +76,8 @@ def read_file(date_range_str: str, data_frame_type: str, generator: Callable, Ca
         This function first attempts to read the file based on the provided parameters. If the file is not found
         or the DataFrame does not match the expected columns, the generator function is called to create the DataFrame.
     """
+    if date_range_str is None:
+        date_range_str = config.under_process_date_range
     df = None
     try:
         df = read_with_timeframe(data_frame_type, date_range_str, file_path, n_rows, skip_rows)
@@ -237,6 +239,8 @@ def read_with_timeframe(data_frame_type: str, date_range_str: str, file_path: st
         # Read OHLC data with adjusted index
         ohlc_data = read_with_timeframe('ohlc', '21-07-01.00-00T21-07-02', '/path/to/data/', n_rows=1000, skip_rows=0)
     """
+    if date_range_str is None:
+        date_range_str = config.under_process_date_range
     df = pd.read_csv(os.path.join(file_path, f'{data_frame_type}.{date_range_str}.zip'), sep=',', header=0,
                      index_col='date', parse_dates=['date'], skiprows=skip_rows, nrows=n_rows)
     if 'multi_timeframe' in data_frame_type:

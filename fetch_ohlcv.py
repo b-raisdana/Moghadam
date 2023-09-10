@@ -7,6 +7,7 @@ from pandera import typing as pt
 
 from Config import config
 from Model.MultiTimeframeOHLC import OHLCV
+from helper import log
 
 
 # def zz_seven_days_before_dataframe():
@@ -19,8 +20,17 @@ from Model.MultiTimeframeOHLC import OHLCV
 #     return df
 
 
-def last_month_date_range() -> str:
-    start_date = last_month_morning()
+def under_process_date_range(since=None) -> str:
+    # start_date = last_month_morning(last_month_morning(since))
+    start_date = (last_month_morning(since))
+    end_date = start_date + timedelta(days=60)
+
+    return f'{start_date.strftime("%y-%m-%d.%H-%M")}T' \
+           f'{end_date.strftime("%y-%m-%d.%H-%M")}'
+
+
+def last_month_date_range(since=None) -> str:
+    start_date = last_month_morning(since)
     end_date = start_date + timedelta(days=30)
 
     return f'{start_date.strftime("%y-%m-%d.%H-%M")}T' \
@@ -35,8 +45,10 @@ def seven_days_before_date_range() -> str:
            f'{_end_date.strftime("%y-%m-%d.%H-%M")}'
 
 
-def last_month_morning(tz=pytz.timezone('Asia/Tehran')):
-    start_day = datetime.now(tz).date() - timedelta(days=30)
+def last_month_morning(since=None, tz=pytz.timezone('Asia/Tehran')):
+    if since is None:
+        since = datetime.now(tz).date()
+    start_day = since - timedelta(days=31)
 
     # to add timezone info back (to get yesterday's morning)
     morning = tz.localize(datetime.combine(start_day, time(0, 0)), is_dst=None)
@@ -61,8 +73,10 @@ def seven_days_before_morning(tz=pytz.timezone('Asia/Tehran')):
 #     return response
 
 
-def fetch_ohlcv_by_range(date_range_str: str = config.under_process_date_range, symbol: str = 'BTC/USDT',
-                         timeframe=config.timeframes[0]) -> pt.DataFrame[OHLCV]:
+def fetch_ohlcv_by_range(date_range_str: str = None, symbol: str = 'BTC/USDT', timeframe=config.timeframes[0])\
+        -> pt.DataFrame[OHLCV]:
+    if date_range_str is None:
+        date_range_str = config.under_process_date_range
     start_date_string, end_date_string = date_range_str.split('T')
     start_date = datetime.strptime(start_date_string, '%y-%m-%d.%H-%M')
     end_date = datetime.strptime(end_date_string, '%y-%m-%d.%H-%M')
@@ -80,10 +94,13 @@ def fetch_ohlcv(symbol, timeframe=config.timeframes[0], since: datetime = None, 
     ccxt_timeframe = pandas_to_ccxt_timeframes[timeframe]
     output_list = []
     width_of_timeframe = pd.to_timedelta(timeframe).seconds
-    for batch_start in range(0, limit, 1000):
+    max_query_size = 1000
+    for batch_start in range(0, limit, max_query_size):
         start_timestamp = int(since.timestamp() + batch_start * width_of_timeframe) * 1000
+        this_query_size = min(limit - batch_start, max_query_size)
+        log(f'fetch_ohlcv@{datetime.fromtimestamp(start_timestamp/1000)}#{this_query_size}', stack_trace=False)
         response = exchange.fetch_ohlcv(symbol, timeframe=ccxt_timeframe, since=start_timestamp,
-                                        limit=min(limit - batch_start, 1000), params=params)
+                                        limit=min(limit - batch_start, this_query_size), params=params)
         output_list = output_list + response
 
     return output_list

@@ -1,10 +1,6 @@
-from sqlite3 import Timestamp
-
-from pandera import typing as pt
-
-from Model.BullBearSide import BaseBullBearSide
+from DataPreparation import MultiTimeframe
+from Model.BullBearSide import BullBearSide
 
 
-class MultiTimeframeBullBearSide(BaseBullBearSide):
-    timeframe: pt.Index[str]
-    date: pt.Index[Timestamp]  # start
+class MultiTimeframeBullBearSide(BullBearSide, MultiTimeframe):
+    pass

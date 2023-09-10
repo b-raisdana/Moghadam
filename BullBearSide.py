@@ -1,8 +1,7 @@
 import os
 from datetime import datetime, timedelta
-from typing import Tuple, List
+from typing import Tuple, List, Optional
 
-import numpy as np
 import pandas as pd
 import pandera.typing as pt
 from pandas import Timestamp
@@ -613,18 +612,29 @@ def test_boundary_ATR(_boundaries: pt.DataFrame[BullBearSide]) -> bool:
     return True
 
 
-def previous_trend(trends: pt.DataFrame[BullBearSide]):
+def previous_trend(trends: pt.DataFrame[BullBearSide]) -> Tuple[List[Optional[int]], List[Optional[float]]]:
+    """
+        Find the previous trend and its movement for each row in a DataFrame of trends.
+
+        Args:
+            trends (pd.DataFrame): A DataFrame containing trend data with columns 'movement_start_time' and 'movement_end_time'.
+
+        Returns:
+            Tuple[List[Optional[int]], List[Optional[float]]]: A tuple containing two lists:
+                - A list of previous trend indices (int or None).
+                - A list of the corresponding previous trend movements (float or None).
+        """
     _previous_trends = []
     _previous_trends_movement = []
     for _start, this_trend in trends.iterrows():
         if this_trend['movement_start_time'] is not None:
             possible_previous_trends = trends[trends['movement_end_time'] == this_trend['movement_start_time']]
-            if len(possible_previous_trends) > 1:
-                pass
             if len(possible_previous_trends) > 0:
                 _previous_trends.append(possible_previous_trends['movement'].idxmax())
                 _previous_trends_movement.append(possible_previous_trends['movement'].max())
                 continue
+            else:
+                log(f'did not find any previous trend for trend stat@{_start}({this_trend})')
         else:
             raise Exception(f"movement_start_time is not valid:{this_trend['movement_start_time']}")
         _previous_trends.append(None)
@@ -684,7 +694,7 @@ def detect_trends(single_timeframe_candle_trend, timeframe: str) -> pt.DataFrame
     return _boundaries[['bull_bear_side', 'end']]
 
 
-def read_multi_timeframe_bull_bear_side_trends(date_range_str: str) -> pt.DataFrame[MultiTimeframeBullBearSide]:
+def read_multi_timeframe_bull_bear_side_trends(date_range_str: str = None) -> pt.DataFrame[MultiTimeframeBullBearSide]:
     result = read_file(
         date_range_str,
         'multi_timeframe_bull_bear_side_trends',
@@ -724,30 +734,31 @@ class MultiTimeframePivot(Pivot, MultiTimeframe):
 """
 
 
-def read_multi_timeframe_candle_trend(date_range_str):
+def read_multi_timeframe_candle_trend(date_range_str: str = None):
     result = read_file(date_range_str, 'multi_timeframe_candle_trend', generate_multi_timeframe_candle_trend,
                        MultiTimeframeCandleTrend)
     return result
 
 
 @measure_time
-def generate_multi_timeframe_bull_bear_side_trends(date_range_str: str, file_path: str = config.path_of_data,
-                                                   timeframe_short_list: List['str'] = None):
-    
+def generate_multi_timeframe_bull_bear_side_trends(date_range_str: str = None, file_path: str = config.path_of_data,
+                                                   timeframe_shortlist: List['str'] = None):
+    if date_range_str is None:
+        date_range_str = config.under_process_date_range
     multi_timeframe_ohlca = read_multi_timeframe_ohlca(date_range_str)
-    
+
     multi_timeframe_peaks_n_valleys = read_multi_timeframe_peaks_n_valleys(date_range_str)
     # Generate multi-timeframe candle trend
-    
+
     multi_timeframe_candle_trend = read_multi_timeframe_candle_trend(date_range_str)
     # Generate multi-timeframe trend boundaries
     trends = multi_timeframe_bull_bear_side_trends(multi_timeframe_candle_trend,
                                                    multi_timeframe_peaks_n_valleys,
                                                    multi_timeframe_ohlca,
-                                                   timeframe_shortlist=timeframe_short_list)
+                                                   timeframe_shortlist=timeframe_shortlist)
     # Plot multi-timeframe trend boundaries
     plot_multi_timeframe_bull_bear_side_trends(multi_timeframe_ohlca, multi_timeframe_peaks_n_valleys, trends,
-                                               timeframe_shortlist=timeframe_short_list)
+                                               timeframe_shortlist=timeframe_shortlist)
     # Save multi-timeframe trend boundaries to a.zip file
     trends.to_csv(os.path.join(file_path, f'multi_timeframe_bull_bear_side_trends.{date_range_str}.zip'),
                   compression='zip')
