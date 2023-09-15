@@ -131,7 +131,7 @@ def generate_multi_timeframe_top_pivots(date_range_str: str = None, file_path: s
     if date_range_str is None:
         date_range_str = config.under_process_date_range
     _tops_pivots = tops_pivots(date_range_str)
-    plot_multi_timeframe_pivots(_tops_pivots, name='multi_timeframe_top_pivots')
+    # plot_multi_timeframe_pivots(_tops_pivots, name='multi_timeframe_top_pivots')
     _tops_pivots.to_csv(
         os.path.join(file_path, f'multi_timeframe_bull_bear_side_pivots.{date_range_str}.zip'),
         compression='zip')

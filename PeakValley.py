@@ -320,7 +320,7 @@ def multi_timeframe_peaks_n_valleys(date_range_str) \
 def generate_multi_timeframe_peaks_n_valleys(date_range_str, file_path: str = config.path_of_data):
     _peaks_n_valleys = multi_timeframe_peaks_n_valleys(date_range_str)
 
-    plot_multi_timeframe_peaks_n_valleys(_peaks_n_valleys, date_range_str)
+    # plot_multi_timeframe_peaks_n_valleys(_peaks_n_valleys, date_range_str)
     _peaks_n_valleys.to_csv(os.path.join(file_path, f'multi_timeframe_peaks_n_valleys.{date_range_str}.zip'),
                             compression='zip')
 

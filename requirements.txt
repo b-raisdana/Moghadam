@@ -9,6 +9,7 @@ numpy
 pytest
 pandera
 ccxt
+MetaTrader5
 # beautifulsoup4
 
 # conda update --all

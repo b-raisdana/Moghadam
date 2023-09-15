@@ -756,9 +756,9 @@ def generate_multi_timeframe_bull_bear_side_trends(date_range_str: str = None, f
                                                    multi_timeframe_peaks_n_valleys,
                                                    multi_timeframe_ohlca,
                                                    timeframe_shortlist=timeframe_shortlist)
-    # Plot multi-timeframe trend boundaries
-    plot_multi_timeframe_bull_bear_side_trends(multi_timeframe_ohlca, multi_timeframe_peaks_n_valleys, trends,
-                                               timeframe_shortlist=timeframe_shortlist)
+    # # Plot multi-timeframe trend boundaries
+    # plot_multi_timeframe_bull_bear_side_trends(multi_timeframe_ohlca, multi_timeframe_peaks_n_valleys, trends,
+    #                                            timeframe_shortlist=timeframe_shortlist)
     # Save multi-timeframe trend boundaries to a.zip file
     trends.to_csv(os.path.join(file_path, f'multi_timeframe_bull_bear_side_trends.{date_range_str}.zip'),
                   compression='zip')
