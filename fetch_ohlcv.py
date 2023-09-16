@@ -20,11 +20,9 @@ from helper import log
 #     return df
 
 
-def under_process_date_range(since=None) -> str:
-    # start_date = last_month_morning(last_month_morning(since))
-    start_date = (last_month_morning(since))
-    end_date = start_date + timedelta(days=60)
-
+def under_process_date_range(since=None, days: float = 60) -> str:
+    end_date = today_morning()
+    start_date = end_date - timedelta(days=days)
     return f'{start_date.strftime("%y-%m-%d.%H-%M")}T' \
            f'{end_date.strftime("%y-%m-%d.%H-%M")}'
 
@@ -45,7 +43,7 @@ def seven_days_before_date_range() -> str:
            f'{_end_date.strftime("%y-%m-%d.%H-%M")}'
 
 
-def last_month_morning(since=None, tz=pytz.timezone('Asia/Tehran')):
+def last_month_morning(since=None, tz=pytz.timezone('Asia/Tehran')) -> datetime:
     if since is None:
         since = datetime.now(tz).date()
     start_day = since - timedelta(days=31)
@@ -56,7 +54,11 @@ def last_month_morning(since=None, tz=pytz.timezone('Asia/Tehran')):
     return morning
 
 
-def seven_days_before_morning(tz=pytz.timezone('Asia/Tehran')):
+def today_morning(tz=pytz.timezone('Asia/Tehran')) -> datetime:
+    return tz.localize(datetime.combine(datetime.now(tz).date(), time(0, 0)), is_dst=None)
+
+
+def seven_days_before_morning(tz=pytz.timezone('Asia/Tehran')) -> datetime:
     seven_days_before = datetime.now(tz).date() - timedelta(days=7)
 
     # to add timezone info back (to get yesterday's morning)
@@ -73,7 +75,7 @@ def seven_days_before_morning(tz=pytz.timezone('Asia/Tehran')):
 #     return response
 
 
-def fetch_ohlcv_by_range(date_range_str: str = None, symbol: str = 'BTC/USDT', timeframe=config.timeframes[0])\
+def fetch_ohlcv_by_range(date_range_str: str = None, symbol: str = 'BTC/USDT', timeframe=config.timeframes[0]) \
         -> pt.DataFrame[OHLCV]:
     if date_range_str is None:
         date_range_str = config.under_process_date_range
@@ -98,7 +100,7 @@ def fetch_ohlcv(symbol, timeframe=config.timeframes[0], since: datetime = None, 
     for batch_start in range(0, limit, max_query_size):
         start_timestamp = int(since.timestamp() + batch_start * width_of_timeframe) * 1000
         this_query_size = min(limit - batch_start, max_query_size)
-        log(f'fetch_ohlcv@{datetime.fromtimestamp(start_timestamp/1000)}#{this_query_size}', stack_trace=False)
+        log(f'fetch_ohlcv@{datetime.fromtimestamp(start_timestamp / 1000)}#{this_query_size}', stack_trace=False)
         response = exchange.fetch_ohlcv(symbol, timeframe=ccxt_timeframe, since=start_timestamp,
                                         limit=min(limit - batch_start, this_query_size), params=params)
         output_list = output_list + response

@@ -1,5 +1,6 @@
 # import talib as ta
 import os
+from datetime import timedelta
 
 import numpy as np
 import pandas as pd
@@ -38,11 +39,7 @@ def calculate_strength(peaks_or_valleys: pd.DataFrame, mode: TopTYPE, ohlc: pd.D
                 f'Strength expected to be greater than or equal {config.timeframes[0]} but is '
                 f'min({_left_distance},{_right_distance})={min(_left_distance, _right_distance)} @ "{i_timestamp}"')
         peaks_or_valleys.loc[i_timestamp, 'strength'] = min(_left_distance, _right_distance)
-        # peaks_or_valleys['strength'] = pd.Timedelta(peaks_or_valleys['strength'])
-        # peaks_or_valleys.astype({
-        #     'strength': 'timedelta64[s]'
-        # })
-    # output = pd.concat([peaks_or_valleys, reserved_peaks_or_valleys]).sort_index()
+    peaks_or_valleys['strength'] = peaks_or_valleys['strength'].dt.total_seconds()
     return peaks_or_valleys
 
 
@@ -275,7 +272,7 @@ def top_timeframe(tops: pt.DataFrame[PeaksValleys]) -> pt.DataFrame[PeaksValleys
     tops['timeframe'] = config.timeframes[0]
     for _, timeframe in enumerate(config.timeframes[1:]):
         tops.loc[
-            (tops['strength'] >= pd.to_timedelta(timeframe) * 2)
+            (tops['strength'] >= pd.to_timedelta(timeframe).total_seconds() * 2)
             , 'timeframe'
         ] = timeframe
     return tops
@@ -301,11 +298,9 @@ def multi_timeframe_peaks_n_valleys(date_range_str) \
 
     _peaks_n_valleys = calculate_strength_of_peaks_n_valleys(base_ohlc, _peaks_n_valleys)
 
-    _peaks_n_valleys = _peaks_n_valleys.astype({
-        'strength': 'timedelta64[s]'
-    })
-    # _peaks_n_valleys['timeframe'] = [strength_to_timeframe(row['strength']) for index, row in
-    #                                  _peaks_n_valleys.iterrows()]
+    # _peaks_n_valleys = _peaks_n_valleys.astype({
+    #     'strength': 'timedelta64[s]'
+    # })
     _peaks_n_valleys = top_timeframe(_peaks_n_valleys)
 
     _peaks_n_valleys.set_index('timeframe', append=True, inplace=True)

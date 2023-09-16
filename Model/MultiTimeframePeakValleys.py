@@ -7,7 +7,7 @@ from Model.MultiTimeframeOHLC import OHLCV
 
 class PeaksValleys(OHLCV):
     peak_or_valley: pandera.typing.Series[str]
-    strength: pt.Timedelta  # pandera.typing.Series[np.timedelta64]
+    strength: pandera.typing.Series[float] # pt.Timedelta  # pandera.typing.Series[np.timedelta64]
 
 
 class MultiTimeframePeakValleys(PeaksValleys, MultiTimeframe):
