@@ -1,5 +1,7 @@
 import os
+import re
 import string
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Callable, Union, List
 
@@ -422,3 +424,28 @@ def anti_trigger_timeframe(timeframe):
     if config.timeframes.index(timeframe) > len(config.timeframes) + config.timeframe_shifter['trigger'] - 1:
         raise Exception(f'{timeframe} has not an anit trigger time!')
     return shift_time(timeframe, -config.timeframe_shifter['trigger'])
+
+
+def map_symbol(symbol: str, map_dictionary: dict) -> str:
+    upper_symbol = symbol.upper()
+    if upper_symbol in map_dictionary.values():
+        return symbol.upper()
+    return map_dictionary[upper_symbol]
+
+
+@dataclass
+class FileInfoSet:
+    symbol: str
+    file_type: str
+    date_range: str
+
+
+def extract_file_info(file_name: str) -> FileInfoSet:
+    pattern = re.compile(r'^((?P<symbol>[\w]+)\.)?(?P<file_type>[\w_]+)\.(?P<date_range>[\d\-\.T]+)\.zip$')
+    match = pattern.match(file_name)
+    if not match or len(match) < 2:
+        raise Exception("Invalid filename format:" + file_name)
+    data = match.groupdict()
+    if 'symbol' not in data.kkeys() or data['symbol'] is None:
+        data['symbol'] = config.under_process_symbol
+    return data

@@ -13,6 +13,7 @@ from Config import config, INFINITY_TIME_DELTA, TopTYPE
 from DataPreparation import read_file, single_timeframe, df_timedelta_to_str, cast_and_validate
 from FigurePlotter.DataPreparation_plotter import plot_ohlca
 from FigurePlotter.plotter import save_figure, file_id, plot_multiple_figures, timeframe_color
+from MetaTrader import MT
 from Model.MultiTimeframePeakValleys import PeaksValleys, MultiTimeframePeakValleys
 from helper import log, measure_time
 
@@ -311,13 +312,14 @@ def multi_timeframe_peaks_n_valleys(date_range_str) \
     return _peaks_n_valleys
 
 
+
 @measure_time
 def generate_multi_timeframe_peaks_n_valleys(date_range_str, file_path: str = config.path_of_data):
     _peaks_n_valleys = multi_timeframe_peaks_n_valleys(date_range_str)
-
     # plot_multi_timeframe_peaks_n_valleys(_peaks_n_valleys, date_range_str)
     _peaks_n_valleys.to_csv(os.path.join(file_path, f'multi_timeframe_peaks_n_valleys.{date_range_str}.zip'),
                             compression='zip')
+    MT.copy_to_data_path(f'multi_timeframe_peaks_n_valleys.{date_range_str}.zip')
 
 
 @measure_time
@@ -329,6 +331,7 @@ def calculate_strength_of_peaks_n_valleys(time_ohlc, time_peaks_n_valleys):
 
 def read_multi_timeframe_peaks_n_valleys(date_range_str: str = None) \
         -> pt.DataFrame[PeaksValleys]:
-    result = read_file(date_range_str, 'multi_timeframe_peaks_n_valleys', generate_multi_timeframe_peaks_n_valleys,
+    result = read_file(date_range_str, 'multi_timeframe_peaks_n_valleys',
+                       generate_multi_timeframe_peaks_n_valleys,
                        MultiTimeframePeakValleys)
     return result

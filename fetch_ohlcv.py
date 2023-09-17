@@ -1,4 +1,6 @@
 from datetime import datetime, timedelta, time
+from enum import Enum
+from typing import List
 
 import ccxt
 import pandas as pd
@@ -6,6 +8,7 @@ import pytz
 from pandera import typing as pt
 
 from Config import config
+from DataPreparation import map_symbol
 from Model.MultiTimeframeOHLC import OHLCV
 from helper import log
 
@@ -74,11 +77,36 @@ def seven_days_before_morning(tz=pytz.timezone('Asia/Tehran')) -> datetime:
 #
 #     return response
 
+_ccxt_symbol_map = {
+    'BTCUSDT': 'BTC/USDT',
+}
 
-def fetch_ohlcv_by_range(date_range_str: str = None, symbol: str = 'BTC/USDT', timeframe=config.timeframes[0]) \
+
+class StringCase(Enum):
+    Upper = 'upper'
+    Lower = 'lower'
+
+
+def str_list_case(list_of_string: List[str], case: StringCase):
+    if case == StringCase.Lower:
+        return [x.lower() for x in list_of_string]
+    elif case == StringCase.Upper:
+        return [x.upper() for x in list_of_string]
+    else:
+        raise Exception(f'case expected to be a StringCase({[(e.name, e.value) for e in StringCase]}) ')
+
+
+def map_to_ccxt_symbol(symbol: str)->str:
+    return map_symbol(symbol, _ccxt_symbol_map)
+
+
+def fetch_ohlcv_by_range(date_range_str: str = None, symbol: str = None, timeframe=config.timeframes[0]) \
         -> pt.DataFrame[OHLCV]:
     if date_range_str is None:
         date_range_str = config.under_process_date_range
+    if symbol is None:
+        symbol = map_to_ccxt_symbol(config.under_process_date_range)
+        # 'BTC/USDT'
     start_date_string, end_date_string = date_range_str.split('T')
     start_date = datetime.strptime(start_date_string, '%y-%m-%d.%H-%M')
     end_date = datetime.strptime(end_date_string, '%y-%m-%d.%H-%M')

@@ -5,7 +5,7 @@ from PeakValley import generate_multi_timeframe_peaks_n_valleys
 from fetch_ohlcv import under_process_date_range
 
 if __name__ == "__main__":
-    config.under_process_date_range = under_process_date_range(days=30)
+    config.under_process_date_range = under_process_date_range(days=60)
 
     # data_path = get_data_path()
     # multi_timeframe_ohlc = read_multi_timeframe_ohlc()
