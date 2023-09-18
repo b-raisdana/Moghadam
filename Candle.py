@@ -9,6 +9,7 @@ from DataPreparation import read_file, single_timeframe
 from FigurePlotter.DataPreparation_plotter import plot_ohlca, plot_multi_timeframe_ohlca, plot_multi_timeframe_ohlc, \
     plot_ohlc
 from FigurePlotter.plotter import file_id
+from MetaTrader import MT
 from Model.MultiTimeframeOHLC import MultiTimeframeOHLCV, OHLCV
 from Model.MultiTimeframeOHLCA import MultiTimeframeOHLCA, OHLCA
 from fetch_ohlcv import fetch_ohlcv_by_range
@@ -131,3 +132,4 @@ def generate_ohlc(date_range_str: str = None, file_path: str = config.path_of_da
     # plot_ohlc(ohlc=df)
     df.to_csv(os.path.join(file_path, f'ohlc.{date_range_str}.zip'),
               compression='zip')
+    MT.extract_to_data_path(os.path.join(file_path, f'ohlc.{date_range_str}.zip'),)

@@ -105,7 +105,7 @@ def fetch_ohlcv_by_range(date_range_str: str = None, symbol: str = None, timefra
     if date_range_str is None:
         date_range_str = config.under_process_date_range
     if symbol is None:
-        symbol = map_to_ccxt_symbol(config.under_process_date_range)
+        symbol = map_to_ccxt_symbol(config.under_process_symbol)
         # 'BTC/USDT'
     start_date_string, end_date_string = date_range_str.split('T')
     start_date = datetime.strptime(start_date_string, '%y-%m-%d.%H-%M')

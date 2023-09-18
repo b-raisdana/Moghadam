@@ -319,7 +319,7 @@ def generate_multi_timeframe_peaks_n_valleys(date_range_str, file_path: str = co
     # plot_multi_timeframe_peaks_n_valleys(_peaks_n_valleys, date_range_str)
     _peaks_n_valleys.to_csv(os.path.join(file_path, f'multi_timeframe_peaks_n_valleys.{date_range_str}.zip'),
                             compression='zip')
-    MT.copy_to_data_path(f'multi_timeframe_peaks_n_valleys.{date_range_str}.zip')
+    MT.extract_to_data_path(os.path.join(file_path, f'multi_timeframe_peaks_n_valleys.{date_range_str}.zip'))
 
 
 @measure_time

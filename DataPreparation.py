@@ -443,9 +443,9 @@ class FileInfoSet:
 def extract_file_info(file_name: str) -> FileInfoSet:
     pattern = re.compile(r'^((?P<symbol>[\w]+)\.)?(?P<file_type>[\w_]+)\.(?P<date_range>[\d\-\.T]+)\.zip$')
     match = pattern.match(file_name)
-    if not match or len(match) < 2:
+    if not match or len(match.groupdict()) < 3:
         raise Exception("Invalid filename format:" + file_name)
     data = match.groupdict()
-    if 'symbol' not in data.kkeys() or data['symbol'] is None:
+    if 'symbol' not in data.keys() or data['symbol'] is None:
         data['symbol'] = config.under_process_symbol
-    return data
+    return FileInfoSet(**data)
