@@ -2,3 +2,16 @@
 .idea
 /ta-lib/
 /.pytest_cache/
+/MetaTrader 5/logs/
+/MetaTrader 5/Terminal.ico
+
+/MetaTrader 5/uninstall.exe
+/MetaTrader 5/terminal64.exe
+/MetaTrader 5/Tester/
+/MetaTrader 5/Config/
+/MetaTrader 5/terminal640-portable.lnk
+/MetaTrader 5/Profiles/
+/MetaTrader 5/metatester64.exe
+/MetaTrader 5/MetaEditor64.exe
+/MetaTrader 5/Sounds/
+/MetaTrader 5/Bases/
