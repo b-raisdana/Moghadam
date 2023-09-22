@@ -41,8 +41,14 @@ class MT:
 
     @staticmethod
     def data_path():
-        terminal_info = mt5_client().terminal_info()
-        return terminal_info.data_path
+        # terminal_info = mt5_client().terminal_info()
+        # return terminal_info.data_path
+        current_working_dir = os.getcwd()
+        if not path.isfile(path.join(current_working_dir, 'MetaTrader 5', 'terminal64.exe')):
+            raise Exception('Install MetaTrader 5 portable under ' +
+                            path.join(current_working_dir, 'MetaTrader 5') + '\n' +
+                            'https://drive.google.com/file/d/1YIiteGoiDxaL84ZbTCtccZi713BZssM7/view?usp=drive_link')
+        return path.join(current_working_dir, 'MetaTrader 5')  # , 'MQL5')
 
     @staticmethod
     def extract_to_data_path(source_file_path: str, make_dir: bool = False,
@@ -78,118 +84,130 @@ class MT:
                     os.rename(_source_file, _destination_file)
         return
 
+    @staticmethod
+    def run_by_autoit():
+        relative_path_of_CustomProfile_chart_config_file_inder_data_folder = \
+            "MQL5\Profiles\Charts\CustomProfile"
 
-def run_by_autoit():
-    relative_path_of_CustomProfile_chart_config_file_inder_data_folder = "\MQL5\Profiles\Charts\CustomProfile"
-    name_of_CustomProfile_chart_config_file = "chart01.chr"
-    content_of_CustomProfile_chart_config_file = """
-    <chart>
-id=133394933231445677
-symbol=CustomBTCUSDT
-description=
-period_type=1
-period_size=1
-digits=4
-tick_size=0.000000
-position_time=1694491200
-scale_fix=0
-scale_fixed_min=25460.738000
-scale_fixed_max=26884.364000
-scale_fix11=0
-scale_bar=0
-scale_bar_val=1.000000
-scale=16
-mode=1
-fore=0
-grid=1
-volume=2
-scroll=1
-shift=0
-shift_size=19.832985
-fixed_pos=0.000000
-ticker=1
-ohlc=0
-one_click=0
-one_click_btn=1
-bidline=1
-askline=0
-lastline=0
-days=0
-descriptions=0
-tradelines=1
-tradehistory=1
-window_left=0
-window_top=0
-window_right=1503
-window_bottom=658
-window_type=1
-floating=0
-floating_left=0
-floating_top=0
-floating_right=0
-floating_bottom=0
-floating_type=1
-floating_toolbar=1
-floating_tbstate=
-background_color=0
-foreground_color=16777215
-barup_color=65280
-bardown_color=65280
-bullcandle_color=0
-bearcandle_color=16777215
-chartline_color=65280
-volumes_color=3329330
-grid_color=10061943
-bidline_color=10061943
-askline_color=255
-lastline_color=49152
-stops_color=255
-windows_total=1
+        name_of_CustomProfile_chart_config_file = "chart01.chr"
+        content_of_CustomProfile_chart_config_file = """
+            <chart>
+        id=133394933231445677
+        symbol=CustomBTCUSDT
+        description=
+        period_type=1
+        period_size=1
+        digits=4
+        tick_size=0.000000
+        position_time=1694491200
+        scale_fix=0
+        scale_fixed_min=25460.738000
+        scale_fixed_max=26884.364000
+        scale_fix11=0
+        scale_bar=0
+        scale_bar_val=1.000000
+        scale=16
+        mode=1
+        fore=0
+        grid=1
+        volume=2
+        scroll=1
+        shift=0
+        shift_size=19.832985
+        fixed_pos=0.000000
+        ticker=1
+        ohlc=0
+        one_click=0
+        one_click_btn=1
+        bidline=1
+        askline=0
+        lastline=0
+        days=0
+        descriptions=0
+        tradelines=1
+        tradehistory=1
+        window_left=0
+        window_top=0
+        window_right=1503
+        window_bottom=658
+        window_type=1
+        floating=0
+        floating_left=0
+        floating_top=0
+        floating_right=0
+        floating_bottom=0
+        floating_type=1
+        floating_toolbar=1
+        floating_tbstate=
+        background_color=0
+        foreground_color=16777215
+        barup_color=65280
+        bardown_color=65280
+        bullcandle_color=0
+        bearcandle_color=16777215
+        chartline_color=65280
+        volumes_color=3329330
+        grid_color=10061943
+        bidline_color=10061943
+        askline_color=255
+        lastline_color=49152
+        stops_color=255
+        windows_total=1
+        
+        <expert>
+        name=CustomAutoLoader
+        path=Experts\CustomAutoLoader.ex5
+        expertmode=33
+        <inputs>
+        </inputs>
+        </expert>
+        
+        <window>
+        height=100.000000
+        objects=0
+        
+        <indicator>
+        name=Main
+        path=
+        apply=1
+        show_data=1
+        scale_inherit=0
+        scale_line=0
+        scale_line_percent=50
+        scale_line_value=0.000000
+        scale_fix_min=0
+        scale_fix_min_val=0.000000
+        scale_fix_max=0
+        scale_fix_max_val=0.000000
+        expertmode=0
+        fixed_height=-1
+        </indicator>
+        </window>
+        </chart>
+            """
+        # Specify the path to the AutoIt executable
+        autoit_executable_path = "C:\Program Files (x86)\AutoIt3\AutoIt3_x64.exe"
+        if not path.isfile(autoit_executable_path):
+            raise Exception('Install AutoIt3 in ' + autoit_executable_path)
 
-<expert>
-name=CustomAutoLoader
-path=Experts\CustomAutoLoader.ex5
-expertmode=33
-<inputs>
-</inputs>
-</expert>
+        if not path.isfile(path.join(MT.data_path(),
+                                     relative_path_of_CustomProfile_chart_config_file_inder_data_folder,
+                                     name_of_CustomProfile_chart_config_file)):
+            raise Exception('Can not find CustomProfile chart config file  in ' +
+                            path.join(MT.data_path(),
+                                     relative_path_of_CustomProfile_chart_config_file_inder_data_folder,
+                                     name_of_CustomProfile_chart_config_file) + '\n' +
+                            'Expected to contain:' + content_of_CustomProfile_chart_config_file)
+        # Specify the path to your AutoIt script
+        autoit_script_path = path.join(os.getcwd(), "load_meta_trader.au3")
 
-<window>
-height=100.000000
-objects=0
+        # Use subprocess to run the script
+        result = subprocess.run([autoit_executable_path, autoit_script_path], stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE)
 
-<indicator>
-name=Main
-path=
-apply=1
-show_data=1
-scale_inherit=0
-scale_line=0
-scale_line_percent=50
-scale_line_value=0.000000
-scale_fix_min=0
-scale_fix_min_val=0.000000
-scale_fix_max=0
-scale_fix_max_val=0.000000
-expertmode=0
-fixed_height=-1
-</indicator>
-</window>
-</chart>
-    """
-    # Specify the path to the AutoIt executable
-    autoit_executable_path = "C:\Program Files (x86)\AutoIt3\AutoIt3_x64.exe"
-
-    # Specify the path to your AutoIt script
-    autoit_script_path = "load_meta_trader.au3"
-
-    # Use subprocess to run the script
-    result = subprocess.run([autoit_executable_path, autoit_script_path], stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE)
-
-    # Print the result
-    print("STDOUT:", result.stdout.decode('utf-8'))
-    print("STDERR:", result.stderr.decode('utf-8'))
+        # Print the result
+        print("STDOUT:", result.stdout.decode('utf-8'))
+        print("STDERR:", result.stderr.decode('utf-8'))
 
 
 def zz_write_hst(df: pt.DataFrame[OHLCV], symbol: str, period: int, price_precision: int, filepath: str):
