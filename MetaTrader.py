@@ -197,7 +197,9 @@ class MT:
                             path.join(MT.data_path(),
                                      relative_path_of_CustomProfile_chart_config_file_inder_data_folder,
                                      name_of_CustomProfile_chart_config_file) + '\n' +
-                            'Expected to contain:' + content_of_CustomProfile_chart_config_file)
+                            'Expected to contain:' + content_of_CustomProfile_chart_config_file + 
+                            'Add CustomSymbols to MT5, create the CustomProfile and make it to load'
+                            'CustomAutoLoader under MetaTrader 5\MQL5\Experts')
         # Specify the path to your AutoIt script
         autoit_script_path = path.join(os.getcwd(), "load_meta_trader.au3")
 
