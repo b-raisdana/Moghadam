@@ -1,10 +1,10 @@
-Run("C:\Program Files\Alpari MT5\Terminal64.exe /portable /skipupdate")
+Run(".\MetaTrader 5\Terminal64.exe /portable /skipupdate")
 
 ; Wait for the MT5 terminal to fully load (you might need to adjust the wait time)
-Sleep(20000)
+Sleep(5000)
 
 ; Open the "Navigator" window
-Send("{ALTDOWN}f{ALTUP}fCustomProfile")
+Send("{Esc}{ALTDOWN}f{ALTUP}fCu{ENTER}")
 
 ; Wait for a bit to ensure the Navigator window is open
 Sleep(5000)
