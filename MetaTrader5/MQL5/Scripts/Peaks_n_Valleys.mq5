@@ -78,8 +78,10 @@ bool ShouldDisplayTimeframe(string timeframe)
 int load_tops()
   {
    Print("load_tops started");
+   long chart_id = ChartID();
+   string chart_symbol = ChartSymbol(chart_id);
    CFileCSV fileCSV;
-   string file_name = "multi_timeframe_peaks_n_valleys.csv";
+   string file_name = chart_symbol + ".multi_timeframe_peaks_n_valleys.csv";
 
    datetime start_time = NULL;
    datetime end_time = NULL;

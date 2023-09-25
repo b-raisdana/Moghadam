@@ -26,29 +26,35 @@
 // #import
 //+------------------------------------------------------------------+
 #include <FileCSV.mqh>
-bool ReadRates(){
-   // Setup custom symbol
-   long chart_id = ChartID();
-   string chart_symbol = ChartSymbol(chart_id);
-   Print("Start reading "+chart_symbol+".csv");
-   // Open the CSV file
+#include <CustomSymbols.mqh>
+bool ReadSymbolRates(string chart_symbol)
+  {
+// Setup custom symbol
+   if(chart_symbol=="" || chart_symbol==NULL)
+     {
+      long chart_id = ChartID();
+      chart_symbol = ChartSymbol(chart_id);
+     }
+// Open the CSV file
    CFileCSV csv;
-   string file_name = chart_symbol+".csv";
+   string file_name = chart_symbol+".ohlc.csv";
+   Print("Start reading "+file_name);
    if(!csv.Open(file_name, FILE_READ|FILE_CSV|FILE_ANSI))
-   {
+     {
       Print("Failed to open "+file_name+" file. Error code: ", GetLastError());
       return false;
-   }
-   // Read and ignore the first line (header line)
+     }
+// Read and ignore the first line (header line)
    string line;
-   csv.Read(line);   
-   if (line != "date,open,high,low,close,volume"){
+   csv.Read(line);
+   if(line != "date,open,high,low,close,volume")
+     {
       Print("Invalid input file format in "+ file_name +line);
       return false;
-   }
+     }
    int read_lines = 0;
    while(csv.Read(line))
-   {
+     {
       string parts[];
       StringSplit(line, ',', parts);
       datetime time = StringToTime(parts[0]);
@@ -64,17 +70,32 @@ bool ReadRates(){
       tick[0].low = low;
       tick[0].close = close;
       tick[0].real_volume = int(volume * 1000000); // to preserve volume fractions as MQL does not allow volume fractions
-      if(CustomRatesUpdate(chart_symbol, tick)<0){
+      if(CustomRatesUpdate(chart_symbol, tick)<0)
+        {
          Print("Failed to add tick. Error code: ", GetLastError());
          return false;
-      }
+        }
       read_lines += 1;
-      if (MathMod(read_lines, 1000) == 0)    Print(IntegerToString(read_lines) + " lines of data imported successfully"); 
-   }
+      if(MathMod(read_lines, 1000) == 0)
+         Print(IntegerToString(read_lines) + " lines of data imported successfully");
+     }
    Print(IntegerToString(read_lines) + " lines of data imported successfully");
    csv.Close();
-   int result = FileMove(file_name, 0 ,file_name + ".bak", FILE_REWRITE);
-   if (result == false) Print("Fail to rename "+file_name+" to .bak");
+   int result = FileMove(file_name, 0,file_name + ".bak", FILE_REWRITE);
+   if(result == false)
+      Print("Fail to rename "+file_name+" to .bak");
 
    return true;
-}
+  }
+//+------------------------------------------------------------------+
+void ReadCustomSymbolsRates()
+  {
+   for(int i = 0; i<ArraySize(custom_symbols); i++)
+     {
+      if(ReadSymbolRates(custom_symbols[i]))
+         Print(custom_symbols[i] + "ReadRates Succeed!");
+      else
+         Print(custom_symbols[i] + "ReadRates Failed!");
+     }
+  }
+//+------------------------------------------------------------------+

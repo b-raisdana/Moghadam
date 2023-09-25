@@ -7,17 +7,43 @@
 #property link      "https://www.mql5.com"
 #property version   "1.00"
 #include <ReadRates.mqh>
+#include <CustomSymbols.mqh>
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
+//+------------------------------------------------------------------+
+void ReadIndicatorUpdates()
+  {
+
+  }
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+void IntializationUpdates()
+  {
+   if(CreateCustomSymbols())
+      Print("create_custom_symbols Succeed!");
+   else
+      Print("create_custom_symbols Failed!");
+  }
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+void FrequentUpdates()
+  {
+   EventSetTimer(5);
+   ReadCustomSymbolsRates();
+   ReadIndicatorUpdates();
+  }
+//+------------------------------------------------------------------+
+//|                                                                  |
 //+------------------------------------------------------------------+
 int OnInit()
   {
 //--- create timer
-   //EventSetTimer(60);
-   
-//---
-   Print("CustomAutoLoader OnIniti");
-   if(ReadRates()) Print("ReadRates Succeed!" ); else Print("ReadRates Failed!" );
+   Print("CustomAutoLoader OnInit");
+   EventSetTimer(300);
+   IntializationUpdates();
+   OnTimer();
    return(INIT_SUCCEEDED);
   }
 //+------------------------------------------------------------------+
@@ -27,7 +53,7 @@ void OnDeinit(const int reason)
   {
 //--- destroy timer
    EventKillTimer();
-   
+
   }
 //+------------------------------------------------------------------+
 //| Expert tick function                                             |
@@ -35,15 +61,16 @@ void OnDeinit(const int reason)
 void OnTick()
   {
 //---
-   
+
   }
 //+------------------------------------------------------------------+
 //| Timer function                                                   |
 //+------------------------------------------------------------------+
 void OnTimer()
   {
-//---
-   
+   Comment("\r\n\r\nLast Updated:" + TimeToString(TimeCurrent(), TIME_MINUTES | TIME_SECONDS));
+   Print("Updated:" + TimeToString(TimeCurrent(), TIME_MINUTES | TIME_SECONDS));
+   FrequentUpdates();
   }
 //+------------------------------------------------------------------+
 //| Trade function                                                   |
@@ -51,7 +78,7 @@ void OnTimer()
 void OnTrade()
   {
 //---
-   
+
   }
 //+------------------------------------------------------------------+
 //| TradeTransaction function                                        |
@@ -61,7 +88,7 @@ void OnTradeTransaction(const MqlTradeTransaction& trans,
                         const MqlTradeResult& result)
   {
 //---
-   
+
   }
 //+------------------------------------------------------------------+
 //| Tester function                                                  |
@@ -81,7 +108,7 @@ double OnTester()
 void OnTesterInit()
   {
 //---
-   
+
   }
 //+------------------------------------------------------------------+
 //| TesterPass function                                              |
@@ -89,7 +116,7 @@ void OnTesterInit()
 void OnTesterPass()
   {
 //---
-   
+
   }
 //+------------------------------------------------------------------+
 //| TesterDeinit function                                            |
@@ -97,7 +124,7 @@ void OnTesterPass()
 void OnTesterDeinit()
   {
 //---
-   
+
   }
 //+------------------------------------------------------------------+
 //| ChartEvent function                                              |
@@ -108,7 +135,7 @@ void OnChartEvent(const int id,
                   const string &sparam)
   {
 //---
-   
+
   }
 //+------------------------------------------------------------------+
 //| BookEvent function                                               |
@@ -116,6 +143,6 @@ void OnChartEvent(const int id,
 void OnBookEvent(const string &symbol)
   {
 //---
-   
+
   }
 //+------------------------------------------------------------------+

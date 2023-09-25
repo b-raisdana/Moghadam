@@ -2,18 +2,17 @@
 .idea
 /ta-lib/
 /.pytest_cache/
-/MetaTrader 5/logs/
-/MetaTrader 5/Terminal.ico
-
-/MetaTrader 5/uninstall.exe
-/MetaTrader 5/terminal64.exe
-/MetaTrader 5/Tester/
-/MetaTrader 5/Config/
-/MetaTrader 5/terminal640-portable.lnk
-/MetaTrader 5/Profiles/
-/MetaTrader 5/metatester64.exe
-/MetaTrader 5/MetaEditor64.exe
-/MetaTrader 5/Sounds/
-/MetaTrader 5/Bases/
-/MetaTrader 5/temp/
-/MetaTrader 5/MQL5/Logs/
+/MetaTrader5/logs/
+/MetaTrader5/Terminal.ico
+/MetaTrader5/uninstall.exe
+/MetaTrader5/terminal64.exe
+/MetaTrader5/Tester/
+/MetaTrader5/Config/
+/MetaTrader5/terminal640-portable.lnk
+/MetaTrader5/Profiles/
+/MetaTrader5/metatester64.exe
+/MetaTrader5/MetaEditor64.exe
+/MetaTrader5/Sounds/
+/MetaTrader5/Bases/
+/MetaTrader5/temp/
+/MetaTrader5/MQL5/Logs/
