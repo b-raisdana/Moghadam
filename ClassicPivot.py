@@ -3,6 +3,7 @@ import os
 import pandas as pd
 from pandera import typing as pt
 
+import helper
 from BullBearSidePivot import read_multi_timeframe_bull_bear_side_pivots
 from PivotsHelper import peaks_or_valleys_pivots_level_n_margins, pivot_margins, pivots_level_n_margins
 from Candle import read_multi_timeframe_ohlca
@@ -129,7 +130,7 @@ def read_multi_timeframe_top_pivots(date_range_str: str = None):
 def generate_multi_timeframe_top_pivots(date_range_str: str = None, file_path: str = config.path_of_data):
     # tops of timeframe which the timeframe is its pattern timeframe
     if date_range_str is None:
-        date_range_str = config.under_process_date_range
+        date_range_str = helper.under_process_date_range
     _tops_pivots = tops_pivots(date_range_str)
     # plot_multi_timeframe_pivots(_tops_pivots, name='multi_timeframe_top_pivots')
     _tops_pivots.to_csv(
@@ -161,7 +162,7 @@ def generate_multi_timeframe_pivot_levels(date_range_str: str = None):
             timeframe of top
     """
     if date_range_str is None:
-        date_range_str = config.under_process_date_range
+        date_range_str = helper.under_process_date_range
     multi_timeframe_bull_bear_side_pivots = read_multi_timeframe_bull_bear_side_pivots(date_range_str)
     multi_timeframe_anti_pattern_tops_pivots = read_multi_timeframe_top_pivots(date_range_str)
     # multi_timeframe_color_trend_pivots = read_multi_timeframe_color_trend_pivots()

@@ -4,6 +4,7 @@ from typing import List
 import pandas as pd
 from pandera import typing as pt
 
+import helper
 from BullBearSide import read_multi_timeframe_bull_bear_side_trends, previous_trend
 from Candle import read_multi_timeframe_ohlca
 from Config import config
@@ -59,7 +60,7 @@ def multi_timeframe_bull_bear_side_pivots(date_range_str: str = None, timeframe_
     :return:
     """
     if date_range_str is None:
-        date_range_str = config.under_process_date_range
+        date_range_str = helper.under_process_date_range
 
     multi_timeframe_trends = read_multi_timeframe_bull_bear_side_trends(date_range_str)
     multi_timeframe_peaks_n_valleys = read_multi_timeframe_peaks_n_valleys(date_range_str)
@@ -235,7 +236,7 @@ def generate_multi_timeframe_bull_bear_side_pivots(date_range_str: str = None,
     :return:
     """
     if date_range_str is None:
-        date_range_str = config.under_process_date_range
+        date_range_str = helper.under_process_date_range
     multi_timeframe_pivots = multi_timeframe_bull_bear_side_pivots(date_range_str, timeframe_shortlist)
     # plot_multi_timeframe_pivots(multi_timeframe_pivots, name='multi_timeframe_bull_bear_side_pivots')
     multi_timeframe_pivots.to_csv(

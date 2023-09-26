@@ -11,6 +11,7 @@ import pandera
 from pandas import Timedelta, DatetimeIndex, Timestamp
 from pandera import typing as pt
 
+import helper
 from Config import config, GLOBAL_CACHE
 from helper import log
 
@@ -79,7 +80,7 @@ def read_file(date_range_str: str, data_frame_type: str, generator: Callable, Ca
         or the DataFrame does not match the expected columns, the generator function is called to create the DataFrame.
     """
     if date_range_str is None:
-        date_range_str = config.under_process_date_range
+        date_range_str = helper.under_process_date_range
     df = None
     try:
         df = read_with_timeframe(data_frame_type, date_range_str, file_path, n_rows, skip_rows)
@@ -242,7 +243,7 @@ def read_with_timeframe(data_frame_type: str, date_range_str: str, file_path: st
         ohlc_data = read_with_timeframe('ohlc', '21-07-01.00-00T21-07-02', '/path/to/data/', n_rows=1000, skip_rows=0)
     """
     if date_range_str is None:
-        date_range_str = config.under_process_date_range
+        date_range_str = helper.under_process_date_range
     df = pd.read_csv(os.path.join(file_path, f'{data_frame_type}.{date_range_str}.zip'), sep=',', header=0,
                      index_col='date', parse_dates=['date'], skiprows=skip_rows, nrows=n_rows)
     if 'multi_timeframe' in data_frame_type:
@@ -367,7 +368,10 @@ def all_annotations(cls) -> ChainMap:
     return annotations  # ChainMap(*(c.__annotations__ for c in cls.__mro__ if '__annotations__' in c.__dict__))
 
 
-def cast_and_validate(data, ModelClass: pandera.DataFrameModel, return_bool: bool = False):
+def cast_and_validate(data, ModelClass: pandera.DataFrameModel, return_bool: bool = False,
+                      zero_size_allowed: bool = False):
+    if not zero_size_allowed and len(data) == 0:
+        raise Exception('Zero size data!')
     as_types = {}
     _all_annotations = all_annotations(ModelClass)
 

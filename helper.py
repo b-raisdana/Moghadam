@@ -2,7 +2,10 @@ import datetime
 import functools
 import time
 import traceback
+from datetime import datetime, timedelta
 from enum import Enum
+
+import pytz
 
 
 class LogSeverity(Enum):
@@ -23,7 +26,7 @@ def log(log_message: str, severity: LogSeverity = LogSeverity.WARNING, stack_tra
     Returns:
         None
     """
-    print(f'{severity.value}@{datetime.datetime.now().strftime("%m-%d.%H:%M:%S")}#{log_message}')
+    print(f'{severity.value}@{datetime.now().strftime("%m-%d.%H:%M:%S")}#{log_message}')
     if stack_trace:
         stack = traceback.extract_stack(limit=2 + 1)[:-1]  # Remove the last item
         traceback.print_list(stack)
@@ -51,3 +54,29 @@ def measure_time(func):
         return result
 
     return _measure_time
+
+
+def date_range(date_range_str):
+    start_date_string, end_date_string = date_range_str.split('T')
+    start_date = datetime.strptime(start_date_string, '%y-%m-%d.%H-%M')
+    end_date = datetime.strptime(end_date_string, '%y-%m-%d.%H-%M')
+    return start_date, end_date
+
+
+def under_process_date_range(end_date: datetime = None, days: float = 60) -> str:
+    if end_date is None:
+        end_date = today_morning()
+    start_date = end_date - timedelta(days=days)
+    return f'{start_date.strftime("%y-%m-%d.%H-%M")}T' \
+           f'{end_date.strftime("%y-%m-%d.%H-%M")}'
+
+
+def today_morning(tz=pytz.timezone('Asia/Tehran')) -> datetime:
+    return morning(datetime.now(tz))
+
+
+def morning(date_time: datetime, tz=pytz.timezone('Asia/Tehran')):
+    # return tz.localize(datetime.combine(date_time.date(), time(0, 0)), is_dst=None)
+    if date_time.tzinfo is None or date_time.tzinfo.utcoffset(date_time) is None:
+        date_time = tz.localize(date_time, is_dst=None)
+    return date_time.replace(hour=0, minute=0, second=0)
