@@ -38,7 +38,7 @@ bool ReadSymbolRates(string chart_symbol)
 // Open the CSV file
    CFileCSV csv;
    string file_name = chart_symbol+".ohlc.csv";
-   Print("Start reading "+file_name);
+   //Print("Start reading "+file_name);
    if(!csv.Open(file_name, FILE_READ|FILE_CSV|FILE_ANSI))
      {
       Print("Failed to open "+file_name+" file. Error code: ", GetLastError());
@@ -93,9 +93,11 @@ void ReadCustomSymbolsRates()
    for(int i = 0; i<ArraySize(custom_symbols); i++)
      {
       if(ReadSymbolRates(custom_symbols[i]))
-         Print(custom_symbols[i] + "ReadRates Succeed!");
+         //Print(custom_symbols[i] + "ReadRates Succeed!");
+         int nop = 0;
       else
-         Print(custom_symbols[i] + "ReadRates Failed!");
+         //Print(custom_symbols[i] + "ReadRates Failed!");
+         int nop = 0;
      }
   }
 //+------------------------------------------------------------------+

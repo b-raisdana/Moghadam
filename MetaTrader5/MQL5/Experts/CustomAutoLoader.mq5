@@ -30,7 +30,7 @@ void IntializationUpdates()
 //+------------------------------------------------------------------+
 void FrequentUpdates()
   {
-   EventSetTimer(5);
+   EventSetTimer(30);
    ReadCustomSymbolsRates();
    ReadIndicatorUpdates();
   }
@@ -40,8 +40,8 @@ void FrequentUpdates()
 int OnInit()
   {
 //--- create timer
-   Print("CustomAutoLoader OnInit");
-   EventSetTimer(300);
+   //Print("CustomAutoLoader OnInit");
+   //EventSetTimer(300);
    IntializationUpdates();
    OnTimer();
    return(INIT_SUCCEEDED);
@@ -68,8 +68,8 @@ void OnTick()
 //+------------------------------------------------------------------+
 void OnTimer()
   {
-   Comment("\r\n\r\nLast Updated:" + TimeToString(TimeCurrent(), TIME_MINUTES | TIME_SECONDS));
-   Print("Updated:" + TimeToString(TimeCurrent(), TIME_MINUTES | TIME_SECONDS));
+   Comment("\r\n\r\n\r\n\r\n\r\nLast Updated:" + TimeToString(TimeCurrent(), TIME_MINUTES | TIME_SECONDS));
+   //Print("Updated:" + TimeToString(TimeCurrent(), TIME_MINUTES | TIME_SECONDS));
    FrequentUpdates();
   }
 //+------------------------------------------------------------------+
