@@ -10,10 +10,12 @@ from os import path, remove
 from pathlib import Path
 from typing import Union, List
 
+import psutil
 from pandera import typing as pt
 
 from DataPreparation import map_symbol, extract_file_info, FileInfoSet
 from Model.MultiTimeframeOHLC import OHLCV
+from helper import log
 
 # def mt5_client() -> Mt5:
 #     global META_TRADER_IS_INITIALIZED
@@ -42,25 +44,25 @@ def tree_to_dict(element: ET.Element) -> dict:
 
 
 def compare_tree(left: ET.Element, right: ET.Element, path_to_root: List[str] = []) -> bool:
-    compare_ignored_keys = ['id', 'scale_fixed_max', 'position_time', 'scale_fixed_min']
+    compare_ignored_keys = ['id', 'scale_fixed_max', 'position_time', 'scale_fixed_min', 'window_type', 'shift_size']
     result = True
     if left.tag != right.tag:
-        print(f"{path_to_root}->{left.tag}: Different tags ({left.tag} / {right.tag})")
+        log(f"{path_to_root}->{left.tag}: Different tags ({left.tag} / {right.tag})", stack_trace=False)
         result = False
     left_only_attributes = set(left.attrib.keys()).difference(right.attrib.keys())
     if len(left_only_attributes) > 0:
-        print(f"{path_to_root}->{left.tag}[{','.join(left_only_attributes)}]: "
-              f"attributes only in right_element!")
+        log(f"{path_to_root}->{left.tag}[{','.join(left_only_attributes)}]: "
+            f"attributes only in right_element!", stack_trace=False)
         result = False
     right_only_attributes = set(right.attrib.keys()).difference(left.attrib.keys())
     if len(right_only_attributes) > 0:
-        print(f"{path_to_root}->{left.tag}[{','.join(right_only_attributes)}]: "
-              f"attributes only in right_element!")
+        log(f"{path_to_root}->{left.tag}[{','.join(right_only_attributes)}]: "
+            f"attributes only in right_element!", stack_trace=False)
         result = False
     for key in set(left.attrib.keys()).intersection(right.attrib.keys()):
         if key not in compare_ignored_keys and left.attrib[key] != right.attrib[key]:
-            print(f"{path_to_root}->{left.tag}[{key}]: "
-                  f"\{left.attrib[key]} != {right.attrib[key]}")
+            log(f"{path_to_root}->{left.tag}[{key}]: "
+                f"\{left.attrib[key]} != {right.attrib[key]}", stack_trace=False)
             result = False
     left_as_dict = {}
     for child in left:
@@ -70,13 +72,13 @@ def compare_tree(left: ET.Element, right: ET.Element, path_to_root: List[str] = 
         right_as_dict[child.tag] = child
     left_only_children_tags = set(left_as_dict.keys()).difference(right_as_dict.keys())
     if len(left_only_children_tags) > 0:
-        print(f"{path_to_root}->{left.tag}[{','.join(left_only_children_tags)}]: "
-              f"children only in left_element!")
+        log(f"{path_to_root}->{left.tag}[{','.join(left_only_children_tags)}]: "
+            f"children only in left_element!", stack_trace=False)
         result = False
     right_only_children_tags = set(right_as_dict.keys()).difference(left_as_dict.keys())
     if len(right_only_children_tags) > 0:
-        print(f"{path_to_root}->{left.tag}[{','.join(right_only_children_tags)}]: "
-              f"children only in right_element!")
+        log(f"{path_to_root}->{left.tag}[{','.join(right_only_children_tags)}]: "
+            f"children only in right_element!", stack_trace=False)
         result = False
     for key in set(left_as_dict.keys()).intersection(set(right_as_dict.keys())):
         result = result and compare_tree(left_as_dict[key], right_as_dict[key], path_to_root + [left.tag])
@@ -302,14 +304,29 @@ class MT:
     @classmethod
     def run_by_autoit(cls):
         cls.check_for_requirements()
-
+        cls.close_meta_trader()
         # Use subprocess to run the script
         result = subprocess.run([cls.autoit_executable_path, cls.autoit_script_path], stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE)
 
         # Print the result
-        print("STDOUT:", result.stdout.decode('utf-8'))
-        print("STDERR:", result.stderr.decode('utf-8'))
+        log("STDOUT:" + result.stdout.decode('utf-8'), stack_trace=False)
+        log("STDERR:" + result.stderr.decode('utf-8'), stack_trace=False)
+
+    @classmethod
+    def close_meta_trader(cls):
+        # Define the process name for MetaTrader 5
+        process_names = ["terminal.exe", "terminal64.exe"]
+        # Check if MetaTrader 5 is running
+        for process in psutil.process_iter(attrs=['pid', 'name']):
+            if process.info['name'] in process_names:
+                log(f"Found MetaTrader 5 running with PID: {process.pid}", stack_trace=False)
+                # Terminate the MetaTrader 5 process
+                try:
+                    psutil.Process(process.pid).terminate()
+                    log(f"MetaTrader 5 terminated successfully (pid={process.pid}).", stack_trace=False)
+                except psutil.NoSuchProcess:
+                    log(f"MetaTrader 5 process not found (pid={process.pid}).", stack_trace=False)
 
     @classmethod
     def check_custom_profile_chart_content(cls):
@@ -332,7 +349,7 @@ class MT:
         chart_root = text_to_attribute(chart_root)
         original_root = text_to_attribute(original_root)
 
-        # Compare the XML elements recursively and print differences
+        # Compare the XML elements recursively and log differences
         if not compare_tree(chart_root, original_root):
             raise Exception('chart_root and original_root are not the same')
 
