@@ -11,6 +11,7 @@ from Config import config
 from DataPreparation import single_timeframe, expected_movement_size, trigger_timeframe, read_file, \
     cast_and_validate, anti_pattern_timeframe
 from FigurePlotter.Pivot_plotter import plot_multi_timeframe_pivots
+from MetaTrader import MT
 from Model.BullBearSide import BullBearSide
 from Model.MultiTimeframePivot import MultiTimeframePivot
 from Model.Pivot import BullBearSidePivot
@@ -242,6 +243,7 @@ def generate_multi_timeframe_bull_bear_side_pivots(date_range_str: str = None,
     multi_timeframe_pivots.to_csv(
         os.path.join(file_path, f'multi_timeframe_bull_bear_side_pivots.{date_range_str}.zip'),
         compression='zip')
+    MT.extract_to_data_path(os.path.join(file_path, f'multi_timeframe_bull_bear_side_pivots.{date_range_str}.zip'))
 
     """
         in all boundaries with movement >= 1 ATR:

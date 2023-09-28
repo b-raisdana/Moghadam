@@ -146,4 +146,4 @@ def generate_ohlc(date_range_str: str = None, file_path: str = config.path_of_da
     cast_and_validate(df, OHLCV)
     df.to_csv(os.path.join(file_path, f'ohlc.{date_range_str}.zip'),
               compression='zip')
-    MT.extract_to_data_path(os.path.join(file_path, f'ohlc.{date_range_str}.zip'), )
+    MT.extract_to_data_path(os.path.join(file_path, f'ohlc.{date_range_str}.zip'))

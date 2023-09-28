@@ -5,6 +5,7 @@ from pandera import typing as pt
 
 import helper
 from BullBearSidePivot import read_multi_timeframe_bull_bear_side_pivots
+from MetaTrader import MT
 from PivotsHelper import peaks_or_valleys_pivots_level_n_margins, pivot_margins, pivots_level_n_margins
 from Candle import read_multi_timeframe_ohlca
 from Model.MultiTimeframeOHLC import OHLCV
@@ -134,8 +135,9 @@ def generate_multi_timeframe_top_pivots(date_range_str: str = None, file_path: s
     _tops_pivots = tops_pivots(date_range_str)
     # plot_multi_timeframe_pivots(_tops_pivots, name='multi_timeframe_top_pivots')
     _tops_pivots.to_csv(
-        os.path.join(file_path, f'multi_timeframe_bull_bear_side_pivots.{date_range_str}.zip'),
+        os.path.join(file_path, f'multi_timeframe_top_pivots.{date_range_str}.zip'),
         compression='zip')
+    MT.extract_to_data_path(os.path.join(file_path, f'multi_timeframe_top_pivots.{date_range_str}.zip'))
 
 
 @measure_time
