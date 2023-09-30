@@ -210,7 +210,7 @@ def multi_timeframe_bull_bear_side_pivots(date_range_str: str = None, timeframe_
 def read_multi_timeframe_bull_bear_side_pivots(date_range_str: str = None) \
         -> pt.DataFrame[MultiTimeframePivot]:
     result = read_file(date_range_str, 'multi_timeframe_bull_bear_side_pivots',
-                       generate_multi_timeframe_bull_bear_side_pivots < MultiTimeframePivot)
+                       generate_multi_timeframe_bull_bear_side_pivots, MultiTimeframePivot)
     return result
 
 

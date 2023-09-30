@@ -55,17 +55,29 @@ int DrawColoredBox(datetime start, datetime end, double top, double bottom, colo
 //|                                                                  |
 //+------------------------------------------------------------------+
 int DrawColoredBox(datetime start, datetime end, double top, double bottom, color fill_color, string object_name,
-                   color border_color, int chart_id)
+                   color border_color, long chart_id)
   {
-   int rectangle_handle = ObjectCreate(chart_id, object_name, OBJ_RECTANGLE_LABEL, 0, start, bottom, end, top);
-   ObjectSetInteger(chart_id, object_name, OBJPROP_FILL, fill_color);
-   ObjectSetInteger(chart_id, object_name, OBJPROP_COLOR, border_color);
+//if(!ObjectCreate(chart_ID,name,OBJ_RECTANGLE,sub_window,time1,price1,time2,price2))
+   int rectangle_handle =ObjectCreate(chart_id, object_name, OBJ_RECTANGLE, 0, start, bottom, end, top);
+   if(! rectangle_handle)
+     {
+      Print(__FUNCTION__,
+            ": failed to create a rectangle! Error code = ",GetLastError());
+      return(false);
+     }
+   ObjectSetInteger(chart_id, object_name, OBJPROP_FILL, clrNONE);
+   if(fill_color!=NULL)
+     {
+      uint effective_fill_color = ColorToARGB(fill_color, 0xf0);
+      ObjectSetInteger(chart_id, object_name, OBJPROP_FILL, clrNONE);//fill_color);
+     }
+   ObjectSetInteger(chart_id, object_name, OBJPROP_COLOR, border_color);//border_color);
    if(border_color == NULL)
-      ObjectSetInteger(chart_id, object_name, OBJPROP_WIDTH, 1);
-   ObjectSetInteger(chart_id, object_name, OBJPROP_SELECTABLE, false);
-   ObjectSetInteger(chart_id, object_name, OBJPROP_SELECTED, false);
-   ObjectSetInteger(chart_id, object_name, OBJPROP_RAY_RIGHT, false);
-   ObjectSetInteger(chart_id, object_name, OBJPROP_STYLE, STYLE_SOLID);
+      ObjectSetInteger(chart_id, object_name, OBJPROP_WIDTH, 0);
+//ObjectSetInteger(chart_id, object_name, OBJPROP_SELECTABLE, false);
+//ObjectSetInteger(chart_id, object_name, OBJPROP_SELECTED, false);
+//ObjectSetInteger(chart_id, object_name, OBJPROP_RAY_RIGHT, false);
+//ObjectSetInteger(chart_id, object_name, OBJPROP_STYLE, STYLE_SOLID);
    return rectangle_handle;
   }
 
@@ -95,6 +107,8 @@ int load_classic_levels(string level_type)
         }
       while(fileCSV.Read(line))
         {
+         //if(line!="4H,2023-08-04 20:45:00,28800.5,28969.8,28769.572962385162,2023-08-04 20:45:00,2023-08-26 04:45:00,,,0,")
+         //   continue;
          string parts[];
          StringSplit(line, ',', parts);
          string timeframe = parts[0];
@@ -150,12 +164,12 @@ int load_classic_levels(string level_type)
          if(StringLen(archived_at_str)>0)
             tooltip_text += StringFormat("Archived: %s", archived_at_str);
          // Draw the colored box
-         DrawColoredBox(activation_time, end_time, internal_margin, breakout_margin, clrBlue, object_name, NULL, chart_id);
+         DrawColoredBox(activation_time, end_time, internal_margin, breakout_margin, timeframe_color, object_name, timeframe_color, 0);
          ObjectSetString(chart_id, object_name, OBJPROP_TOOLTIP, tooltip_text);
          // Draw the blue horizontal line
          ObjectCreate(chart_id, object_name + "-L", OBJ_TREND, 0, date, level, end_time, level);
          ObjectSetInteger(chart_id, object_name + "-L", OBJPROP_COLOR, clrBlue);
-         ObjectSetInteger(chart_id, object_name + "-L", OBJPROP_RAY_RIGHT, true);
+         ObjectSetInteger(chart_id, object_name + "-L", OBJPROP_RAY_RIGHT, false);
          ObjectSetString(chart_id, object_name + "-L", OBJPROP_TOOLTIP, tooltip_text);
          SetObjectTimeframes(object_name);
          counter++;

@@ -129,7 +129,8 @@ def read_multi_timeframe_top_pivots(date_range_str: str = None):
 
 @measure_time
 def generate_multi_timeframe_top_pivots(date_range_str: str = None, file_path: str = config.path_of_data):
-    # tops of timeframe which the timeframe is its pattern timeframe
+    # tops of timeframe which the timeframe C
+    # is its pattern timeframe
     if date_range_str is None:
         date_range_str = helper.under_process_date_range
     _tops_pivots = tops_pivots(date_range_str)
