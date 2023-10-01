@@ -114,7 +114,7 @@ int load_tops()
          if(end_time == NULL  || end_time <  time)
             end_time = time;
 
-         color timeframe_color = TimeFrameColor(timeframe);
+         color timeframe_color = TimeframeColor(timeframe);
          string object_name;
          if(peak_or_valley == "valley")
            {

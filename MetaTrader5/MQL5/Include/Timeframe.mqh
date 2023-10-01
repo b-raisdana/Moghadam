@@ -3,6 +3,14 @@
 //|                                                          Behrooz |
 //|                                             https://www.mql5.com |
 //+------------------------------------------------------------------+
+input bool show_1min = true;
+input bool show_5min = true;
+input bool show_15min = true;
+input bool show_1H = true;
+input bool show_4H = true;
+input bool show_1D = true;
+input bool show_1W = true;
+
 #property copyright "Behrooz"
 #property link      "https://www.mql5.com"
 //+------------------------------------------------------------------+
@@ -109,7 +117,7 @@ color timeframe_color_map[] =
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
-color             TimeFrameColor(string timeframe)
+color             TimeframeColor(string timeframe)
   {
    int timeframe_index = TimeframeToIndex(timeframe);
    int number_of_colors = ArraySize(timeframe_color_map);
@@ -196,22 +204,13 @@ void              SetObjectTimeframes(string object_name)
   {
    string timeframe = ObjectTimeframe(object_name);
    int timeframes_to_display = CombineGeTimeframes(timeframe);
-   Print(object_name+" timeframes_to_display:"+timeframes_to_display);
+   //Print(object_name+" timeframes_to_display:"+timeframes_to_display);
    if(!ObjectSetInteger(0, object_name, OBJPROP_TIMEFRAMES, timeframes_to_display))
      {
       Print("Failed to set object timeframes. Error code: ", GetLastError());
      }
   }
-//+------------------------------------------------------------------+
 
-//+------------------------------------------------------------------+
-input bool show_1min = true;
-input bool show_5min = true;
-input bool show_15min = true;
-input bool show_1H = true;
-input bool show_4H = true;
-input bool show_1D = true;
-input bool show_1W = true;
 
 //+------------------------------------------------------------------+
 //|                                                                  |

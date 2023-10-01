@@ -9,44 +9,14 @@
 
 #include <FileCSV.mqh>
 #include <Arrays\ArrayString.mqh>
+#include <Canvas\Canvas.mqh>
 #include <Timeframe.mqh>
 
-#include <Canvas/Canvas.mqh>
-//+------------------------------------------------------------------+
-//| Expert initialization function                                   |
-//+------------------------------------------------------------------+
-//void update_object_display()
-//  {
-//   Print("update_object_display started");
-//   int chart_period = ChartPeriod();
-//   Print("Chart period:" + IntegerToString(chart_period));
-//   int totalObjects = ObjectsTotal(0);
-//   int hidden_object_count = 0;
-//   int visible_object_count = 0;
-//
-//   for(int i = 0; i < totalObjects; i++)
-//     {
-//      string object_name = ObjectName(0, i);
-//      if(chart_period <= TimeframeToPeriod(timeframe) && ShouldDisplayTimeframe(timeframe))
-//        {
-//         Print(chart_period+" <= "+timeframe+"/"+TimeframeToPeriod(timeframe));
-//         ObjectSetInteger(0, object_name, OBJPROP_HIDDEN, false);
-//         visible_object_count++;
-//        }
-//      else
-//        {
-//         Print(chart_period+" > "+timeframe+"/"+TimeframeToPeriod(timeframe));
-//         ObjectSetInteger(0, object_name, OBJPROP_HIDDEN, true);
-//         hidden_object_count++;
-//        }
-//     }
-//   Print(IntegerToString(visible_object_count) + " Visible and " +
-//         IntegerToString(hidden_object_count) + " Hidden objects updated.");
-//  }
+bool classic_levels_are_loaded = false;
+
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
-// Function to draw a colored box
 int DrawColoredBox(datetime start, datetime end, double top, double bottom, color fill_color, string object_name)
   {
    return DrawColoredBox(start, end, top, bottom, fill_color, object_name, NULL, 0);
@@ -57,30 +27,6 @@ int DrawColoredBox(datetime start, datetime end, double top, double bottom, colo
 int DrawColoredBox(datetime start, datetime end, double top, double bottom, color fill_color, string object_name,
                    color border_color, long chart_id)
   {
-//if(!ObjectCreate(chart_ID,name,OBJ_RECTANGLE,sub_window,time1,price1,time2,price2))
-//   int           x1, y1, x2, y2;
-//   ChartTimePriceToXY(
-//      chart_id,      // Chart ID
-//      0,             // The number of the subwindow
-//      start,         // Time on the chart
-//      bottom,        // Price on the chart
-//      x1,            // The X coordinate for the time on the chart
-//      y1             // The Y coordinates for the price on the chart
-//   );
-//   ChartTimePriceToXY(
-//      chart_id,      // Chart ID
-//      0,             // The number of the subwindow
-//      end,         // Time on the chart
-//      top,        // Price on the chart
-//      x2,            // The X coordinate for the time on the chart
-//      y2             // The Y coordinates for the price on the chart
-//   );
-//   CCanvas box;
-//   box.FillRectangle(x1, y1, x2, y2,ColorToARGB(fill_color,0x10));
-////   Print("Error in DrawColoredBox:" + GetLastError() );
-////}
-//   return &box;
-
    int rectangle_handle =ObjectCreate(chart_id, object_name, OBJ_RECTANGLE, 0, start, bottom, end, top);
    if(! rectangle_handle)
      {
@@ -158,7 +104,7 @@ int load_classic_levels(string level_type)
          bool is_overlap_of = StringToInteger(is_overlap_of_str) == 1;
 
          // Determine the box color based on timeframe
-         color timeframe_color = TimeFrameColor(timeframe);
+         color timeframe_color = TimeframeColor(timeframe);
 
          // Calculate the end time (min of deactivated_at, ttl, current time + 1 day)
          if(deactivated_at==NULL)
@@ -210,66 +156,131 @@ int load_classic_levels(string level_type)
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
-bool classic_levels_are_loaded = false;
-void test_draw_box()
-  {
-   string input_text = "1H,2023-09-30 13:12:00,26907.5,26918.3,26904.72237003385,2023-09-30 13:12:00,2023-10-05 21:12:00,,,0,\n1H,2023-09-30 15:46:00,27092.0,27041.2,27100.32856322383,2023-09-30 15:46:00,2023-10-05 23:46:00,,,0,";
-   string lines[];
-   StringSplit(input_text, '\n', lines);
-//int           x1, y1, x2, y2;
-//ChartTimePriceToXY(
-//   chart_id,      // Chart ID
-//   0,             // The number of the subwindow
-//   start,         // Time on the chart
-//   bottom,        // Price on the chart
-//   x1,            // The X coordinate for the time on the chart
-//   y1             // The Y coordinates for the price on the chart
-//);
-//ChartTimePriceToXY(
-//   chart_id,      // Chart ID
-//   0,             // The number of the subwindow
-//   end,         // Time on the chart
-//   top,        // Price on the chart
-//   x2,            // The X coordinate for the time on the chart
-//   y2             // The Y coordinates for the price on the chart
-//);
-//double p1, p2;
-//int sub1, sub2;
-//datetime t1, t2;
-//ChartXYToTimePrice(0, 0,0,sub1,t1, p1);
-//ChartXYToTimePrice(0, 100,100,sub2,t2, p2);
-//CCanvas box;
-//box.FillRectangle(0, 0, 100, 100,clrBlue);//ColorToARGB(clrBlue,0x10));
-//box.Update(true);
-   datetime t1, t2;
-   t1 = StringToTime("2023-09-30 13:12:00");
-   t2 = StringToTime("2023-09-29 13:12:00");
-   ObjectCreate(0, "TTT", OBJ_RECTANGLE, 0, t1, 26907.5, t2, 26918.3);
-   DrawColoredBox(
-      t1,               //datetime start,
-      t2,               //datetime end,
-      26907.5,          //double top,
-      26918.3,          //double bottom,
-      clrRed,           //color fill_color,
-      "Test_Object",    //string object_name,
-      clrYellow,        //color border_color,
-      0                 //long chart_id)
-      );
-    ChartRedraw(0);
-  }
 //+------------------------------------------------------------------+
 //|                                                                  |
+//+------------------------------------------------------------------+
+bool timeframe_legend_printed = false;
+string timeframes [] =
+  {
+   "1min",
+   "5min",
+   "15min",
+   "1H",
+   "4H",
+   "1D",
+   "1W"
+  };
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+void TimeframeLegend(long chart_id)
+  {
+   CCanvas canvas1;
+   datetime window_corner_time, window_corner_time2;
+   double window_corner_price, window_corner_price2;
+   int sub_windows;
+   ChartXYToTimePrice(0, 0, 0, sub_windows, window_corner_time, window_corner_price);
+   ChartXYToTimePrice(0, 100, 200, sub_windows, window_corner_time2, window_corner_price2);
+   if(!timeframe_legend_printed)
+     {
+      for(int i=0; i<ArraySize(timeframes); i++)
+        {
+         //CCanvas canvas;
+         //int x = 10, y;
+         //y = 10 + i * 20;
+         ////ObjectCreate(0, "Legend-"+timeframes[i],OBJ_RECTANGLE_LABEL,0, TimeCurrent());
+         //if(!canvas.CreateBitmap(
+         //      "Legend-"+timeframes[i],         // name
+         //      TimeCurrent(),                   // time
+         //      27000,                           // price
+         //      200,                             // width
+         //      200,                             // height
+         //      COLOR_FORMAT_ARGB_NORMALIZE      // format
+         //      //chart_id,                              // chart identifier
+         //      //0,
+         //      //"Legend-"+timeframes[i],                               // object name
+         //      //200,                                 // image width in pixels
+         //      //ArraySize(timeframes)*20,                                // image height in pixels
+         //      //COLOR_FORMAT_ARGB_NORMALIZE       // color processing method
+         //   ))
+         //  {
+         //   Print("Failed canvas.Attach:" + GetLastError());
+         //  }
+         //canvas.FillRectangle(x, y, x + 100, y+10, TimeframeColor(timeframes[i]));
+         //canvas.TextOut(x, y, timeframes[i], clrBlack);
+         //canvas.Update(true);
+         int x = 10, y;
+         y = 10 + i * 20;
+
+         string objName = "Legend-"+timeframes[i];
+         //if(!ObjectCreate(chart_id, objName, OBJ_RECTANGLE_LABEL, 0, TimeCurrent(), 27000))
+         //  {
+         //   Print("Failed to create object:" + GetLastError());
+         //   continue;
+         //  }
+         //if(!(
+         //      ObjectSetInteger(chart_id, objName, OBJPROP_XDISTANCE, x) &&
+         //      ObjectSetInteger(chart_id, objName, OBJPROP_YDISTANCE, y) &&
+         //      ObjectSetInteger(chart_id, objName, OBJPROP_XSIZE, 200) &&
+         //      ObjectSetInteger(chart_id, objName, OBJPROP_YSIZE, 20) &&
+         //      //ObjectSetInteger(chart_id, objName, OBJPROP_BGCOLOR, TimeframeColor(timeframes[i])) &&
+         //      ObjectSetInteger(chart_id, objName, OBJPROP_COLOR, clrBlack) &&
+         //      //ObjectSetInteger(chart_id, objName, OBJPROP_FILL, true) &&
+         //      //ObjectSetInteger(chart_id, objName, OBJPROP_BACK, true) &&
+         //      ObjectSetInteger(chart_id, objName, OBJPROP_CORNER, CORNER_LEFT_UPPER) &&
+         //      ObjectSetInteger(chart_id, objName, OBJPROP_STYLE, STYLE_SOLID) &&
+         //      ObjectSetInteger(0, objName, OBJPROP_SELECTED, false) &&
+         //      ObjectSetInteger(0, objName, OBJPROP_SELECTABLE, false) &&
+         //      ObjectSetString(chart_id, objName, OBJPROP_TEXT, timeframes[i])
+         //   ))
+         //  {
+         //   Print("Failed to modify object:" + GetLastError());
+         //  }
+         if(!ObjectCreate(chart_id, objName + "-t", OBJ_LABEL, 0, 0, 0))
+           {
+            Print("Failed to create object:" + GetLastError());
+            continue;
+           }
+         if(!(
+               ObjectSetInteger(chart_id, objName, OBJPROP_XDISTANCE, x) &&
+               ObjectSetInteger(chart_id, objName, OBJPROP_YDISTANCE, y) &&
+               // ObjectSetInteger(chart_id, objName, OBJPROP_BGCOLOR, TimeframeColor(timeframes[i])) &&
+               ObjectSetInteger(chart_id, objName, OBJPROP_COLOR, TimeframeColor(timeframes[i])) &&
+               ObjectSetInteger(chart_id, objName, OBJPROP_FILL, true) &&
+               ObjectSetInteger(chart_id, objName, OBJPROP_BACK, true) &&
+               ObjectSetInteger(chart_id, objName, OBJPROP_CORNER, CORNER_LEFT_UPPER) &&
+               ObjectSetInteger(chart_id, objName, OBJPROP_STYLE, STYLE_SOLID) &&
+               ObjectSetInteger(0, objName, OBJPROP_SELECTED, true) &&
+               ObjectSetInteger(0, objName, OBJPROP_SELECTABLE, true) &&
+               ObjectSetString(chart_id, objName, OBJPROP_TEXT, timeframes[i])
+            ))
+           {
+            Print("Failed to modify object:" + GetLastError());
+           }
+         PrintFormat("0x%.8X - clrBlue",TimeframeColor(timeframes[i]));
+        }
+     }
+  }
+//+------------------------------------------------------------------+
+//| Expert initialization function                                   |
 //+------------------------------------------------------------------+
 int OnInit()
   {
    Print("ClassicLevels OnInit");
-   test_draw_box();
-//   if(!classic_levels_are_loaded)
-//     {
-//      load_classic_levels("top");
-//      //load_classic_levels("bull_bear_side");
-//     }
-////update_object_display();
+//test_draw_box();
+   if(!classic_levels_are_loaded)
+     {
+      long chart_id = ChartID();
+      TimeframeLegend(chart_id);
+      //load_classic_levels("top");
+      ChartRedraw();
+      //load_classic_levels("bull_bear_side");
+     }
+   else
+     {
+      Print("classic_levels_are_loaded");
+     }
+//update_object_display();
    return(0);
   }
 
