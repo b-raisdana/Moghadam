@@ -11,7 +11,7 @@
 #include <Arrays\ArrayString.mqh>
 #include <Timeframe.mqh>
 
-
+#include <Canvas/Canvas.mqh>
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
@@ -58,6 +58,29 @@ int DrawColoredBox(datetime start, datetime end, double top, double bottom, colo
                    color border_color, long chart_id)
   {
 //if(!ObjectCreate(chart_ID,name,OBJ_RECTANGLE,sub_window,time1,price1,time2,price2))
+//   int           x1, y1, x2, y2;
+//   ChartTimePriceToXY(
+//      chart_id,      // Chart ID
+//      0,             // The number of the subwindow
+//      start,         // Time on the chart
+//      bottom,        // Price on the chart
+//      x1,            // The X coordinate for the time on the chart
+//      y1             // The Y coordinates for the price on the chart
+//   );
+//   ChartTimePriceToXY(
+//      chart_id,      // Chart ID
+//      0,             // The number of the subwindow
+//      end,         // Time on the chart
+//      top,        // Price on the chart
+//      x2,            // The X coordinate for the time on the chart
+//      y2             // The Y coordinates for the price on the chart
+//   );
+//   CCanvas box;
+//   box.FillRectangle(x1, y1, x2, y2,ColorToARGB(fill_color,0x10));
+////   Print("Error in DrawColoredBox:" + GetLastError() );
+////}
+//   return &box;
+
    int rectangle_handle =ObjectCreate(chart_id, object_name, OBJ_RECTANGLE, 0, start, bottom, end, top);
    if(! rectangle_handle)
      {
@@ -188,15 +211,65 @@ int load_classic_levels(string level_type)
 //|                                                                  |
 //+------------------------------------------------------------------+
 bool classic_levels_are_loaded = false;
+void test_draw_box()
+  {
+   string input_text = "1H,2023-09-30 13:12:00,26907.5,26918.3,26904.72237003385,2023-09-30 13:12:00,2023-10-05 21:12:00,,,0,\n1H,2023-09-30 15:46:00,27092.0,27041.2,27100.32856322383,2023-09-30 15:46:00,2023-10-05 23:46:00,,,0,";
+   string lines[];
+   StringSplit(input_text, '\n', lines);
+//int           x1, y1, x2, y2;
+//ChartTimePriceToXY(
+//   chart_id,      // Chart ID
+//   0,             // The number of the subwindow
+//   start,         // Time on the chart
+//   bottom,        // Price on the chart
+//   x1,            // The X coordinate for the time on the chart
+//   y1             // The Y coordinates for the price on the chart
+//);
+//ChartTimePriceToXY(
+//   chart_id,      // Chart ID
+//   0,             // The number of the subwindow
+//   end,         // Time on the chart
+//   top,        // Price on the chart
+//   x2,            // The X coordinate for the time on the chart
+//   y2             // The Y coordinates for the price on the chart
+//);
+//double p1, p2;
+//int sub1, sub2;
+//datetime t1, t2;
+//ChartXYToTimePrice(0, 0,0,sub1,t1, p1);
+//ChartXYToTimePrice(0, 100,100,sub2,t2, p2);
+//CCanvas box;
+//box.FillRectangle(0, 0, 100, 100,clrBlue);//ColorToARGB(clrBlue,0x10));
+//box.Update(true);
+   datetime t1, t2;
+   t1 = StringToTime("2023-09-30 13:12:00");
+   t2 = StringToTime("2023-09-29 13:12:00");
+   ObjectCreate(0, "TTT", OBJ_RECTANGLE, 0, t1, 26907.5, t2, 26918.3);
+   DrawColoredBox(
+      t1,               //datetime start,
+      t2,               //datetime end,
+      26907.5,          //double top,
+      26918.3,          //double bottom,
+      clrRed,           //color fill_color,
+      "Test_Object",    //string object_name,
+      clrYellow,        //color border_color,
+      0                 //long chart_id)
+      );
+    ChartRedraw(0);
+  }
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
 int OnInit()
   {
    Print("ClassicLevels OnInit");
-   if(!classic_levels_are_loaded)
-     {
-      load_classic_levels("top");
-      //load_classic_levels("bull_bear_side");
-     }
-//update_object_display();
+   test_draw_box();
+//   if(!classic_levels_are_loaded)
+//     {
+//      load_classic_levels("top");
+//      //load_classic_levels("bull_bear_side");
+//     }
+////update_object_display();
    return(0);
   }
 
