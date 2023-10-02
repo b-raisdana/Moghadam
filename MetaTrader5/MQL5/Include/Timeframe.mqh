@@ -13,6 +13,19 @@ input bool show_1W = true;
 
 #property copyright "Behrooz"
 #property link      "https://www.mql5.com"
+
+bool timeframe_legend_printed = false;
+string timeframes [] =
+  {
+   "1min",
+   "5min",
+   "15min",
+   "1H",
+   "4H",
+   "1D",
+   "1W"
+  };
+
 //+------------------------------------------------------------------+
 //|                                                                  |
 //+------------------------------------------------------------------+
@@ -108,7 +121,7 @@ color timeframe_color_map[] =
    clrRed,              // 1min
    clrOrange,           // 5min
    clrYellow,           // 15min
-   clrLemonChiffon,     // 1H
+   //clrLemonChiffon,     // 1H
    clrGreen,            // 4H
    clrCyan,             // 1D
    C'1F,45,6E',             // 4D
@@ -233,4 +246,47 @@ bool ShouldDisplayTimeframe(string timeframe)
       return show_1W;
    Print("Unsupported timeframe for ShouldDisplayTimeframe:" + timeframe);
    return false;
+  }
+  
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+void TimeframeLegend(long chart_id)
+  {
+   datetime window_corner_time, window_corner_time2;
+   double window_corner_price, window_corner_price2;
+   int sub_windows;
+   ChartXYToTimePrice(0, 0, 0, sub_windows, window_corner_time, window_corner_price);
+   ChartXYToTimePrice(0, 100, 200, sub_windows, window_corner_time2, window_corner_price2);
+   if(!timeframe_legend_printed)
+     {
+      for(int i=0; i<ArraySize(timeframes); i++)
+        {
+         int x = 5, y;
+         y = 50 + i * 20;
+         string objName = "Legend-"+timeframes[i];
+         if(!ObjectCreate(chart_id, objName + "-t", OBJ_LABEL, 0, 0, 0))
+           {
+            Print("Failed to create object:" + GetLastError());
+            continue;
+           }
+         if(!(
+               ObjectSetInteger(chart_id, objName + "-t", OBJPROP_XDISTANCE, x) &&
+               ObjectSetInteger(chart_id, objName + "-t", OBJPROP_YDISTANCE, y) &&
+               // ObjectSetInteger(chart_id, objName, OBJPROP_BGCOLOR, TimeframeColor(timeframes[i])) &&
+               ObjectSetInteger(chart_id, objName + "-t", OBJPROP_COLOR, TimeframeColor(timeframes[i])) &&
+               ObjectSetInteger(chart_id, objName + "-t", OBJPROP_FILL, true) &&
+               ObjectSetInteger(chart_id, objName + "-t", OBJPROP_BACK, true) &&
+               ObjectSetInteger(chart_id, objName + "-t", OBJPROP_CORNER, CORNER_LEFT_UPPER) &&
+               ObjectSetInteger(chart_id, objName + "-t", OBJPROP_STYLE, STYLE_SOLID) &&
+               ObjectSetInteger(0, objName + "-t", OBJPROP_SELECTED, false) &&
+               ObjectSetInteger(0, objName + "-t", OBJPROP_SELECTABLE, false) &&
+               ObjectSetString(chart_id, objName + "-t", OBJPROP_TEXT, timeframes[i])
+            ))
+           {
+            Print("Failed to modify object:" + GetLastError());
+           }
+         PrintFormat("0x%.8X - clrBlue",TimeframeColor(timeframes[i]));
+        }
+     }
   }

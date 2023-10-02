@@ -22,6 +22,10 @@ def rally_base_drop(peaks_n_valleys: pd):
     if len(peaks_n_valleys['timeframe'].unique()) > 1:
         raise Exception('Expected to peaks_n_valleys filtered and grouped by timeframe before!')
     timeframe = peaks_n_valleys['timeframe'].unique()[0]
+    if timeframe == '1W':
+        timeframe = 'W-MON'
+    elif timeframe == 'M':
+        timeframe = 'MS'
     trend = pd.DataFrame(
         index=pd.date_range(start=peaks_n_valleys.index[0], end=peaks_n_valleys.index[-1], freq=timeframe))
     add_previous_n_next_peaks_n_valleys(peaks_n_valleys, trend)

@@ -283,7 +283,6 @@ def single_timeframe(multi_timeframe_data: pd.DataFrame, timeframe):
         multi_timeframe_data.index.get_level_values('timeframe') == timeframe]
     return validate_no_timeframe(single_timeframe_data.droplevel('timeframe'))
 
-
 def to_timeframe(time: Union[DatetimeIndex, datetime], timeframe: str) -> datetime:
     """
     Round the given datetime to the nearest time based on the specified timeframe.
@@ -301,23 +300,31 @@ def to_timeframe(time: Union[DatetimeIndex, datetime], timeframe: str) -> dateti
     # Calculate the number of seconds in the timedelta
     seconds_in_timeframe = timeframe_timedelta.total_seconds()
     if isinstance(time, DatetimeIndex):
-        # Calculate the timestamp with the floor division
-        rounded_timestamp = ((time.view(np.int64) // 10 ** 9) // seconds_in_timeframe) * seconds_in_timeframe
-
-        # Convert the rounded timestamp back to datetime
-        rounded_time = pd.DatetimeIndex(rounded_timestamp * 10 ** 9)
-        for t in rounded_time:
-            if t not in GLOBAL_CACHE[f'valid_times_{timeframe}']:
-                raise Exception(f'Invalid time {t}!')
+        raise Exception('This happened unexpectedly')
+        # # Calculate the timestamp with the floor division
+        # rounded_timestamp = ((time.view(np.int64) // 10 ** 9) // seconds_in_timeframe) * seconds_in_timeframe
+        #
+        # # Convert the rounded timestamp back to datetime
+        # rounded_time = pd.DatetimeIndex(rounded_timestamp * 10 ** 9)
+        # for t in rounded_time:
+        #     if t not in GLOBAL_CACHE[f'valid_times_{timeframe}']:
+        #         raise Exception(f'Invalid time {t}!')
     elif isinstance(time, Timestamp):
-        rounded_timestamp = (time.timestamp() // seconds_in_timeframe) * seconds_in_timeframe
+        if pd.to_timedelta(timeframe) >= timedelta(days=7):
+            rounded_time = time.replace(hour=0, minute=0, second=0)
+            if rounded_time.nanosecond != 0:
+                raise Exception('This happened unexpectedly')
+            day_of_week = (time.day_of_week + 1) % 7
+            rounded_time = rounded_time - timedelta(days=day_of_week)
+        else:
+            rounded_timestamp = (time.timestamp() // seconds_in_timeframe) * seconds_in_timeframe
 
-        # Convert the rounded timestamp back to datetime
-        rounded_time = pd.Timestamp(rounded_timestamp * 10 ** 9)
+            # Convert the rounded timestamp back to datetime
+            rounded_time = pd.Timestamp(rounded_timestamp * 10 ** 9)
         if f'valid_times_{timeframe}' not in GLOBAL_CACHE.keys():
             raise Exception(f'valid_times_{timeframe} not initialized in GLOBAL_CACHE')
         if rounded_time not in GLOBAL_CACHE[f'valid_times_{timeframe}']:
-            raise Exception(f'Invalid time {rounded_time}!')
+            raise Exception(f'time {rounded_time} not found in cached times!')
     else:
         raise Exception(f'Invalid type of time:{type(time)}')
     return rounded_time

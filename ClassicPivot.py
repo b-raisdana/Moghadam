@@ -5,17 +5,16 @@ from pandera import typing as pt
 
 import helper
 from BullBearSidePivot import read_multi_timeframe_bull_bear_side_pivots
-from MetaTrader import MT
-from PivotsHelper import peaks_or_valleys_pivots_level_n_margins, pivot_margins, pivots_level_n_margins
 from Candle import read_multi_timeframe_ohlca
-from Model.MultiTimeframeOHLC import OHLCV
-from Config import config, TopTYPE
-from DataPreparation import single_timeframe, trigger_timeframe, read_file, \
+from Config import config
+from DataPreparation import single_timeframe, read_file, \
     anti_trigger_timeframe, cast_and_validate, anti_pattern_timeframe
-from FigurePlotter.Pivot_plotter import plot_multi_timeframe_pivots
+from MetaTrader import MT
+from Model.MultiTimeframeOHLC import OHLCV
 from Model.MultiTimeframePivot import MultiTimeframePivot
-from PeakValley import read_multi_timeframe_peaks_n_valleys, peaks_only, valleys_only
+from PeakValley import read_multi_timeframe_peaks_n_valleys
 from Pivots import pivot_exact_overlapped, level_ttl, update_hit
+from PivotsHelper import pivots_level_n_margins
 from helper import measure_time
 
 
@@ -101,9 +100,14 @@ def tops_pivots(date_range_str) -> pt.DataFrame[MultiTimeframePivot]:
     multi_timeframe_pivots = pd.DataFrame()
     for timeframe in config.structure_timeframes[::-1][2:]:
         _pivots = single_timeframe(_multi_timeframe_peaks_n_valleys, anti_trigger_timeframe(timeframe))
+        ohlc_start = _multi_timeframe_ohlca.index.get_level_values('date').min()
+        _pivots = _pivots.loc[ohlc_start + pd.to_timedelta(anti_trigger_timeframe(timeframe)):]
+        anti_trigger_timeframe_ohlca = single_timeframe(_multi_timeframe_ohlca, anti_trigger_timeframe(timeframe))
         timeframe_ohlca = single_timeframe(_multi_timeframe_ohlca, timeframe)
-        trigger_timeframe_ohlca = single_timeframe(_multi_timeframe_ohlca, trigger_timeframe(timeframe))
-        _pivots = pivots_level_n_margins(_pivots, _pivots, timeframe, timeframe_ohlca, trigger_timeframe_ohlca)
+        trigger_timeframe_ohlca = single_timeframe(_multi_timeframe_ohlca, timeframe)  # trigger_timeframe(timeframe))
+        _pivots = pivots_level_n_margins(_pivots, _pivots, anti_trigger_timeframe(timeframe),
+                                         anti_trigger_timeframe_ohlca,
+                                         trigger_timeframe_ohlca)
         _pivots['activation_time'] = _pivots.index
         _pivots['ttl'] = _pivots.index + level_ttl(timeframe)
         _pivots['hit'] = 0  # update_hits(multi_timeframe_pivots)
@@ -119,6 +123,29 @@ def tops_pivots(date_range_str) -> pt.DataFrame[MultiTimeframePivot]:
             multi_timeframe_pivots = pd.concat([multi_timeframe_pivots, _pivots])
     multi_timeframe_pivots = cast_and_validate(multi_timeframe_pivots, MultiTimeframePivot)
     return multi_timeframe_pivots
+    # _multi_timeframe_peaks_n_valleys = read_multi_timeframe_peaks_n_valleys(date_range_str)
+    # _multi_timeframe_ohlca = read_multi_timeframe_ohlca(date_range_str)
+    # multi_timeframe_pivots = pd.DataFrame()
+    # for timeframe in config.structure_timeframes[::-1][2:]:
+    #     _pivots = single_timeframe(_multi_timeframe_peaks_n_valleys, anti_trigger_timeframe(timeframe))
+    #     timeframe_ohlca = single_timeframe(_multi_timeframe_ohlca, timeframe)
+    #     trigger_timeframe_ohlca = single_timeframe(_multi_timeframe_ohlca, trigger_timeframe(timeframe))
+    #     _pivots = pivots_level_n_margins(_pivots, _pivots, timeframe, timeframe_ohlca, trigger_timeframe_ohlca)
+    #     _pivots['activation_time'] = _pivots.index
+    #     _pivots['ttl'] = _pivots.index + level_ttl(timeframe)
+    #     _pivots['hit'] = 0  # update_hits(multi_timeframe_pivots)
+    #     _pivots['is_overlap_of'] = None
+    #     _pivots['deactivated_at'] = None
+    #     _pivots['archived_at'] = None
+    #
+    #     if len(_pivots) > 0:
+    #         # _pivots = cast_and_validate(_pivots, Pivot)
+    #         _pivots['timeframe'] = anti_pattern_timeframe(timeframe)
+    #         _pivots.set_index('timeframe', append=True, inplace=True)
+    #         _pivots = _pivots.swaplevel()
+    #         multi_timeframe_pivots = pd.concat([multi_timeframe_pivots, _pivots])
+    # multi_timeframe_pivots = cast_and_validate(multi_timeframe_pivots, MultiTimeframePivot)
+    # return multi_timeframe_pivots
 
 
 def read_multi_timeframe_top_pivots(date_range_str: str = None):

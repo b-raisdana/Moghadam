@@ -9,8 +9,8 @@ from Model.Pivot import Pivot
 from PeakValley import peaks_only, valleys_only
 
 
-def pivots_level_n_margins(single_timeframe_pivot_peaks_or_valleys: pd.DataFrame,
-                           single_timeframe_pivots: pd.DataFrame,
+def pivots_level_n_margins(timeframe_pivot_peaks_or_valleys: pd.DataFrame,
+                           timeframe_pivots: pd.DataFrame,
                            timeframe: str,
                            candle_body_source: pd.DataFrame,
                            atr_source: pd.DataFrame) -> pd.DataFrame:
@@ -18,8 +18,8 @@ def pivots_level_n_margins(single_timeframe_pivot_peaks_or_valleys: pd.DataFrame
     Calculate pivot levels and margins based on peak or valley type for a single timeframe.
 
     Args:
-        single_timeframe_pivot_peaks_or_valleys (pd.DataFrame): DataFrame containing peak or valley data.
-        single_timeframe_pivots (pd.DataFrame): DataFrame to store the processed pivot data.
+        timeframe_pivot_peaks_or_valleys (pd.DataFrame): DataFrame containing peak or valley data.
+        timeframe_pivots (pd.DataFrame): DataFrame to store the processed pivot data.
         timeframe (str): The desired timeframe for mapping pivot times.
         candle_body_source (pd.DataFrame): DataFrame containing candle body data with 'open' and 'close' columns.
         atr_source (pd.DataFrame): DataFrame containing ATR (Average True Range) data with 'ATR' column.
@@ -27,23 +27,23 @@ def pivots_level_n_margins(single_timeframe_pivot_peaks_or_valleys: pd.DataFrame
     Returns:
         pd.DataFrame: Updated DataFrame with calculated pivot levels and margins.
     """
-    if len(single_timeframe_pivot_peaks_or_valleys) != len(single_timeframe_pivots):
-        raise Exception(f'single_timeframe_pivot_peaks_or_valleys({len(single_timeframe_pivot_peaks_or_valleys)}) '
-                        f'and single_timeframe_pivots({len(single_timeframe_pivots)}) should have the same length')
-    pivot_peaks = peaks_only(single_timeframe_pivot_peaks_or_valleys)
-    single_timeframe_pivots = peaks_or_valleys_pivots_level_n_margins(pivot_peaks, TopTYPE.PEAK,
-                                                                      single_timeframe_pivots, timeframe,
-                                                                      candle_body_source, atr_source)
-    pivot_valleys = valleys_only(single_timeframe_pivot_peaks_or_valleys)
-    single_timeframe_pivots = peaks_or_valleys_pivots_level_n_margins(pivot_valleys, TopTYPE.VALLEY,
-                                                                      single_timeframe_pivots, timeframe,
-                                                                      candle_body_source, atr_source)
-    return single_timeframe_pivots
+    if len(timeframe_pivot_peaks_or_valleys) != len(timeframe_pivots):
+        raise Exception(f'single_timeframe_pivot_peaks_or_valleys({len(timeframe_pivot_peaks_or_valleys)}) '
+                        f'and single_timeframe_pivots({len(timeframe_pivots)}) should have the same length')
+    pivot_peaks = peaks_only(timeframe_pivot_peaks_or_valleys)
+    timeframe_pivots = peaks_or_valleys_pivots_level_n_margins(pivot_peaks, TopTYPE.PEAK,
+                                                               timeframe_pivots, timeframe,
+                                                               candle_body_source, atr_source)
+    pivot_valleys = valleys_only(timeframe_pivot_peaks_or_valleys)
+    timeframe_pivots = peaks_or_valleys_pivots_level_n_margins(pivot_valleys, TopTYPE.VALLEY,
+                                                               timeframe_pivots, timeframe,
+                                                               candle_body_source, atr_source)
+    return timeframe_pivots
 
 
-def peaks_or_valleys_pivots_level_n_margins(single_timeframe_pivot_peaks_or_valleys: pd.DataFrame,
+def peaks_or_valleys_pivots_level_n_margins(timeframe_pivot_peaks_or_valleys: pd.DataFrame,
                                             _type: TopTYPE,
-                                            single_timeframe_pivots: pd.DataFrame,
+                                            timeframe_pivots: pd.DataFrame,
                                             timeframe: str,
                                             candle_body_source: pd.DataFrame,
                                             atr_source: pd.DataFrame) -> pd.DataFrame:
@@ -51,9 +51,9 @@ def peaks_or_valleys_pivots_level_n_margins(single_timeframe_pivot_peaks_or_vall
     Processes the pivot data to determine levels, margins, and other metrics for a single timeframe.
 
     Args:
-        single_timeframe_pivot_peaks_or_valleys (pd.DataFrame): Input pivot data, typically containing high and low prices.
+        timeframe_pivot_peaks_or_valleys (pd.DataFrame): Input pivot data, typically containing high and low prices.
         _type (TopTYPE): Enum indicating whether the pivot data represents peaks or valleys.
-        single_timeframe_pivots (pd.DataFrame): DataFrame to store processed pivot data.
+        timeframe_pivots (pd.DataFrame): DataFrame to store processed pivot data.
         timeframe (str): A string specifying the desired timeframe for mapping pivot times.
         candle_body_source (pd.DataFrame): DataFrame containing 'open', 'high', 'low', 'close' columns for specific timeframes.
         atr_source (pd.DataFrame): DataFrame containing ATR (Average True Range) data with 'ATR' column.
@@ -71,21 +71,21 @@ def peaks_or_valleys_pivots_level_n_margins(single_timeframe_pivot_peaks_or_vall
     if timeframe not in config.timeframes:
         raise ValueError(f"'{timeframe}' is not a valid timeframe. Please select from {config.timeframe}.")
 
-    if len(single_timeframe_pivot_peaks_or_valleys) == 0:
-        return single_timeframe_pivots
+    if len(timeframe_pivot_peaks_or_valleys) == 0:
+        return timeframe_pivots
 
     if _type.value == 'peak':
         level_key = 'high'
     else:  # 'valley'
         level_key = 'low'
 
-    pivot_times = single_timeframe_pivot_peaks_or_valleys.index.get_level_values('date')
-    single_timeframe_pivots.loc[pivot_times, 'level'] = single_timeframe_pivot_peaks_or_valleys[level_key].tolist()
+    pivot_times = timeframe_pivot_peaks_or_valleys.index.get_level_values('date')
+    timeframe_pivots.loc[pivot_times, 'level'] = timeframe_pivot_peaks_or_valleys[level_key].tolist()
 
-    single_timeframe_pivots = pivot_margins(single_timeframe_pivots, _type, single_timeframe_pivot_peaks_or_valleys,
-                                            candle_body_source, timeframe, atr_source)
+    timeframe_pivots = pivot_margins(timeframe_pivots, _type, timeframe_pivot_peaks_or_valleys,
+                                     candle_body_source, timeframe, atr_source)
 
-    return single_timeframe_pivots
+    return timeframe_pivots
 
 
 def pivot_margins(pivots: pd.DataFrame, _type: TopTYPE, pivot_peaks_or_valleys: pd.DataFrame,

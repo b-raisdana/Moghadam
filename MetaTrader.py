@@ -293,7 +293,7 @@ class MT:
         # Specify the path to your AutoIt script
 
     @classmethod
-    def check_for_requirements(cls):
+    def rate_load_requirements(cls):
         cls.find_conflicting_profiles()
         cls.custom_profile_chart_exists()
         cls.custom_profile_original_chart_exists()
@@ -302,8 +302,8 @@ class MT:
         cls.autoit_runner_script_exists()
 
     @classmethod
-    def run_by_autoit(cls):
-        cls.check_for_requirements()
+    def rate_load(cls):
+        cls.rate_load_requirements()
         cls.close_meta_trader()
         # Use subprocess to run the script
         result = subprocess.run([cls.autoit_executable_path, cls.autoit_script_path], stdout=subprocess.PIPE,

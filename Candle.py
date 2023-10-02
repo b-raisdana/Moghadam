@@ -66,6 +66,10 @@ def generate_multi_timeframe_ohlc(date_range_str: str, file_path: str = config.p
     multi_timeframe_ohlc.set_index('timeframe', append=True, inplace=True)
     multi_timeframe_ohlc = multi_timeframe_ohlc.swaplevel()
     for _, timeframe in enumerate(config.timeframes[1:]):
+        if timeframe == '1W':
+            timeframe = 'W-MON'
+        elif timeframe == 'M':
+            timeframe = 'MS'
         _timeframe_ohlc = ohlc.groupby(pd.Grouper(freq=timeframe)) \
             .agg({'open': 'first',
                   'close': 'last',
@@ -147,3 +151,4 @@ def generate_ohlc(date_range_str: str = None, file_path: str = config.path_of_da
     df.to_csv(os.path.join(file_path, f'ohlc.{date_range_str}.zip'),
               compression='zip')
     MT.extract_to_data_path(os.path.join(file_path, f'ohlc.{date_range_str}.zip'))
+    MT.rate_load()

@@ -42,7 +42,12 @@ def even_distribution(peaks: pd, valleys: pd):
 
 def test_timeframe_switching():
     for i in range(1, len(config.timeframes)):
-        _timeframe_ohlc_ticks = base_ohlc_ticks.groupby(pd.Grouper(freq=config.timeframes[i])) \
+        timeframe = config.timeframes[i]
+        if timeframe == '1W':
+            timeframe = 'W-MON'
+        elif timeframe == 'M':
+            timeframe = 'MS'
+        _timeframe_ohlc_ticks = base_ohlc_ticks.groupby(pd.Grouper(freq=timeframe)) \
             .agg({'open': 'first',
                   'close': 'last',
                   'low': 'min',

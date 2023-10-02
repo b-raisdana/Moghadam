@@ -37,16 +37,22 @@ int DrawColoredBox(datetime start, datetime end, double top, double bottom, colo
    ObjectSetInteger(chart_id, object_name, OBJPROP_FILL, clrNONE);
    if(fill_color!=NULL)
      {
-      uint effective_fill_color = ColorToARGB(fill_color, 0xf0);
-      ObjectSetInteger(chart_id, object_name, OBJPROP_FILL, clrNONE);//fill_color);
+      ObjectSetInteger(chart_id, object_name, OBJPROP_FILL, true);//fill_color);
      }
-   ObjectSetInteger(chart_id, object_name, OBJPROP_COLOR, border_color);//border_color);
+   ObjectSetInteger(chart_id, object_name, OBJPROP_ZORDER, 0);//border_color);
    if(border_color == NULL)
+     {
       ObjectSetInteger(chart_id, object_name, OBJPROP_WIDTH, 0);
-//ObjectSetInteger(chart_id, object_name, OBJPROP_SELECTABLE, false);
-//ObjectSetInteger(chart_id, object_name, OBJPROP_SELECTED, false);
+     }
+   else
+     {
+      ObjectSetInteger(chart_id, object_name, OBJPROP_WIDTH, 1);
+      ObjectSetInteger(chart_id, object_name, OBJPROP_COLOR, border_color);//border_color);
+     }
+   ObjectSetInteger(chart_id, object_name, OBJPROP_SELECTABLE, false);
+   ObjectSetInteger(chart_id, object_name, OBJPROP_SELECTED, false);
 //ObjectSetInteger(chart_id, object_name, OBJPROP_RAY_RIGHT, false);
-//ObjectSetInteger(chart_id, object_name, OBJPROP_STYLE, STYLE_SOLID);
+   ObjectSetInteger(chart_id, object_name, OBJPROP_STYLE, STYLE_SOLID);
    return rectangle_handle;
   }
 
@@ -154,114 +160,6 @@ int load_classic_levels(string level_type)
    return 1;
   }
 //+------------------------------------------------------------------+
-//|                                                                  |
-//+------------------------------------------------------------------+
-//+------------------------------------------------------------------+
-//|                                                                  |
-//+------------------------------------------------------------------+
-bool timeframe_legend_printed = false;
-string timeframes [] =
-  {
-   "1min",
-   "5min",
-   "15min",
-   "1H",
-   "4H",
-   "1D",
-   "1W"
-  };
-//+------------------------------------------------------------------+
-//|                                                                  |
-//+------------------------------------------------------------------+
-void TimeframeLegend(long chart_id)
-  {
-   CCanvas canvas1;
-   datetime window_corner_time, window_corner_time2;
-   double window_corner_price, window_corner_price2;
-   int sub_windows;
-   ChartXYToTimePrice(0, 0, 0, sub_windows, window_corner_time, window_corner_price);
-   ChartXYToTimePrice(0, 100, 200, sub_windows, window_corner_time2, window_corner_price2);
-   if(!timeframe_legend_printed)
-     {
-      for(int i=0; i<ArraySize(timeframes); i++)
-        {
-         //CCanvas canvas;
-         //int x = 10, y;
-         //y = 10 + i * 20;
-         ////ObjectCreate(0, "Legend-"+timeframes[i],OBJ_RECTANGLE_LABEL,0, TimeCurrent());
-         //if(!canvas.CreateBitmap(
-         //      "Legend-"+timeframes[i],         // name
-         //      TimeCurrent(),                   // time
-         //      27000,                           // price
-         //      200,                             // width
-         //      200,                             // height
-         //      COLOR_FORMAT_ARGB_NORMALIZE      // format
-         //      //chart_id,                              // chart identifier
-         //      //0,
-         //      //"Legend-"+timeframes[i],                               // object name
-         //      //200,                                 // image width in pixels
-         //      //ArraySize(timeframes)*20,                                // image height in pixels
-         //      //COLOR_FORMAT_ARGB_NORMALIZE       // color processing method
-         //   ))
-         //  {
-         //   Print("Failed canvas.Attach:" + GetLastError());
-         //  }
-         //canvas.FillRectangle(x, y, x + 100, y+10, TimeframeColor(timeframes[i]));
-         //canvas.TextOut(x, y, timeframes[i], clrBlack);
-         //canvas.Update(true);
-         int x = 10, y;
-         y = 10 + i * 20;
-
-         string objName = "Legend-"+timeframes[i];
-         //if(!ObjectCreate(chart_id, objName, OBJ_RECTANGLE_LABEL, 0, TimeCurrent(), 27000))
-         //  {
-         //   Print("Failed to create object:" + GetLastError());
-         //   continue;
-         //  }
-         //if(!(
-         //      ObjectSetInteger(chart_id, objName, OBJPROP_XDISTANCE, x) &&
-         //      ObjectSetInteger(chart_id, objName, OBJPROP_YDISTANCE, y) &&
-         //      ObjectSetInteger(chart_id, objName, OBJPROP_XSIZE, 200) &&
-         //      ObjectSetInteger(chart_id, objName, OBJPROP_YSIZE, 20) &&
-         //      //ObjectSetInteger(chart_id, objName, OBJPROP_BGCOLOR, TimeframeColor(timeframes[i])) &&
-         //      ObjectSetInteger(chart_id, objName, OBJPROP_COLOR, clrBlack) &&
-         //      //ObjectSetInteger(chart_id, objName, OBJPROP_FILL, true) &&
-         //      //ObjectSetInteger(chart_id, objName, OBJPROP_BACK, true) &&
-         //      ObjectSetInteger(chart_id, objName, OBJPROP_CORNER, CORNER_LEFT_UPPER) &&
-         //      ObjectSetInteger(chart_id, objName, OBJPROP_STYLE, STYLE_SOLID) &&
-         //      ObjectSetInteger(0, objName, OBJPROP_SELECTED, false) &&
-         //      ObjectSetInteger(0, objName, OBJPROP_SELECTABLE, false) &&
-         //      ObjectSetString(chart_id, objName, OBJPROP_TEXT, timeframes[i])
-         //   ))
-         //  {
-         //   Print("Failed to modify object:" + GetLastError());
-         //  }
-         if(!ObjectCreate(chart_id, objName + "-t", OBJ_LABEL, 0, 0, 0))
-           {
-            Print("Failed to create object:" + GetLastError());
-            continue;
-           }
-         if(!(
-               ObjectSetInteger(chart_id, objName, OBJPROP_XDISTANCE, x) &&
-               ObjectSetInteger(chart_id, objName, OBJPROP_YDISTANCE, y) &&
-               // ObjectSetInteger(chart_id, objName, OBJPROP_BGCOLOR, TimeframeColor(timeframes[i])) &&
-               ObjectSetInteger(chart_id, objName, OBJPROP_COLOR, TimeframeColor(timeframes[i])) &&
-               ObjectSetInteger(chart_id, objName, OBJPROP_FILL, true) &&
-               ObjectSetInteger(chart_id, objName, OBJPROP_BACK, true) &&
-               ObjectSetInteger(chart_id, objName, OBJPROP_CORNER, CORNER_LEFT_UPPER) &&
-               ObjectSetInteger(chart_id, objName, OBJPROP_STYLE, STYLE_SOLID) &&
-               ObjectSetInteger(0, objName, OBJPROP_SELECTED, true) &&
-               ObjectSetInteger(0, objName, OBJPROP_SELECTABLE, true) &&
-               ObjectSetString(chart_id, objName, OBJPROP_TEXT, timeframes[i])
-            ))
-           {
-            Print("Failed to modify object:" + GetLastError());
-           }
-         PrintFormat("0x%.8X - clrBlue",TimeframeColor(timeframes[i]));
-        }
-     }
-  }
-//+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
 int OnInit()
@@ -271,8 +169,8 @@ int OnInit()
    if(!classic_levels_are_loaded)
      {
       long chart_id = ChartID();
-      TimeframeLegend(chart_id);
-      //load_classic_levels("top");
+      TimeframeLegend(0);
+      load_classic_levels("top");
       ChartRedraw();
       //load_classic_levels("bull_bear_side");
      }
