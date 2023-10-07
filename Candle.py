@@ -67,10 +67,12 @@ def generate_multi_timeframe_ohlc(date_range_str: str, file_path: str = config.p
     multi_timeframe_ohlc = multi_timeframe_ohlc.swaplevel()
     for _, timeframe in enumerate(config.timeframes[1:]):
         if timeframe == '1W':
-            timeframe = 'W-MON'
+            frequency = 'W-MON'
         elif timeframe == 'M':
-            timeframe = 'MS'
-        _timeframe_ohlc = ohlc.groupby(pd.Grouper(freq=timeframe)) \
+            frequency = 'MS'
+        else:
+            frequency = timeframe
+        _timeframe_ohlc = ohlc.groupby(pd.Grouper(freq=frequency)) \
             .agg({'open': 'first',
                   'close': 'last',
                   'low': 'min',

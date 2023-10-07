@@ -10,7 +10,6 @@ from Candle import read_multi_timeframe_ohlca
 from Config import config
 from DataPreparation import single_timeframe, expected_movement_size, trigger_timeframe, read_file, \
     cast_and_validate, anti_pattern_timeframe
-from FigurePlotter.Pivot_plotter import plot_multi_timeframe_pivots
 from MetaTrader import MT
 from Model.BullBearSide import BullBearSide
 from Model.MultiTimeframePivot import MultiTimeframePivot
@@ -102,11 +101,17 @@ def multi_timeframe_bull_bear_side_pivots(date_range_str: str = None, timeframe_
                 _pivots['return_end_value'] = _pivot_trends['movement_end_value'].to_list()
 
                 # find the Peaks and Valleys align with the Pivot
-                pivot_peaks_and_valleys = single_timeframe_peaks_n_valleys.loc[
+                timeframe_peaks_and_valleys = single_timeframe_peaks_n_valleys.loc[
                     single_timeframe_peaks_n_valleys.index.get_level_values('date').isin(_pivots.index)]
-                _pivots = pivots_level_n_margins(pivot_peaks_and_valleys, _pivots, timeframe, timeframe_ohlca,
-                                                 trigger_timeframe_ohlca)
-
+                # _pivots = pivots_level_n_margins( timeframe_peaks_and_valleys, _pivots, timeframe, timeframe_ohlca,
+                #                                  trigger_timeframe_ohlca)
+                _pivots = pivots_level_n_margins(pivot_peaks_or_valleys=timeframe_peaks_and_valleys,
+                                                 timeframe_pivots=_pivots,
+                                                 timeframe=timeframe,
+                                                 candle_body_source=timeframe_ohlca,
+                                                 internal_atr_source=timeframe_ohlca,
+                                                 breakout_atr_source=trigger_timeframe_ohlca,
+                                                 )
                 _pivots['ttl'] = _pivots.index + level_ttl(timeframe)
                 _pivots['deactivated_at'] = None
                 _pivots['archived_at'] = None

@@ -351,7 +351,8 @@ class MT:
 
         # Compare the XML elements recursively and log differences
         if not compare_tree(chart_root, original_root):
-            raise Exception('chart_root and original_root are not the same')
+            raise Exception(f'CustomProfile({cls.chart_config_file_full_path})and it\'s '
+                            f'backup({cls.chart_original_config_file_full_path}) are not the same')
 
     @classmethod
     def find_conflicting_profiles(cls, profiles_directory_path: str = None) -> None:

@@ -4,7 +4,7 @@ from sys import exit
 import helper
 from BullBearSidePivot import generate_multi_timeframe_bull_bear_side_pivots
 from Candle import generate_ohlc
-from ClassicPivot import generate_multi_timeframe_top_pivots
+from PeakValleyPivots import generate_multi_timeframe_top_pivots
 from Config import config
 from MetaTrader import MT
 from PeakValley import generate_multi_timeframe_peaks_n_valleys, read_multi_timeframe_peaks_n_valleys

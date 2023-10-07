@@ -11,36 +11,6 @@
 #include <Arrays\ArrayString.mqh>
 #include <Timeframe.mqh>
 
-input bool show_1min = true;
-input bool show_5min = true;
-input bool show_15min = true;
-input bool show_1H = true;
-input bool show_4H = true;
-input bool show_1D = true;
-input bool show_1W = true;
-
-//+------------------------------------------------------------------+
-//|                                                                  |
-//+------------------------------------------------------------------+
-bool ShouldDisplayTimeframe(string timeframe)
-  {
-   if(timeframe == "1min")
-      return show_1min;
-   if(timeframe == "5min")
-      return show_5min;
-   if(timeframe == "15min")
-      return show_15min;
-   if(timeframe == "1H")
-      return show_1H;
-   if(timeframe == "4H")
-      return show_4H;
-   if(timeframe == "1D")
-      return show_1D;
-   if(timeframe == "1W")
-      return show_1W;
-   Print("Unsupported timeframe for ShouldDisplayTimeframe:" + timeframe);
-   return false;
-  }
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+

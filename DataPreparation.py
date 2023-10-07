@@ -314,7 +314,7 @@ def to_timeframe(time: Union[DatetimeIndex, datetime], timeframe: str) -> dateti
             rounded_time = time.replace(hour=0, minute=0, second=0)
             if rounded_time.nanosecond != 0:
                 raise Exception('This happened unexpectedly')
-            day_of_week = (time.day_of_week + 1) % 7
+            day_of_week = time.day_of_week # (time.day_of_week + 1) % 7
             rounded_time = rounded_time - timedelta(days=day_of_week)
         else:
             rounded_timestamp = (time.timestamp() // seconds_in_timeframe) * seconds_in_timeframe
@@ -324,7 +324,7 @@ def to_timeframe(time: Union[DatetimeIndex, datetime], timeframe: str) -> dateti
         if f'valid_times_{timeframe}' not in GLOBAL_CACHE.keys():
             raise Exception(f'valid_times_{timeframe} not initialized in GLOBAL_CACHE')
         if rounded_time not in GLOBAL_CACHE[f'valid_times_{timeframe}']:
-            raise Exception(f'time {rounded_time} not found in cached times!')
+            raise Exception(f'time {rounded_time} not found in GLOBAL_CACHE[valid_times_{timeframe}]!')
     else:
         raise Exception(f'Invalid type of time:{type(time)}')
     return rounded_time

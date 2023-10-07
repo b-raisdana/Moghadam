@@ -1,43 +1,45 @@
-from ctypes import Union
-
 import pandas as pd
-from pandera import typing as pt
+from pandas import Timestamp
 
 from Config import TopTYPE, config
 from DataPreparation import to_timeframe
-from Model.Pivot import Pivot
 from PeakValley import peaks_only, valleys_only
 
 
-def pivots_level_n_margins(timeframe_pivot_peaks_or_valleys: pd.DataFrame,
+def pivots_level_n_margins(pivot_peaks_or_valleys: pd.DataFrame,
                            timeframe_pivots: pd.DataFrame,
                            timeframe: str,
                            candle_body_source: pd.DataFrame,
-                           atr_source: pd.DataFrame) -> pd.DataFrame:
+                           internal_atr_source: pd.DataFrame,
+                           breakout_atr_source: pd.DataFrame,
+                           ) -> pd.DataFrame:
     """
     Calculate pivot levels and margins based on peak or valley type for a single timeframe.
 
     Args:
-        timeframe_pivot_peaks_or_valleys (pd.DataFrame): DataFrame containing peak or valley data.
+        pivot_peaks_or_valleys (pd.DataFrame): DataFrame containing peak or valley data.
         timeframe_pivots (pd.DataFrame): DataFrame to store the processed pivot data.
         timeframe (str): The desired timeframe for mapping pivot times.
         candle_body_source (pd.DataFrame): DataFrame containing candle body data with 'open' and 'close' columns.
-        atr_source (pd.DataFrame): DataFrame containing ATR (Average True Range) data with 'ATR' column.
+        internal_atr_source (pd.DataFrame): DataFrame containing ATR (Average True Range) data with 'ATR' column.
+        breakout_atr_source (pd.DataFrame): DataFrame containing ATR (Average True Range) data with 'ATR' column.
 
     Returns:
         pd.DataFrame: Updated DataFrame with calculated pivot levels and margins.
     """
-    if len(timeframe_pivot_peaks_or_valleys) != len(timeframe_pivots):
-        raise Exception(f'single_timeframe_pivot_peaks_or_valleys({len(timeframe_pivot_peaks_or_valleys)}) '
+    if len(pivot_peaks_or_valleys) != len(timeframe_pivots):
+        raise Exception(f'single_timeframe_pivot_peaks_or_valleys({len(pivot_peaks_or_valleys)}) '
                         f'and single_timeframe_pivots({len(timeframe_pivots)}) should have the same length')
-    pivot_peaks = peaks_only(timeframe_pivot_peaks_or_valleys)
+    pivot_peaks = peaks_only(pivot_peaks_or_valleys)
     timeframe_pivots = peaks_or_valleys_pivots_level_n_margins(pivot_peaks, TopTYPE.PEAK,
                                                                timeframe_pivots, timeframe,
-                                                               candle_body_source, atr_source)
-    pivot_valleys = valleys_only(timeframe_pivot_peaks_or_valleys)
+                                                               candle_body_source, internal_atr_source,
+                                                               breakout_atr_source)
+    pivot_valleys = valleys_only(pivot_peaks_or_valleys)
     timeframe_pivots = peaks_or_valleys_pivots_level_n_margins(pivot_valleys, TopTYPE.VALLEY,
                                                                timeframe_pivots, timeframe,
-                                                               candle_body_source, atr_source)
+                                                               candle_body_source, internal_atr_source,
+                                                               breakout_atr_source)
     return timeframe_pivots
 
 
@@ -46,7 +48,9 @@ def peaks_or_valleys_pivots_level_n_margins(timeframe_pivot_peaks_or_valleys: pd
                                             timeframe_pivots: pd.DataFrame,
                                             timeframe: str,
                                             candle_body_source: pd.DataFrame,
-                                            atr_source: pd.DataFrame) -> pd.DataFrame:
+                                            internal_margin_atr: pd.DataFrame,
+                                            breakout_margin_atr: pd.DataFrame,
+                                            ) -> pd.DataFrame:
     """
     Processes the pivot data to determine levels, margins, and other metrics for a single timeframe.
 
@@ -56,7 +60,8 @@ def peaks_or_valleys_pivots_level_n_margins(timeframe_pivot_peaks_or_valleys: pd
         timeframe_pivots (pd.DataFrame): DataFrame to store processed pivot data.
         timeframe (str): A string specifying the desired timeframe for mapping pivot times.
         candle_body_source (pd.DataFrame): DataFrame containing 'open', 'high', 'low', 'close' columns for specific timeframes.
-        atr_source (pd.DataFrame): DataFrame containing ATR (Average True Range) data with 'ATR' column.
+        internal_margin_atr (pd.DataFrame): DataFrame containing ATR (Average True Range) data with 'ATR' column.
+        breakout_margin_atr (pd.DataFrame): DataFrame containing ATR (Average True Range) data with 'ATR' column.
 
     Returns:
         pd.DataFrame: Updated single_timeframe_pivots DataFrame with the processed pivot data.
@@ -83,13 +88,14 @@ def peaks_or_valleys_pivots_level_n_margins(timeframe_pivot_peaks_or_valleys: pd
     timeframe_pivots.loc[pivot_times, 'level'] = timeframe_pivot_peaks_or_valleys[level_key].tolist()
 
     timeframe_pivots = pivot_margins(timeframe_pivots, _type, timeframe_pivot_peaks_or_valleys,
-                                     candle_body_source, timeframe, atr_source)
+                                     candle_body_source, timeframe, internal_margin_atr, breakout_margin_atr)
 
     return timeframe_pivots
 
 
 def pivot_margins(pivots: pd.DataFrame, _type: TopTYPE, pivot_peaks_or_valleys: pd.DataFrame,
-                  candle_body_source: pd.DataFrame, timeframe: str, atr_source: pd.DataFrame) -> pd.DataFrame:
+                  candle_body_source: pd.DataFrame, timeframe: str, internal_margin_atr: pd.DataFrame,
+                  breakout_margin_atr: pd.DataFrame) -> pd.DataFrame:
     """
     Calculate margins for pivot levels based on peak or valley type.
 
@@ -99,11 +105,14 @@ def pivot_margins(pivots: pd.DataFrame, _type: TopTYPE, pivot_peaks_or_valleys: 
         pivot_peaks_or_valleys (pd.DataFrame): DataFrame containing peak or valley information.
         candle_body_source (pd.DataFrame): DataFrame containing candle body data with 'open' and 'close' columns.
         timeframe (str): Timeframe used for mapping pivot times.
-        atr_source (pd.DataFrame): DataFrame containing ATR (Average True Range) data with 'ATR' column.
+        internal_margin_atr (pd.DataFrame): DataFrame containing ATR (Average True Range) data with 'ATR' column.
+        breakout_margin_atr (pd.DataFrame): DataFrame containing ATR (Average True Range) data with 'ATR' column.
 
     Returns:
         pd.DataFrame: Updated DataFrame with calculated margins.
     """
+    # if Timestamp('2023-08-08 21:21:00') in pivots.index.get_level_values(level='date'):
+    #     pass
     if _type.value not in ['peak', 'valley']:
         raise ValueError("Invalid type. Use either 'peak' or 'valley'.")
     if _type.value == 'peak':
@@ -118,30 +127,32 @@ def pivot_margins(pivots: pd.DataFrame, _type: TopTYPE, pivot_peaks_or_valleys: 
     pivot_times_mapped_to_timeframe = [to_timeframe(pivot_time, timeframe) for pivot_time in focused_pivots_times]
 
     if _type.value == TopTYPE.PEAK.value:
-        focused_pivots['nearest_body'] = \
-            candle_body_source.loc[pivot_times_mapped_to_timeframe, ['open', 'close']] \
-                .apply(choose_body_operator, axis='columns').tolist()
-    else:
-        focused_pivots['nearest_body'] = candle_body_source.loc[
-            pivot_times_mapped_to_timeframe, ['open', 'close']] \
+        focused_pivots['nearest_body'] = (
+            candle_body_source.loc[pivot_times_mapped_to_timeframe, ['open', 'close']]
             .apply(choose_body_operator, axis='columns').tolist()
+        )
+    else:
+        focused_pivots['nearest_body'] = (candle_body_source.loc[
+                                              pivot_times_mapped_to_timeframe, ['open', 'close']]
+                                          .apply(choose_body_operator, axis='columns').tolist())
 
-    pivots_atr = atr_source.loc[pivot_times_mapped_to_timeframe, 'ATR'].tolist()
+    internal_margin = internal_margin_atr.loc[pivot_times_mapped_to_timeframe, 'ATR'].tolist()
+    breakout_margin = breakout_margin_atr.loc[pivot_times_mapped_to_timeframe, 'ATR'].tolist()
 
     if _type.value == TopTYPE.PEAK.value:
         focused_pivots['ATR_margin'] = [level - atr for level, atr in
-                                        zip(focused_pivots['level'].tolist(), pivots_atr)]
+                                        zip(focused_pivots['level'].tolist(), internal_margin)]
     else:
-        focused_pivots['ATR_margin'] = focused_pivots['level'].add(pivots_atr).tolist()
+        focused_pivots['ATR_margin'] = focused_pivots['level'].add(internal_margin).tolist()
 
     focused_pivots['internal_margin'] = focused_pivots[['nearest_body', 'ATR_margin']].apply(
         internal_func, axis='columns').tolist()
 
     if _type.value == TopTYPE.PEAK.value:
-        focused_pivots['external_margin'] = focused_pivots['level'].add(pivots_atr).tolist()
+        focused_pivots['external_margin'] = focused_pivots['level'].add(breakout_margin).tolist()
     else:
         focused_pivots['external_margin'] = \
-            [level - atr for level, atr in zip(pivots.loc[focused_pivots_times, 'level'].to_list(), pivots_atr)]
+            [level - atr for level, atr in zip(pivots.loc[focused_pivots_times, 'level'].to_list(), breakout_margin)]
     pivots.loc[focused_pivots_times, ['internal_margin', 'external_margin']] = \
         focused_pivots[['internal_margin', 'external_margin']]
     return pivots

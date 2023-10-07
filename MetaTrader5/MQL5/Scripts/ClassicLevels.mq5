@@ -107,7 +107,9 @@ int load_classic_levels(string level_type)
          datetime archived_at = NULL;
          if(StringLen(archived_at_str)>0)
             archived_at = StringToTime(archived_at_str);
-         bool is_overlap_of = StringToInteger(is_overlap_of_str) == 1;
+         datetime is_overlap_of = NULL;
+         if(StringLen(is_overlap_of_str)>0) 
+            is_overlap_of = StringToTime(is_overlap_of_str);
 
          // Determine the box color based on timeframe
          color timeframe_color = TimeframeColor(timeframe);
@@ -129,15 +131,17 @@ int load_classic_levels(string level_type)
                return false;
               }
          string tooltip_text = StringFormat(
-                                  object_name + "\nLevel: %d\nActivation: %s\nInternal: %d\nBreak Out: %dOverlap: %d\n",
+                                  object_name + "\nLevel: %0.0f\nActivation: %s\nInternal:  %0.0f\nBreak Out: %0.0f",
                                   level, activation_time_str, internal_margin, breakout_margin);
+         if(is_overlap_of != NULL)
+            tooltip_text += StringFormat("\nOverlap: %s", is_overlap_of_str);
          if(hit>0)
-            tooltip_text += StringFormat("Hit: %d", hit);
-         tooltip_text += StringFormat("TTL:%s", ttl_str);
+            tooltip_text += StringFormat("\nHit: %d", hit);
+         tooltip_text += StringFormat("\nTTL:%s", ttl_str);
          if(StringLen(deactivated_at_str)>0)
-            tooltip_text += StringFormat("Deactivated: %s", deactivated_at_str);
+            tooltip_text += StringFormat("\nDeactivated: %s", deactivated_at_str);
          if(StringLen(archived_at_str)>0)
-            tooltip_text += StringFormat("Archived: %s", archived_at_str);
+            tooltip_text += StringFormat("\nArchived: %s", archived_at_str);
          // Draw the colored box
          DrawColoredBox(activation_time, end_time, internal_margin, breakout_margin, timeframe_color, object_name, timeframe_color, 0);
          ObjectSetString(chart_id, object_name, OBJPROP_TOOLTIP, tooltip_text);

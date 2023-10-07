@@ -44,10 +44,12 @@ def test_timeframe_switching():
     for i in range(1, len(config.timeframes)):
         timeframe = config.timeframes[i]
         if timeframe == '1W':
-            timeframe = 'W-MON'
+            frequency = 'W-MON'
         elif timeframe == 'M':
-            timeframe = 'MS'
-        _timeframe_ohlc_ticks = base_ohlc_ticks.groupby(pd.Grouper(freq=timeframe)) \
+            frequency = 'MS'
+        else:
+            frequency = timeframe
+        _timeframe_ohlc_ticks = base_ohlc_ticks.groupby(pd.Grouper(freq=frequency)) \
             .agg({'open': 'first',
                   'close': 'last',
                   'low': 'min',
