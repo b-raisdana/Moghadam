@@ -151,6 +151,7 @@ int load_classic_levels(string level_type)
          ObjectSetInteger(chart_id, object_name + "-L", OBJPROP_RAY_RIGHT, false);
          ObjectSetString(chart_id, object_name + "-L", OBJPROP_TOOLTIP, tooltip_text);
          SetObjectTimeframes(object_name);
+         SetObjectTimeframes(object_name + "-L");
          counter++;
         }
       fileCSV.Close();

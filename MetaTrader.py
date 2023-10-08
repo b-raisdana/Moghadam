@@ -302,7 +302,7 @@ class MT:
         cls.autoit_runner_script_exists()
 
     @classmethod
-    def rate_load(cls):
+    def load_rates(cls):
         cls.rate_load_requirements()
         cls.close_meta_trader()
         # Use subprocess to run the script

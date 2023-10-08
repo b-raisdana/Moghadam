@@ -1,8 +1,7 @@
 import pandera
 from pandera import typing as pt
 
-from DataPreparation import MultiTimeframe
-from Model.MultiTimeframeOHLC import OHLCV
+from Model.MultiTimeframeOHLC import OHLCV, MultiTimeframe
 
 
 class OHLCA(OHLCV):

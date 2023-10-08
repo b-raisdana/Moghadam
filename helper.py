@@ -4,6 +4,7 @@ import time
 import traceback
 from datetime import datetime, timedelta
 from enum import Enum
+from typing import Tuple
 
 import pytz
 
@@ -56,14 +57,14 @@ def measure_time(func):
     return _measure_time
 
 
-def date_range(date_range_str):
+def date_range(date_range_str: str) -> Tuple[datetime, datetime]:
     start_date_string, end_date_string = date_range_str.split('T')
     start_date = datetime.strptime(start_date_string, '%y-%m-%d.%H-%M')
     end_date = datetime.strptime(end_date_string, '%y-%m-%d.%H-%M')
     return start_date, end_date
 
 
-def under_process_date_range(end_date: datetime = None, days: float = 60) -> str:
+def date_range_to_string(end_date: datetime = None, days: float = 60) -> str:
     if end_date is None:
         end_date = today_morning()
     start_date = end_date - timedelta(days=days)

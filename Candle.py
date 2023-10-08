@@ -42,7 +42,7 @@ def generate_ohlca(date_range_str: str, file_path: str = config.path_of_data) ->
 @measure_time
 def generate_multi_timeframe_ohlca(date_range_str: str = None, file_path: str = config.path_of_data) -> None:
     if date_range_str is None:
-        date_range_str = helper.under_process_date_range
+        date_range_str = config.under_process_date_range
     multi_timeframe_ohlc = read_multi_timeframe_ohlc(date_range_str)
     multi_timeframe_ohlca = pd.DataFrame()
     for _, timeframe in enumerate(config.timeframes):
@@ -86,10 +86,6 @@ def generate_multi_timeframe_ohlc(date_range_str: str, file_path: str = config.p
     # plot_multi_timeframe_ohlc(multi_timeframe_ohlc, date_range_str)
     multi_timeframe_ohlc.to_csv(os.path.join(file_path, f'multi_timeframe_ohlc.{date_range_str}.zip'),
                                 compression='zip')
-
-
-# def zz_check_multi_timeframe_ohlca_columns(multi_timeframe_ohlca: pd.DataFrame, raise_exception=False) -> bool:
-#     return check_dataframe(multi_timeframe_ohlca, config.multi_timeframe_ohlca_columns, raise_exception)
 
 
 def read_multi_timeframe_ohlc(date_range_str: str = None) \
@@ -142,7 +138,7 @@ def generate_ohlc(date_range_str: str = None, file_path: str = config.path_of_da
     # raise Exception('Not implemented, so we expect the file exists.')
     # original_prices = pd.read_csv('17-01-01.0-01TO17-12-31.23-59.1min.zip')
     if date_range_str is None:
-        date_range_str = helper.under_process_date_range
+        date_range_str = config.under_process_date_range
     raw_ohlcv = fetch_ohlcv_by_range(date_range_str)
     df = pd.DataFrame(raw_ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
     df['date'] = pd.to_datetime(df['timestamp'], unit='ms')
@@ -153,4 +149,4 @@ def generate_ohlc(date_range_str: str = None, file_path: str = config.path_of_da
     df.to_csv(os.path.join(file_path, f'ohlc.{date_range_str}.zip'),
               compression='zip')
     MT.extract_to_data_path(os.path.join(file_path, f'ohlc.{date_range_str}.zip'))
-    MT.rate_load()
+    MT.load_rates()

@@ -35,18 +35,16 @@ def map_to_ccxt_symbol(symbol: str) -> str:
     return map_symbol(symbol, _ccxt_symbol_map)
 
 
-def fetch_ohlcv_by_range(date_range_str: str = None, symbol: str = None, timeframe=config.timeframes[0]) \
+def fetch_ohlcv_by_range(date_range_str: str = None, symbol: str = None, base_timeframe=config.timeframes[0]) \
         -> pt.DataFrame[OHLCV]:
     if date_range_str is None:
-        date_range_str = helper.under_process_date_range
+        date_range_str = config.under_process_date_range
     if symbol is None:
         symbol = map_to_ccxt_symbol(config.under_process_symbol)
-        # 'BTC/USDT'
     start_date, end_date = date_range(date_range_str)
     duration = end_date - start_date
-    limit = int(duration / pd.to_timedelta(timeframe))
-    response = fetch_ohlcv(symbol, timeframe=timeframe, since=start_date, limit=limit)
-
+    limit = int(duration / pd.to_timedelta(base_timeframe))
+    response = fetch_ohlcv(symbol, timeframe=base_timeframe, since=start_date, limit=limit)
     return response
 
 
