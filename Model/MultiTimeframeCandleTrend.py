@@ -4,7 +4,7 @@ import pandera
 from pandas import Timestamp
 from pandera import typing as pt
 
-from DataPreparation import MultiTimeframe
+from Model.MultiTimeframeOHLC import MultiTimeframe
 
 
 class CandleTrend(pandera.DataFrameModel):

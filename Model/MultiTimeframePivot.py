@@ -1,7 +1,7 @@
 import pandera
 from pandera import typing as pt
 
-from DataPreparation import MultiTimeframe
+from GPTnote import MultiTimeframe
 from Model.Pivot import Pivot
 
 
