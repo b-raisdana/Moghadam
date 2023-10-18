@@ -2,9 +2,7 @@ import pandera
 from pandas import Timestamp
 from pandera import typing as pt
 
-
-class MultiTimeframe(pandera.DataFrameModel):
-    timeframe: pt.Index[str]
+from Model.MultiTimeframe import MultiTimeframe
 
 
 class OHLCV(pandera.DataFrameModel):

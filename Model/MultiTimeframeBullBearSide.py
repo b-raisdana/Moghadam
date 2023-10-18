@@ -1,4 +1,4 @@
-from DataPreparation import MultiTimeframe
+from Model.MultiTimeframe import MultiTimeframe
 from Model.BullBearSide import BullBearSide
 
 
