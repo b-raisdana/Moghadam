@@ -12,7 +12,7 @@ from pandas import Timedelta, DatetimeIndex, Timestamp
 from pandera import typing as pt
 
 import helper
-from Config import config
+from Config import config, GLOBAL_CACHE
 from helper import log
 
 
@@ -305,7 +305,7 @@ def to_timeframe(time: Union[DatetimeIndex, datetime], timeframe: str) -> dateti
         # # Convert the rounded timestamp back to datetime
         # rounded_time = pd.DatetimeIndex(rounded_timestamp * 10 ** 9)
         # for t in rounded_time:
-        #     if t not in globals()[f'valid_times_{timeframe}']:
+        #     if t not in GLOBAL_CACHE[f'valid_times_{timeframe}']:
         #         raise Exception(f'Invalid time {t}!')
     elif isinstance(time, Timestamp):
         if pd.to_timedelta(timeframe) >= timedelta(days=7):
@@ -319,10 +319,10 @@ def to_timeframe(time: Union[DatetimeIndex, datetime], timeframe: str) -> dateti
 
             # Convert the rounded timestamp back to datetime
             rounded_time = pd.Timestamp(rounded_timestamp * 10 ** 9)
-        if f'valid_times_{timeframe}' not in globals().keys():
-            raise Exception(f'valid_times_{timeframe} not initialized in globals()')
-        if rounded_time not in globals()[f'valid_times_{timeframe}']:
-            raise Exception(f'time {rounded_time} not found in globals()[valid_times_{timeframe}]!')
+        if f'valid_times_{timeframe}' not in GLOBAL_CACHE.keys():
+            raise Exception(f'valid_times_{timeframe} not initialized in GLOBAL_CACHE')
+        if rounded_time not in GLOBAL_CACHE[f'valid_times_{timeframe}']:
+            raise Exception(f'time {rounded_time} not found in GLOBAL_CACHE[valid_times_{timeframe}]!')
     else:
         raise Exception(f'Invalid type of time:{type(time)}')
     return rounded_time

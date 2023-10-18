@@ -29,6 +29,7 @@ class TopTYPE(Enum):
     VALLEY = 'valley'
 
 
+GLOBAL_CACHE = {}
 
 
 class Config():

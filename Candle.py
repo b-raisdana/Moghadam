@@ -5,7 +5,7 @@ import talib as ta
 from pandera import typing as pt
 
 import helper
-from Config import config
+from Config import config, GLOBAL_CACHE
 from DataPreparation import read_file, single_timeframe, cast_and_validate
 from FigurePlotter.plotter import file_id
 from MetaTrader import MT
@@ -93,7 +93,7 @@ def read_multi_timeframe_ohlc(date_range_str: str = None) \
     result = read_file(date_range_str, 'multi_timeframe_ohlc', generate_multi_timeframe_ohlc,
                        MultiTimeframeOHLCV)
     for timeframe in config.timeframes:
-        globals()[f'valid_times_{timeframe}'] = \
+        GLOBAL_CACHE[f'valid_times_{timeframe}'] = \
             single_timeframe(result, timeframe).index.get_level_values('date').tolist()
     return result
 
@@ -103,8 +103,8 @@ def read_multi_timeframe_ohlca(date_range_str: str = None) \
     result = read_file(date_range_str, 'multi_timeframe_ohlca', generate_multi_timeframe_ohlca,
                        MultiTimeframeOHLCA)
     for timeframe in config.timeframes:
-        if f'valid_times_{timeframe}' not in globals().keys():
-            globals()[f'valid_times_{timeframe}'] = \
+        if f'valid_times_{timeframe}' not in GLOBAL_CACHE.keys():
+            GLOBAL_CACHE[f'valid_times_{timeframe}'] = \
                 single_timeframe(result, timeframe).index.get_level_values('date').tolist()
     return result
 
