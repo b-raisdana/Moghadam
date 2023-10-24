@@ -14,7 +14,7 @@ import psutil
 from pandera import typing as pt
 
 from DataPreparation import map_symbol, extract_file_info, FileInfoSet
-from Model.MultiTimeframeOHLC import OHLCV
+from Model.MultiTimeframeOHLCV import OHLCV
 from helper import log
 
 # def mt5_client() -> Mt5:
@@ -133,7 +133,7 @@ class MT:
     	shift_size=19.832985
     	fixed_pos=0.000000
     	ticker=1
-    	ohlc=0
+    	ohlcv=0
     	one_click=0
     	one_click_btn=1
     	bidline=1

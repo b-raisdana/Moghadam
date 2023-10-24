@@ -5,7 +5,7 @@ import pandas as pd
 from pandera import typing as pt
 
 from BullBearSide import read_multi_timeframe_bull_bear_side_trends, previous_trend
-from Candle import read_multi_timeframe_ohlca
+from Candle import read_multi_timeframe_ohlcva
 from Config import config
 from DataPreparation import single_timeframe, expected_movement_size, trigger_timeframe, read_file, \
     cast_and_validate, anti_pattern_timeframe
@@ -63,14 +63,14 @@ def multi_timeframe_bull_bear_side_pivots(date_range_str: str = None, timeframe_
 
     multi_timeframe_trends = read_multi_timeframe_bull_bear_side_trends(date_range_str)
     multi_timeframe_peaks_n_valleys = read_multi_timeframe_peaks_n_valleys(date_range_str)
-    multi_timeframe_ohlca = read_multi_timeframe_ohlca(date_range_str)
+    multi_timeframe_ohlcva = read_multi_timeframe_ohlcva(date_range_str)
     multi_timeframe_pivots = pd.DataFrame()
     if timeframe_shortlist is None:
         timeframe_shortlist = config.structure_timeframes[::-1]
     for timeframe in timeframe_shortlist:
         single_timeframe_peaks_n_valleys = major_peaks_n_valleys(multi_timeframe_peaks_n_valleys, timeframe)
-        timeframe_ohlca = single_timeframe(multi_timeframe_ohlca, timeframe)
-        trigger_timeframe_ohlca = single_timeframe(multi_timeframe_ohlca, trigger_timeframe(timeframe))
+        timeframe_ohlcva = single_timeframe(multi_timeframe_ohlcva, timeframe)
+        trigger_timeframe_ohlcva = single_timeframe(multi_timeframe_ohlcva, trigger_timeframe(timeframe))
         timeframe_trends = single_timeframe(multi_timeframe_trends, timeframe)
         _expected_movement_size = expected_movement_size(timeframe_trends['ATR'])
         if len(timeframe_trends) > 0:
@@ -102,14 +102,14 @@ def multi_timeframe_bull_bear_side_pivots(date_range_str: str = None, timeframe_
                 # find the Peaks and Valleys align with the Pivot
                 timeframe_peaks_and_valleys = single_timeframe_peaks_n_valleys.loc[
                     single_timeframe_peaks_n_valleys.index.get_level_values('date').isin(_pivots.index)]
-                # _pivots = pivots_level_n_margins( timeframe_peaks_and_valleys, _pivots, timeframe, timeframe_ohlca,
-                #                                  trigger_timeframe_ohlca)
+                # _pivots = pivots_level_n_margins( timeframe_peaks_and_valleys, _pivots, timeframe, timeframe_ohlcva,
+                #                                  trigger_timeframe_ohlcva)
                 _pivots = pivots_level_n_margins(pivot_peaks_or_valleys=timeframe_peaks_and_valleys,
                                                  timeframe_pivots=_pivots,
                                                  timeframe=timeframe,
-                                                 candle_body_source=timeframe_ohlca,
-                                                 internal_atr_source=timeframe_ohlca,
-                                                 breakout_atr_source=trigger_timeframe_ohlca,
+                                                 candle_body_source=timeframe_ohlcva,
+                                                 internal_atr_source=timeframe_ohlcva,
+                                                 breakout_atr_source=trigger_timeframe_ohlcva,
                                                  )
                 _pivots['ttl'] = _pivots.index + level_ttl(timeframe)
                 _pivots['deactivated_at'] = None
@@ -150,14 +150,14 @@ def multi_timeframe_bull_bear_side_pivots(date_range_str: str = None, timeframe_
 #
 #     multi_timeframe_trends = read_multi_timeframe_bull_bear_side_trends(date_range_str)
 #     multi_timeframe_peaks_n_valleys = read_multi_timeframe_peaks_n_valleys(date_range_str)
-#     multi_timeframe_ohlca = read_multi_timeframe_ohlca(date_range_str)
+#     multi_timeframe_ohlcva = read_multi_timeframe_ohlcva(date_range_str)
 #     multi_timeframe_pivots = pd.DataFrame()
 #     if timeframe_shortlist is None:
 #         timeframe_shortlist = config.structure_timeframes[::-1]
 #     for timeframe in timeframe_shortlist:
 #         single_timeframe_peaks_n_valleys = major_peaks_n_valleys(multi_timeframe_peaks_n_valleys, timeframe)
-#         timeframe_ohlca = single_timeframe(multi_timeframe_ohlca, timeframe)
-#         trigger_timeframe_ohlca = single_timeframe(multi_timeframe_ohlca, trigger_timeframe(timeframe))
+#         timeframe_ohlcva = single_timeframe(multi_timeframe_ohlcva, timeframe)
+#         trigger_timeframe_ohlcva = single_timeframe(multi_timeframe_ohlcva, trigger_timeframe(timeframe))
 #         timeframe_trends = single_timeframe(multi_timeframe_trends, timeframe)
 #         _expected_movement_size = expected_movement_size(timeframe_trends['ATR'])
 #         if len(timeframe_trends) > 0:
@@ -194,8 +194,8 @@ def multi_timeframe_bull_bear_side_pivots(date_range_str: str = None, timeframe_
 #                 # find the Peaks and Valleys align with the Pivot
 #                 pivot_peaks_and_valleys = single_timeframe_peaks_n_valleys.loc[
 #                     single_timeframe_peaks_n_valleys.index.get_level_values('date').isin(_pivots.index)]
-#                 _pivots = pivots_level_n_margins(pivot_peaks_and_valleys, _pivots, timeframe, trigger_timeframe_ohlca,
-#                                                  trigger_timeframe_ohlca)
+#                 _pivots = pivots_level_n_margins(pivot_peaks_and_valleys, _pivots, timeframe, trigger_timeframe_ohlcva,
+#                                                  trigger_timeframe_ohlcva)
 #
 #                 _pivots['ttl'] = _pivots.index + level_ttl(timeframe)
 #                 _pivots['deactivated_at'] = None

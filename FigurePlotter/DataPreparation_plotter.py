@@ -8,34 +8,34 @@ from helper import log, measure_time
 
 
 @measure_time
-def plot_multi_timeframe_ohlca(multi_timeframe_ohlca, name: str = '', show: bool = True, save: bool = True) -> None:
-    # todo: test plot_multi_timeframe_ohlca
+def plot_multi_timeframe_ohlcva(multi_timeframe_ohlcva, name: str = '', show: bool = True, save: bool = True) -> None:
+    # todo: test plot_multi_timeframe_ohlcva
     figures = []
     for _, timeframe in enumerate(config.timeframes):
-        figures.append(plot_ohlca(single_timeframe(multi_timeframe_ohlca, timeframe), show=False, save=False,
-                                  name=f'{timeframe} ohlca'))
-    plot_multiple_figures(figures, name=f'multi_timeframe_ohlca.{file_id(multi_timeframe_ohlca, name)}',
+        figures.append(plot_ohlcva(single_timeframe(multi_timeframe_ohlcva, timeframe), show=False, save=False,
+                                  name=f'{timeframe} ohlcva'))
+    plot_multiple_figures(figures, name=f'multi_timeframe_ohlcva.{file_id(multi_timeframe_ohlcva, name)}',
                           save=save, show=show)
 
 
 # @measure_time
-def plot_multi_timeframe_ohlc(multi_timeframe_ohlc, date_range_str):
-    # todo: test plot_multi_timeframe_ohlc
+def plot_multi_timeframe_ohlcv(multi_timeframe_ohlcv, date_range_str):
+    # todo: test plot_multi_timeframe_ohlcv
     figures = []
     for _, timeframe in enumerate(config.timeframes):
-        figures.append(plot_ohlc(single_timeframe(multi_timeframe_ohlc, timeframe), show=False, save=False,
-                                 name=f'{timeframe} ohlc'))
-    plot_multiple_figures(figures, name=f'multi_timeframe_ohlc.{date_range_str}')
+        figures.append(plot_ohlcv(single_timeframe(multi_timeframe_ohlcv, timeframe), show=False, save=False,
+                                  name=f'{timeframe} ohlcv'))
+    plot_multiple_figures(figures, name=f'multi_timeframe_ohlcv.{date_range_str}')
 
 
 # @measure_time
-def plot_ohlc(ohlc: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']),
-              save: bool = True, name: str = '', show: bool = True) -> plgo.Figure:
+def plot_ohlcv(ohlcv: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']),
+               save: bool = True, name: str = '', show: bool = True) -> plgo.Figure:
     """
         Plot OHLC (Open, High, Low, Close) data as a candlestick chart.
 
         Parameters:
-            ohlc (pd.DataFrame): A DataFrame containing OHLC data.
+            ohlcv (pd.DataFrame): A DataFrame containing OHLC data.
             save (bool): If True, the plot is saved as an image file.
             name (str): The name of the plot.
             show (bool): If False, the plot will not be displayed.
@@ -45,10 +45,10 @@ def plot_ohlc(ohlc: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']),
         """
     # MAX_LEN_OF_DATA_FRAME_TO_PLOT = 50000
     # SAFE_LEN_OF_DATA_FRAME_TO_PLOT = 10000
-    # if len(ohlc.index) > MAX_LEN_OF_DATA_FRAME_TO_PLOT:
-    #     raise Exception(f'Too many rows to plt ({len(ohlc.index),}>{MAX_LEN_OF_DATA_FRAME_TO_PLOT})')
-    # if len(ohlc.index) > SAFE_LEN_OF_DATA_FRAME_TO_PLOT:
-    #     log(f'Plotting too much data will slow us down ({len(ohlc.index),}>{SAFE_LEN_OF_DATA_FRAME_TO_PLOT})')
+    # if len(ohlcv.index) > MAX_LEN_OF_DATA_FRAME_TO_PLOT:
+    #     raise Exception(f'Too many rows to plt ({len(ohlcv.index),}>{MAX_LEN_OF_DATA_FRAME_TO_PLOT})')
+    # if len(ohlcv.index) > SAFE_LEN_OF_DATA_FRAME_TO_PLOT:
+    #     log(f'Plotting too much data will slow us down ({len(ohlcv.index),}>{SAFE_LEN_OF_DATA_FRAME_TO_PLOT})')
 
     kaleido_install_lock_file_path = 'kaleido.installed'
     # if not os.path.isfile(kaleido_install_lock_file_path):
@@ -66,22 +66,22 @@ def plot_ohlc(ohlc: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']),
     #     except:
     #         os.system('pip install -U kaleido')
     #         os.system(f'echo "" > {kaleido_install_lock_file_path}')
-    if DEBUG: log(f'data({ohlc.shape})')
-    if DEBUG: log(ohlc)
-    fig = plgo.Figure(data=[plgo.Candlestick(x=ohlc.index.values,
-                                             open=ohlc['open'], high=ohlc['high'], low=ohlc['low'], close=ohlc['close']
+    if DEBUG: log(f'data({ohlcv.shape})')
+    if DEBUG: log(ohlcv)
+    fig = plgo.Figure(data=[plgo.Candlestick(x=ohlcv.index.values,
+                                             open=ohlcv['open'], high=ohlcv['high'], low=ohlcv['low'], close=ohlcv['close']
                                              , name=name
                                              )]).update_yaxes(fixedrange=False).update_layout(yaxis_title=name)
     if show: fig.show()
     if save:
-        file_name = f'ohlc.{file_id(ohlc, name)}'
+        file_name = f'ohlcv.{file_id(ohlcv, name)}'
         save_figure(fig, file_name)
 
     return fig
 
 
 # @measure_time
-def plot_ohlca(ohlca: pd.DataFrame, save: bool = True, show: bool = True, name: str = '') -> plgo.Figure:
+def plot_ohlcva(ohlcva: pd.DataFrame, save: bool = True, show: bool = True, name: str = '') -> plgo.Figure:
     """
     Plot OHLC data with an additional ATR (Average True Range) boundary.
 
@@ -90,7 +90,7 @@ def plot_ohlca(ohlca: pd.DataFrame, save: bool = True, show: bool = True, name: 
     and the width of the boundary is equal to the ATR value for each data point.
 
     Parameters:
-        ohlca (pd.DataFrame): A DataFrame containing OHLC data along with the 'ATR' column representing the ATR values.
+        ohlcva (pd.DataFrame): A DataFrame containing OHLC data along with the 'ATR' column representing the ATR values.
         save (bool): If True, the plot is saved as an HTML file.
         show (bool): If True, the plot is displayed in the browser.
 
@@ -98,34 +98,34 @@ def plot_ohlca(ohlca: pd.DataFrame, save: bool = True, show: bool = True, name: 
         None
 
     Example:
-        # Assuming you have the 'ohlca' DataFrame with the required columns (open, high, low, close, ATR)
+        # Assuming you have the 'ohlcva' DataFrame with the required columns (open, high, low, close, ATR)
         date_range_str = "17-10-06.00-00T17-10-06"
-        plot_ohlca(ohlca, date_range_str)
+        plot_ohlcva(ohlcva, date_range_str)
     """
     # Calculate the middle of the boundary (average of open and close)
-    midpoints = (ohlca['high'] + ohlca['low']) / 2
-    # Create a figure using the plot_ohlc function
-    fig = plot_ohlc(ohlca[['open', 'high', 'low', 'close']], show=False, save=False, name=name)
+    midpoints = (ohlcva['high'] + ohlcva['low']) / 2
+    # Create a figure using the plot_ohlcv function
+    fig = plot_ohlcv(ohlcva[['open', 'high', 'low', 'close']], show=False, save=False, name=name)
 
     # Add the ATR boundaries
-    fig = add_atr_scatter(fig, ohlca.index, midpoints=midpoints, widths=CandleSize.Spinning.value[1] * ohlca['ATR'],
+    fig = add_atr_scatter(fig, ohlcva.index, midpoints=midpoints, widths=CandleSize.Spinning.value[1] * ohlcva['ATR'],
                           name='Standard')
-    fig = add_atr_scatter(fig, ohlca.index, midpoints=midpoints, widths=CandleSize.Standard.value[1] * ohlca['ATR'],
+    fig = add_atr_scatter(fig, ohlcva.index, midpoints=midpoints, widths=CandleSize.Standard.value[1] * ohlcva['ATR'],
                           name='Long')
-    fig = add_atr_scatter(fig, ohlca.index, midpoints=midpoints, widths=CandleSize.Long.value[1] * ohlca['ATR'],
+    fig = add_atr_scatter(fig, ohlcva.index, midpoints=midpoints, widths=CandleSize.Long.value[1] * ohlcva['ATR'],
                           name='Spike')
 
-    fig.add_scatter(x=ohlca.index, y=midpoints,
+    fig.add_scatter(x=ohlcva.index, y=midpoints,
                     mode='none',
                     showlegend=False,
-                    text=[f'ATR: {atr:0.1f}' for atr in ohlca['ATR']],
+                    text=[f'ATR: {atr:0.1f}' for atr in ohlcva['ATR']],
                     hoverinfo='text')
 
     fig.update_layout(hovermode='x unified')
-    # fig.add_scatter(x=ohlca.index, y=(ohlca['high']+ohlca['low'])/2, mode='text', text=f'ATR: {ohlca["ATR"]}')
+    # fig.add_scatter(x=ohlcva.index, y=(ohlcva['high']+ohlcva['low'])/2, mode='text', text=f'ATR: {ohlcva["ATR"]}')
     # Show the figure or write it to an HTML file
     if save:
-        file_name = f'ohlca.{file_id(ohlca, name)}'
+        file_name = f'ohlcva.{file_id(ohlcva, name)}'
         save_figure(fig, file_name)
 
     if show:

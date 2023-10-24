@@ -8,7 +8,7 @@ from helper import measure_time
 
 
 @measure_time
-def plot_single_timeframe_candle_trend(ohlc: pd.DataFrame, single_timeframe_candle_trend: pd.DataFrame,
+def plot_single_timeframe_candle_trend(ohlcv: pd.DataFrame, single_timeframe_candle_trend: pd.DataFrame,
                                        single_timeframe_peaks_n_valleys: pd.DataFrame, show=True, save=True,
                                        path_of_plot=config.path_of_plots, name='Single Timeframe Candle Trend'):
     """
@@ -19,7 +19,7 @@ def plot_single_timeframe_candle_trend(ohlc: pd.DataFrame, single_timeframe_cand
     and Side candles with 70% transparent grey color.
 
     Parameters:
-        ohlc (pd.DataFrame): DataFrame containing OHLC data.
+        ohlcv (pd.DataFrame): DataFrame containing OHLC data.
         single_timeframe_candle_trend (pd.DataFrame): DataFrame containing candle trend data.
         single_timeframe_peaks_n_valleys (pd.DataFrame): DataFrame containing peaks and valleys data.
         show (bool): If True, the plot will be displayed.
@@ -38,7 +38,7 @@ def plot_single_timeframe_candle_trend(ohlc: pd.DataFrame, single_timeframe_cand
     })
 
     # Create the figure using plot_peaks_n_valleys function
-    fig = plot_peaks_n_valleys(ohlc,
+    fig = plot_peaks_n_valleys(ohlcv,
                                peaks=peaks_only(single_timeframe_peaks_n_valleys),
                                valleys=valleys_only(single_timeframe_peaks_n_valleys),
                                name=f'{name} Peaks n Valleys')
@@ -50,14 +50,14 @@ def plot_single_timeframe_candle_trend(ohlc: pd.DataFrame, single_timeframe_cand
     fig.update_layout(title_text=name)
 
     # Show the figure or write it to an HTML file
-    if save: save_figure(fig, name, file_id(ohlc))
+    if save: save_figure(fig, name, file_id(ohlcv))
     if show: fig.show()
 
     return fig
 
 
 # @measure_time
-def plot_multi_timeframe_candle_trend(multi_timeframe_candle_trend, multi_timeframe_peaks_n_valleys, ohlc, show=True,
+def plot_multi_timeframe_candle_trend(multi_timeframe_candle_trend, multi_timeframe_peaks_n_valleys, ohlcv, show=True,
                                       save=True, path_of_plot=config.path_of_plots):
     # todo: test plot_multi_timeframe_candle_trend
     figures = []
@@ -65,7 +65,7 @@ def plot_multi_timeframe_candle_trend(multi_timeframe_candle_trend, multi_timefr
     _multi_timeframe_valleys = valleys_only(multi_timeframe_peaks_n_valleys)
     for _, timeframe in enumerate(config.timeframes):
         figures.append(
-            plot_single_timeframe_candle_trend(ohlc, single_timeframe(multi_timeframe_candle_trend, timeframe),
+            plot_single_timeframe_candle_trend(ohlcv, single_timeframe(multi_timeframe_candle_trend, timeframe),
                                                major_peaks_n_valleys(multi_timeframe_peaks_n_valleys, timeframe),
                                                show=True,
                                                save=True,

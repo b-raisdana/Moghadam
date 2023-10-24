@@ -64,16 +64,20 @@ def date_range(date_range_str: str) -> Tuple[datetime, datetime]:
     return start_date, end_date
 
 
-def date_range_to_string(end_date: datetime = None, days: float = 60) -> str:
+def date_range_to_string(end_date: datetime = None, days: float = 60, start_date: datetime = None) -> str:
     if end_date is None:
         end_date = today_morning()
-    start_date = end_date - timedelta(days=days)
-    return f'{start_date.strftime("%y-%m-%d.%H-%M")}T' \
-           f'{end_date.strftime("%y-%m-%d.%H-%M")}'
+    if start_date is None:
+        start_date = end_date - timedelta(days=days) + timedelta(minutes=1)
+        return f'{start_date.strftime("%y-%m-%d.%H-%M")}T' \
+               f'{end_date.strftime("%y-%m-%d.%H-%M")}'
+    else:
+        return f'{start_date.strftime("%y-%m-%d.%H-%M")}T' \
+               f'{end_date.strftime("%y-%m-%d.%H-%M")}'
 
 
 def today_morning(tz=pytz.timezone('Asia/Tehran')) -> datetime:
-    return morning(datetime.now(tz))
+    return morning(datetime.now(tz)) - timedelta(minutes=1)
 
 
 def morning(date_time: datetime, tz=pytz.timezone('Asia/Tehran')):

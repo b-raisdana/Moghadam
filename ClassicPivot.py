@@ -3,7 +3,7 @@ from pandera import typing as pt
 
 import helper
 from BullBearSidePivot import read_multi_timeframe_bull_bear_side_pivots
-from Model.MultiTimeframeOHLC import OHLCV
+from Model.MultiTimeframeOHLCV import OHLCV
 from Model.MultiTimeframePivot import MultiTimeframePivot
 from PeakValleyPivots import read_multi_timeframe_top_pivots
 from Pivots import pivot_exact_overlapped, update_hit
@@ -23,7 +23,7 @@ def update_active_levels(multi_timeframe_pivots: pt.DataFrame[MultiTimeframePivo
     return multi_timeframe_pivots
 
 
-def reactivated_passed_levels(_time, ohlc: pt.DataFrame[OHLCV],
+def reactivated_passed_levels(_time, ohlcv: pt.DataFrame[OHLCV],
                               multi_timeframe_pivots: pt.DataFrame[MultiTimeframePivot]) \
         -> pt.DataFrame[MultiTimeframePivot]:
     """
@@ -40,7 +40,7 @@ def reactivated_passed_levels(_time, ohlc: pt.DataFrame[OHLCV],
         & (not multi_timeframe_pivots['deactivated_at'].isnull())
         ].sort_values(by='deactivated_at')
     for inactive_pivot_index, _ in inactive_pivots.iterrows():
-        filtered_ohlc = ohlc[inactive_pivot_index:_time]
+        filtered_ohlcv = ohlcv[inactive_pivot_index:_time]
 
     raise Exception('Not implemented')
 
@@ -53,7 +53,7 @@ def archive_cold_levels(_time, multi_timeframe_pivots: pt.DataFrame[MultiTimefra
     return multi_timeframe_pivots
 
 
-def update_inactive_levels(update__time, ohlc: pt.DataFrame[OHLCV],
+def update_inactive_levels(update__time, ohlcv: pt.DataFrame[OHLCV],
                            multi_timeframe_pivots: pt.DataFrame[MultiTimeframePivot]) \
         -> pt.DataFrame[MultiTimeframePivot]:
     """

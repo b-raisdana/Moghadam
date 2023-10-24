@@ -28,7 +28,7 @@ def find_peaks_valleys(ohlcv_df: pd.DataFrame, timeframes: List[str]):
                                        'strength': [timedelta.max] * len(valleys)}, index=valleys.index)
             peaks_valleys = pd.concat([peaks_valleys, valleys_df])
 
-    peaks_valleys.sort_index(inplace=True)
+    peaks_valleys.sort_index(inplace=True, level='date')
 
     for index, row in peaks_valleys.iterrows():
         is_peak = row['peak_or_valley'] == 'PEAK'

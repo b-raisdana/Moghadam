@@ -2,7 +2,7 @@ import pandera
 from pandera import typing as pt
 
 from Model.MultiTimeframe import MultiTimeframe
-from Model.MultiTimeframeOHLC import OHLCV
+from Model.MultiTimeframeOHLCV import OHLCV
 
 
 class PeaksValleys(OHLCV):

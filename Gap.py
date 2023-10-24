@@ -26,7 +26,7 @@ def generate_multi_timeframe_gap_levels():
 
 
 @measure_time
-def generate_multi_timeframe_pivots(multi_timeframe_ohlca: pd.DataFrame, multi_timeframe_peaks_n_valleys: pd.DataFrame):
+def generate_multi_timeframe_pivots(multi_timeframe_ohlcva: pd.DataFrame, multi_timeframe_peaks_n_valleys: pd.DataFrame):
     generate_multi_timeframe_pivot_levels()
     generate_multi_timeframe_gap_levels()
 

@@ -55,7 +55,7 @@ def read_file(date_range_str: str, data_frame_type: str, generator: Callable, Ca
 
     Parameters:
         date_range_str (str): The date range string used to construct the filename.
-        data_frame_type (str): The type of DataFrame to read, e.g., 'ohlca', 'multi_timeframe_ohlca', etc.
+        data_frame_type (str): The type of DataFrame to read, e.g., 'ohlcva', 'multi_timeframe_ohlcva', etc.
         generator (Callable): The function that generates the DataFrame if needed.
         skip_rows (Optional[int]): The number of rows to skip while reading the file.
         n_rows (Optional[int]): The maximum number of rows to read from the file.
@@ -69,9 +69,9 @@ def read_file(date_range_str: str, data_frame_type: str, generator: Callable, Ca
                    does not match the expected columns.
 
     Example:
-        # Assuming you have a generator function 'generate_ohlca' and 'ohlca_columns' defined in configuration
-        df = read_file(date_range_str='17-10-06.00-00T17-10-06', data_frame_type='ohlca',
-                       generator=generate_ohlca)
+        # Assuming you have a generator function 'generate_ohlcva' and 'ohlcva_columns' defined in configuration
+        df = read_file(date_range_str='17-10-06.00-00T17-10-06', data_frame_type='ohlcva',
+                       generator=generate_ohlcva)
 
     Note:
         This function first attempts to read the file based on the provided parameters. If the file is not found
@@ -227,7 +227,7 @@ def read_with_timeframe(data_frame_type: str, date_range_str: str, file_path: st
     includes 'multi_timeframe', it sets the index with both 'timeframe' and 'date' levels and swaps them.
 
     Parameters:
-        data_frame_type (str): The type of data frame being read, such as 'ohlc', 'ohlca', or 'multi_timeframe_ohlca'.
+        data_frame_type (str): The type of data frame being read, such as 'ohlcv', 'ohlcva', or 'multi_timeframe_ohlcva'.
         date_range_str (str): The date range string used to generate the file name.
         file_path (str): The path to the directory containing the data file.
         n_rows (int): The maximum number of rows to read from the CSV file.
@@ -238,7 +238,7 @@ def read_with_timeframe(data_frame_type: str, date_range_str: str, file_path: st
 
     Example:
         # Read OHLC data with adjusted index
-        ohlc_data = read_with_timeframe('ohlc', '21-07-01.00-00T21-07-02', '/path/to/data/', n_rows=1000, skip_rows=0)
+        ohlcv_data = read_with_timeframe('ohlcv', '21-07-01.00-00T21-07-02', '/path/to/data/', n_rows=1000, skip_rows=0)
     """
     if date_range_str is None:
         date_range_str = config.under_process_date_range

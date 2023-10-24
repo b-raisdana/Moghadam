@@ -8,59 +8,59 @@ from pandas import Timestamp
 
 import PeakValley
 import helper
-from Candle import read_multi_timeframe_ohlc, read_multi_timeframe_ohlca
+from Candle import read_multi_timeframe_ohlcv, read_multi_timeframe_ohlcva
 from Config import TopTYPE, config, TREND
 from DataPreparation import read_file, single_timeframe, to_timeframe, cast_and_validate
 from FigurePlotter.BullBearSide_plotter import plot_multi_timeframe_bull_bear_side_trends
 from Model.BullBearSide import BullBearSide
 from Model.MultiTimeframeBullBearSide import MultiTimeframeBullBearSide
 from Model.MultiTimeframeCandleTrend import MultiTimeframeCandleTrend
-from Model.MultiTimeframeOHLC import OHLCV
-from Model.MultiTimeframeOHLCA import OHLCA
+from Model.MultiTimeframeOHLCV import OHLCV
+from Model.MultiTimeframeOHLCVA import OHLCVA
 from PeakValley import peaks_only, valleys_only, read_multi_timeframe_peaks_n_valleys, major_peaks_n_valleys
 from helper import log, measure_time
 
 
 # @measure_time
-def insert_previous_n_next_tops(single_timeframe_peaks_n_valleys, ohlc):
-    ohlc = insert_previous_n_next_top(TopTYPE.PEAK, single_timeframe_peaks_n_valleys, ohlc)
-    ohlc = insert_previous_n_next_top(TopTYPE.VALLEY, single_timeframe_peaks_n_valleys, ohlc)
-    return ohlc
+def insert_previous_n_next_tops(single_timeframe_peaks_n_valleys, ohlcv):
+    ohlcv = insert_previous_n_next_top(TopTYPE.PEAK, single_timeframe_peaks_n_valleys, ohlcv)
+    ohlcv = insert_previous_n_next_top(TopTYPE.VALLEY, single_timeframe_peaks_n_valleys, ohlcv)
+    return ohlcv
 
 
-def insert_previous_n_next_top(top_type: TopTYPE, peaks_n_valleys, ohlc):
+def insert_previous_n_next_top(top_type: TopTYPE, peaks_n_valleys, ohlcv):
     # Todo: Not tested!
-    if f'previous_{top_type.value}_index' not in ohlc.columns:
-        ohlc[f'previous_{top_type.value}_index'] = None
-    if f'previous_{top_type.value}_value' not in ohlc.columns:
-        ohlc[f'previous_{top_type.value}_value'] = None
-    if f'next_{top_type.value}_index' not in ohlc.columns:
-        ohlc[f'next_{top_type.value}_index'] = None
-    if f'next_{top_type.value}_value' not in ohlc.columns:
-        ohlc[f'next_{top_type.value}_value'] = None
+    if f'previous_{top_type.value}_index' not in ohlcv.columns:
+        ohlcv[f'previous_{top_type.value}_index'] = None
+    if f'previous_{top_type.value}_value' not in ohlcv.columns:
+        ohlcv[f'previous_{top_type.value}_value'] = None
+    if f'next_{top_type.value}_index' not in ohlcv.columns:
+        ohlcv[f'next_{top_type.value}_index'] = None
+    if f'next_{top_type.value}_value' not in ohlcv.columns:
+        ohlcv[f'next_{top_type.value}_value'] = None
     tops = peaks_n_valleys[peaks_n_valleys['peak_or_valley'] == top_type.value]
     high_or_low = 'high' if top_type == TopTYPE.PEAK else 'low'
     for i in range(len(tops)):
         if i == len(tops) - 1:
-            is_previous_for_indexes = ohlc.loc[ohlc.index > tops.index.get_level_values('date')[i]].index
+            is_previous_for_indexes = ohlcv.loc[ohlcv.index > tops.index.get_level_values('date')[i]].index
         else:
-            is_previous_for_indexes = ohlc.loc[(ohlc.index > tops.index.get_level_values('date')[i]) &
-                                               (ohlc.index <= tops.index.get_level_values('date')[i + 1])].index
+            is_previous_for_indexes = ohlcv.loc[(ohlcv.index > tops.index.get_level_values('date')[i]) &
+                                               (ohlcv.index <= tops.index.get_level_values('date')[i + 1])].index
         if i == 0:
-            is_next_for_indexes = ohlc.loc[ohlc.index <= tops.index.get_level_values('date')[i]].index
+            is_next_for_indexes = ohlcv.loc[ohlcv.index <= tops.index.get_level_values('date')[i]].index
         else:
-            is_next_for_indexes = ohlc.loc[(ohlc.index > tops.index.get_level_values('date')[i - 1]) &
-                                           (ohlc.index <= tops.index.get_level_values('date')[i])].index
-        ohlc.loc[is_previous_for_indexes, f'previous_{top_type.value}_index'] = tops.index.get_level_values('date')[i]
-        ohlc.loc[is_previous_for_indexes, f'previous_{top_type.value}_value'] = tops.iloc[i][high_or_low]
-        ohlc.loc[is_next_for_indexes, f'next_{top_type.value}_index'] = tops.index.get_level_values('date')[i]
-        ohlc.loc[is_next_for_indexes, f'next_{top_type.value}_value'] = tops.iloc[i][high_or_low]
-    return ohlc
+            is_next_for_indexes = ohlcv.loc[(ohlcv.index > tops.index.get_level_values('date')[i - 1]) &
+                                           (ohlcv.index <= tops.index.get_level_values('date')[i])].index
+        ohlcv.loc[is_previous_for_indexes, f'previous_{top_type.value}_index'] = tops.index.get_level_values('date')[i]
+        ohlcv.loc[is_previous_for_indexes, f'previous_{top_type.value}_value'] = tops.iloc[i][high_or_low]
+        ohlcv.loc[is_next_for_indexes, f'next_{top_type.value}_index'] = tops.index.get_level_values('date')[i]
+        ohlcv.loc[is_next_for_indexes, f'next_{top_type.value}_value'] = tops.iloc[i][high_or_low]
+    return ohlcv
 
 
-def single_timeframe_candles_trend(ohlc: pd.DataFrame, single_timeframe_peaks_n_valley: pd.DataFrame) -> pd.DataFrame:
+def single_timeframe_candles_trend(ohlcv: pd.DataFrame, single_timeframe_peaks_n_valley: pd.DataFrame) -> pd.DataFrame:
     # Todo: Not tested!
-    candle_trend = insert_previous_n_next_tops(single_timeframe_peaks_n_valley, ohlc)
+    candle_trend = insert_previous_n_next_tops(single_timeframe_peaks_n_valley, ohlcv)
     candle_trend['bull_bear_side'] = TREND.SIDE.value
     candle_trend.loc[
         candle_trend.index[
@@ -423,7 +423,7 @@ def next_top_of_boundary(boundary_end: pd.Timestamp, boundary, single_timeframe_
 # @measure_time
 def multi_timeframe_bull_bear_side_trends(multi_timeframe_candle_trend: pd.DataFrame,
                                           multi_timeframe_peaks_n_valleys: pd.DataFrame,
-                                          multi_timeframe_ohlca: pd.DataFrame,
+                                          multi_timeframe_ohlcva: pd.DataFrame,
                                           timeframe_shortlist: List['str'] = None) \
         -> pt.DataFrame[MultiTimeframeBullBearSide]:
     trends = pd.DataFrame()
@@ -437,12 +437,12 @@ def multi_timeframe_bull_bear_side_trends(multi_timeframe_candle_trend: pd.DataF
         single_timeframe_peaks_n_valleys = major_peaks_n_valleys(multi_timeframe_peaks_n_valleys, timeframe)
         _timeframe_trends = single_timeframe_bull_bear_side_trends(single_timeframe_candle_trend,
                                                                    single_timeframe_peaks_n_valleys,
-                                                                   single_timeframe(multi_timeframe_ohlca,
+                                                                   single_timeframe(multi_timeframe_ohlcva,
                                                                                     timeframe)
                                                                    , timeframe)
         _timeframe_trends['timeframe'] = timeframe
         _timeframe_trends.set_index('timeframe', append=True, inplace=True)
-        _timeframe_trends = _timeframe_trends.swaplevel().sort_index()
+        _timeframe_trends = _timeframe_trends.swaplevel().sort_index(level='date')
         if len(_timeframe_trends) > 0:
             trends = pd.concat([trends, _timeframe_trends])
     # trends = trends[
@@ -461,7 +461,7 @@ def multi_timeframe_bull_bear_side_trends(multi_timeframe_candle_trend: pd.DataF
     return trends
 
 
-def add_trend_tops(_boundaries, single_timeframe_peak_n_valley: pt.DataFrame[PeakValley], ohlc: pt.DataFrame[OHLCV]):
+def add_trend_tops(_boundaries, single_timeframe_peak_n_valley: pt.DataFrame[PeakValley], ohlcv: pt.DataFrame[OHLCV]):
     if 'internal_high' not in _boundaries.columns:
         _boundaries['internal_high'] = None
     if 'internal_low' not in _boundaries.columns:
@@ -480,11 +480,11 @@ def add_trend_tops(_boundaries, single_timeframe_peak_n_valley: pt.DataFrame[Pea
             _boundaries.loc[i, 'internal_low'] = boundary_internal_tops['low'].min()
             _boundaries.loc[i, 'low_time'] = boundary_internal_tops['low'].idxmin()[1]
         else:
-            _boundaries.loc[i, 'internal_high'] = ohlc.loc[i:_boundary['end'], 'high'].max()
-            _boundaries.loc[i, 'high_time'] = ohlc.loc[i:_boundary['end'],
+            _boundaries.loc[i, 'internal_high'] = ohlcv.loc[i:_boundary['end'], 'high'].max()
+            _boundaries.loc[i, 'high_time'] = ohlcv.loc[i:_boundary['end'],
                                               'high'].idxmax()
-            _boundaries.loc[i, 'internal_low'] = ohlc.loc[i:_boundary['end'], 'low'].min()
-            _boundaries.loc[i, 'low_time'] = ohlc.loc[i:_boundary['end'], 'low'].idxmin()
+            _boundaries.loc[i, 'internal_low'] = ohlcv.loc[i:_boundary['end'], 'low'].min()
+            _boundaries.loc[i, 'low_time'] = ohlcv.loc[i:_boundary['end'], 'low'].idxmin()
     return _boundaries
 
 
@@ -512,7 +512,7 @@ def most_two_significant_tops(start, end, single_timeframe_peaks_n_valleys, tops
         (single_timeframe_peaks_n_valleys.index <= end) &
         (single_timeframe_peaks_n_valleys['peak_or_valley'] == tops_type.value)
         ].sort_values(by='strength')
-    return filtered_valleys.iloc[:2].sort_index()
+    return filtered_valleys.iloc[:2].sort_index(level='date')
 
 
 def add_canal_lines(_boundaries, single_timeframe_peaks_n_valleys):
@@ -539,8 +539,8 @@ def add_canal_lines(_boundaries, single_timeframe_peaks_n_valleys):
     return _boundaries
 
 
-def trend_ATRs(single_timeframe_boundaries: pt.DataFrame[BullBearSide], ohlca: pt.DataFrame[OHLCA]):
-    _boundaries_ATRs = [boundary_ATRs(_boundary_index, _boundary['end'], ohlca) for _boundary_index, _boundary in
+def trend_ATRs(single_timeframe_boundaries: pt.DataFrame[BullBearSide], ohlcva: pt.DataFrame[OHLCVA]):
+    _boundaries_ATRs = [boundary_ATRs(_boundary_index, _boundary['end'], ohlcva) for _boundary_index, _boundary in
                         single_timeframe_boundaries.iterrows()]
 
     for _i, _ATRs in enumerate(_boundaries_ATRs):
@@ -644,16 +644,16 @@ def previous_trend(trends: pt.DataFrame[BullBearSide]) -> Tuple[List[Optional[in
 
 
 def single_timeframe_bull_bear_side_trends(single_timeframe_candle_trend: pd.DataFrame,
-                                           single_timeframe_peaks_n_valleys, ohlca: pt.DataFrame[OHLCA],
+                                           single_timeframe_peaks_n_valleys, ohlcva: pt.DataFrame[OHLCVA],
                                            timeframe: str) -> pd.DataFrame:
-    if ohlca['ATR'].first_valid_index() is None:
+    if ohlcva['ATR'].first_valid_index() is None:
         return pd.DataFrame()
-    single_timeframe_candle_trend = single_timeframe_candle_trend.loc[ohlca['ATR'].first_valid_index():]
+    single_timeframe_candle_trend = single_timeframe_candle_trend.loc[ohlcva['ATR'].first_valid_index():]
     _trends = detect_trends(single_timeframe_candle_trend, timeframe)
-    _trends = add_trend_tops(_trends, single_timeframe_peaks_n_valleys, ohlca)
+    _trends = add_trend_tops(_trends, single_timeframe_peaks_n_valleys, ohlcva)
     _trends = add_toward_top_to_trend(_trends, single_timeframe_peaks_n_valleys, timeframe)
     _trends['movement'] = trend_movement(_trends)
-    _trends['ATR'] = trend_ATRs(_trends, ohlca=ohlca)
+    _trends['ATR'] = trend_ATRs(_trends, ohlcva=ohlcva)
     test_boundary_ATR(_trends)
     _trends['duration'] = trend_duration(_trends)
     _trends['rate'] = trend_rate(_trends, timeframe)
@@ -663,12 +663,12 @@ def single_timeframe_bull_bear_side_trends(single_timeframe_candle_trend: pd.Dat
     return _trends
 
 
-def boundary_ATRs(_boundary_start: Timestamp, _boudary_end: Timestamp, ohlca: pt.DataFrame[OHLCA]) -> List[float]:
-    _boundary_ATRs = ohlca.loc[_boundary_start:_boudary_end, 'ATR']
+def boundary_ATRs(_boundary_start: Timestamp, _boudary_end: Timestamp, ohlcva: pt.DataFrame[OHLCVA]) -> List[float]:
+    _boundary_ATRs = ohlcva.loc[_boundary_start:_boudary_end, 'ATR']
     if len(_boundary_ATRs[_boundary_ATRs.notnull()]) <= 0:
         raise Exception(f'Boundaries expected to be generated over candles with ATR but in '
                         f'{_boundary_start}-{_boudary_end} there is not any valid ATR!')
-    return ohlca.loc[_boundary_start:_boudary_end, 'ATR']  # .fillna(0)
+    return ohlcva.loc[_boundary_start:_boudary_end, 'ATR']  # .fillna(0)
 
 
 def detect_trends(single_timeframe_candle_trend, timeframe: str) -> pt.DataFrame[BullBearSide]:
@@ -746,7 +746,7 @@ def generate_multi_timeframe_bull_bear_side_trends(date_range_str: str = None, f
                                                    timeframe_shortlist: List['str'] = None):
     if date_range_str is None:
         date_range_str = config.under_process_date_range
-    multi_timeframe_ohlca = read_multi_timeframe_ohlca(date_range_str)
+    multi_timeframe_ohlcva = read_multi_timeframe_ohlcva(date_range_str)
 
     multi_timeframe_peaks_n_valleys = read_multi_timeframe_peaks_n_valleys(date_range_str)
     # Generate multi-timeframe candle trend
@@ -755,10 +755,10 @@ def generate_multi_timeframe_bull_bear_side_trends(date_range_str: str = None, f
     # Generate multi-timeframe trend boundaries
     trends = multi_timeframe_bull_bear_side_trends(multi_timeframe_candle_trend,
                                                    multi_timeframe_peaks_n_valleys,
-                                                   multi_timeframe_ohlca,
+                                                   multi_timeframe_ohlcva,
                                                    timeframe_shortlist=timeframe_shortlist)
     # # Plot multi-timeframe trend boundaries
-    # plot_multi_timeframe_bull_bear_side_trends(multi_timeframe_ohlca, multi_timeframe_peaks_n_valleys, trends,
+    # plot_multi_timeframe_bull_bear_side_trends(multi_timeframe_ohlcva, multi_timeframe_peaks_n_valleys, trends,
     #                                            timeframe_shortlist=timeframe_shortlist)
     # Save multi-timeframe trend boundaries to a.zip file
     trends.to_csv(os.path.join(file_path, f'multi_timeframe_bull_bear_side_trends.{date_range_str}.zip'),
@@ -768,16 +768,16 @@ def generate_multi_timeframe_bull_bear_side_trends(date_range_str: str = None, f
 @measure_time
 def generate_multi_timeframe_candle_trend(date_range_str: str, timeframe_shortlist: List['str'] = None,
                                           file_path: str = config.path_of_data):
-    multi_timeframe_ohlc = read_multi_timeframe_ohlc(date_range_str)
+    multi_timeframe_ohlcv = read_multi_timeframe_ohlcv(date_range_str)
     multi_timeframe_peaks_n_valleys = read_multi_timeframe_peaks_n_valleys(date_range_str).sort_index(level='date')
     multi_timeframe_candle_trend = pd.DataFrame()
     if timeframe_shortlist is None:
         timeframe_shortlist = config.timeframes
     for timeframe in timeframe_shortlist:  # peaks_n_valleys.index.unique(level='timeframe'):
-        # log(f'single_timeframe_candles_trend(single_timeframe(multi_timeframe_ohlc, {timeframe}),'
+        # log(f'single_timeframe_candles_trend(single_timeframe(multi_timeframe_ohlcv, {timeframe}),'
         #     f'major_peaks_n_valleys(multi_timeframe_peaks_n_valleys, {timeframe})')
         _timeframe_candle_trend = \
-            single_timeframe_candles_trend(single_timeframe(multi_timeframe_ohlc, timeframe),
+            single_timeframe_candles_trend(single_timeframe(multi_timeframe_ohlcv, timeframe),
                                            major_peaks_n_valleys(multi_timeframe_peaks_n_valleys, timeframe))
         _timeframe_candle_trend['timeframe'] = timeframe
         _timeframe_candle_trend.set_index('timeframe', append=True, inplace=True)

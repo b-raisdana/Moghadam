@@ -2,10 +2,10 @@ import pandas as pd
 from pandera import typing as pt
 from plotly import graph_objects as plgo
 
-from Candle import read_multi_timeframe_ohlc
+from Candle import read_multi_timeframe_ohlcv
 from Config import config
 from DataPreparation import single_timeframe
-from FigurePlotter.DataPreparation_plotter import plot_ohlc
+from FigurePlotter.DataPreparation_plotter import plot_ohlcv
 from FigurePlotter.plotter import save_figure, file_id, timeframe_color
 from Model.MultiTimeframePivot import MultiTimeframePivot
 from Model.Pivot import Pivot
@@ -37,17 +37,17 @@ def plot_multi_timeframe_pivots(multi_timeframe_pivots: pt.DataFrame[MultiTimefr
                                 name: str = '', show: bool = True,
                                 html_path: str = '', save: bool = True) -> plgo.Figure:
     # Create the figure using plot_peaks_n_valleys function
-    multi_timeframe_ohlc = read_multi_timeframe_ohlc(date_range_str)
-    end_time = max(multi_timeframe_ohlc.index.get_level_values('date'))
-    base_ohlc = single_timeframe(multi_timeframe_ohlc, config.timeframes[0])
-    fig = plot_ohlc(ohlc=base_ohlc, show=False, save=False, name=f'ohlc{config.timeframes[0]}')
+    multi_timeframe_ohlcv = read_multi_timeframe_ohlcv(date_range_str)
+    end_time = max(multi_timeframe_ohlcv.index.get_level_values('date'))
+    base_ohlcv = single_timeframe(multi_timeframe_ohlcv, config.timeframes[0])
+    fig = plot_ohlcv(ohlcv=base_ohlcv, show=False, save=False, name=f'ohlcv{config.timeframes[0]}')
     for timeframe in config.timeframes[1:]:
-        ohlc = single_timeframe(multi_timeframe_ohlc, timeframe)
-        fig.add_trace(plgo.Candlestick(x=ohlc.index,
-                                       open=ohlc['open'],
-                                       high=ohlc['high'],
-                                       low=ohlc['low'],
-                                       close=ohlc['close'], name=f'ohlc{timeframe}'))
+        ohlcv = single_timeframe(multi_timeframe_ohlcv, timeframe)
+        fig.add_trace(plgo.Candlestick(x=ohlcv.index,
+                                       open=ohlcv['open'],
+                                       high=ohlcv['high'],
+                                       low=ohlcv['low'],
+                                       close=ohlcv['close'], name=f'ohlcv{timeframe}'))
 
     multi_timeframe_pivots.sort_index(level='date', inplace=True)
     for (pivot_timeframe, pivot_start), pivot_info in multi_timeframe_pivots.iterrows():
@@ -95,7 +95,7 @@ def plot_multi_timeframe_pivots(multi_timeframe_pivots: pt.DataFrame[MultiTimefr
             legendgroup=pivot_name,  # hoverinfo='text', text=pivot_description,
         )
     if save or html_path != '':
-        file_name = f'{file_id(base_ohlc, name)}'
+        file_name = f'{file_id(base_ohlcv, name)}'
         save_figure(fig, file_name, html_path)
 
     if show: fig.show()

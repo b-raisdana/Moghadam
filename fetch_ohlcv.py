@@ -4,12 +4,13 @@ from typing import List
 
 import ccxt
 import pandas as pd
+import pytz
 from pandera import typing as pt
 
 import helper
 from Config import config
 from DataPreparation import map_symbol
-from Model.MultiTimeframeOHLC import OHLCV
+from Model.MultiTimeframeOHLCV import OHLCV
 from helper import log, date_range
 
 _ccxt_symbol_map = {
@@ -42,8 +43,9 @@ def fetch_ohlcv_by_range(date_range_str: str = None, symbol: str = None, base_ti
     if symbol is None:
         symbol = map_to_ccxt_symbol(config.under_process_symbol)
     start_date, end_date = date_range(date_range_str)
-    duration = end_date - start_date
+    duration = end_date - start_date + pd.to_timedelta(config.timeframes[0])
     limit = int(duration / pd.to_timedelta(base_timeframe))
+
     response = fetch_ohlcv(symbol, timeframe=base_timeframe, since=start_date, limit=limit)
     return response
 
@@ -57,7 +59,7 @@ def fetch_ohlcv(symbol, timeframe=config.timeframes[0], since: datetime = None, 
     width_of_timeframe = pd.to_timedelta(timeframe).seconds
     max_query_size = 1000
     for batch_start in range(0, limit, max_query_size):
-        start_timestamp = int(since.timestamp() + batch_start * width_of_timeframe) * 1000
+        start_timestamp = int(since.replace(tzinfo=pytz.UTC).timestamp() + batch_start * width_of_timeframe) * 1000
         this_query_size = min(limit - batch_start, max_query_size)
         log(f'fetch_ohlcv@{datetime.fromtimestamp(start_timestamp / 1000)}#{this_query_size}', stack_trace=False)
         response = exchange.fetch_ohlcv(symbol, timeframe=ccxt_timeframe, since=start_timestamp,

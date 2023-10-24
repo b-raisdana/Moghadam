@@ -14,11 +14,11 @@ from helper import measure_time, log
 MAX_NUMBER_OF_PLOT_SCATTERS = 5000
 
 
-def plot_single_timeframe_bull_bear_side_trends(single_timeframe_ohlca: pd.DataFrame, peaks_n_valleys: pd.DataFrame,
+def plot_single_timeframe_bull_bear_side_trends(single_timeframe_ohlcva: pd.DataFrame, peaks_n_valleys: pd.DataFrame,
                                                 boundaries: pd.DataFrame,
                                                 name: str = '', show: bool = True,
                                                 html_path: str = '', save: bool = True) -> plgo.Figure:
-    fig = plot_peaks_n_valleys(single_timeframe_ohlca, peaks=peaks_only(peaks_n_valleys),
+    fig = plot_peaks_n_valleys(single_timeframe_ohlcva, peaks=peaks_only(peaks_n_valleys),
                                valleys=valleys_only(peaks_n_valleys), name=name, show=False, save=False)
     remained_number_of_scatters = MAX_NUMBER_OF_PLOT_SCATTERS
     for _start, _trend in boundaries.iterrows():
@@ -26,13 +26,13 @@ def plot_single_timeframe_bull_bear_side_trends(single_timeframe_ohlca: pd.DataF
             pass
         trend_peaks_n_valleys = boundary_including_peaks_valleys(peaks_n_valleys, _start,
                                                                  _trend['end'])
-        included_candles = single_timeframe_ohlca.loc[_start: _trend['end']].index
+        included_candles = single_timeframe_ohlcva.loc[_start: _trend['end']].index
         trend_peaks = peaks_only(trend_peaks_n_valleys)['high'].sort_index(level='date')
         trend_valleys = valleys_only(trend_peaks_n_valleys)['low'].sort_index(level='date', ascending=False)
         xs = [_start] + trend_peaks.index.get_level_values('date').tolist() + \
              [_trend['end']] + trend_valleys.index.get_level_values('date').tolist()[::-1]
-        ys = [single_timeframe_ohlca.loc[_start, 'open']] + trend_peaks.values.tolist() + \
-             [single_timeframe_ohlca.loc[_trend['end'], 'close']] + trend_valleys.values.tolist()[::-1]
+        ys = [single_timeframe_ohlcva.loc[_start, 'open']] + trend_peaks.values.tolist() + \
+             [single_timeframe_ohlcva.loc[_trend['end'], 'close']] + trend_valleys.values.tolist()[::-1]
         fill_color = 'green' if _trend['bull_bear_side'] == TREND.BULLISH.value else \
             'red' if _trend['bull_bear_side'] == TREND.BEARISH.value else 'gray'
         text = f'{_trend["bull_bear_side"].replace("_TREND", "")}: ' \
@@ -55,7 +55,7 @@ def plot_single_timeframe_bull_bear_side_trends(single_timeframe_ohlca: pd.DataF
                             legendgroup=f'{_trend["bull_bear_side"].replace("_TREND", "")}: '
                                         f'{_start.strftime("%H:%M")}-{_trend["end"].strftime("%H:%M")}',
                             )
-            fig.add_scatter(x=included_candles, y=single_timeframe_ohlca.loc[included_candles, 'open'],
+            fig.add_scatter(x=included_candles, y=single_timeframe_ohlcva.loc[included_candles, 'open'],
                             mode='none',
                             showlegend=False,
                             text=text,
@@ -77,7 +77,7 @@ def plot_single_timeframe_bull_bear_side_trends(single_timeframe_ohlca: pd.DataF
             break
 
     if save or html_path != '':
-        file_name = f'single_timeframe_bull_bear_side_trends.{file_id(single_timeframe_ohlca, name)}'
+        file_name = f'single_timeframe_bull_bear_side_trends.{file_id(single_timeframe_ohlcva, name)}'
         save_figure(fig, file_name, html_path)
 
     if show: fig.show()
@@ -85,7 +85,7 @@ def plot_single_timeframe_bull_bear_side_trends(single_timeframe_ohlca: pd.DataF
 
 
 @measure_time
-def plot_multi_timeframe_bull_bear_side_trends(multi_timeframe_ohlca, multi_timeframe_peaks_n_valleys,
+def plot_multi_timeframe_bull_bear_side_trends(multi_timeframe_ohlcva, multi_timeframe_peaks_n_valleys,
                                                _multi_timeframe_bull_bear_side_trends, show: bool = True,
                                                save: bool = True,
                                                timeframe_shortlist: List['str'] = None):
@@ -94,15 +94,15 @@ def plot_multi_timeframe_bull_bear_side_trends(multi_timeframe_ohlca, multi_time
         timeframe_shortlist = config.timeframes
     for timeframe in timeframe_shortlist:
         _figure = plot_single_timeframe_bull_bear_side_trends(
-            single_timeframe_ohlca=single_timeframe(multi_timeframe_ohlca, timeframe),
+            single_timeframe_ohlcva=single_timeframe(multi_timeframe_ohlcva, timeframe),
             peaks_n_valleys=major_peaks_n_valleys(multi_timeframe_peaks_n_valleys, timeframe).sort_index(level='date'),
             boundaries=single_timeframe(_multi_timeframe_bull_bear_side_trends, timeframe).sort_index(level='date'),
             show=False, save=False,
             name=f'{timeframe} boundaries')
         figures.append(_figure)
     plot_multiple_figures(figures, name=f'multi_timeframe_bull_bear_side_trends.'
-                                        f'{multi_timeframe_ohlca.index[0][1].strftime("%y-%m-%d.%H-%M")}T'
-                                        f'{multi_timeframe_ohlca.index[-1][1].strftime("%y-%m-%d.%H-%M")}',
+                                        f'{multi_timeframe_ohlcva.index[0][1].strftime("%y-%m-%d.%H-%M")}T'
+                                        f'{multi_timeframe_ohlcva.index[-1][1].strftime("%y-%m-%d.%H-%M")}',
                           show=show, save=save)
 
 

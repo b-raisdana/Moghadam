@@ -4,7 +4,7 @@ import pandas as pd
 from pandera import typing as pt
 
 import helper
-from Candle import read_multi_timeframe_ohlca
+from Candle import read_multi_timeframe_ohlcva
 from Config import config
 from DataPreparation import single_timeframe, anti_trigger_timeframe, anti_pattern_timeframe, cast_and_validate, \
     read_file
@@ -30,29 +30,29 @@ def tops_pivots(date_range_str) -> pt.DataFrame[MultiTimeframePivot]:
         2. we use the 1H chart for 1D tops because they are creating 1H classic levels.
     '''
     _multi_timeframe_peaks_n_valleys = read_multi_timeframe_peaks_n_valleys(date_range_str)
-    _multi_timeframe_ohlca = read_multi_timeframe_ohlca(date_range_str)
+    _multi_timeframe_ohlcva = read_multi_timeframe_ohlcva(date_range_str)
     multi_timeframe_pivots = pd.DataFrame()
     for timeframe in config.structure_timeframes[::-1][2:]:
         # 1W tops are creating classic levels for 4H, 1D for 1H and 4H for 15min structure Timeframes.
         _pivots = single_timeframe(_multi_timeframe_peaks_n_valleys, anti_trigger_timeframe(timeframe))
-        ohlc_start = _multi_timeframe_ohlca.index.get_level_values('date').min()
+        ohlcv_start = _multi_timeframe_ohlcva.index.get_level_values('date').min()
         '''
         first part of the chart with the length of anti_trigger_timeframe(timeframe) is not reliable. We have to now 
         about anti_trigger_timeframe(timeframe) to make sure the detected Top is not for a anti-trigger Timeframe.  
         '''
-        _pivots = _pivots.loc[ohlc_start + pd.to_timedelta(anti_trigger_timeframe(timeframe)):]
-        anti_trigger_timeframe_ohlca = single_timeframe(_multi_timeframe_ohlca, anti_trigger_timeframe(timeframe))
+        _pivots = _pivots.loc[ohlcv_start + pd.to_timedelta(anti_trigger_timeframe(timeframe)):]
+        anti_trigger_timeframe_ohlcva = single_timeframe(_multi_timeframe_ohlcva, anti_trigger_timeframe(timeframe))
         '''
         we use the 1H chart for 1D tops because they are creating 1H classic levels.
         '''
-        timeframe_ohlca = single_timeframe(_multi_timeframe_ohlca, timeframe)
-        trigger_timeframe_ohlca = single_timeframe(_multi_timeframe_ohlca, timeframe)  # trigger_timeframe(timeframe))
+        timeframe_ohlcva = single_timeframe(_multi_timeframe_ohlcva, timeframe)
+        trigger_timeframe_ohlcva = single_timeframe(_multi_timeframe_ohlcva, timeframe)  # trigger_timeframe(timeframe))
         _pivots = pivots_level_n_margins(pivot_peaks_or_valleys=_pivots, timeframe_pivots=_pivots,
                                          # timeframe=anti_trigger_timeframe(timeframe),
                                          timeframe=timeframe,
-                                         candle_body_source=timeframe_ohlca,
-                                         internal_atr_source=timeframe_ohlca,
-                                         breakout_atr_source=trigger_timeframe_ohlca,
+                                         candle_body_source=timeframe_ohlcva,
+                                         internal_atr_source=timeframe_ohlcva,
+                                         breakout_atr_source=trigger_timeframe_ohlcva,
                                          )
         _pivots['activation_time'] = _pivots.index
         _pivots['ttl'] = _pivots.index + level_ttl(timeframe)
@@ -72,13 +72,13 @@ def tops_pivots(date_range_str) -> pt.DataFrame[MultiTimeframePivot]:
     multi_timeframe_pivots = cast_and_validate(multi_timeframe_pivots, MultiTimeframePivot)
     return multi_timeframe_pivots
     # _multi_timeframe_peaks_n_valleys = read_multi_timeframe_peaks_n_valleys(date_range_str)
-    # _multi_timeframe_ohlca = read_multi_timeframe_ohlca(date_range_str)
+    # _multi_timeframe_ohlcva = read_multi_timeframe_ohlcva(date_range_str)
     # multi_timeframe_pivots = pd.DataFrame()
     # for timeframe in config.structure_timeframes[::-1][2:]:
     #     _pivots = single_timeframe(_multi_timeframe_peaks_n_valleys, anti_trigger_timeframe(timeframe))
-    #     timeframe_ohlca = single_timeframe(_multi_timeframe_ohlca, timeframe)
-    #     trigger_timeframe_ohlca = single_timeframe(_multi_timeframe_ohlca, trigger_timeframe(timeframe))
-    #     _pivots = pivots_level_n_margins(_pivots, _pivots, timeframe, timeframe_ohlca, trigger_timeframe_ohlca)
+    #     timeframe_ohlcva = single_timeframe(_multi_timeframe_ohlcva, timeframe)
+    #     trigger_timeframe_ohlcva = single_timeframe(_multi_timeframe_ohlcva, trigger_timeframe(timeframe))
+    #     _pivots = pivots_level_n_margins(_pivots, _pivots, timeframe, timeframe_ohlcva, trigger_timeframe_ohlcva)
     #     _pivots['activation_time'] = _pivots.index
     #     _pivots['ttl'] = _pivots.index + level_ttl(timeframe)
     #     _pivots['hit'] = 0  # update_hits(multi_timeframe_pivots)
