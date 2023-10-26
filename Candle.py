@@ -4,7 +4,6 @@ import pandas as pd
 import talib as ta
 from pandera import typing as pt
 
-import helper
 from Config import config, GLOBAL_CACHE
 from DataPreparation import read_file, single_timeframe, cast_and_validate
 from FigurePlotter.plotter import file_id

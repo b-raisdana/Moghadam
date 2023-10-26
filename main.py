@@ -12,6 +12,12 @@ from helper import date_range_to_string
 
 if __name__ == "__main__":
     config.under_process_date_range = date_range_to_string(days=60)
+
+    date_range_str = config.under_process_date_range
+    file_path: str = config.path_of_data
+    MT.extract_to_data_path(os.path.join(file_path, f'ohlc.{date_range_str}.zip'))
+    MT.load_rates()
+
     # generatePeaks_n_Valleys
     # _ohlc()
     # generate_multi_timeframe_peaks_n_valleys(config.under_process_date_range)
