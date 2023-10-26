@@ -27,6 +27,19 @@
 //+------------------------------------------------------------------+
 #include <FileCSV.mqh>
 #include <CustomSymbols.mqh>
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+int RatesNumber(string symbol)
+  {
+   MqlRates mql_rates[];
+   int rates_count = CopyRates(Symbol(), PERIOD_M1, 1, 99999999, mql_rates);
+   return rates_count;
+  }
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
 bool ReadSymbolRates(string chart_symbol)
   {
 // Setup custom symbol
@@ -37,8 +50,8 @@ bool ReadSymbolRates(string chart_symbol)
      }
 // Open the CSV file
    CFileCSV csv;
-   string file_name = chart_symbol+".ohlc.csv";
-   //Print("Start reading "+file_name);
+   string file_name = chart_symbol+".ohlcv.csv";
+//Print("Start reading "+file_name);
    if(!csv.Open(file_name, FILE_READ|FILE_CSV|FILE_ANSI))
      {
       Print("Failed to open "+file_name+" file. Error code: ", GetLastError());
@@ -47,9 +60,10 @@ bool ReadSymbolRates(string chart_symbol)
 // Read and ignore the first line (header line)
    string line;
    csv.Read(line);
-   if(line != "date,open,high,low,close,volume")
+   string expected_header = "date,open,high,low,close,volume";
+   if(line != expected_header)
      {
-      Print("Invalid input file format in "+ file_name +line);
+      Print("Invalid input file format in "+ file_name + " " +line);
       return false;
      }
    int read_lines = 0;
@@ -72,12 +86,20 @@ bool ReadSymbolRates(string chart_symbol)
       tick[0].real_volume = int(volume * 1000000); // to preserve volume fractions as MQL does not allow volume fractions
       if(CustomRatesUpdate(chart_symbol, tick)<0)
         {
-         Print("Failed to add tick. Error code: ", GetLastError());
-         return false;
+         int error_code = GetLastError();
+         Print("Failed to add tick. Error code: ", error_code);
+         if(error_code==0)
+           {
+            MqlRates mql_rates[];
+            Print("Number of rates:" + RatesNumber(chart_symbol));
+            return false;
+           }
         }
       read_lines += 1;
       if(MathMod(read_lines, 1000) == 0)
-         Print(IntegerToString(read_lines) + " lines of data imported successfully");
+        {
+         Print(IntegerToString(read_lines) + " lines of data imported from " + file_name + " Rates: " + RatesNumber(chart_symbol));
+        }
      }
    Print(IntegerToString(read_lines) + " lines of data imported successfully");
    csv.Close();

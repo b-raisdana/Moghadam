@@ -66,7 +66,10 @@ def date_range(date_range_str: str) -> Tuple[datetime, datetime]:
 
 def date_range_to_string(end_date: datetime = None, days: float = 60, start_date: datetime = None) -> str:
     if end_date is None:
-        end_date = today_morning()
+        if start_date is None:
+            end_date = today_morning()
+        else:
+            end_date = start_date + timedelta(days=days) - timedelta(minutes=1)
     if start_date is None:
         start_date = end_date - timedelta(days=days) + timedelta(minutes=1)
         return f'{start_date.strftime("%y-%m-%d.%H-%M")}T' \

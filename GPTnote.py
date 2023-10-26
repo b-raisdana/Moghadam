@@ -30,7 +30,7 @@ def date_range(date_range_str: str) -> Tuple[datetime, datetime]:
 
 def read_multi_timeframe_ohlcv(date_range_str: str = None) \
         -> pt.DataFrame[MultiTimeframeOHLCV]:
-    result = read_file(date_range_str, 'multi_timeframe_ohlcvv', generate_multi_timeframe_ohlcv,
+    result = read_file(date_range_str, 'multi_timeframe_ohlcv', generate_multi_timeframe_ohlcv,
                        MultiTimeframeOHLCV)
     for timeframe in config.timeframes:
         GLOBAL_CACHE[f'valid_times_{timeframe}'] = \
