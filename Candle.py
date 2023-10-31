@@ -35,6 +35,11 @@ def expand_date_range(date_range_str: str, time_delta: timedelta, mode: str):
     start, end = date_range(date_range_str)
     if mode == 'start':
         start = start - time_delta
+    elif mode == 'end':
+        end = end + time_delta
+    elif mode == 'both':
+        start = start - time_delta
+        end = end + time_delta
     else:
         raise Exception(f'mode={mode} not implemented')
     return date_range_to_string(start_date=start, end_date=end)

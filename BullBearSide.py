@@ -7,17 +7,16 @@ import pandera.typing as pt
 from pandas import Timestamp
 
 import PeakValley
-import helper
 from Candle import read_multi_timeframe_ohlcv, read_multi_timeframe_ohlcva
 from Config import TopTYPE, config, TREND
 from DataPreparation import read_file, single_timeframe, to_timeframe, cast_and_validate
-from FigurePlotter.BullBearSide_plotter import plot_multi_timeframe_bull_bear_side_trends
 from Model.BullBearSide import BullBearSide
 from Model.MultiTimeframeBullBearSide import MultiTimeframeBullBearSide
 from Model.MultiTimeframeCandleTrend import MultiTimeframeCandleTrend
 from Model.MultiTimeframeOHLCV import OHLCV
 from Model.MultiTimeframeOHLCVA import OHLCVA
-from PeakValley import peaks_only, valleys_only, read_multi_timeframe_peaks_n_valleys, major_peaks_n_valleys
+from PeakValley import peaks_only, valleys_only, read_multi_timeframe_peaks_n_valleys, major_peaks_n_valleys, \
+    insert_previous_n_next_top
 from helper import log, measure_time
 
 
@@ -25,36 +24,6 @@ from helper import log, measure_time
 def insert_previous_n_next_tops(single_timeframe_peaks_n_valleys, ohlcv):
     ohlcv = insert_previous_n_next_top(TopTYPE.PEAK, single_timeframe_peaks_n_valleys, ohlcv)
     ohlcv = insert_previous_n_next_top(TopTYPE.VALLEY, single_timeframe_peaks_n_valleys, ohlcv)
-    return ohlcv
-
-
-def insert_previous_n_next_top(top_type: TopTYPE, peaks_n_valleys, ohlcv):
-    # Todo: Not tested!
-    if f'previous_{top_type.value}_index' not in ohlcv.columns:
-        ohlcv[f'previous_{top_type.value}_index'] = None
-    if f'previous_{top_type.value}_value' not in ohlcv.columns:
-        ohlcv[f'previous_{top_type.value}_value'] = None
-    if f'next_{top_type.value}_index' not in ohlcv.columns:
-        ohlcv[f'next_{top_type.value}_index'] = None
-    if f'next_{top_type.value}_value' not in ohlcv.columns:
-        ohlcv[f'next_{top_type.value}_value'] = None
-    tops = peaks_n_valleys[peaks_n_valleys['peak_or_valley'] == top_type.value]
-    high_or_low = 'high' if top_type == TopTYPE.PEAK else 'low'
-    for i in range(len(tops)):
-        if i == len(tops) - 1:
-            is_previous_for_indexes = ohlcv.loc[ohlcv.index > tops.index.get_level_values('date')[i]].index
-        else:
-            is_previous_for_indexes = ohlcv.loc[(ohlcv.index > tops.index.get_level_values('date')[i]) &
-                                               (ohlcv.index <= tops.index.get_level_values('date')[i + 1])].index
-        if i == 0:
-            is_next_for_indexes = ohlcv.loc[ohlcv.index <= tops.index.get_level_values('date')[i]].index
-        else:
-            is_next_for_indexes = ohlcv.loc[(ohlcv.index > tops.index.get_level_values('date')[i - 1]) &
-                                           (ohlcv.index <= tops.index.get_level_values('date')[i])].index
-        ohlcv.loc[is_previous_for_indexes, f'previous_{top_type.value}_index'] = tops.index.get_level_values('date')[i]
-        ohlcv.loc[is_previous_for_indexes, f'previous_{top_type.value}_value'] = tops.iloc[i][high_or_low]
-        ohlcv.loc[is_next_for_indexes, f'next_{top_type.value}_index'] = tops.index.get_level_values('date')[i]
-        ohlcv.loc[is_next_for_indexes, f'next_{top_type.value}_value'] = tops.iloc[i][high_or_low]
     return ohlcv
 
 

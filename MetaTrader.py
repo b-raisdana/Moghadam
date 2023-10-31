@@ -304,7 +304,7 @@ class MT:
     @classmethod
     def load_rates(cls):
         cls.rate_load_requirements()
-        cls.close_meta_trader()
+        cls.kill_meta_trader()
         # Use subprocess to run the script
         result = subprocess.run([cls.autoit_executable_path, cls.autoit_script_path], stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE)
@@ -312,9 +312,12 @@ class MT:
         # Print the result
         log("STDOUT:" + result.stdout.decode('utf-8'), stack_trace=False)
         log("STDERR:" + result.stderr.decode('utf-8'), stack_trace=False)
+        time.sleep(2)
+        cls.kill_meta_trader()
+        time.sleep(2)
 
     @classmethod
-    def close_meta_trader(cls):
+    def kill_meta_trader(cls):
         # Define the process name for MetaTrader 5
         process_names = ["terminal.exe", "terminal64.exe"]
         # Check if MetaTrader 5 is running
