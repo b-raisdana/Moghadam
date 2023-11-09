@@ -8,7 +8,7 @@ from plotly import graph_objects as plgo
 
 from Candle import read_multi_timeframe_ohlcva, expand_date_range
 from Config import config, INFINITY_TIME_DELTA, TopTYPE
-from DataPreparation import read_file, single_timeframe, df_timedelta_to_str, cast_and_validate
+from DataPreparation import read_file, single_timeframe, df_timedelta_to_str, cast_and_validate, trim_to_date_range
 from FigurePlotter.DataPreparation_plotter import plot_ohlcva
 from FigurePlotter.plotter import save_figure, file_id, plot_multiple_figures, timeframe_color
 from MetaTrader import MT
@@ -330,9 +330,9 @@ def top_timeframe(tops: pt.DataFrame[PeaksValleys]) -> pt.DataFrame[PeaksValleys
 #     return config.timeframes[-1]
 
 
-def multi_timeframe_peaks_n_valleys(date_range_str) \
+def multi_timeframe_peaks_n_valleys(expanded_date_range) \
         -> pt.DataFrame[MultiTimeframePeakValleys]:
-    multi_timeframe_ohlcva = read_multi_timeframe_ohlcva(date_range_str)
+    multi_timeframe_ohlcva = read_multi_timeframe_ohlcva(expanded_date_range)
 
     base_ohlcv = single_timeframe(multi_timeframe_ohlcva, config.timeframes[0])
 
@@ -340,9 +340,6 @@ def multi_timeframe_peaks_n_valleys(date_range_str) \
 
     _peaks_n_valleys = calculate_strength_of_peaks_n_valleys(base_ohlcv, _peaks_n_valleys)
 
-    # _peaks_n_valleys = _peaks_n_valleys.astype({
-    #     'strength': 'timedelta64[s]'
-    # })
     _peaks_n_valleys = top_timeframe(_peaks_n_valleys)
 
     _peaks_n_valleys.set_index('timeframe', append=True, inplace=True)
@@ -365,6 +362,7 @@ def generate_multi_timeframe_peaks_n_valleys(date_range_str, file_path: str = co
         (start < _peaks_n_valleys.index.get_level_values()) &
         (_peaks_n_valleys.index.get_level_values() < end)]
     # plot_multi_timeframe_peaks_n_valleys(_peaks_n_valleys, date_range_str)
+    _peaks_n_valleys = trim_to_date_range(date_range_str, _peaks_n_valleys)
     _peaks_n_valleys.to_csv(os.path.join(file_path, f'multi_timeframe_peaks_n_valleys.{date_range_str}.zip'),
                             compression='zip')
     MT.extract_to_data_path(os.path.join(file_path, f'multi_timeframe_peaks_n_valleys.{date_range_str}.zip'))

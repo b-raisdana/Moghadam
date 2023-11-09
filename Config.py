@@ -4,7 +4,6 @@ import json
 import os
 from datetime import timedelta
 from enum import Enum
-from typing import List
 
 import pandas as pd
 
@@ -76,14 +75,12 @@ class Config():
 
         self.INFINITY_TIME_DELTA = timedelta(days=10 * 365)
 
-
-
         self.path_of_data = 'data'
         self.path_of_plots = os.path.join(self.path_of_data, 'plots')
         self.path_of_logs = 'logs'
         self.path_of_test_plots = os.path.join('test_plots')
 
-        self.base_time_delta = timedelta(minutes=1)
+        self.base_time_delta = pd.to_timedelta(self.timeframes[0])  # timedelta(minutes=1)
 
         self.momentum_trand_strength_factor = 0.70  # CandleSize.Standard.value[0]
 

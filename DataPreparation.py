@@ -13,9 +13,7 @@ from pandera import typing as pt
 
 import helper
 from Config import config, GLOBAL_CACHE
-from helper import log
-
-
+from helper import log, date_range
 
 
 def range_of_data(data: pd.DataFrame) -> str:
@@ -458,3 +456,13 @@ def extract_file_info(file_name: str) -> FileInfoSet:
     if 'symbol' not in data.keys() or data['symbol'] is None:
         data['symbol'] = config.under_process_symbol
     return FileInfoSet(**data)
+
+
+def trim_to_date_range(date_range_str: str, df):
+    start, end = date_range(date_range_str)
+    date_indexes = df.index.get_level_values(level='date')
+    df = df[
+        (date_indexes >= start) &
+        (date_indexes <= end)
+        ]
+    return df

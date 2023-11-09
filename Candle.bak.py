@@ -46,7 +46,32 @@ def expand_date_range(date_range_str: str, time_delta: timedelta, mode: str):
 
 
 @measure_time
-def core_generate_multi_timeframe_ohlcv(date_range_str: str, file_path: str = config.path_of_data):
+def generate_multi_timeframe_ohlcva(date_range_str: str = None, file_path: str = config.path_of_data) -> None:
+    if date_range_str is None:
+        date_range_str = config.under_process_date_range
+
+    biggest_timeframe = config.timeframes[-1]
+    expanded_date_range = expand_date_range(date_range_str,
+                                            time_delta=config.ATR_timeperiod * pd.to_timedelta(biggest_timeframe),
+                                            mode='start')
+    expanded_multi_timeframe_ohlcv = read_multi_timeframe_ohlcv(expanded_date_range)
+    multi_timeframe_ohlcva = pd.DataFrame()
+    for _, timeframe in enumerate(config.timeframes):
+        _single_timeframe_ohlcva = insert_atr(single_timeframe(expanded_multi_timeframe_ohlcv, timeframe))
+        _single_timeframe_ohlcva.dropna(subset=['ATR'], inplace=True)
+        _single_timeframe_ohlcva['timeframe'] = timeframe
+        _single_timeframe_ohlcva.set_index('timeframe', append=True, inplace=True)
+        _single_timeframe_ohlcva = _single_timeframe_ohlcva.swaplevel()
+        multi_timeframe_ohlcva = pd.concat([_single_timeframe_ohlcva, multi_timeframe_ohlcva])
+    multi_timeframe_ohlcva.sort_index(level='date', inplace=True)
+    multi_timeframe_ohlcva = trim_to_date_range(date_range_str, multi_timeframe_ohlcva)
+    # plot_multi_timeframe_ohlcva(multi_timeframe_ohlcva)
+    multi_timeframe_ohlcva.to_csv(os.path.join(file_path, f'multi_timeframe_ohlcva.{date_range_str}.zip'),
+                                  compression='zip')
+
+
+@measure_time
+def generate_multi_timeframe_ohlcv(date_range_str: str, file_path: str = config.path_of_data):
     ohlcv = read_ohlcv(date_range_str)
     # ohlcv['timeframe '] = config.timeframes[0]
     multi_timeframe_ohlcv = ohlcv.copy()
@@ -63,7 +88,7 @@ def core_generate_multi_timeframe_ohlcv(date_range_str: str, file_path: str = co
         if pd.to_timedelta(timeframe) >= timedelta(days=1):
             # fetch_timeframe_ohlcv = fetch_ohlcv_by_range()
             # Todo: we where here!
-            if len(ohlcv.index) < pd.to_timedelta(timeframe) / pd.to_timedelta(config.base_time_delta):
+            if len(ohlcv.index) <  pd.to_timedelta(timeframe) / pd.to_timedelta(config.base_time_delta):
                 raise Exception(f"len(ohlcv.index)={len(ohlcv.index)} < timeframe({timeframe}) "
                                 f"candels({pd.to_timedelta(timeframe) / pd.to_timedelta(config.base_time_delta)}) "
                                 f"which causes invalid multi timeframe candle generation!")
@@ -85,11 +110,9 @@ def core_generate_multi_timeframe_ohlcv(date_range_str: str, file_path: str = co
                                  compression='zip')
 
 
-def core_read_multi_timeframe_ohlcv(date_range_str: str = None) \
+def old_read_multi_timeframe_ohlcv(date_range_str: str = None) \
         -> pt.DataFrame[MultiTimeframeOHLCV]:
-    if date_range_str is None:
-        date_range_str = config.under_process_date_range
-    result = read_file(date_range_str, 'multi_timeframe_ohlcv', core_generate_multi_timeframe_ohlcv,
+    result = read_file(date_range_str, 'multi_timeframe_ohlcv', generate_multi_timeframe_ohlcv,
                        MultiTimeframeOHLCV)
     for timeframe in config.timeframes:
         GLOBAL_CACHE[f'valid_times_{timeframe}'] = \
@@ -104,22 +127,11 @@ def read_daily_multi_timeframe_ohlcv(day: datetime, timezone='GMT') -> pt.DataFr
     day_date_range_str = f'{start_str}T{end_str}'
 
     # Fetch the data for the given day using the old function
-    return core_read_multi_timeframe_ohlcv(day_date_range_str)
+    return old_read_multi_timeframe_ohlcv(day_date_range_str)
 
 
 def read_multi_timeframe_ohlcv(date_range_str: str, precise_start_date=False, precise_end_date=False) \
         -> pt.DataFrame[MultiTimeframeOHLCV]:
-    if date_range_str is None:
-        date_range_str = config.under_process_date_range
-    result = read_file(date_range_str, 'multi_timeframe_ohlcv', generate_multi_timeframe_ohlcv,
-                       MultiTimeframeOHLCV)
-    for timeframe in config.timeframes:
-        GLOBAL_CACHE[f'valid_times_{timeframe}'] = \
-            single_timeframe(result, timeframe).index.get_level_values('date').tolist()
-    return result
-
-
-def generate_multi_timeframe_ohlcv(date_range_str: str = None, file_path: str = config.path_of_data) -> None:
     start, end = date_range(date_range_str)
 
     # Split the date range into individual days
@@ -131,85 +143,19 @@ def generate_multi_timeframe_ohlcv(date_range_str: str = None, file_path: str = 
         daily_dataframes.append(read_daily_multi_timeframe_ohlcv(current_day))
         current_day += timedelta(days=1)
 
-    # Concatenate the daily data
-    df = pd.concat(daily_dataframes)
-    df.to_csv(os.path.join(file_path, f'multi_timeframe_ohlcv.{date_range_str}.zip'),
-              compression='zip')
-
-
-def read_daily_multi_timeframe_ohlcva(day: datetime, timezone='GMT') -> pt.DataFrame[MultiTimeframeOHLCV]:
-    # Format the date_range_str for the given day
-    start_str = day.strftime('%y-%m-%d.00-00')
-    end_str = day.strftime('%y-%m-%d.23-59')
-    day_date_range_str = f'{start_str}T{end_str}'
-
-    # Fetch the data for the given day using the old function
-    return core_read_multi_timeframe_ohlcva(day_date_range_str)
+    # Concatenate the daily data and return
+    return pd.concat(daily_dataframes)
 
 
 def read_multi_timeframe_ohlcva(date_range_str: str = None) \
         -> pt.DataFrame[MultiTimeframeOHLCVA]:
-    if date_range_str is None:
-        date_range_str = config.under_process_date_range
     result = read_file(date_range_str, 'multi_timeframe_ohlcva', generate_multi_timeframe_ohlcva,
-                       MultiTimeframeOHLCV)
-    return result
-
-
-def generate_multi_timeframe_ohlcva(date_range_str: str = None, file_path: str = config.path_of_data) -> None:
-    start, end = date_range(date_range_str)
-
-    # Split the date range into individual days
-    current_day = start
-    daily_dataframes = []
-
-    while current_day.date() <= end.date():
-        # For each day, get the data and append to daily_dataframes list
-        daily_dataframes.append(read_daily_multi_timeframe_ohlcva(current_day))
-        current_day += timedelta(days=1)
-
-    # Concatenate the daily data
-    df = pd.concat(daily_dataframes)
-    df = trim_to_date_range(date_range_str, )
-    df.to_csv(os.path.join(file_path, f'multi_timeframe_ohlcva.{date_range_str}.zip'),
-              compression='zip')
-
-
-def core_read_multi_timeframe_ohlcva(date_range_str: str = None) \
-        -> pt.DataFrame[MultiTimeframeOHLCVA]:
-    result = read_file(date_range_str, 'multi_timeframe_ohlcva', core_generate_multi_timeframe_ohlcva,
                        MultiTimeframeOHLCVA)
     for timeframe in config.timeframes:
         if f'valid_times_{timeframe}' not in GLOBAL_CACHE.keys():
             GLOBAL_CACHE[f'valid_times_{timeframe}'] = \
                 single_timeframe(result, timeframe).index.get_level_values('date').tolist()
     return result
-
-
-@measure_time
-def core_generate_multi_timeframe_ohlcva(date_range_str: str = None, file_path: str = config.path_of_data) -> None:
-    if date_range_str is None:
-        date_range_str = config.under_process_date_range
-
-    biggest_timeframe = config.timeframes[-1]
-    expanded_date_range = expand_date_range(date_range_str,
-                                            time_delta=config.ATR_timeperiod * pd.to_timedelta(biggest_timeframe),
-                                            mode='start')
-    expanded_multi_timeframe_ohlcv = read_multi_timeframe_ohlcv(expanded_date_range)
-    multi_timeframe_ohlcva = pd.DataFrame()
-    for _, timeframe in enumerate(config.timeframes):
-        _single_timeframe_ohlcva = insert_atr(single_timeframe(expanded_multi_timeframe_ohlcv, timeframe))
-        _single_timeframe_ohlcva.dropna(subset=['ATR'], inplace=True)
-        _single_timeframe_ohlcva['timeframe'] = timeframe
-        _single_timeframe_ohlcva.set_index('timeframe', append=True, inplace=True)
-        _single_timeframe_ohlcva = _single_timeframe_ohlcva.swaplevel()
-        multi_timeframe_ohlcva = pd.concat([_single_timeframe_ohlcva, multi_timeframe_ohlcva])
-    multi_timeframe_ohlcva.sort_index(level='date', inplace=True)
-
-    multi_timeframe_ohlcva = trim_to_date_range(date_range_str, multi_timeframe_ohlcva)
-    # plot_multi_timeframe_ohlcva(multi_timeframe_ohlcva)
-    multi_timeframe_ohlcva.to_csv(os.path.join(file_path, f'multi_timeframe_ohlcva.{date_range_str}.zip'),
-                                  compression='zip')
 
 
 # def read_daily_multi_timeframe_ohlcva(day: datetime) -> pt.DataFrame[MultiTimeframeOHLCVA]:
@@ -244,7 +190,7 @@ def read_ohlcva(date_range_str: str = None) -> pt.DataFrame[OHLCVA]:
     return result
 
 
-def core_read_ohlcv(date_range_str: str = None) -> pt.DataFrame[OHLCV]:
+def old_read_ohlcv(date_range_str: str = None) -> pt.DataFrame[OHLCV]:
     if date_range_str is None:
         date_range_str = config.under_process_date_range
     # start_date, end_date = date_range(date_range_str)
@@ -258,10 +204,9 @@ def core_read_ohlcv(date_range_str: str = None) -> pt.DataFrame[OHLCV]:
     #     part_date_range = f'{part_start.strftime("%y-%m-%d.%H-%M")}T{part_end.strftime("%y-%m-%d.%H-%M")}'
     #     part_result = read_file(part_date_range, 'ohlcv', generate_ohlcv, OHLCV)
     #     result = pd.concat(part_result)
-    result = read_file(date_range_str, 'ohlcv', core_generate_ohlcv, OHLCV)
-    # cast_and_validate(result, OHLCV)
+    result = read_file(date_range_str, 'ohlcv', generate_ohlcv, OHLCV)
+    cast_and_validate(result, OHLCV)
     return result
-
 
 def read_daily_ohlcv(day: datetime, timezone='GMT') -> pt.DataFrame[MultiTimeframeOHLCV]:
     # Format the date_range_str for the given day
@@ -270,20 +215,11 @@ def read_daily_ohlcv(day: datetime, timezone='GMT') -> pt.DataFrame[MultiTimefra
     day_date_range_str = f'{start_str}T{end_str}'
 
     # Fetch the data for the given day using the old function
-    return core_read_ohlcv(day_date_range_str)
+    return old_read_ohlcv(day_date_range_str)
 
 
 def read_ohlcv(date_range_str: str, precise_start_date=False, precise_end_date=False) \
         -> pt.DataFrame[MultiTimeframeOHLCV]:
-    if date_range_str is None:
-        date_range_str = config.under_process_date_range
-    result = read_file(date_range_str, 'ohlcv', generate_ohlcv, OHLCV)
-    # cast_and_validate(result, OHLCV)
-    return result
-
-
-@measure_time
-def generate_ohlcv(date_range_str: str = None, file_path: str = config.path_of_data) -> None:
     start, end = date_range(date_range_str)
 
     # Split the date range into individual days
@@ -294,14 +230,12 @@ def generate_ohlcv(date_range_str: str = None, file_path: str = config.path_of_d
         # For each day, get the data and append to daily_dataframes list
         daily_dataframes.append(read_daily_ohlcv(current_day))
         current_day += timedelta(days=1)
-    df = pd.concat(daily_dataframes)
-    # Concatenate the daily data and return
-    df.to_csv(os.path.join(file_path, f'ohlcv.{date_range_str}.zip'),
-              compression='zip')
 
+    # Concatenate the daily data and return
+    return pd.concat(daily_dataframes)
 
 @measure_time
-def core_generate_ohlcv(date_range_str: str = None, file_path: str = config.path_of_data):
+def generate_ohlcv(date_range_str: str = None, file_path: str = config.path_of_data):
     if date_range_str is None:
         date_range_str = config.under_process_date_range
     raw_ohlcv = fetch_ohlcv_by_range(date_range_str)
