@@ -11,9 +11,8 @@ import pandera
 from pandas import Timedelta, DatetimeIndex, Timestamp
 from pandera import typing as pt
 
-import helper
 from Config import config, GLOBAL_CACHE
-from helper import log, date_range
+from helper import log, date_range, date_range_to_string
 
 
 def range_of_data(data: pd.DataFrame) -> str:
@@ -279,7 +278,8 @@ def single_timeframe(multi_timeframe_data: pd.DataFrame, timeframe):
         multi_timeframe_data.index.get_level_values('timeframe') == timeframe]
     return validate_no_timeframe(single_timeframe_data.droplevel('timeframe'))
 
-def to_timeframe(time: Union[DatetimeIndex, datetime], timeframe: str) -> datetime:
+
+def to_timeframe(time: Union[DatetimeIndex, datetime], timeframe: str, ignore_cached_times: bool = False) -> datetime:
     """
     Round the given datetime to the nearest time based on the specified timeframe.
 
@@ -295,32 +295,28 @@ def to_timeframe(time: Union[DatetimeIndex, datetime], timeframe: str) -> dateti
 
     # Calculate the number of seconds in the timedelta
     seconds_in_timeframe = timeframe_timedelta.total_seconds()
+    if pd.to_timedelta(timeframe) >= timedelta(minutes=30):
+        if time.tzinfo is None:
+            raise Exception('To round times to timeframes > 30 minutes timezone is significant')
     if isinstance(time, DatetimeIndex):
         raise Exception('This happened unexpectedly')
-        # # Calculate the timestamp with the floor division
-        # rounded_timestamp = ((time.view(np.int64) // 10 ** 9) // seconds_in_timeframe) * seconds_in_timeframe
-        #
-        # # Convert the rounded timestamp back to datetime
-        # rounded_time = pd.DatetimeIndex(rounded_timestamp * 10 ** 9)
-        # for t in rounded_time:
-        #     if t not in GLOBAL_CACHE[f'valid_times_{timeframe}']:
-        #         raise Exception(f'Invalid time {t}!')
-    elif isinstance(time, Timestamp):
+    elif isinstance(time, datetime) or isinstance(time, Timestamp):
         if pd.to_timedelta(timeframe) >= timedelta(days=7):
-            rounded_time = time.replace(hour=0, minute=0, second=0)
-            if rounded_time.nanosecond != 0:
-                raise Exception('This happened unexpectedly')
-            day_of_week = time.day_of_week # (time.day_of_week + 1) % 7
+            rounded_time = time.replace(hour=0, minute=0, second=0, microsecond=0)
+            day_of_week = time.weekday()  # (time.day_of_week + 1) % 7
             rounded_time = rounded_time - timedelta(days=day_of_week)
         else:
             rounded_timestamp = (time.timestamp() // seconds_in_timeframe) * seconds_in_timeframe
-
             # Convert the rounded timestamp back to datetime
-            rounded_time = pd.Timestamp(rounded_timestamp * 10 ** 9)
-        if f'valid_times_{timeframe}' not in GLOBAL_CACHE.keys():
-            raise Exception(f'valid_times_{timeframe} not initialized in GLOBAL_CACHE')
-        if rounded_time not in GLOBAL_CACHE[f'valid_times_{timeframe}']:
-            raise Exception(f'time {rounded_time} not found in GLOBAL_CACHE[valid_times_{timeframe}]!')
+            if isinstance(time, datetime):
+                rounded_time = time.fromtimestamp(rounded_timestamp)
+            else:  # isinstance(time, Timestamp)
+                rounded_time = pd.Timestamp(rounded_timestamp * 10 ** 9)
+        if not ignore_cached_times:
+            if f'valid_times_{timeframe}' not in GLOBAL_CACHE.keys():
+                raise Exception(f'valid_times_{timeframe} not initialized in GLOBAL_CACHE')
+            if rounded_time not in GLOBAL_CACHE[f'valid_times_{timeframe}']:
+                raise Exception(f'time {rounded_time} not found in GLOBAL_CACHE[valid_times_{timeframe}]!')
     else:
         raise Exception(f'Invalid type of time:{type(time)}')
     return rounded_time
@@ -458,11 +454,26 @@ def extract_file_info(file_name: str) -> FileInfoSet:
     return FileInfoSet(**data)
 
 
-def trim_to_date_range(date_range_str: str, df):
+# @cache
+def trim_to_date_range(date_range_str: str, df: pd.DataFrame) -> pd.DataFrame:
     start, end = date_range(date_range_str)
     date_indexes = df.index.get_level_values(level='date')
     df = df[
-        (date_indexes >= start) &
-        (date_indexes <= end)
+        (date_indexes >= np.datetime64(start)) &
+        (date_indexes <= np.datetime64(end))
         ]
     return df
+
+
+def expand_date_range(date_range_str: str, time_delta: timedelta, mode: str):
+    start, end = date_range(date_range_str)
+    if mode == 'start':
+        start = start - time_delta
+    elif mode == 'end':
+        end = end + time_delta
+    elif mode == 'both':
+        start = start - time_delta
+        end = end + time_delta
+    else:
+        raise Exception(f'mode={mode} not implemented')
+    return date_range_to_string(start=start, end=end)

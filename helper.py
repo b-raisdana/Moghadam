@@ -60,23 +60,27 @@ def measure_time(func):
 def date_range(date_range_str: str) -> Tuple[datetime, datetime]:
     start_date_string, end_date_string = date_range_str.split('T')
     start_date = datetime.strptime(start_date_string, '%y-%m-%d.%H-%M')
+    if start_date.tzinfo is None:
+        start_date = start_date.replace(tzinfo=pytz.utc)
     end_date = datetime.strptime(end_date_string, '%y-%m-%d.%H-%M')
+    if end_date.tzinfo is None:
+        end_date = end_date.replace(tzinfo=pytz.utc)
     return start_date, end_date
 
 
-def date_range_to_string(end_date: datetime = None, days: float = 60, start_date: datetime = None) -> str:
-    if end_date is None:
-        if start_date is None:
-            end_date = today_morning()
+def date_range_to_string(end: datetime = None, days: float = 60, start: datetime = None) -> str:
+    if end is None:
+        if start is None:
+            end = today_morning()
         else:
-            end_date = start_date + timedelta(days=days) - timedelta(minutes=1)
-    if start_date is None:
-        start_date = end_date - timedelta(days=days) + timedelta(minutes=1)
-        return f'{start_date.strftime("%y-%m-%d.%H-%M")}T' \
-               f'{end_date.strftime("%y-%m-%d.%H-%M")}'
+            end = start + timedelta(days=days) - timedelta(minutes=1)
+    if start is None:
+        start = end - timedelta(days=days) + timedelta(minutes=1)
+        return f'{start.strftime("%y-%m-%d.%H-%M")}T' \
+               f'{end.strftime("%y-%m-%d.%H-%M")}'
     else:
-        return f'{start_date.strftime("%y-%m-%d.%H-%M")}T' \
-               f'{end_date.strftime("%y-%m-%d.%H-%M")}'
+        return f'{start.strftime("%y-%m-%d.%H-%M")}T' \
+               f'{end.strftime("%y-%m-%d.%H-%M")}'
 
 
 def today_morning(tz=pytz.timezone('Asia/Tehran')) -> datetime:

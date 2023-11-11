@@ -30,6 +30,12 @@ if __name__ == "__main__":
     # MT.load_rates()
     # exit(0)
 
+    # timeframe = '1W'
+    # expanded_date_range = '23-05-01.00-00T23-08-15.23-59'
+    # generate_multi_timeframe_ohlcv(expanded_date_range)
+    # expanded_date_multi_timeframe_ohlcv = read_multi_timeframe_ohlcv(expanded_date_range)
+    # timeframe_ohlcv = single_timeframe(expanded_date_multi_timeframe_ohlcv, timeframe)
+
     generate_multi_timeframe_peaks_n_valleys(config.under_process_date_range)
     # generate_multi_timeframe_candle_trend(config.under_process_date_range)
     # generate_multi_timeframe_bull_bear_side_trends(config.under_process_date_range, timeframe_shortlist=['4H'])

@@ -3,6 +3,7 @@ from pandera import typing as pt
 
 import helper
 from BullBearSidePivot import read_multi_timeframe_bull_bear_side_pivots
+from Config import config
 from Model.MultiTimeframeOHLCV import OHLCV
 from Model.MultiTimeframePivot import MultiTimeframePivot
 from PeakValleyPivots import read_multi_timeframe_top_pivots

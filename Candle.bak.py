@@ -27,6 +27,7 @@ def generate_ohlcva(date_range_str: str, file_path: str = config.path_of_data) -
     #     raise Exception('input_file expected to start with "ohlcv" and does not start with "ohlcva"!')
     ohlcv = read_ohlcv(date_range_str)
     ohlcva = insert_atr(ohlcv)
+    ohlcva.sort_index(inplace=True, level='date')
     # plot_ohlcva(ohlcva)
     ohlcva.to_csv(os.path.join(file_path, f'ohlcva.{date_range_str}.zip'), compression='zip')
 
@@ -42,7 +43,7 @@ def expand_date_range(date_range_str: str, time_delta: timedelta, mode: str):
         end = end + time_delta
     else:
         raise Exception(f'mode={mode} not implemented')
-    return date_range_to_string(start_date=start, end_date=end)
+    return date_range_to_string(start=start, end=end)
 
 
 @measure_time
@@ -88,7 +89,7 @@ def generate_multi_timeframe_ohlcv(date_range_str: str, file_path: str = config.
         if pd.to_timedelta(timeframe) >= timedelta(days=1):
             # fetch_timeframe_ohlcv = fetch_ohlcv_by_range()
             # Todo: we where here!
-            if len(ohlcv.index) <  pd.to_timedelta(timeframe) / pd.to_timedelta(config.base_time_delta):
+            if len(ohlcv.index) < pd.to_timedelta(timeframe) / pd.to_timedelta(config.base_time_delta):
                 raise Exception(f"len(ohlcv.index)={len(ohlcv.index)} < timeframe({timeframe}) "
                                 f"candels({pd.to_timedelta(timeframe) / pd.to_timedelta(config.base_time_delta)}) "
                                 f"which causes invalid multi timeframe candle generation!")
@@ -144,7 +145,10 @@ def read_multi_timeframe_ohlcv(date_range_str: str, precise_start_date=False, pr
         current_day += timedelta(days=1)
 
     # Concatenate the daily data and return
-    return pd.concat(daily_dataframes)
+    # todo: prevent duplicate index (timeframe, date)
+    df = pd.concat(daily_dataframes)
+    df = trim_to_date_range(date_range_str, df)
+    return df
 
 
 def read_multi_timeframe_ohlcva(date_range_str: str = None) \
@@ -208,6 +212,7 @@ def old_read_ohlcv(date_range_str: str = None) -> pt.DataFrame[OHLCV]:
     cast_and_validate(result, OHLCV)
     return result
 
+
 def read_daily_ohlcv(day: datetime, timezone='GMT') -> pt.DataFrame[MultiTimeframeOHLCV]:
     # Format the date_range_str for the given day
     start_str = day.strftime('%y-%m-%d.00-00')
@@ -232,7 +237,11 @@ def read_ohlcv(date_range_str: str, precise_start_date=False, precise_end_date=F
         current_day += timedelta(days=1)
 
     # Concatenate the daily data and return
-    return pd.concat(daily_dataframes)
+    # todo: prevent duplicate index (timeframe, date)
+    df = pd.concat(daily_dataframes)
+    df = trim_to_date_range(date_range_str, df)
+    return df
+
 
 @measure_time
 def generate_ohlcv(date_range_str: str = None, file_path: str = config.path_of_data):
@@ -244,6 +253,7 @@ def generate_ohlcv(date_range_str: str = None, file_path: str = config.path_of_d
     # df['date'] = df['date'].dt.tz_localize('UTC').dt.tz_convert('Asia/Tehran')
     df.set_index('date', inplace=True)
     df.drop(columns=['timestamp'], inplace=True)
+    df.sort_index(inplace=True, level='date')
     # plot_ohlcv(ohlcv=df)
     cast_and_validate(df, OHLCV)
     df.to_csv(os.path.join(file_path, f'ohlcv.{date_range_str}.zip'),

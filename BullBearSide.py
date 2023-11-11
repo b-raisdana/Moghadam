@@ -7,7 +7,8 @@ import pandera.typing as pt
 from pandas import Timestamp
 
 import PeakValley
-from Candle import read_multi_timeframe_ohlcv, read_multi_timeframe_ohlcva
+from ohlcv import read_multi_timeframe_ohlcv
+from atr import read_multi_timeframe_ohlcva
 from Config import TopTYPE, config, TREND
 from DataPreparation import read_file, single_timeframe, to_timeframe, cast_and_validate
 from Model.BullBearSide import BullBearSide
@@ -730,6 +731,7 @@ def generate_multi_timeframe_bull_bear_side_trends(date_range_str: str = None, f
     # plot_multi_timeframe_bull_bear_side_trends(multi_timeframe_ohlcva, multi_timeframe_peaks_n_valleys, trends,
     #                                            timeframe_shortlist=timeframe_shortlist)
     # Save multi-timeframe trend boundaries to a.zip file
+    trends.sort_index(inplace=True, level='date')
     trends.to_csv(os.path.join(file_path, f'multi_timeframe_bull_bear_side_trends.{date_range_str}.zip'),
                   compression='zip')
 
@@ -753,6 +755,7 @@ def generate_multi_timeframe_candle_trend(date_range_str: str, timeframe_shortli
         _timeframe_candle_trend = _timeframe_candle_trend.swaplevel()
         multi_timeframe_candle_trend = pd.concat([multi_timeframe_candle_trend, _timeframe_candle_trend])
     # multi_timeframe_candle_trend = multi_timeframe_candle_trend.sort_index()
+    multi_timeframe_candle_trend.sort_index(inplace=True, level='date')
     multi_timeframe_candle_trend.to_csv(os.path.join(file_path, f'multi_timeframe_candle_trend.{date_range_str}.zip'),
                                         compression='zip')
     return multi_timeframe_candle_trend

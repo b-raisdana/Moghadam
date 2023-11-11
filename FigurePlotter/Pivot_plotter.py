@@ -2,7 +2,7 @@ import pandas as pd
 from pandera import typing as pt
 from plotly import graph_objects as plgo
 
-from Candle import read_multi_timeframe_ohlcv
+from ohlcv import read_multi_timeframe_ohlcv
 from Config import config
 from DataPreparation import single_timeframe
 from FigurePlotter.DataPreparation_plotter import plot_ohlcv

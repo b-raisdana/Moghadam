@@ -6,9 +6,10 @@ import pandas as pd
 import pandera.typing as pt
 from plotly import graph_objects as plgo
 
-from Candle import read_multi_timeframe_ohlcva, expand_date_range
+from atr import read_multi_timeframe_ohlcva
 from Config import config, INFINITY_TIME_DELTA, TopTYPE
-from DataPreparation import read_file, single_timeframe, df_timedelta_to_str, cast_and_validate, trim_to_date_range
+from DataPreparation import read_file, single_timeframe, df_timedelta_to_str, cast_and_validate, trim_to_date_range, \
+    expand_date_range
 from FigurePlotter.DataPreparation_plotter import plot_ohlcva
 from FigurePlotter.plotter import save_figure, file_id, plot_multiple_figures, timeframe_color
 from MetaTrader import MT
@@ -350,11 +351,11 @@ def multi_timeframe_peaks_n_valleys(expanded_date_range) \
     return _peaks_n_valleys
 
 
-@measure_time
+# @measure_time
 def generate_multi_timeframe_peaks_n_valleys(date_range_str, file_path: str = config.path_of_data):
     biggest_timeframe = config.timeframes[-1]
     expanded_date_range = expand_date_range(date_range_str,
-                                            time_delta=config.ATR_timeperiod * pd.to_timedelta(biggest_timeframe),
+                                            time_delta=4 * pd.to_timedelta(biggest_timeframe),
                                             mode='both')
     _peaks_n_valleys = multi_timeframe_peaks_n_valleys(expanded_date_range)
     start, end = date_range(date_range_str)
@@ -362,6 +363,7 @@ def generate_multi_timeframe_peaks_n_valleys(date_range_str, file_path: str = co
         (start < _peaks_n_valleys.index.get_level_values()) &
         (_peaks_n_valleys.index.get_level_values() < end)]
     # plot_multi_timeframe_peaks_n_valleys(_peaks_n_valleys, date_range_str)
+    _peaks_n_valleys.sort_index(inplace=True, level='date')
     _peaks_n_valleys = trim_to_date_range(date_range_str, _peaks_n_valleys)
     _peaks_n_valleys.to_csv(os.path.join(file_path, f'multi_timeframe_peaks_n_valleys.{date_range_str}.zip'),
                             compression='zip')

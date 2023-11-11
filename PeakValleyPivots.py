@@ -4,7 +4,7 @@ import pandas as pd
 from pandera import typing as pt
 
 import helper
-from Candle import read_multi_timeframe_ohlcva
+from atr import read_multi_timeframe_ohlcva
 from Config import config
 from DataPreparation import single_timeframe, anti_trigger_timeframe, anti_pattern_timeframe, cast_and_validate, \
     read_file
@@ -110,6 +110,7 @@ def generate_multi_timeframe_top_pivots(date_range_str: str = None, file_path: s
         date_range_str = config.under_process_date_range
     _tops_pivots = tops_pivots(date_range_str)
     # plot_multi_timeframe_pivots(_tops_pivots, name='multi_timeframe_top_pivots')
+    _tops_pivots.sort_index(inplace=True, level='date')
     _tops_pivots.to_csv(
         os.path.join(file_path, f'multi_timeframe_top_pivots.{date_range_str}.zip'),
         compression='zip')

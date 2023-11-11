@@ -5,7 +5,7 @@ import pandas as pd
 from pandera import typing as pt
 
 from BullBearSide import read_multi_timeframe_bull_bear_side_trends, previous_trend
-from Candle import read_multi_timeframe_ohlcva
+from atr import read_multi_timeframe_ohlcva
 from Config import config
 from DataPreparation import single_timeframe, expected_movement_size, trigger_timeframe, read_file, \
     cast_and_validate, anti_pattern_timeframe
@@ -244,6 +244,7 @@ def generate_multi_timeframe_bull_bear_side_pivots(date_range_str: str = None,
         date_range_str = config.under_process_date_range
     multi_timeframe_pivots = multi_timeframe_bull_bear_side_pivots(date_range_str, timeframe_shortlist)
     # plot_multi_timeframe_pivots(multi_timeframe_pivots, name='multi_timeframe_bull_bear_side_pivots')
+    multi_timeframe_pivots.sort_index(inplace=True, level='date')
     multi_timeframe_pivots.to_csv(
         os.path.join(file_path, f'multi_timeframe_bull_bear_side_pivots.{date_range_str}.zip'),
         compression='zip')
