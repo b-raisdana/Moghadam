@@ -16,6 +16,7 @@ from MetaTrader import MT
 from Model.MultiTimeframeOHLCV import OHLCV
 from Model.MultiTimeframePeakValleys import PeaksValleys, MultiTimeframePeakValleys
 from helper import measure_time, date_range
+from ohlcv import read_base_timeframe_ohlcv
 
 
 # def calculate_strength(peaks_or_valleys: pd.DataFrame, mode: TopTYPE, ohlcv: pd.DataFrame):
@@ -140,7 +141,7 @@ def map_strength_to_frequency(peaks_valleys: pd.DataFrame) -> pd.DataFrame:
     return peaks_valleys
 
 
-# @measure_time
+@measure_time
 def plot_peaks_n_valleys(ohlcva: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close', 'ATR']),
                          peaks: pd = pd.DataFrame(columns=['high', 'timeframe']),
                          valleys: pd = pd.DataFrame(columns=['low', 'timeframe']),
@@ -257,7 +258,7 @@ def find_peaks_n_valleys(base_ohlcv: pd.DataFrame,
     return _peaks_n_valleys.sort_index(level='date') if sort_index else _peaks_n_valleys
 
 
-# @measure_time
+@measure_time
 def major_peaks_n_valleys(multi_timeframe_peaks_n_valleys: pd.DataFrame, timeframe: str) -> pd.DataFrame:
     """
     Filter rows from multi_timeframe_peaks_n_valleys with a timeframe equal to or greater than the specified timeframe.
@@ -285,7 +286,7 @@ def higher_or_eq_timeframe_peaks_n_valleys(peaks_n_valleys: pd.DataFrame, timefr
     return result
 
 
-# @measure_time
+@measure_time
 def plot_multi_timeframe_peaks_n_valleys(multi_timeframe_peaks_n_valleys, date_range_str: str, show=True, save=True,
                                          path_of_plot=config.path_of_plots):
     multi_timeframe_ohlcva = read_multi_timeframe_ohlcva(date_range_str)
@@ -333,9 +334,7 @@ def top_timeframe(tops: pt.DataFrame[PeaksValleys]) -> pt.DataFrame[PeaksValleys
 
 def multi_timeframe_peaks_n_valleys(expanded_date_range) \
         -> pt.DataFrame[MultiTimeframePeakValleys]:
-    multi_timeframe_ohlcva = read_multi_timeframe_ohlcva(expanded_date_range)
-
-    base_ohlcv = single_timeframe(multi_timeframe_ohlcva, config.timeframes[0])
+    base_ohlcv = read_base_timeframe_ohlcv(expanded_date_range)
 
     _peaks_n_valleys = find_peaks_n_valleys(base_ohlcv, sort_index=False)
 
@@ -351,7 +350,7 @@ def multi_timeframe_peaks_n_valleys(expanded_date_range) \
     return _peaks_n_valleys
 
 
-# @measure_time
+@measure_time
 def generate_multi_timeframe_peaks_n_valleys(date_range_str, file_path: str = config.path_of_data):
     biggest_timeframe = config.timeframes[-1]
     expanded_date_range = expand_date_range(date_range_str,

@@ -1,26 +1,54 @@
 import os
 from datetime import datetime, timedelta
 
+import numpy as np
 import pandas as pd
-import talib as ta
+import pandas_ta as ta # noqa
+import talib as tal
 from pandera import typing as pt
 
 from Config import config, GLOBAL_CACHE
 from DataPreparation import read_file, trim_to_date_range, single_timeframe, expand_date_range
-from Model.MultiTimeframeOHLCV import MultiTimeframeOHLCV
+from Model.MultiTimeframeOHLCV import MultiTimeframeOHLCV, OHLCV
 from Model.MultiTimeframeOHLCVA import MultiTimeframeOHLCVA
-from helper import measure_time, date_range
-from ohlcv import read_base_timeframe_ohlcv, read_multi_timeframe_ohlcv
+from helper import date_range, measure_time
+from ohlcv import read_multi_timeframe_ohlcv
 
 
-def insert_atr(single_timeframe_ohlcv: pd.DataFrame) -> pd.DataFrame:
-    _ATR = ta.ATR(high=single_timeframe_ohlcv['high'].values, low=single_timeframe_ohlcv['low'].values,
-                  close=single_timeframe_ohlcv['close'].values, timeperiod=config.ATR_timeperiod)
-    single_timeframe_ohlcv['ATR'] = _ATR
-    return single_timeframe_ohlcv
+def RMA(values, period):
+    alpha = 1 / period
+    rma = np.zeros_like(values)
+    rma[0] = values[0]
+    for i in range(1, len(values)):
+        rma[i] = alpha * values[i] + (1 - alpha) * rma[i - 1]
+    return rma
+
+
+def insert_atr(timeframe_ohlcv: pt.DataFrame[OHLCV], mode: str = 'ta_lib', rma: bool = True) -> pd.DataFrame:
+    if mode == 'pandas_ta':
+        raw_ATR = timeframe_ohlcv.ta.atr(timeperiod=config.ATR_timeperiod,
+                                         high='high',
+                                         low='low',
+                                         close='close',
+                                         )
+    elif mode == 'ta_lib':
+        raw_ATR = tal.ATR(high=timeframe_ohlcv['high'].values, low=timeframe_ohlcv['low'].values,
+                          close=timeframe_ohlcv['close'].values, timeperiod=config.ATR_timeperiod)
+    else:
+        raise Exception(f"Unsupported mode:{mode}")
+    if rma:
+        # _ATR = pd.DataFrame(raw_ATR).ta.rma(length=config.ATR_timeperiod)
+        _ATR = RMA(raw_ATR, 20 )
+    else:
+        _ATR = raw_ATR
+    timeframe_ohlcv['ATR'] = _ATR
+    return timeframe_ohlcv
 
 
 def generate_multi_timeframe_ohlcva(date_range_str: str = None, file_path: str = config.path_of_data) -> None:
+    if date_range_str is None:
+        date_range_str = config.under_process_date_range
+
     start, end = date_range(date_range_str)
 
     # Split the date range into individual days
@@ -33,10 +61,10 @@ def generate_multi_timeframe_ohlcva(date_range_str: str = None, file_path: str =
         current_day += timedelta(days=1)
 
     # Concatenate the daily data
-    # todo: prevent duplicate index (timeframe, date)
     df = pd.concat(daily_dataframes)
     df.sort_index(inplace=True, level='date')
     df = trim_to_date_range(date_range_str, df)
+    assert df.index.duplicated().any()
     df.to_csv(os.path.join(file_path, f'multi_timeframe_ohlcva.{date_range_str}.zip'),
               compression='zip')
 
@@ -50,7 +78,7 @@ def read_multi_timeframe_ohlcva(date_range_str: str = None) \
     return result
 
 
-# @measure_time
+@measure_time
 def core_generate_multi_timeframe_ohlcva(date_range_str: str = None, file_path: str = config.path_of_data) -> None:
     if date_range_str is None:
         date_range_str = config.under_process_date_range
@@ -101,13 +129,3 @@ def read_daily_multi_timeframe_ohlcva(day: datetime, timezone='GMT') -> pt.DataF
 
     # Fetch the data for the given day using the old function
     return core_read_multi_timeframe_ohlcva(day_date_range_str)
-
-# @measure_time
-# def generate_ohlcva(date_range_str: str, file_path: str = config.path_of_data) -> None:
-#     ohlcv = read_ohlcv(date_range_str)
-#     ohlcva = insert_atr(ohlcv)
-#     # plot_ohlcva(ohlcva)
-#     ohlcva.to_csv(os.path.join(file_path, f'ohlcva.{date_range_str}.zip'), compression='zip')
-# def read_ohlcva(date_range_str: str = None) -> pt.DataFrame[OHLCVA]:
-#     result = read_file(date_range_str, 'ohlcva', generate_ohlcva, OHLCVA)
-#     return result

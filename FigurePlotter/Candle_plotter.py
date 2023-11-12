@@ -56,7 +56,7 @@ def plot_single_timeframe_candle_trend(ohlcv: pd.DataFrame, single_timeframe_can
     return fig
 
 
-# @measure_time
+@measure_time
 def plot_multi_timeframe_candle_trend(multi_timeframe_candle_trend, multi_timeframe_peaks_n_valleys, ohlcv, show=True,
                                       save=True, path_of_plot=config.path_of_plots):
     # todo: test plot_multi_timeframe_candle_trend

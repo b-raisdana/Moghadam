@@ -84,7 +84,7 @@ class Config():
 
         self.momentum_trand_strength_factor = 0.70  # CandleSize.Standard.value[0]
 
-        self.load_data_to_meta_trader = True
+        self.load_data_to_meta_trader = False
 
         self.ATR_timeperiod = 14
 

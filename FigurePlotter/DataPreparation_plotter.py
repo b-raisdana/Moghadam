@@ -18,7 +18,7 @@ def plot_multi_timeframe_ohlcva(multi_timeframe_ohlcva, name: str = '', show: bo
                           save=save, show=show)
 
 
-# @measure_time
+@measure_time
 def plot_multi_timeframe_ohlcv(multi_timeframe_ohlcv, date_range_str):
     # todo: test plot_multi_timeframe_ohlcv
     figures = []
@@ -28,7 +28,7 @@ def plot_multi_timeframe_ohlcv(multi_timeframe_ohlcv, date_range_str):
     plot_multiple_figures(figures, name=f'multi_timeframe_ohlcv.{date_range_str}')
 
 
-# @measure_time
+@measure_time
 def plot_ohlcv(ohlcv: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']),
                save: bool = True, name: str = '', show: bool = True) -> plgo.Figure:
     """
@@ -80,7 +80,7 @@ def plot_ohlcv(ohlcv: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']
     return fig
 
 
-# @measure_time
+@measure_time
 def plot_ohlcva(ohlcva: pd.DataFrame, save: bool = True, show: bool = True, name: str = '') -> plgo.Figure:
     """
     Plot OHLC data with an additional ATR (Average True Range) boundary.

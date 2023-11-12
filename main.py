@@ -1,20 +1,23 @@
+import os
+from datetime import timedelta
 from sys import exit
 
 from Config import config
+from MetaTrader import MT
 from PeakValley import generate_multi_timeframe_peaks_n_valleys
-from helper import date_range_to_string
+from atr import generate_multi_timeframe_ohlcva
+from helper import date_range_to_string, today_morning, log
+from ohlcv import read_base_timeframe_ohlcv
 
 if __name__ == "__main__":
     config.under_process_date_range = date_range_to_string(days=60)
 
-    # config.load_data_to_meta_trader = False
     # file_path: str = config.path_of_data
-    #
     # today_morning = today_morning()
-    # for month in range(10, 12):
-    #     date_range_str = date_range_to_string(days=30, end_date=today_morning - timedelta(days=30 * month))
+    # for month in range(0, 2):
+    #     date_range_str = date_range_to_string(days=30, end=today_morning - timedelta(days=30 * month))
     #     log(f'date_range_str{date_range_str}')
-    #     ohlcv = read_ohlcv(date_range_str)
+    #     ohlcv = read_base_timeframe_ohlcv(date_range_str)
     #     ohlcv = ohlcv[['open', 'high', 'low', 'close', 'volume']]
     #     ohlcv.to_csv(os.path.join(file_path, f'ohlcv.{date_range_str}.zip'),
     #                  compression='zip')
@@ -24,19 +27,9 @@ if __name__ == "__main__":
     #
     # exit(0)
 
-    # date_range_str = config.under_process_date_range
-    # file_path: str = config.path_of_data
-    # MT.extract_to_data_path(os.path.join(file_path, f'ohlcv.{date_range_str}.zip'))
-    # MT.load_rates()
-    # exit(0)
+    generate_multi_timeframe_ohlcva()
 
-    # timeframe = '1W'
-    # expanded_date_range = '23-05-01.00-00T23-08-15.23-59'
-    # generate_multi_timeframe_ohlcv(expanded_date_range)
-    # expanded_date_multi_timeframe_ohlcv = read_multi_timeframe_ohlcv(expanded_date_range)
-    # timeframe_ohlcv = single_timeframe(expanded_date_multi_timeframe_ohlcv, timeframe)
-
-    generate_multi_timeframe_peaks_n_valleys(config.under_process_date_range)
+    # generate_multi_timeframe_peaks_n_valleys(config.under_process_date_range)
     # generate_multi_timeframe_candle_trend(config.under_process_date_range)
     # generate_multi_timeframe_bull_bear_side_trends(config.under_process_date_range, timeframe_shortlist=['4H'])
     # generate_multi_timeframe_bull_bear_side_pivots(config.under_process_date_range, timeframe_shortlist=['4H'])

@@ -4,6 +4,8 @@ pandas
 plotly
 pydantic
 numpy
+
+pandas_ta
 # conda install -c conda-forge ta-lib
 # TA-Lib~=0.4.19
 pytest

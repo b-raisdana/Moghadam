@@ -21,7 +21,7 @@ from PeakValley import peaks_only, valleys_only, read_multi_timeframe_peaks_n_va
 from helper import log, measure_time
 
 
-# @measure_time
+@measure_time
 def insert_previous_n_next_tops(single_timeframe_peaks_n_valleys, ohlcv):
     ohlcv = insert_previous_n_next_top(TopTYPE.PEAK, single_timeframe_peaks_n_valleys, ohlcv)
     ohlcv = insert_previous_n_next_top(TopTYPE.VALLEY, single_timeframe_peaks_n_valleys, ohlcv)
@@ -390,7 +390,7 @@ def next_top_of_boundary(boundary_end: pd.Timestamp, boundary, single_timeframe_
     #     raise Exception('Unhandled situation!')
 
 
-# @measure_time
+@measure_time
 def multi_timeframe_bull_bear_side_trends(multi_timeframe_candle_trend: pd.DataFrame,
                                           multi_timeframe_peaks_n_valleys: pd.DataFrame,
                                           multi_timeframe_ohlcva: pd.DataFrame,
@@ -629,7 +629,6 @@ def single_timeframe_bull_bear_side_trends(single_timeframe_candle_trend: pd.Dat
     _trends['rate'] = trend_rate(_trends, timeframe)
     _trends['strength'] = trend_strength(_trends)
     _trends = cast_and_validate(_trends, BullBearSide)
-    # _trends = _trends[[i for i in config.multi_timeframe_bull_bear_side_trends_columns if i != 'timeframe']]
     return _trends
 
 

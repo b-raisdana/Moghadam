@@ -44,7 +44,16 @@ def tree_to_dict(element: ET.Element) -> dict:
 
 
 def compare_tree(left: ET.Element, right: ET.Element, path_to_root: List[str] = []) -> bool:
-    compare_ignored_keys = ['id', 'scale_fixed_max', 'position_time', 'scale_fixed_min', 'window_type', 'shift_size']
+    compare_ignored_keys = [
+        'id',
+        'description',
+        'digits',
+        'position_time',
+        'scale_fixed_min',
+        'scale_fixed_max',
+        'shift_size',
+        'window_type',
+    ]
     result = True
     if left.tag != right.tag:
         log(f"{path_to_root}->{left.tag}: Different tags ({left.tag} / {right.tag})", stack_trace=False)
