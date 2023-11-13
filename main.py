@@ -27,7 +27,7 @@ if __name__ == "__main__":
     #
     # exit(0)
 
-    generate_multi_timeframe_ohlcva()
+    generate_multi_timeframe_ohlcva(date_range_to_string(days=7))
 
     # generate_multi_timeframe_peaks_n_valleys(config.under_process_date_range)
     # generate_multi_timeframe_candle_trend(config.under_process_date_range)

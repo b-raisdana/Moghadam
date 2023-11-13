@@ -3,8 +3,9 @@ from datetime import datetime, timedelta
 
 import numpy as np
 import pandas as pd
-import pandas_ta as ta # noqa
+import pandas_ta as ta  # noqa
 import talib as tal
+from pandas import Timestamp
 from pandera import typing as pt
 
 from Config import config, GLOBAL_CACHE
@@ -15,33 +16,51 @@ from helper import date_range, measure_time
 from ohlcv import read_multi_timeframe_ohlcv
 
 
-def RMA(values, period):
-    alpha = 1 / period
-    rma = np.zeros_like(values)
-    rma[0] = values[0]
-    for i in range(1, len(values)):
+def RMA(values: pd.DataFrame, length):
+    # alpha = 1 / length
+    # rma = np.zeros_like(values)
+    # rma[0] = values[0]
+    # for i in range(1, len(values)):
+    #     rma[i] = alpha * values[i] + np.nan_to_num((1 - alpha) * rma[i - 1])
+    #     pass
+    # return rma
+    alpha = 1 / length
+    rma = pd.DataFrame(values.index, np.nan)  # Initialize with NaN
+
+    # Find the first non-NaN value in the series
+    first_valid_index = values.first_valid_index()
+    if first_valid_index is None:
+        return rma  # Return as all NaN if no valid values
+
+    rma[first_valid_index] = values[first_valid_index]  # Start with the first valid value
+
+    for i in range(first_valid_index + 1, len(values)):
         rma[i] = alpha * values[i] + (1 - alpha) * rma[i - 1]
+
     return rma
 
 
-def insert_atr(timeframe_ohlcv: pt.DataFrame[OHLCV], mode: str = 'ta_lib', rma: bool = True) -> pd.DataFrame:
+def insert_atr(timeframe_ohlcv: pt.DataFrame[OHLCV], mode: str = 'pandas_ta', apply_rma: bool = True) -> pd.DataFrame:
+    if Timestamp("2023-11-06 19:29:00") in timeframe_ohlcv.index:
+        pass
     if mode == 'pandas_ta':
-        raw_ATR = timeframe_ohlcv.ta.atr(timeperiod=config.ATR_timeperiod,
-                                         high='high',
-                                         low='low',
-                                         close='close',
-                                         )
+        timeframe_ohlcv['ATR'] = timeframe_ohlcv.ta.atr(timeperiod=config.ATR_timeperiod,
+                                                       # high='high',
+                                                       # low='low',
+                                                       # close='close',
+                                                       mamode='ema',
+                                                       )
     elif mode == 'ta_lib':
-        raw_ATR = tal.ATR(high=timeframe_ohlcv['high'].values, low=timeframe_ohlcv['low'].values,
-                          close=timeframe_ohlcv['close'].values, timeperiod=config.ATR_timeperiod)
+        timeframe_ohlcv['ATR'] = tal.ATR(high=timeframe_ohlcv['high'].values, low=timeframe_ohlcv['low'].values,
+                                        close=timeframe_ohlcv['close'].values, timeperiod=config.ATR_timeperiod)
     else:
         raise Exception(f"Unsupported mode:{mode}")
-    if rma:
-        # _ATR = pd.DataFrame(raw_ATR).ta.rma(length=config.ATR_timeperiod)
-        _ATR = RMA(raw_ATR, 20 )
-    else:
-        _ATR = raw_ATR
-    timeframe_ohlcv['ATR'] = _ATR
+    # if apply_rma:
+    #     timeframe_ohlcv['ATR1'] = ta.rma(timeframe_ohlcv['TR'], length=config.ATR_timeperiod)
+    #     timeframe_ohlcv['ATR2'] = RMA(timeframe_ohlcv['TR'], length=config.ATR_timeperiod)
+    # else:
+    #     timeframe_ohlcv['ATR2'] = timeframe_ohlcv['TR']
+    # timeframe_ohlcv['ATR'] = _ATR
     return timeframe_ohlcv
 
 
@@ -64,7 +83,7 @@ def generate_multi_timeframe_ohlcva(date_range_str: str = None, file_path: str =
     df = pd.concat(daily_dataframes)
     df.sort_index(inplace=True, level='date')
     df = trim_to_date_range(date_range_str, df)
-    assert df.index.duplicated().any()
+    assert not df.index.duplicated().any()
     df.to_csv(os.path.join(file_path, f'multi_timeframe_ohlcva.{date_range_str}.zip'),
               compression='zip')
 

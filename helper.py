@@ -47,11 +47,16 @@ def measure_time(func):
             result: The result of the wrapped function.
         """
         start_time = time.time()
-        log(f"{func.__name__} started", stack_trace=False)
+        t_kwargs = {
+            'a': 'b',
+            'c': 'd',
+        }
+        t =
+        log(f"{func.__name__}({args}) started", stack_trace=False)
         result = func(*args, **kwargs)
         end_time = time.time()
         execution_time = end_time - start_time
-        log(f"{func.__name__} executed in {execution_time:.6f} seconds", stack_trace=False)
+        log(f"{func.__name__}({0}) executed in {execution_time:.6f} seconds", stack_trace=False)
         return result
 
     return _measure_time

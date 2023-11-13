@@ -266,7 +266,7 @@ def read_with_timeframe(data_frame_type: str, date_range_str: str, file_path: st
 #     return True
 
 
-@measure_time
+# @measure_time
 def single_timeframe(multi_timeframe_data: pd.DataFrame, timeframe):
     if 'timeframe' not in multi_timeframe_data.index.names:
         raise Exception(
@@ -462,7 +462,7 @@ def trim_to_date_range(date_range_str: str, df: pd.DataFrame) -> pd.DataFrame:
         (date_indexes >= np.datetime64(start)) &
         (date_indexes <= np.datetime64(end))
         ]
-    assert df.index.duplicated().any()
+    assert not df.index.duplicated().any()
     return df
 
 
