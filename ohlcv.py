@@ -12,7 +12,7 @@ from fetch_ohlcv import fetch_ohlcv_by_range
 from helper import measure_time, date_range, date_range_to_string
 
 
-@measure_time
+# @measure_time
 def core_generate_multi_timeframe_ohlcv(date_range_str: str, file_path: str = config.path_of_data):
     biggest_timeframe = config.timeframes[-1]
     start, end = date_range(date_range_str)
@@ -59,7 +59,7 @@ def core_generate_multi_timeframe_ohlcv(date_range_str: str, file_path: str = co
                                  compression='zip')
 
 
-@measure_time
+# @measure_time
 def core_read_multi_timeframe_ohlcv(date_range_str: str = None) \
         -> pt.DataFrame[MultiTimeframeOHLCV]:
     if date_range_str is None:
@@ -72,7 +72,7 @@ def core_read_multi_timeframe_ohlcv(date_range_str: str = None) \
     return result
 
 
-@measure_time
+# @measure_time
 def read_daily_multi_timeframe_ohlcv(day: datetime) -> pt.DataFrame[MultiTimeframeOHLCV]:
     # Format the date_range_str for the given day
     start_str = day.strftime('%y-%m-%d.00-00')
@@ -118,7 +118,7 @@ def generate_multi_timeframe_ohlcv(date_range_str: str = None, file_path: str = 
               compression='zip')
 
 
-@measure_time
+# @measure_time
 def core_read_ohlcv(date_range_str: str = None) -> pt.DataFrame[OHLCV]:
     if date_range_str is None:
         date_range_str = config.under_process_date_range
@@ -126,7 +126,7 @@ def core_read_ohlcv(date_range_str: str = None) -> pt.DataFrame[OHLCV]:
     return result
 
 
-@measure_time
+# @measure_time
 def read_daily_ohlcv(day: datetime, timezone='GMT') -> pt.DataFrame[MultiTimeframeOHLCV]:
     # Format the date_range_str for the given day
     start_str = day.strftime('%y-%m-%d.00-00')
@@ -167,7 +167,7 @@ def generate_base_timeframe_ohlcv(date_range_str: str = None, file_path: str = c
               compression='zip')
 
 
-@measure_time
+# @measure_time
 def core_generate_ohlcv(date_range_str: str = None, file_path: str = config.path_of_data):
     if date_range_str is None:
         date_range_str = config.under_process_date_range
