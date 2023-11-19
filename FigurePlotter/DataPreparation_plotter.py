@@ -1,5 +1,7 @@
 import pandas as pd
+import plotly.graph_objects as go
 from plotly import graph_objects as plgo
+from plotly.subplots import make_subplots
 
 from Config import config, CandleSize
 from DataPreparation import single_timeframe
@@ -13,7 +15,7 @@ def plot_multi_timeframe_ohlcva(multi_timeframe_ohlcva, name: str = '', show: bo
     figures = []
     for _, timeframe in enumerate(config.timeframes):
         figures.append(plot_ohlcva(single_timeframe(multi_timeframe_ohlcva, timeframe), show=False, save=False,
-                                  name=f'{timeframe} ohlcva'))
+                                   name=f'{timeframe} ohlcva'))
     plot_multiple_figures(figures, name=f'multi_timeframe_ohlcva.{file_id(multi_timeframe_ohlcva, name)}',
                           save=save, show=show)
 
@@ -43,33 +45,12 @@ def plot_ohlcv(ohlcv: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']
         Returns:
             plgo.Figure: The Plotly figure object containing the OHLC candlestick chart.
         """
-    # MAX_LEN_OF_DATA_FRAME_TO_PLOT = 50000
-    # SAFE_LEN_OF_DATA_FRAME_TO_PLOT = 10000
-    # if len(ohlcv.index) > MAX_LEN_OF_DATA_FRAME_TO_PLOT:
-    #     raise Exception(f'Too many rows to plt ({len(ohlcv.index),}>{MAX_LEN_OF_DATA_FRAME_TO_PLOT})')
-    # if len(ohlcv.index) > SAFE_LEN_OF_DATA_FRAME_TO_PLOT:
-    #     log(f'Plotting too much data will slow us down ({len(ohlcv.index),}>{SAFE_LEN_OF_DATA_FRAME_TO_PLOT})')
 
-    kaleido_install_lock_file_path = 'kaleido.installed'
-    # if not os.path.isfile(kaleido_install_lock_file_path):
-    #     log('kaleido not satisfied!')
-    #     try:
-    #         os.system('pip install -q condacolab')
-    #         import condacolab
-    #
-    #         if not condacolab.check():
-    #             condacolab.install()
-    #             os.system('conda install -c conda-forge python-kaleido')
-    #             os.system(f'echo "" > {kaleido_install_lock_file_path}')
-    #         else:
-    #             log('condacolab already satisfied')
-    #     except:
-    #         os.system('pip install -U kaleido')
-    #         os.system(f'echo "" > {kaleido_install_lock_file_path}')
     if DEBUG: log(f'data({ohlcv.shape})')
     if DEBUG: log(ohlcv)
     fig = plgo.Figure(data=[plgo.Candlestick(x=ohlcv.index.values,
-                                             open=ohlcv['open'], high=ohlcv['high'], low=ohlcv['low'], close=ohlcv['close']
+                                             open=ohlcv['open'], high=ohlcv['high'], low=ohlcv['low'],
+                                             close=ohlcv['close']
                                              , name=name
                                              )]).update_yaxes(fixedrange=False).update_layout(yaxis_title=name)
     if show: fig.show()
@@ -102,35 +83,72 @@ def plot_ohlcva(ohlcva: pd.DataFrame, save: bool = True, show: bool = True, name
         date_range_str = "17-10-06.00-00T17-10-06"
         plot_ohlcva(ohlcva, date_range_str)
     """
+    # Create a figure with 2 rows
+
+    master_fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.02,
+                               row_heights=[0.7, 0.3])  # Adjust row heights as needed
     # Calculate the middle of the boundary (average of open and close)
     midpoints = (ohlcva['high'] + ohlcva['low']) / 2
     # Create a figure using the plot_ohlcv function
-    fig = plot_ohlcv(ohlcva[['open', 'high', 'low', 'close']], show=False, save=False, name=name)
+    sub_fig = plot_ohlcv(ohlcva[['open', 'high', 'low', 'close']], show=False, save=False, name=name)
 
     # Add the ATR boundaries
-    fig = add_atr_scatter(fig, ohlcva.index, midpoints=midpoints, widths=CandleSize.Spinning.value[1] * ohlcva['ATR'],
-                          name='Standard')
-    fig = add_atr_scatter(fig, ohlcva.index, midpoints=midpoints, widths=CandleSize.Standard.value[1] * ohlcva['ATR'],
-                          name='Long')
-    fig = add_atr_scatter(fig, ohlcva.index, midpoints=midpoints, widths=CandleSize.Long.value[1] * ohlcva['ATR'],
-                          name='Spike')
+    sub_fig = add_atr_scatter(sub_fig, ohlcva.index, midpoints=midpoints,
+                              widths=CandleSize.Spinning.value[1] * ohlcva['ATR'],
+                              name='Standard')
+    sub_fig = add_atr_scatter(sub_fig, ohlcva.index, midpoints=midpoints,
+                              widths=CandleSize.Standard.value[1] * ohlcva['ATR'],
+                              name='Long')
+    sub_fig = add_atr_scatter(sub_fig, ohlcva.index, midpoints=midpoints,
+                              widths=CandleSize.Long.value[1] * ohlcva['ATR'],
+                              name='Spike')
 
-    fig.add_scatter(x=ohlcva.index, y=midpoints,
-                    mode='none',
-                    showlegend=False,
-                    text=[f'ATR: {atr:0.1f}' for atr in ohlcva['ATR']],
-                    hoverinfo='text')
+    sub_fig.add_scatter(x=ohlcva.index, y=midpoints,
+                        mode='none',
+                        showlegend=False,
+                        text=[f'ATR: {atr:0.1f}' for atr in ohlcva['ATR']],
+                        hoverinfo='text')
 
-    fig.update_layout(hovermode='x unified')
-    # fig.add_scatter(x=ohlcva.index, y=(ohlcva['high']+ohlcva['low'])/2, mode='text', text=f'ATR: {ohlcva["ATR"]}')
+    sub_fig.update_layout(hovermode='x unified')
+
+    for trace in sub_fig.data:
+        master_fig.add_trace(trace, row=1, col=1)
+
+    master_fig.add_trace(go.Scatter(
+        x=ohlcva.index,
+        y=ohlcva['ATR'],
+        name='ATR',
+        mode='lines',  # Use line mode
+        line=dict(color='black')), row=2, col=1)
+
+    # Update layout and Aesthetics
+    master_fig.update_layout(
+        xaxis=dict(
+            fixedrange=False,  # Allows zooming on the x-axis
+            rangeslider=dict(visible=False)  # Hide range slider for the first subplot (price chart)
+        ),
+        xaxis2=dict(
+            fixedrange=False,  # Allows zooming on the x-axis
+            rangeslider=dict(visible=True)  # Show range slider for the second subplot (ATR chart)
+        ),
+        yaxis=dict(
+            fixedrange=False  # Allows zooming on the y-axis for the first subplot
+        ),
+        yaxis2=dict(
+            fixedrange=False  # Allows zooming on the y-axis for the second subplot
+        ),
+        height=800, width=1200, title_text=f"OHLCV and ATR Chart for {name}")
+    master_fig.update_yaxes(title_text="Price", row=1, col=1)
+    master_fig.update_yaxes(title_text="ATR", row=2, col=1)
+
     # Show the figure or write it to an HTML file
     if save:
         file_name = f'ohlcva.{file_id(ohlcva, name)}'
-        save_figure(fig, file_name)
+        save_figure(master_fig, file_name)
 
     if show:
-        fig.show()
-    return fig
+        master_fig.show()
+    return master_fig
 
 
 def add_atr_scatter(fig: plgo.Figure, xs: pd.Series, midpoints: pd.Series, widths: pd.Series,

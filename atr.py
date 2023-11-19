@@ -89,11 +89,11 @@ def generate_multi_timeframe_ohlcva(date_range_str: str = None, file_path: str =
 
 
 def read_multi_timeframe_ohlcva(date_range_str: str = None) \
-        -> pt.DataFrame[MultiTimeframeOHLCVA]:
+        -> MultiTimeframeOHLCVA:
     if date_range_str is None:
         date_range_str = config.under_process_date_range
     result = read_file(date_range_str, 'multi_timeframe_ohlcva', generate_multi_timeframe_ohlcva,
-                       MultiTimeframeOHLCV)
+                       MultiTimeframeOHLCVA)
     return result
 
 
@@ -140,7 +140,7 @@ def core_read_multi_timeframe_ohlcva(date_range_str: str = None) \
     return result
 
 
-def read_daily_multi_timeframe_ohlcva(day: datetime, timezone='GMT') -> pt.DataFrame[MultiTimeframeOHLCV]:
+def read_daily_multi_timeframe_ohlcva(day: datetime, timezone='GMT') -> pt.DataFrame[MultiTimeframeOHLCVA]:
     # Format the date_range_str for the given day
     start_str = day.strftime('%y-%m-%d.00-00')
     end_str = day.strftime('%y-%m-%d.23-59')

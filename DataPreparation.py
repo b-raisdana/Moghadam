@@ -3,7 +3,7 @@ import re
 import string
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Callable, Union, List
+from typing import Callable, Union, List, Type, TypeVar
 
 import numpy as np
 import pandas as pd
@@ -12,7 +12,7 @@ from pandas import Timedelta, DatetimeIndex, Timestamp
 from pandera import typing as pt
 
 from Config import config, GLOBAL_CACHE
-from helper import log, date_range, date_range_to_string, measure_time
+from helper import log, date_range, date_range_to_string
 
 
 def range_of_data(data: pd.DataFrame) -> str:
@@ -38,9 +38,13 @@ def range_of_data(data: pd.DataFrame) -> str:
            f'{data.index.get_level_values("date")[-1].strftime("%y-%m-%d.%H-%M")}'
 
 
+# Define a type variable
+Pandera_DFM_Type = TypeVar('T', bound=pandera.DataFrameModel)
+
+
 # @cache
-def read_file(date_range_str: str, data_frame_type: str, generator: Callable, CasterModel: pandera.DataFrameModel
-              , skip_rows=None, n_rows=None, file_path: str = config.path_of_data) -> pd.DataFrame:
+def read_file(date_range_str: str, data_frame_type: str, generator: Callable, caster_model: Type[Pandera_DFM_Type]
+              , skip_rows=None, n_rows=None, file_path: str = config.path_of_data) -> Pandera_DFM_Type:
     """
     Read data from a file and return a DataFrame. If the file does not exist or the DataFrame does not
     match the expected columns, the generator function is used to create the DataFrame.
@@ -73,6 +77,13 @@ def read_file(date_range_str: str, data_frame_type: str, generator: Callable, Ca
     Note:
         This function first attempts to read the file based on the provided parameters. If the file is not found
         or the DataFrame does not match the expected columns, the generator function is called to create the DataFrame.
+        :param file_path:
+        :param n_rows:
+        :param skip_rows:
+        :param date_range_str:
+        :param data_frame_type:
+        :param generator:
+        :param caster_model:
     """
     if date_range_str is None:
         date_range_str = config.under_process_date_range
@@ -92,12 +103,12 @@ def read_file(date_range_str: str, data_frame_type: str, generator: Callable, Ca
     #         raise Exception(f'Failed to generate {data_frame_type}! {data_frame_type}.columns:{df.columns}')
     #     # log(f'generate {data_frame_type} executed in {timedelta_to_str(datetime.now() - start_time, milliseconds=True)}s')
 
-    if df is None or not cast_and_validate(df, CasterModel, return_bool=True):
+    if df is None or not cast_and_validate(df, caster_model, return_bool=True):
         generator(date_range_str)
         df = read_with_timeframe(data_frame_type, date_range_str, file_path, n_rows, skip_rows)
-        df = cast_and_validate(df, CasterModel)
+        df = cast_and_validate(df, caster_model)
     else:
-        df = cast_and_validate(df, CasterModel)
+        df = cast_and_validate(df, caster_model)
     return df
 
 
@@ -367,8 +378,8 @@ def all_annotations(cls) -> ChainMap:
     return annotations  # ChainMap(*(c.__annotations__ for c in cls.__mro__ if '__annotations__' in c.__dict__))
 
 
-def cast_and_validate(data, ModelClass: pandera.DataFrameModel, return_bool: bool = False,
-                      zero_size_allowed: bool = False):
+def cast_and_validate(data, ModelClass: Type[Pandera_DFM_Type], return_bool: bool = False,
+                      zero_size_allowed: bool = False) -> Union[Pandera_DFM_Type, bool]:
     if not zero_size_allowed and len(data) == 0:
         raise Exception('Zero size data!')
     as_types = {}
