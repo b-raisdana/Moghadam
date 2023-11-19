@@ -5,10 +5,9 @@ import pandas as pd
 from pandera import typing as pt
 
 from BullBearSide import read_multi_timeframe_bull_bear_side_trends, previous_trend
-from atr import read_multi_timeframe_ohlcva
 from Config import config
 from DataPreparation import single_timeframe, expected_movement_size, trigger_timeframe, read_file, \
-    cast_and_validate, anti_pattern_timeframe
+    cast_and_validate, anti_pattern_timeframe, after_under_process_date
 from MetaTrader import MT
 from Model.BullBearSide import BullBearSide
 from Model.MultiTimeframePivot import MultiTimeframePivot
@@ -16,6 +15,7 @@ from Model.Pivot import BullBearSidePivot
 from PeakValley import read_multi_timeframe_peaks_n_valleys, major_peaks_n_valleys
 from Pivots import level_ttl
 from PivotsHelper import pivots_level_n_margins
+from atr import read_multi_timeframe_ohlcva
 from helper import measure_time
 
 
@@ -121,7 +121,8 @@ def multi_timeframe_bull_bear_side_pivots(date_range_str: str = None, timeframe_
                 _pivots.set_index('timeframe', append=True, inplace=True)
                 _pivots = _pivots.swaplevel()
                 multi_timeframe_pivots = pd.concat([_pivots, multi_timeframe_pivots])
-    multi_timeframe_pivots = cast_and_validate(multi_timeframe_pivots, MultiTimeframePivot)
+    multi_timeframe_pivots = cast_and_validate(multi_timeframe_pivots, MultiTimeframePivot,
+                                               zero_size_allowed=after_under_process_date(date_range_str))
     return multi_timeframe_pivots
 
 

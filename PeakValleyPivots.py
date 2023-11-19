@@ -3,16 +3,15 @@ import os
 import pandas as pd
 from pandera import typing as pt
 
-import helper
-from atr import read_multi_timeframe_ohlcva
 from Config import config
-from DataPreparation import single_timeframe, anti_trigger_timeframe, anti_pattern_timeframe, cast_and_validate, \
-    read_file
+from DataPreparation import single_timeframe, anti_trigger_timeframe, cast_and_validate, \
+    read_file, after_under_process_date
 from MetaTrader import MT
 from Model.MultiTimeframePivot import MultiTimeframePivot
 from PeakValley import read_multi_timeframe_peaks_n_valleys
 from Pivots import level_ttl
 from PivotsHelper import pivots_level_n_margins
+from atr import read_multi_timeframe_ohlcva
 from helper import measure_time
 
 
@@ -69,7 +68,8 @@ def tops_pivots(date_range_str) -> pt.DataFrame[MultiTimeframePivot]:
             _pivots = _pivots.swaplevel()
             multi_timeframe_pivots = pd.concat([multi_timeframe_pivots, _pivots])
     multi_timeframe_pivots.sort_index(level='date', inplace=True)
-    multi_timeframe_pivots = cast_and_validate(multi_timeframe_pivots, MultiTimeframePivot)
+    multi_timeframe_pivots = cast_and_validate(multi_timeframe_pivots, MultiTimeframePivot,
+                                               zero_size_allowed=after_under_process_date(date_range_str))
     return multi_timeframe_pivots
     # _multi_timeframe_peaks_n_valleys = read_multi_timeframe_peaks_n_valleys(date_range_str)
     # _multi_timeframe_ohlcva = read_multi_timeframe_ohlcva(date_range_str)

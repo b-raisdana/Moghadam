@@ -44,7 +44,8 @@ Pandera_DFM_Type = TypeVar('T', bound=pandera.DataFrameModel)
 
 # @cache
 def read_file(date_range_str: str, data_frame_type: str, generator: Callable, caster_model: Type[Pandera_DFM_Type]
-              , skip_rows=None, n_rows=None, file_path: str = config.path_of_data) -> Pandera_DFM_Type:
+              , skip_rows=None, n_rows=None, file_path: str = config.path_of_data,
+              zero_size_allowed: Union[None, bool] = None) -> Pandera_DFM_Type:
     """
     Read data from a file and return a DataFrame. If the file does not exist or the DataFrame does not
     match the expected columns, the generator function is used to create the DataFrame.
@@ -77,6 +78,7 @@ def read_file(date_range_str: str, data_frame_type: str, generator: Callable, ca
     Note:
         This function first attempts to read the file based on the provided parameters. If the file is not found
         or the DataFrame does not match the expected columns, the generator function is called to create the DataFrame.
+        :param zero_size_allowed:
         :param file_path:
         :param n_rows:
         :param skip_rows:
@@ -103,12 +105,14 @@ def read_file(date_range_str: str, data_frame_type: str, generator: Callable, ca
     #         raise Exception(f'Failed to generate {data_frame_type}! {data_frame_type}.columns:{df.columns}')
     #     # log(f'generate {data_frame_type} executed in {timedelta_to_str(datetime.now() - start_time, milliseconds=True)}s')
 
-    if df is None or not cast_and_validate(df, caster_model, return_bool=True):
+    if zero_size_allowed is None:
+        zero_size_allowed = after_under_process_date(date_range_str)
+    if df is None or not cast_and_validate(df, caster_model, return_bool=True, zero_size_allowed=zero_size_allowed):
         generator(date_range_str)
         df = read_with_timeframe(data_frame_type, date_range_str, file_path, n_rows, skip_rows)
-        df = cast_and_validate(df, caster_model)
+        df = cast_and_validate(df, caster_model, zero_size_allowed=zero_size_allowed)
     else:
-        df = cast_and_validate(df, caster_model)
+        df = cast_and_validate(df, caster_model, zero_size_allowed=zero_size_allowed)
     return df
 
 
@@ -378,12 +382,18 @@ def all_annotations(cls) -> ChainMap:
     return annotations  # ChainMap(*(c.__annotations__ for c in cls.__mro__ if '__annotations__' in c.__dict__))
 
 
-def cast_and_validate(data, ModelClass: Type[Pandera_DFM_Type], return_bool: bool = False,
+def cast_and_validate(data, model_class: Type[Pandera_DFM_Type], return_bool: bool = False,
                       zero_size_allowed: bool = False) -> Union[Pandera_DFM_Type, bool]:
-    if not zero_size_allowed and len(data) == 0:
-        raise Exception('Zero size data!')
+    if len(data) == 0:
+        if not zero_size_allowed:
+            raise Exception('Zero size data!')
+        else:
+            if return_bool:
+                return True
+            else:
+                return pd.DataFrame()
     as_types = {}
-    _all_annotations = all_annotations(ModelClass)
+    _all_annotations = all_annotations(model_class)
 
     for attr_name, attr_type in _all_annotations.items():
         if 'timestamp' in str(attr_type).lower() and 'timestamp' not in str(data.dtypes.loc[attr_name]).lower():
@@ -402,17 +412,17 @@ def cast_and_validate(data, ModelClass: Type[Pandera_DFM_Type], return_bool: boo
         data = data.astype(as_types)
     if return_bool:
         try:
-            ModelClass.validate(data, lazy=True)
+            model_class.validate(data, lazy=True)
         except pandera.errors.SchemaErrors as exc:
             log(exc.schema_errors)
             return False
         except Exception as e:
             raise e
     else:
-        ModelClass.validate(data, lazy=True, )
+        model_class.validate(data, lazy=True, )
     if return_bool:
         return True
-    data = data[[column for column in ModelClass.__fields__.keys() if column not in ['timeframe', 'date']]]
+    data = data[[column for column in model_class.__fields__.keys() if column not in ['timeframe', 'date']]]
     return data
 
 
@@ -489,3 +499,13 @@ def expand_date_range(date_range_str: str, time_delta: timedelta, mode: str):
     else:
         raise Exception(f'mode={mode} not implemented')
     return date_range_to_string(start=start, end=end)
+
+
+def after_under_process_date(date_range_str):
+    start, _ = date_range(date_range_str)
+    _, end = date_range(config.under_process_date_range)
+    if start > end:
+        allow_zero_size = True
+    else:
+        allow_zero_size = False
+    return allow_zero_size

@@ -5,7 +5,8 @@ import pandas as pd
 from pandera import typing as pt
 
 from Config import config, GLOBAL_CACHE
-from DataPreparation import read_file, single_timeframe, cast_and_validate, trim_to_date_range, to_timeframe
+from DataPreparation import read_file, single_timeframe, cast_and_validate, trim_to_date_range, to_timeframe, \
+    after_under_process_date
 from MetaTrader import MT
 from Model.MultiTimeframeOHLCV import MultiTimeframeOHLCV, OHLCV
 from fetch_ohlcv import fetch_ohlcv_by_range
@@ -178,7 +179,7 @@ def core_generate_ohlcv(date_range_str: str = None, file_path: str = config.path
     df.set_index('date', inplace=True)
     df.drop(columns=['timestamp'], inplace=True)
     # plot_ohlcv(ohlcv=df)
-    cast_and_validate(df, OHLCV)
+    cast_and_validate(df, OHLCV, zero_size_allowed=after_under_process_date(date_range_str))
     df.to_csv(os.path.join(file_path, f'ohlcv.{date_range_str}.zip'),
               compression='zip')
     if config.load_data_to_meta_trader:

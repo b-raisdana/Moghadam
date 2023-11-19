@@ -61,9 +61,9 @@ def fetch_ohlcv(symbol, timeframe=config.timeframes[0], since: datetime = None, 
     for batch_start in range(0, limit, max_query_size):
         start_timestamp = int(since.replace(tzinfo=pytz.UTC).timestamp() + batch_start * width_of_timeframe) * 1000
         this_query_size = min(limit - batch_start, max_query_size)
-        log(f'fetch_ohlcv@{datetime.fromtimestamp(start_timestamp / 1000)}#{this_query_size}', stack_trace=False)
         response = exchange.fetch_ohlcv(symbol, timeframe=ccxt_timeframe, since=start_timestamp,
                                         limit=min(limit - batch_start, this_query_size), params=params)
+        log(f'fetch_ohlcv@{datetime.fromtimestamp(start_timestamp / 1000)}#{this_query_size}>{len(response)}', stack_trace=False)
         output_list = output_list + response
 
     return output_list

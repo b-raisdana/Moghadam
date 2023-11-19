@@ -8,7 +8,8 @@ from plotly import graph_objects as plgo
 from Config import TREND, config
 from DataPreparation import single_timeframe
 from FigurePlotter.plotter import file_id, save_figure, plot_multiple_figures
-from PeakValley import plot_peaks_n_valleys, peaks_only, valleys_only, major_peaks_n_valleys
+from PeakValley import peaks_only, valleys_only, major_peaks_n_valleys
+from FigurePlotter.PeakValley_plotter import plot_peaks_n_valleys
 from helper import measure_time, log
 
 MAX_NUMBER_OF_PLOT_SCATTERS = 5000
