@@ -12,7 +12,7 @@ from pandas import Timedelta, DatetimeIndex, Timestamp
 from pandera import typing as pt
 
 from Config import config, GLOBAL_CACHE
-from helper import log, date_range, date_range_to_string
+from helper import log, date_range, date_range_to_string, morning
 
 
 def range_of_data(data: pd.DataFrame) -> str:
@@ -43,6 +43,13 @@ Pandera_DFM_Type = TypeVar('T', bound=pandera.DataFrameModel)
 
 
 # @cache
+def data_is_not_cachable(date_range_str):
+    _, end = date_range(date_range_str)
+    if end > morning(datetime.utcnow()):
+        return True
+    return False
+
+
 def read_file(date_range_str: str, data_frame_type: str, generator: Callable, caster_model: Type[Pandera_DFM_Type]
               , skip_rows=None, n_rows=None, file_path: str = config.path_of_data,
               zero_size_allowed: Union[None, bool] = None) -> Pandera_DFM_Type:
@@ -113,6 +120,8 @@ def read_file(date_range_str: str, data_frame_type: str, generator: Callable, ca
         df = cast_and_validate(df, caster_model, zero_size_allowed=zero_size_allowed)
     else:
         df = cast_and_validate(df, caster_model, zero_size_allowed=zero_size_allowed)
+    if data_is_not_cachable(date_range_str):
+        os.remove(os.path.join(file_path, f'{data_frame_type}.{date_range_str}.zip'))
     return df
 
 

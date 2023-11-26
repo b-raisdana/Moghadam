@@ -1,8 +1,10 @@
 from sys import exit
 
 from Config import config
+from FigurePlotter.DataPreparation_plotter import plot_multi_timeframe_ohlcva
 from PeakValley import read_multi_timeframe_peaks_n_valleys
 from FigurePlotter.PeakValley_plotter import plot_multi_timeframe_peaks_n_valleys
+from atr import generate_multi_timeframe_ohlcva, read_multi_timeframe_ohlcva
 from helper import date_range_to_string
 
 if __name__ == "__main__":
@@ -23,9 +25,10 @@ if __name__ == "__main__":
     #
     # exit(0)
 
-    # generate_multi_timeframe_ohlcva(date_range_to_string(days=7))
-    # _ohlcva = read_multi_timeframe_ohlcva(date_range_to_string(days=7))
-    # plot_multi_timeframe_ohlcva(_ohlcva)
+    generate_multi_timeframe_ohlcva(date_range_to_string(days=7))
+    _ohlcva = read_multi_timeframe_ohlcva(date_range_to_string(days=7))
+    plot_multi_timeframe_ohlcva(_ohlcva)
+    exit()
 
     _peaks_and_valleys = read_multi_timeframe_peaks_n_valleys(config.under_process_date_range)
     plot_multi_timeframe_peaks_n_valleys(_peaks_and_valleys, config.under_process_date_range)

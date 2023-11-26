@@ -93,11 +93,11 @@ def date_range_to_string(end: datetime = None, days: float = 60, start: datetime
                f'{end.strftime("%y-%m-%d.%H-%M")}'
 
 
-def today_morning(tz=pytz.timezone('Asia/Tehran')) -> datetime:
+def today_morning(tz=pytz.utc) -> datetime:
     return morning(datetime.now(tz)) - timedelta(minutes=1)
 
 
-def morning(date_time: datetime, tz=pytz.timezone('Asia/Tehran')):
+def morning(date_time: datetime, tz=pytz.utc):
     # return tz.localize(datetime.combine(date_time.date(), time(0, 0)), is_dst=None)
     if date_time.tzinfo is None or date_time.tzinfo.utcoffset(date_time) is None:
         date_time = tz.localize(date_time, is_dst=None)

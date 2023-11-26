@@ -73,7 +73,6 @@ def core_read_multi_timeframe_ohlcv(date_range_str: str = None) \
     return result
 
 
-# @measure_time
 def read_daily_multi_timeframe_ohlcv(day: datetime) -> pt.DataFrame[MultiTimeframeOHLCV]:
     # Format the date_range_str for the given day
     start_str = day.strftime('%y-%m-%d.00-00')
@@ -84,7 +83,6 @@ def read_daily_multi_timeframe_ohlcv(day: datetime) -> pt.DataFrame[MultiTimefra
     return core_read_multi_timeframe_ohlcv(day_date_range_str)
 
 
-@measure_time
 def read_multi_timeframe_ohlcv(date_range_str: str) \
         -> pt.DataFrame[MultiTimeframeOHLCV]:
     if date_range_str is None:
@@ -127,7 +125,7 @@ def core_read_ohlcv(date_range_str: str = None) -> pt.DataFrame[OHLCV]:
     return result
 
 
-# @measure_time
+
 def read_daily_ohlcv(day: datetime) -> pt.DataFrame[OHLCV]:
     # Format the date_range_str for the given day
     start_str = day.strftime('%y-%m-%d.00-00')
@@ -138,7 +136,7 @@ def read_daily_ohlcv(day: datetime) -> pt.DataFrame[OHLCV]:
     return core_read_ohlcv(day_date_range_str)
 
 
-@measure_time
+
 def read_base_timeframe_ohlcv(date_range_str: str) \
         -> pt.DataFrame[MultiTimeframeOHLCV]:
     if date_range_str is None:
