@@ -66,14 +66,19 @@ def calculate_strength(peaks_or_valleys: pt.DataFrame[PeaksValleys], top_type: T
     # high value is greater than high value of the row.
 
     # Create a boolean mask for values where the 'high' column is greater than its previous value.
-    next_higher_mask = compare_op(ohlcv[compare_column].shift(-1), ohlcv[compare_column])
-    ohlcv['next_crossing_ohlcv'] = np.where(next_higher_mask, ohlcv.index.shift(-1), np.nan).bfill()
-
+    next_is_higher_mask = compare_op(ohlcv[compare_column].shift(-1), ohlcv[compare_column])
+    ohlcv['next_crossing_ohlcv'] = pd.to_datetime(np.where(next_is_higher_mask, ohlcv.shift(-1).index, pd.NaT),
+                                                  unit='ns', utc=True)
+    ohlcv['next_crossing_ohlcv'].bfill(inplace=True)
     previous_higher_mask = compare_op(ohlcv[compare_column].shift(1), ohlcv[compare_column])
-    ohlcv['previous_crossing_ohlcv'] = np.where(previous_higher_mask, ohlcv.index.shift(1), np.nan).ffill()
+    ohlcv['previous_crossing_ohlcv'] = pd.to_datetime(np.where(previous_higher_mask, ohlcv.shift(1).index, pd.NaT),
+                                                      unit='ns', utc=True)
+    ohlcv['previous_crossing_ohlcv'].ffill(inplace=True)
+
     peaks_or_valleys['left_distance'] = peaks_or_valleys.index - ohlcv.loc[ohlcv_top_indexes, 'previous_crossing_ohlcv']
     left_na_indexes = peaks_or_valleys[pd.isna(peaks_or_valleys['left_distance'])].index
     peaks_or_valleys.loc[left_na_indexes, 'left_distance'] = left_na_indexes - start_time_of_prices
+
     peaks_or_valleys['right_distance'] = ohlcv.loc[ohlcv_top_indexes, 'next_crossing_ohlcv'] - peaks_or_valleys.index
     right_na_indexes = peaks_or_valleys[pd.isna(peaks_or_valleys['right_distance'])].index
     peaks_or_valleys.loc[right_na_indexes, 'right_distance'] = INFINITY_TIME_DELTA

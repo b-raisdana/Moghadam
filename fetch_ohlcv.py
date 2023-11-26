@@ -59,12 +59,14 @@ def fetch_ohlcv(symbol, timeframe=config.timeframes[0], since: datetime = None, 
     width_of_timeframe = pd.to_timedelta(timeframe).seconds
     max_query_size = 1000
     for batch_start in range(0, limit, max_query_size):
-        start_timestamp = int(since.replace(tzinfo=pytz.UTC).timestamp() + batch_start * width_of_timeframe) * 1000
-        this_query_size = min(limit - batch_start, max_query_size)
-        response = exchange.fetch_ohlcv(symbol, timeframe=ccxt_timeframe, since=start_timestamp,
-                                        limit=min(limit - batch_start, this_query_size), params=params)
-        log(f'fetch_ohlcv@{datetime.fromtimestamp(start_timestamp / 1000)}#{this_query_size}>{len(response)}', stack_trace=False)
-        output_list = output_list + response
+        start_time = since.replace(tzinfo=pytz.UTC)
+        if start_time < datetime.utcnow().replace(tzinfo=pytz.utc):
+            start_timestamp = int(start_time.timestamp() + batch_start * width_of_timeframe) * 1000
+            this_query_size = min(limit - batch_start, max_query_size)
+            response = exchange.fetch_ohlcv(symbol, timeframe=ccxt_timeframe, since=start_timestamp,
+                                            limit=min(limit - batch_start, this_query_size), params=params)
+            log(f'fetch_ohlcv@{datetime.fromtimestamp(start_timestamp / 1000)}#{this_query_size}>{len(response)}', stack_trace=False)
+            output_list = output_list + response
 
     return output_list
 

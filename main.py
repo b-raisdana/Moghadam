@@ -25,10 +25,10 @@ if __name__ == "__main__":
     #
     # exit(0)
 
-    generate_multi_timeframe_ohlcva(date_range_to_string(days=7))
-    _ohlcva = read_multi_timeframe_ohlcva(date_range_to_string(days=7))
-    plot_multi_timeframe_ohlcva(_ohlcva)
-    exit()
+    # generate_multi_timeframe_ohlcva(date_range_to_string(days=7))
+    # _ohlcva = read_multi_timeframe_ohlcva(date_range_to_string(days=7))
+    # plot_multi_timeframe_ohlcva(_ohlcva)
+    # exit()
 
     _peaks_and_valleys = read_multi_timeframe_peaks_n_valleys(config.under_process_date_range)
     plot_multi_timeframe_peaks_n_valleys(_peaks_and_valleys, config.under_process_date_range)
