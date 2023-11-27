@@ -14,6 +14,17 @@ from helper import measure_time, date_range, date_range_to_string
 
 
 # @measure_time
+def bar_times_in_date_range(date_range_str, timeframe):
+    start, end = date_range(date_range_str)
+    first_bar_time = to_timeframe
+    if first_bar_time < start:
+        first_bar_time += pd.to_timedelta(timeframe)
+    bar_times = []
+    while first_bar_time <= end:
+        bar_times.append(first_bar_time)
+        first_bar_time += pd.to_timedelta(timeframe)
+
+
 def core_generate_multi_timeframe_ohlcv(date_range_str: str, file_path: str = config.path_of_data):
     biggest_timeframe = config.timeframes[-1]
     start, end = date_range(date_range_str)
@@ -40,6 +51,7 @@ def core_generate_multi_timeframe_ohlcv(date_range_str: str, file_path: str = co
             frequency = 'MS'
         else:
             frequency = timeframe
+        xpected_indexes = bar_times_in_date_range(date_range_str, timeframe)
         # if pd.to_timedelta(timeframe) >= timedelta(days=1):
         #     pass
         _timeframe_ohlcv = ohlcv.groupby(pd.Grouper(freq=frequency)) \
@@ -125,7 +137,6 @@ def core_read_ohlcv(date_range_str: str = None) -> pt.DataFrame[OHLCV]:
     return result
 
 
-
 def read_daily_ohlcv(day: datetime) -> pt.DataFrame[OHLCV]:
     # Format the date_range_str for the given day
     start_str = day.strftime('%y-%m-%d.00-00')
@@ -134,7 +145,6 @@ def read_daily_ohlcv(day: datetime) -> pt.DataFrame[OHLCV]:
 
     # Fetch the data for the given day using the old function
     return core_read_ohlcv(day_date_range_str)
-
 
 
 def read_base_timeframe_ohlcv(date_range_str: str) \
