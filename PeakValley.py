@@ -4,6 +4,7 @@ import os
 import numpy as np
 import pandas as pd
 import pandera.typing as pt
+import pytz
 
 from Config import config, INFINITY_TIME_DELTA, TopTYPE
 from DataPreparation import read_file, cast_and_validate, trim_to_date_range, \
@@ -75,11 +76,11 @@ def calculate_strength(peaks_or_valleys: pt.DataFrame[PeaksValleys], top_type: T
                                                       unit='ns', utc=True)
     ohlcv['previous_crossing_ohlcv'].ffill(inplace=True)
 
-    peaks_or_valleys['left_distance'] = peaks_or_valleys.index - ohlcv.loc[ohlcv_top_indexes, 'previous_crossing_ohlcv']
+    peaks_or_valleys['left_distance'] = peaks_or_valleys.index.tz_localize(tz=pytz.UTC) - ohlcv.loc[ohlcv_top_indexes, 'previous_crossing_ohlcv']
     left_na_indexes = peaks_or_valleys[pd.isna(peaks_or_valleys['left_distance'])].index
     peaks_or_valleys.loc[left_na_indexes, 'left_distance'] = left_na_indexes - start_time_of_prices
 
-    peaks_or_valleys['right_distance'] = ohlcv.loc[ohlcv_top_indexes, 'next_crossing_ohlcv'] - peaks_or_valleys.index
+    peaks_or_valleys['right_distance'] = ohlcv.loc[ohlcv_top_indexes, 'next_crossing_ohlcv'] - peaks_or_valleys.index.tz_localize(tz=pytz.UTC)
     right_na_indexes = peaks_or_valleys[pd.isna(peaks_or_valleys['right_distance'])].index
     peaks_or_valleys.loc[right_na_indexes, 'right_distance'] = INFINITY_TIME_DELTA
     peaks_or_valleys['strength'] = peaks_or_valleys[['left_distance', 'right_distance']].min(axis=1)
