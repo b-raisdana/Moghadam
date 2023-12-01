@@ -6,23 +6,23 @@ from pandera import typing as pt
 
 from Config import config, GLOBAL_CACHE
 from DataPreparation import read_file, single_timeframe, cast_and_validate, trim_to_date_range, to_timeframe, \
-    after_under_process_date
+    after_under_process_date, multi_timeframe_times_tester
 from MetaTrader import MT
 from Model.MultiTimeframeOHLCV import MultiTimeframeOHLCV, OHLCV
 from fetch_ohlcv import fetch_ohlcv_by_range
 from helper import measure_time, date_range, date_range_to_string
 
 
-# @measure_time
-def bar_times_in_date_range(date_range_str, timeframe):
-    start, end = date_range(date_range_str)
-    first_bar_time = to_timeframe
-    if first_bar_time < start:
-        first_bar_time += pd.to_timedelta(timeframe)
-    bar_times = []
-    while first_bar_time <= end:
-        bar_times.append(first_bar_time)
-        first_bar_time += pd.to_timedelta(timeframe)
+# # @measure_time
+# def bar_times_in_date_range(date_range_str, timeframe):
+#     start, end = date_range(date_range_str)
+#     first_bar_time = to_timeframe(start, timeframe, ignore_cached_times=True)
+#     if first_bar_time < start:
+#         first_bar_time += pd.to_timedelta(timeframe)
+#     bar_times = []
+#     while first_bar_time <= end:
+#         bar_times.append(first_bar_time)
+#         first_bar_time += pd.to_timedelta(timeframe)
 
 
 def core_generate_multi_timeframe_ohlcv(date_range_str: str, file_path: str = config.path_of_data):
@@ -51,7 +51,6 @@ def core_generate_multi_timeframe_ohlcv(date_range_str: str, file_path: str = co
             frequency = 'MS'
         else:
             frequency = timeframe
-        xpected_indexes = bar_times_in_date_range(date_range_str, timeframe)
         # if pd.to_timedelta(timeframe) >= timedelta(days=1):
         #     pass
         _timeframe_ohlcv = ohlcv.groupby(pd.Grouper(freq=frequency)) \
@@ -67,6 +66,7 @@ def core_generate_multi_timeframe_ohlcv(date_range_str: str, file_path: str = co
             multi_timeframe_ohlcv = pd.concat([multi_timeframe_ohlcv, _timeframe_ohlcv])
     multi_timeframe_ohlcv = trim_to_date_range(date_range_str, multi_timeframe_ohlcv)
     multi_timeframe_ohlcv.sort_index(inplace=True, level='date')
+    multi_timeframe_times_tester(multi_timeframe_ohlcv, date_range_str)
     # plot_multi_timeframe_ohlcv(multi_timeframe_ohlcv, date_range_str)
     multi_timeframe_ohlcv.to_csv(os.path.join(file_path, f'multi_timeframe_ohlcv.{date_range_str}.zip'),
                                  compression='zip')
@@ -121,10 +121,10 @@ def generate_multi_timeframe_ohlcv(date_range_str: str = None, file_path: str = 
         current_day += timedelta(days=1)
 
     # Concatenate the daily data
-    # todo: prevent duplicate index (timeframe, date)
     df = pd.concat(daily_dataframes)
     df.sort_index(inplace=True, level='date')
     df = trim_to_date_range(date_range_str, df)
+    multi_timeframe_times_tester(df, date_range_str)
     df.to_csv(os.path.join(file_path, f'multi_timeframe_ohlcv.{date_range_str}.zip'),
               compression='zip')
 

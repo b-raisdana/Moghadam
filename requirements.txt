@@ -4,6 +4,7 @@ pandas
 plotly
 pydantic
 numpy
+psutil
 
 pandas_ta
 # conda install -c conda-forge ta-lib

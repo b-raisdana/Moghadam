@@ -4,11 +4,10 @@ import time
 import traceback
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Tuple, List
+from typing import Tuple
 
 import pandas as pd
 import pytz
-from plotly.graph_objs import Figure
 
 
 class LogSeverity(Enum):
@@ -55,13 +54,15 @@ def measure_time(func):
                 else 'list...' if isinstance(arg, list)
                 else str(arg)
                 for arg in args
-            ]) +
-                               ", ".join([f'{str(k)}: {str(kwargs[k])}' for k in kwargs.keys()]))
+            ] +
+            [
+                f'{str(k)}: {str(kwargs[k])}' for k in kwargs.keys()
+            ]))
         log(f"{func.__name__}({function_parameters}) started", stack_trace=False)
         result = func(*args, **kwargs)
         end_time = time.time()
         execution_time = end_time - start_time
-        log(f"{func.__name__}({function_parameters}) executed in {execution_time:.6f} seconds", stack_trace=False)
+        log(f"{func.__name__}({function_parameters}) executed in {execution_time:.3f} seconds", stack_trace=False)
         return result
 
     return _measure_time

@@ -8,11 +8,13 @@ from typing import Callable, Union, List, Type, TypeVar
 import numpy as np
 import pandas as pd
 import pandera
+import pytz
 from pandas import Timedelta, DatetimeIndex, Timestamp
 from pandera import typing as pt
 
 from Config import config, GLOBAL_CACHE
-from helper import log, date_range, date_range_to_string, morning
+from Model import MultiTimeframe
+from helper import log, date_range, date_range_to_string, morning, measure_time
 
 
 def range_of_data(data: pd.DataFrame) -> str:
@@ -303,6 +305,7 @@ def single_timeframe(multi_timeframe_data: pd.DataFrame, timeframe):
     return validate_no_timeframe(single_timeframe_data.droplevel('timeframe'))
 
 
+@measure_time
 def to_timeframe(time: Union[DatetimeIndex, datetime], timeframe: str, ignore_cached_times: bool = False) -> datetime:
     """
     Round the given datetime to the nearest time based on the specified timeframe.
@@ -313,7 +316,10 @@ def to_timeframe(time: Union[DatetimeIndex, datetime], timeframe: str, ignore_ca
 
     Returns:
         datetime: The rounded datetime that corresponds to the nearest time within the specified timeframe.
+        :param ignore_cached_times:
     """
+    # if time == Timestamp("2023-11-12 00:00:00+00:00") and timeframe == '1W':
+    #     pass
     # Calculate the timedelta for the specified timeframe
     timeframe_timedelta = pd.to_timedelta(timeframe)
 
@@ -322,9 +328,9 @@ def to_timeframe(time: Union[DatetimeIndex, datetime], timeframe: str, ignore_ca
     if pd.to_timedelta(timeframe) >= timedelta(minutes=30):
         if time.tzinfo is None:
             raise Exception('To round times to timeframes > 30 minutes timezone is significant')
-    if isinstance(time, DatetimeIndex):
-        raise Exception('This happened unexpectedly')
-    elif isinstance(time, datetime) or isinstance(time, Timestamp):
+    assert not isinstance(time, DatetimeIndex)
+
+    if isinstance(time, datetime) or isinstance(time, Timestamp):
         if pd.to_timedelta(timeframe) >= timedelta(days=7):
             rounded_time = time.replace(hour=0, minute=0, second=0, microsecond=0)
             day_of_week = time.weekday()  # (time.day_of_week + 1) % 7
@@ -333,9 +339,9 @@ def to_timeframe(time: Union[DatetimeIndex, datetime], timeframe: str, ignore_ca
             rounded_timestamp = (time.timestamp() // seconds_in_timeframe) * seconds_in_timeframe
             # Convert the rounded timestamp back to datetime
             if isinstance(time, datetime):
-                rounded_time = time.fromtimestamp(rounded_timestamp)
+                rounded_time = time.fromtimestamp(rounded_timestamp, tz=time.tzinfo)
             else:  # isinstance(time, Timestamp)
-                rounded_time = pd.Timestamp(rounded_timestamp * 10 ** 9)
+                rounded_time = pd.Timestamp(rounded_timestamp * 10 ** 9, tz=time.tzinfo)
         if not ignore_cached_times:
             if f'valid_times_{timeframe}' not in GLOBAL_CACHE.keys():
                 raise Exception(f'valid_times_{timeframe} not initialized in GLOBAL_CACHE')
@@ -343,6 +349,12 @@ def to_timeframe(time: Union[DatetimeIndex, datetime], timeframe: str, ignore_ca
                 raise Exception(f'time {rounded_time} not found in GLOBAL_CACHE[valid_times_{timeframe}]!')
     else:
         raise Exception(f'Invalid type of time:{type(time)}')
+    # if tz is not None:
+    #     # if isinstance(rounded_time, datetime):
+    #     #     rounded_time = rounded_time.replace(tzinfo=tz)
+    #     if isinstance(rounded_time, Timestamp):
+    #         rounded_time = rounded_time.tz_localize(tz)
+    assert abs(rounded_time - time) < timeframe_timedelta
     return rounded_time
 
 
@@ -358,6 +370,33 @@ def validate_no_timeframe(data: pd.DataFrame) -> pd.DataFrame:
     if 'timeframe' in data.index.names:
         raise Exception(f'timeframe found in Data(indexes:{data.index.names}, columns:{data.columns.names}')
     return data
+
+
+@measure_time
+def times_tester(df: pd.DataFrame, date_range_str: str, timeframe: str, return_bool: bool = False):
+    expected_times = set(times_in_date_range(date_range_str, timeframe).tz_localize(None))
+    actual_times = set(df.index.tz_localize(tz=None))
+
+    # Checking if all expected times are in the dataframe's index
+    missing_times = expected_times - actual_times
+    if len(missing_times) == 0:
+        return True
+    else:
+        if return_bool:
+            return False
+        else:
+            raise Exception("Some times from the date range are missing in the DataFrame's index:" +
+                            ', '.join([str(time) for time in missing_times]))
+
+
+@measure_time
+def multi_timeframe_times_tester(multi_timeframe_df: pt.DataFrame[MultiTimeframe], date_range_str: str,
+                                 return_bool: bool = False):
+    result = True
+    for timeframe in config.timeframes:
+        _timeframe_df = single_timeframe(multi_timeframe_df, timeframe)
+        result = result & times_tester(_timeframe_df, date_range_str, timeframe, return_bool)
+    return result
 
 
 def expected_movement_size(_list: List):
@@ -518,3 +557,18 @@ def after_under_process_date(date_range_str):
     else:
         allow_zero_size = False
     return allow_zero_size
+
+
+@measure_time
+def times_in_date_range(date_range_str: str, timeframe: str) -> DatetimeIndex:
+    start_date, end_date = date_range(date_range_str)
+    in_timeframe_start_date = to_timeframe(start_date, timeframe, ignore_cached_times=True)
+    if in_timeframe_start_date < start_date:
+        in_timeframe_start_date += pd.to_timedelta(timeframe)
+    if timeframe == '1W':
+        frequency = 'W-MON'
+    elif timeframe == 'M':
+        frequency = 'MS'
+    else:
+        frequency = timeframe
+    return pd.date_range(start=in_timeframe_start_date, end=end_date, freq=frequency)
