@@ -371,30 +371,50 @@ def validate_no_timeframe(data: pd.DataFrame) -> pd.DataFrame:
     return data
 
 
-def times_tester(df: pd.DataFrame, date_range_str: str, timeframe: str, return_bool: bool = False):
-    expected_times = set(times_in_date_range(date_range_str, timeframe).tz_localize(None))
+def times_tester(df: pd.DataFrame, date_range_str: str, timeframe: str, return_bool: bool = False,
+                 ignore_under_process_date_range: bool = True,
+                 under_process_date_range: str = None,
+                 exact_match: bool = False,
+                 ) -> Union[bool, None]:
+    expected_times = set(times_in_date_range(date_range_str, timeframe, ignore_under_process_date_range,
+                                             under_process_date_range).tz_localize(None))
     actual_times = set(df.index.tz_localize(tz=None))
 
     # Checking if all expected times are in the dataframe's index
     missing_times = expected_times - actual_times
-    if len(missing_times) == 0:
-        return True
-    else:
+    if missing_times:
+        message = (f"Some times in {date_range_str}@{timeframe} are missing in the DataFrame's index:" +
+                   ', '.join([str(time) for time in missing_times]))
         if return_bool:
-            log(f"Some times in {date_range_str}@{timeframe} are missing in the DataFrame's index:" +
-                            ', '.join([str(time) for time in missing_times]))
+            log(message)
             return False
         else:
-            raise Exception(f"Some times in {date_range_str}@{timeframe} are missing in the DataFrame's index:" +
-                            ', '.join([str(time) for time in missing_times]))
+            raise Exception(message)
+    else:
+        if exact_match:
+            excess_times = actual_times - expected_times
+            if excess_times == 0:
+                return True
+            else:
+                message = (f"Some times in {date_range_str}@{timeframe} are excessive in the DataFrame's index:" +
+                           ', '.join([str(time) for time in excess_times]))
+                if return_bool:
+                    log(message)
+                    return False
+                else:
+                    raise Exception(message)
+        else:
+            return True
 
 
 def multi_timeframe_times_tester(multi_timeframe_df: pt.DataFrame[MultiTimeframe], date_range_str: str,
-                                 return_bool: bool = False):
+                                 return_bool: bool = False, ignore_under_process_date_range: bool = True,
+                                 under_process_date_range: str = None):
     result = True
     for timeframe in config.timeframes:
         _timeframe_df = single_timeframe(multi_timeframe_df, timeframe)
-        result = result & times_tester(_timeframe_df, date_range_str, timeframe, return_bool)
+        result = result & times_tester(_timeframe_df, date_range_str, timeframe, return_bool,
+                                       ignore_under_process_date_range, under_process_date_range)
     return result
 
 
@@ -558,8 +578,15 @@ def after_under_process_date(date_range_str):
     return allow_zero_size
 
 
-def times_in_date_range(date_range_str: str, timeframe: str) -> DatetimeIndex:
+def times_in_date_range(date_range_str: str, timeframe: str,
+                        ignore_under_process_date_range: bool = True,
+                        under_process_date_range: str = None) -> DatetimeIndex:
     start_date, end_date = date_range(date_range_str)
+    if ignore_under_process_date_range:
+        if under_process_date_range is None:
+            under_process_date_range = config.under_process_date_range
+        _, end_of_under_process_scope = date_range(under_process_date_range)
+        effective_end_date = min(end_date, end_of_under_process_scope)
     in_timeframe_start_date = to_timeframe(start_date, timeframe, ignore_cached_times=True)
     if in_timeframe_start_date < start_date:
         in_timeframe_start_date += pd.to_timedelta(timeframe)
@@ -569,4 +596,4 @@ def times_in_date_range(date_range_str: str, timeframe: str) -> DatetimeIndex:
         frequency = 'MS'
     else:
         frequency = timeframe
-    return pd.date_range(start=in_timeframe_start_date, end=end_date, freq=frequency)
+    return pd.date_range(start=in_timeframe_start_date, end=effective_end_date, freq=frequency)
