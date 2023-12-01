@@ -9,7 +9,8 @@ from pandas import Timestamp
 from pandera import typing as pt
 
 from Config import config, GLOBAL_CACHE
-from DataPreparation import read_file, trim_to_date_range, single_timeframe, expand_date_range
+from DataPreparation import read_file, trim_to_date_range, single_timeframe, expand_date_range, \
+    multi_timeframe_times_tester
 from Model.MultiTimeframeOHLCV import MultiTimeframeOHLCV, OHLCV
 from Model.MultiTimeframeOHLCVA import MultiTimeframeOHLCVA
 from helper import date_range, measure_time
@@ -83,7 +84,8 @@ def generate_multi_timeframe_ohlcva(date_range_str: str = None, file_path: str =
     df = pd.concat(daily_dataframes)
     df.sort_index(inplace=True, level='date')
     df = trim_to_date_range(date_range_str, df)
-    assert not df.index.duplicated().any()
+    # assert not df.index.duplicated().any()
+    assert multi_timeframe_times_tester(df, date_range_str)
     df.to_csv(os.path.join(file_path, f'multi_timeframe_ohlcva.{date_range_str}.zip'),
               compression='zip')
 
@@ -124,6 +126,7 @@ def core_generate_multi_timeframe_ohlcva(date_range_str: str = None, file_path: 
     multi_timeframe_ohlcva.sort_index(level='date', inplace=True)
 
     multi_timeframe_ohlcva = trim_to_date_range(date_range_str, multi_timeframe_ohlcva)
+    assert multi_timeframe_times_tester(multi_timeframe_ohlcva, date_range_str)
     # plot_multi_timeframe_ohlcva(multi_timeframe_ohlcva)
     multi_timeframe_ohlcva.to_csv(os.path.join(file_path, f'multi_timeframe_ohlcva.{date_range_str}.zip'),
                                   compression='zip')

@@ -305,7 +305,6 @@ def single_timeframe(multi_timeframe_data: pd.DataFrame, timeframe):
     return validate_no_timeframe(single_timeframe_data.droplevel('timeframe'))
 
 
-@measure_time
 def to_timeframe(time: Union[DatetimeIndex, datetime], timeframe: str, ignore_cached_times: bool = False) -> datetime:
     """
     Round the given datetime to the nearest time based on the specified timeframe.
@@ -372,7 +371,6 @@ def validate_no_timeframe(data: pd.DataFrame) -> pd.DataFrame:
     return data
 
 
-@measure_time
 def times_tester(df: pd.DataFrame, date_range_str: str, timeframe: str, return_bool: bool = False):
     expected_times = set(times_in_date_range(date_range_str, timeframe).tz_localize(None))
     actual_times = set(df.index.tz_localize(tz=None))
@@ -383,13 +381,14 @@ def times_tester(df: pd.DataFrame, date_range_str: str, timeframe: str, return_b
         return True
     else:
         if return_bool:
+            log(f"Some times in {date_range_str}@{timeframe} are missing in the DataFrame's index:" +
+                            ', '.join([str(time) for time in missing_times]))
             return False
         else:
-            raise Exception("Some times from the date range are missing in the DataFrame's index:" +
+            raise Exception(f"Some times in {date_range_str}@{timeframe} are missing in the DataFrame's index:" +
                             ', '.join([str(time) for time in missing_times]))
 
 
-@measure_time
 def multi_timeframe_times_tester(multi_timeframe_df: pt.DataFrame[MultiTimeframe], date_range_str: str,
                                  return_bool: bool = False):
     result = True
@@ -559,7 +558,6 @@ def after_under_process_date(date_range_str):
     return allow_zero_size
 
 
-@measure_time
 def times_in_date_range(date_range_str: str, timeframe: str) -> DatetimeIndex:
     start_date, end_date = date_range(date_range_str)
     in_timeframe_start_date = to_timeframe(start_date, timeframe, ignore_cached_times=True)
