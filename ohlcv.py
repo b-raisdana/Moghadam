@@ -66,7 +66,7 @@ def core_generate_multi_timeframe_ohlcv(date_range_str: str, file_path: str = co
             multi_timeframe_ohlcv = pd.concat([multi_timeframe_ohlcv, _timeframe_ohlcv])
     multi_timeframe_ohlcv = trim_to_date_range(date_range_str, multi_timeframe_ohlcv)
     multi_timeframe_ohlcv.sort_index(inplace=True, level='date')
-    multi_timeframe_times_tester(multi_timeframe_ohlcv, date_range_str)
+    assert multi_timeframe_times_tester(multi_timeframe_ohlcv, date_range_str)
     # plot_multi_timeframe_ohlcv(multi_timeframe_ohlcv, date_range_str)
     multi_timeframe_ohlcv.to_csv(os.path.join(file_path, f'multi_timeframe_ohlcv.{date_range_str}.zip'),
                                  compression='zip')
@@ -124,7 +124,7 @@ def generate_multi_timeframe_ohlcv(date_range_str: str = None, file_path: str = 
     df = pd.concat(daily_dataframes)
     df.sort_index(inplace=True, level='date')
     df = trim_to_date_range(date_range_str, df)
-    multi_timeframe_times_tester(df, date_range_str)
+    assert multi_timeframe_times_tester(df, date_range_str)
     df.to_csv(os.path.join(file_path, f'multi_timeframe_ohlcv.{date_range_str}.zip'),
               compression='zip')
 
