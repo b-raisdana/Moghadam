@@ -3,7 +3,7 @@ from datetime import timedelta
 from sys import exit
 
 from Config import config
-from FigurePlotter.DataPreparation_plotter import plot_multi_timeframe_ohlcva, plot_multi_timeframe_ohlcv
+from FigurePlotter.OHLVC_plotter import plot_multi_timeframe_ohlcva, plot_multi_timeframe_ohlcv
 from FigurePlotter.PeakValley_plotter import plot_multi_timeframe_peaks_n_valleys
 from MetaTrader import MT
 from PeakValley import read_multi_timeframe_peaks_n_valleys
@@ -13,7 +13,7 @@ from helper import today_morning
 from ohlcv import read_base_timeframe_ohlcv, generate_multi_timeframe_ohlcv, read_multi_timeframe_ohlcv
 
 if __name__ == "__main__":
-    config.under_process_date_range = date_range_to_string(days=60)
+    config.under_process_date_range = date_range_to_string(days=2)
     #
     # file_path: str = config.path_of_data
     # today_morning = today_morning()

@@ -292,11 +292,11 @@ def generate_multi_timeframe_peaks_n_valleys(date_range_str, file_path: str = co
     _peaks_n_valleys = multi_timeframe_peaks_n_valleys(expanded_date_range)
     start, end = date_range(date_range_str)
     _peaks_n_valleys = _peaks_n_valleys.loc[
-        (start < _peaks_n_valleys.index.get_level_values()) &
-        (_peaks_n_valleys.index.get_level_values() < end)]
+        (start.replace(tzinfo=None) < _peaks_n_valleys.index.get_level_values(level='date')) &
+        (_peaks_n_valleys.index.get_level_values(level='date') < end.replace(tzinfo=None))]
     # plot_multi_timeframe_peaks_n_valleys(_peaks_n_valleys, date_range_str)
     _peaks_n_valleys.sort_index(inplace=True, level='date')
-    _peaks_n_valleys = trim_to_date_range(date_range_str, _peaks_n_valleys)
+    _peaks_n_valleys = trim_to_date_range(date_range_str, _peaks_n_valleys, ignore_duplicate_index=True)
     _peaks_n_valleys.to_csv(os.path.join(file_path, f'multi_timeframe_peaks_n_valleys.{date_range_str}.zip'),
                             compression='zip')
     MT.extract_to_data_path(os.path.join(file_path, f'multi_timeframe_peaks_n_valleys.{date_range_str}.zip'))

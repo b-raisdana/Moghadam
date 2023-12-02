@@ -8,13 +8,12 @@ from typing import Callable, Union, List, Type, TypeVar
 import numpy as np
 import pandas as pd
 import pandera
-import pytz
 from pandas import Timedelta, DatetimeIndex, Timestamp
 from pandera import typing as pt
 
 from Config import config, GLOBAL_CACHE
 from Model import MultiTimeframe
-from helper import log, date_range, date_range_to_string, morning, measure_time
+from helper import log, date_range, date_range_to_string, morning
 
 
 def range_of_data(data: pd.DataFrame) -> str:
@@ -163,8 +162,11 @@ def df_timedelta_to_str(input_time: Union[str, Timedelta], hours=True, ignore_ze
           or isinstance(input_time, np.timedelta64)
           or isinstance(input_time, pt.Timedelta)):
         timedelta_obj = input_time
+    elif isinstance(input_time, float):
+        timedelta_obj = timedelta(seconds=input_time)
     else:
-        raise ValueError("Input should be either a pandas timedelta string or a pandas Timedelta object.")
+        raise ValueError(
+            "Input should be either a pandas timedelta string, float(seconds) or a pandas Timedelta object.")
 
     total_minutes = timedelta_obj.total_seconds() // 60
     if hours:
@@ -543,14 +545,18 @@ def extract_file_info(file_name: str) -> FileInfoSet:
 
 
 # @cache
-def trim_to_date_range(date_range_str: str, df: pd.DataFrame) -> pd.DataFrame:
+def trim_to_date_range(date_range_str: str, df: pd.DataFrame, ignore_duplicate_index: bool = False) -> pd.DataFrame:
     start, end = date_range(date_range_str)
     date_indexes = df.index.get_level_values(level='date')
     df = df[
         (date_indexes >= np.datetime64(start)) &
         (date_indexes <= np.datetime64(end))
         ]
-    assert not df.index.duplicated().any()
+    duplicate_indices = df.index.duplicated(keep=False)
+    if not ignore_duplicate_index:
+        assert not duplicate_indices
+    else:
+        log(f"Found duplicate indices:" + duplicate_indices)
     return df
 
 

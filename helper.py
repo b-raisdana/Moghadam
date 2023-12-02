@@ -56,7 +56,10 @@ def measure_time(func):
                 for arg in args
             ] +
             [
-                f'{str(k)}: {str(kwargs[k])}' for k in kwargs.keys()
+                f'{k}:{str(kwargs[k].columns)}' if isinstance(kwargs[k], pd.DataFrame)
+                else f'{k}:list...' if isinstance(kwargs[k], list)
+                else f'{k}:{kwargs[k]}'
+                for k in kwargs.keys()
             ]))
         log(f"{func.__name__}({function_parameters}) started", stack_trace=False)
         result = func(*args, **kwargs)
