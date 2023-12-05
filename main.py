@@ -37,7 +37,6 @@ if __name__ == "__main__":
     generate_multi_timeframe_ohlcva(config.under_process_date_range)
     _ohlcva = read_multi_timeframe_ohlcva(config.under_process_date_range)
     plot_multi_timeframe_ohlcva(_ohlcva)
-    exit()
 
     _peaks_and_valleys = read_multi_timeframe_peaks_n_valleys(config.under_process_date_range)
     plot_multi_timeframe_peaks_n_valleys(_peaks_and_valleys, config.under_process_date_range)

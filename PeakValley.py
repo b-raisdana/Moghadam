@@ -392,7 +392,7 @@ def calculate_strength_of_peaks_n_valleys(time_ohlcv, time_peaks_n_valleys):
 
 
 def read_multi_timeframe_peaks_n_valleys(date_range_str: str = None) \
-        -> pt.DataFrame[PeaksValleys]:
+        -> pt.DataFrame[MultiTimeframePeakValleys]:
     result = read_file(date_range_str, 'multi_timeframe_peaks_n_valleys',
                        generate_multi_timeframe_peaks_n_valleys,
                        MultiTimeframePeakValleys)

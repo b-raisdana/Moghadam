@@ -1,32 +1,30 @@
 import pandas as pd
+from pandera import typing as pt
 from plotly import graph_objects as plgo
 
 from Config import config
 from DataPreparation import single_timeframe, df_timedelta_to_str
 from FigurePlotter.OHLVC_plotter import plot_ohlcva
 from FigurePlotter.plotter import plot_multiple_figures, file_id, timeframe_color, save_figure
+from Model.MultiTimeframePeakValleys import MultiTimeframePeakValleys
 from PeakValley import peaks_only, valleys_only, major_peaks_n_valleys
 from atr import read_multi_timeframe_ohlcva
 from helper import measure_time
 
 
 @measure_time
-def plot_multi_timeframe_peaks_n_valleys(multi_timeframe_peaks_n_valleys, date_range_str: str, show=True, save=True,
-                                         path_of_plot=config.path_of_plots):
+def plot_multi_timeframe_peaks_n_valleys(multi_timeframe_peaks_n_valleys: pt.DataFrame[MultiTimeframePeakValleys],
+                                         date_range_str: str, show=True, save=True):
     multi_timeframe_ohlcva = read_multi_timeframe_ohlcva(date_range_str)
 
     figures = []
     _multi_timeframe_peaks = peaks_only(multi_timeframe_peaks_n_valleys)
     _multi_timeframe_valleys = valleys_only(multi_timeframe_peaks_n_valleys)
     for _, timeframe in enumerate(config.timeframes):
-        # figures.append(plot_ohlcva(single_timeframe(multi_timeframe_ohlcva, timeframe), show=False, save=False,
-        #                            name=f'{timeframe} ohlcva'))
         figures.append(plot_peaks_n_valleys(single_timeframe(multi_timeframe_ohlcva, timeframe),
                                             peaks=major_peaks_n_valleys(_multi_timeframe_peaks, timeframe),
                                             valleys=major_peaks_n_valleys(_multi_timeframe_valleys, timeframe),
                                             name=f'{timeframe} Peaks n Valleys', show=False, save=False))
-    # plot_multiple_figures(figures, name=f'multi_timeframe_ohlcva.{file_id(multi_timeframe_ohlcva, name)}',
-    #                       save=save, show=show)
     fig = plot_multiple_figures(figures, name=f'multi_timeframe_peaks_n_valleys.{file_id(multi_timeframe_ohlcva)}',
                                 show=show, save=save)
     return fig
