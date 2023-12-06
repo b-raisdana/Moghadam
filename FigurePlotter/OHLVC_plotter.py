@@ -21,13 +21,13 @@ def plot_multi_timeframe_ohlcva(multi_timeframe_ohlcva, name: str = '', show: bo
 
 
 @measure_time
-def plot_multi_timeframe_ohlcv(multi_timeframe_ohlcv, date_range_str):
+def plot_multi_timeframe_ohlcv(multi_timeframe_ohlcv, date_range_str, show: bool = True, save: bool = True):
     # todo: test plot_multi_timeframe_ohlcv
     figures = []
     for _, timeframe in enumerate(config.timeframes):
         figures.append(plot_ohlcv(single_timeframe(multi_timeframe_ohlcv, timeframe), show=False, save=False,
                                   name=f'{timeframe} ohlcv'))
-    plot_multiple_figures(figures, name=f'multi_timeframe_ohlcv.{date_range_str}')
+    plot_multiple_figures(figures, name=f'multi_timeframe_ohlcv.{date_range_str}', show=show, save=save)
 
 
 @measure_time

@@ -552,11 +552,12 @@ def trim_to_date_range(date_range_str: str, df: pd.DataFrame, ignore_duplicate_i
         (date_indexes >= np.datetime64(start)) &
         (date_indexes <= np.datetime64(end))
         ]
-    duplicate_indices = df.index.duplicated(keep=False)
+    duplicate_indices = df.index[df.index.duplicated()].unique()
     if not ignore_duplicate_index:
-        assert not duplicate_indices
+        assert len(duplicate_indices) == 0
     else:
-        log(f"Found duplicate indices:" + duplicate_indices)
+        if len(duplicate_indices) > 0:
+            log(f"Found duplicate indices:" + duplicate_indices)
     return df
 
 
