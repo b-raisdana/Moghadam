@@ -3,17 +3,18 @@ import re
 import string
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Callable, Union, List, Type, TypeVar
+from typing import Callable, Union, List, Type
 
 import numpy as np
 import pandas as pd
 import pandera
 from pandas import Timedelta, DatetimeIndex, Timestamp
-from pandera import typing as pt
+from pandera import typing as pt, Float64
 
 from Config import config, GLOBAL_CACHE
 from Model import MultiTimeframe
-from helper import log, date_range, date_range_to_string, morning
+from Model.MultiTimeframe import MultiTimeframe_Type
+from helper import log, date_range, date_range_to_string, morning, Pandera_DFM_Type
 
 
 def range_of_data(data: pd.DataFrame) -> str:
@@ -37,10 +38,6 @@ def range_of_data(data: pd.DataFrame) -> str:
     """
     return f'{data.index.get_level_values("date")[0].strftime("%y-%m-%d.%H-%M")}T' \
            f'{data.index.get_level_values("date")[-1].strftime("%y-%m-%d.%H-%M")}'
-
-
-# Define a type variable
-Pandera_DFM_Type = TypeVar('T', bound=pandera.DataFrameModel)
 
 
 # @cache
@@ -104,14 +101,6 @@ def read_file(date_range_str: str, data_frame_type: str, generator: Callable, ca
         pass
     except Exception as e:
         raise e
-    # if (data_frame_type + '_columns') not in config.__dir__():
-    #     raise Exception(data_frame_type + '_columns not defined in configuration!')
-    # if df is None or not check_dataframe(df, getattr(config, data_frame_type + '_columns')):
-    #     generator(date_range_str)
-    #     df = read_with_timeframe(data_frame_type, date_range_str, file_path, n_rows, skip_rows)
-    #     if not check_dataframe(df, getattr(config, data_frame_type + '_columns')):
-    #         raise Exception(f'Failed to generate {data_frame_type}! {data_frame_type}.columns:{df.columns}')
-    #     # log(f'generate {data_frame_type} executed in {timedelta_to_str(datetime.now() - start_time, milliseconds=True)}s')
 
     if zero_size_allowed is None:
         zero_size_allowed = after_under_process_date(date_range_str)
@@ -275,27 +264,8 @@ def read_with_timeframe(data_frame_type: str, date_range_str: str, file_path: st
     return df
 
 
-# def zz_check_dataframe(dataframe: pd.DataFrame, columns: [str], raise_exception=False):
-#     try:
-#         dataframe.columns
-#     except NameError:
-#         if raise_exception:
-#             raise Exception(
-#                 f'The DataFrame does not have columns:{dataframe}')
-#         else:
-#             return False
-#     for _column in columns:
-#         if _column not in list(dataframe.columns) + list(dataframe.index.names):
-#             if raise_exception:
-#                 raise Exception(
-#                     f'The DataFrame expected to contain {_column} but have these columns:{dataframe.columns}')
-#             else:
-#                 return False
-#     return True
-
-
 # @measure_time
-def single_timeframe(multi_timeframe_data: pd.DataFrame, timeframe):
+def single_timeframe(multi_timeframe_data: Type[MultiTimeframe_Type], timeframe) -> pd.DataFrame:
     if 'timeframe' not in multi_timeframe_data.index.names:
         raise Exception(
             f'multi_timeframe_data expected to have "timeframe" in indexes:[{multi_timeframe_data.index.names}]')
@@ -380,7 +350,10 @@ def times_tester(df: pd.DataFrame, date_range_str: str, timeframe: str, return_b
                  ) -> Union[bool, None]:
     expected_times = set(times_in_date_range(date_range_str, timeframe, ignore_under_process_date_range,
                                              under_process_date_range).tz_localize(None))
-    actual_times = set(df.index.tz_localize(tz=None))
+    if len(df.index) > 0:
+        actual_times = set(df.index.tz_localize(tz=None))
+    else:
+        actual_times = set()
 
     # Checking if all expected times are in the dataframe's index
     missing_times = expected_times - actual_times
@@ -452,7 +425,7 @@ def all_annotations(cls) -> ChainMap:
 
 
 def cast_and_validate(data, model_class: Type[Pandera_DFM_Type], return_bool: bool = False,
-                      zero_size_allowed: bool = False) -> Union[Pandera_DFM_Type, bool]:
+                      zero_size_allowed: bool = False) -> Union[pd.DataFrame, bool]:
     if len(data) == 0:
         if not zero_size_allowed:
             raise Exception('Zero size data!')
@@ -460,10 +433,27 @@ def cast_and_validate(data, model_class: Type[Pandera_DFM_Type], return_bool: bo
             if return_bool:
                 return True
             else:
-                return pd.DataFrame()
+                return empty_df(model_class)
+    data = apply_as_type(data, model_class)
+    if return_bool:
+        try:
+            model_class.validate(data, lazy=True)
+        except pandera.errors.SchemaErrors as exc:
+            log(exc.schema_errors)
+            return False
+        except Exception as e:
+            raise e
+    else:
+        model_class.validate(data, lazy=True, )
+    if return_bool:
+        return True
+    data = data[[column for column in model_class.__fields__.keys() if column not in ['timeframe', 'date']]]
+    return data
+
+
+def apply_as_type(data, model_class):
     as_types = {}
     _all_annotations = all_annotations(model_class)
-
     for attr_name, attr_type in _all_annotations.items():
         if 'timestamp' in str(attr_type).lower() and 'timestamp' not in str(data.dtypes.loc[attr_name]).lower():
             as_types[attr_name] = 'datetime64[s]'
@@ -479,19 +469,6 @@ def cast_and_validate(data, model_class: Type[Pandera_DFM_Type], return_bool: bo
                 as_types[attr_name] = astype
     if len(as_types) > 0:
         data = data.astype(as_types)
-    if return_bool:
-        try:
-            model_class.validate(data, lazy=True)
-        except pandera.errors.SchemaErrors as exc:
-            log(exc.schema_errors)
-            return False
-        except Exception as e:
-            raise e
-    else:
-        model_class.validate(data, lazy=True, )
-    if return_bool:
-        return True
-    data = data[[column for column in model_class.__fields__.keys() if column not in ['timeframe', 'date']]]
     return data
 
 
@@ -604,3 +581,19 @@ def times_in_date_range(date_range_str: str, timeframe: str,
     else:
         frequency = timeframe
     return pd.date_range(start=in_timeframe_start_date, end=effective_end_date, freq=frequency)
+
+
+def empty_df(model_class: Type[Pandera_DFM_Type]) -> Pandera_DFM_Type:
+    # Create an empty DataFrame with Pandas-compatible data types
+    empty_data = {
+        column: [] for column in list(model_class.to_schema().columns.keys()) + list(model_class.to_schema().index.columns.keys())
+    }
+    _empty_df = pd.DataFrame(empty_data)
+    as_types = dict(model_class.to_schema().dtypes, **model_class.to_schema().index.dtypes)
+    for _name, _type in as_types.items():
+        as_types[_name] = _type.type.name
+
+    _empty_df = _empty_df.astype(as_types)
+    _empty_df.set_index(list(model_class.to_schema().index.columns.keys()), inplace=True)
+    _empty_df = model_class(_empty_df)
+    return _empty_df

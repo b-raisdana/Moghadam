@@ -2,11 +2,12 @@ import os
 from datetime import timedelta, datetime
 
 import pandas as pd
+import pytz
 from pandera import typing as pt
 
 from Config import config, GLOBAL_CACHE
-from DataPreparation import read_file, single_timeframe, cast_and_validate, trim_to_date_range, to_timeframe, \
-    after_under_process_date, multi_timeframe_times_tester, times_tester
+from data_preparation import read_file, single_timeframe, cast_and_validate, trim_to_date_range, to_timeframe, \
+    after_under_process_date, multi_timeframe_times_tester, times_tester, empty_df
 from MetaTrader import MT
 from Model.MultiTimeframeOHLCV import MultiTimeframeOHLCV, OHLCV
 from fetch_ohlcv import fetch_ohlcv_by_range
@@ -73,8 +74,7 @@ def core_generate_multi_timeframe_ohlcv(date_range_str: str, file_path: str = co
 
 
 # @measure_time
-def core_read_multi_timeframe_ohlcv(date_range_str: str = None) \
-        -> pt.DataFrame[MultiTimeframeOHLCV]:
+def core_read_multi_timeframe_ohlcv(date_range_str: str = None) -> MultiTimeframeOHLCV:
     if date_range_str is None:
         date_range_str = config.under_process_date_range
     result = read_file(date_range_str, 'multi_timeframe_ohlcv', core_generate_multi_timeframe_ohlcv,
@@ -85,18 +85,20 @@ def core_read_multi_timeframe_ohlcv(date_range_str: str = None) \
     return result
 
 
-def read_daily_multi_timeframe_ohlcv(day: datetime) -> pt.DataFrame[MultiTimeframeOHLCV]:
+def read_daily_multi_timeframe_ohlcv(day: datetime) -> MultiTimeframeOHLCV:
     # Format the date_range_str for the given day
     start_str = day.strftime('%y-%m-%d.00-00')
     end_str = day.strftime('%y-%m-%d.23-59')
     day_date_range_str = f'{start_str}T{end_str}'
 
     # Fetch the data for the given day using the old function
+    if day.replace(hour=0, minute=0, second=0, microsecond=0) > datetime.now(tz=pytz.UTC):
+        _empty_df = empty_df(MultiTimeframeOHLCV)
+        return _empty_df
     return core_read_multi_timeframe_ohlcv(day_date_range_str)
 
 
-def read_multi_timeframe_ohlcv(date_range_str: str) \
-        -> pt.DataFrame[MultiTimeframeOHLCV]:
+def read_multi_timeframe_ohlcv(date_range_str: str) -> MultiTimeframeOHLCV:
     if date_range_str is None:
         date_range_str = config.under_process_date_range
     result = read_file(date_range_str, 'multi_timeframe_ohlcv', generate_multi_timeframe_ohlcv,
@@ -158,40 +160,32 @@ def read_base_timeframe_ohlcv(date_range_str: str) \
 @measure_time
 def generate_base_timeframe_ohlcv(date_range_str: str = None, file_path: str = config.path_of_data) -> None:
     start, end = date_range(date_range_str)
-
     # Split the date range into individual days
     current_day = start
     daily_dataframes = []
-
     while current_day.date() <= end.date():
         # For each day, get the data and append to daily_dataframes list
         daily_dataframes.append(read_daily_ohlcv(current_day))
         current_day += timedelta(days=1)
     # Concatenate the daily data
-    # todo: prevent duplicate index (timeframe, date)
     df = pd.concat(daily_dataframes)
     df.sort_index(inplace=True, level='date')
     df = trim_to_date_range(date_range_str, df)
     assert times_tester(df, date_range_str, config.timeframes[0])
-    df.to_csv(os.path.join(file_path, f'ohlcv.{date_range_str}.zip'),
-              compression='zip')
+    df.to_csv(os.path.join(file_path, f'ohlcv.{date_range_str}.zip'), compression='zip')
 
 
-# @measure_time
 def core_generate_ohlcv(date_range_str: str = None, file_path: str = config.path_of_data):
     if date_range_str is None:
         date_range_str = config.under_process_date_range
     raw_ohlcv = fetch_ohlcv_by_range(date_range_str)
     df = pd.DataFrame(raw_ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
     df['date'] = pd.to_datetime(df['timestamp'], unit='ms')
-    # df['date'] = df['date'].dt.tz_localize('UTC').dt.tz_convert('Asia/Tehran')
     df.set_index('date', inplace=True)
     df.drop(columns=['timestamp'], inplace=True)
-    # plot_ohlcv(ohlcv=df)
     cast_and_validate(df, OHLCV, zero_size_allowed=after_under_process_date(date_range_str))
     assert times_tester(df, date_range_str, timeframe=config.timeframes[0])
-    df.to_csv(os.path.join(file_path, f'ohlcv.{date_range_str}.zip'),
-              compression='zip')
+    df.to_csv(os.path.join(file_path, f'ohlcv.{date_range_str}.zip'), compression='zip')
     if config.load_data_to_meta_trader:
         MT.extract_to_data_path(os.path.join(file_path, f'ohlcv.{date_range_str}.zip'))
         MT.load_rates()

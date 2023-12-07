@@ -2,10 +2,14 @@ import os
 from datetime import timedelta
 from sys import exit
 
+import pandas as pd
+
 from Config import config
+from data_preparation import expand_date_range, empty_df
 from FigurePlotter.OHLVC_plotter import plot_multi_timeframe_ohlcva, plot_multi_timeframe_ohlcv
 from FigurePlotter.PeakValley_plotter import plot_multi_timeframe_peaks_n_valleys
 from MetaTrader import MT
+from Model.MultiTimeframeOHLCV import MultiTimeframeOHLCV
 from PeakValley import read_multi_timeframe_peaks_n_valleys
 from atr import generate_multi_timeframe_ohlcva, read_multi_timeframe_ohlcva
 from helper import date_range_to_string, log
@@ -13,7 +17,7 @@ from helper import today_morning
 from ohlcv import read_base_timeframe_ohlcv, generate_multi_timeframe_ohlcv, read_multi_timeframe_ohlcv
 
 if __name__ == "__main__":
-    config.under_process_date_range = date_range_to_string(days=2)
+    config.under_process_date_range = date_range_to_string(days=0.5)
     #
     # file_path: str = config.path_of_data
     # today_morning = today_morning()
@@ -37,6 +41,14 @@ if __name__ == "__main__":
     generate_multi_timeframe_ohlcva(config.under_process_date_range)
     _ohlcva = read_multi_timeframe_ohlcva(config.under_process_date_range)
     plot_multi_timeframe_ohlcva(_ohlcva, show=False)
+
+    biggest_timeframe = config.timeframes[-1]
+    expanded_date_range = expand_date_range(config.under_process_date_range,
+                                            time_delta=4 * pd.to_timedelta(biggest_timeframe),
+                                            mode='both')
+    generate_multi_timeframe_ohlcva(expanded_date_range)
+    expanded_ohlcva = read_multi_timeframe_ohlcva(expanded_date_range)
+    plot_multi_timeframe_ohlcva(expanded_ohlcva, show=False)
 
     _peaks_and_valleys = read_multi_timeframe_peaks_n_valleys(config.under_process_date_range)
     plot_multi_timeframe_peaks_n_valleys(_peaks_and_valleys, config.under_process_date_range)

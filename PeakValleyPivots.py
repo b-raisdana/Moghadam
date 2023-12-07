@@ -4,8 +4,8 @@ import pandas as pd
 from pandera import typing as pt
 
 from Config import config
-from DataPreparation import single_timeframe, anti_trigger_timeframe, cast_and_validate, \
-    read_file, after_under_process_date
+from data_preparation import single_timeframe, anti_trigger_timeframe, cast_and_validate, \
+    read_file, after_under_process_date, empty_df
 from MetaTrader import MT
 from Model.MultiTimeframePivot import MultiTimeframePivot
 from PeakValley import read_multi_timeframe_peaks_n_valleys
@@ -30,7 +30,7 @@ def tops_pivots(date_range_str) -> pt.DataFrame[MultiTimeframePivot]:
     '''
     _multi_timeframe_peaks_n_valleys = read_multi_timeframe_peaks_n_valleys(date_range_str)
     _multi_timeframe_ohlcva = read_multi_timeframe_ohlcva(date_range_str)
-    multi_timeframe_pivots = pd.DataFrame()
+    multi_timeframe_pivots = empty_df(MultiTimeframePivot)
     for timeframe in config.structure_timeframes[::-1][2:]:
         # 1W tops are creating classic levels for 4H, 1D for 1H and 4H for 15min structure Timeframes.
         _pivots = single_timeframe(_multi_timeframe_peaks_n_valleys, anti_trigger_timeframe(timeframe))

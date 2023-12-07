@@ -6,8 +6,8 @@ from pandera import typing as pt
 
 from BullBearSide import read_multi_timeframe_bull_bear_side_trends, previous_trend
 from Config import config
-from DataPreparation import single_timeframe, expected_movement_size, trigger_timeframe, read_file, \
-    cast_and_validate, anti_pattern_timeframe, after_under_process_date
+from data_preparation import single_timeframe, expected_movement_size, trigger_timeframe, read_file, \
+    cast_and_validate, anti_pattern_timeframe, after_under_process_date, empty_df
 from MetaTrader import MT
 from Model.BullBearSide import BullBearSide
 from Model.MultiTimeframePivot import MultiTimeframePivot
@@ -64,7 +64,8 @@ def multi_timeframe_bull_bear_side_pivots(date_range_str: str = None, timeframe_
     multi_timeframe_trends = read_multi_timeframe_bull_bear_side_trends(date_range_str)
     multi_timeframe_peaks_n_valleys = read_multi_timeframe_peaks_n_valleys(date_range_str)
     multi_timeframe_ohlcva = read_multi_timeframe_ohlcva(date_range_str)
-    multi_timeframe_pivots = pd.DataFrame()
+    # multi_timeframe_pivots = pd.DataFrame()
+    multi_timeframe_pivots = empty_df(MultiTimeframePivot)
     if timeframe_shortlist is None:
         timeframe_shortlist = config.structure_timeframes[::-1]
     for timeframe in timeframe_shortlist:

@@ -9,11 +9,11 @@ from pandas import Timestamp
 from pandera import typing as pt
 
 from Config import config, GLOBAL_CACHE
-from DataPreparation import read_file, trim_to_date_range, single_timeframe, expand_date_range, \
-    multi_timeframe_times_tester
+from data_preparation import read_file, trim_to_date_range, single_timeframe, expand_date_range, \
+    multi_timeframe_times_tester, empty_df
 from Model.MultiTimeframeOHLCV import MultiTimeframeOHLCV, OHLCV
 from Model.MultiTimeframeOHLCVA import MultiTimeframeOHLCVA
-from helper import date_range, measure_time
+from helper import date_range, measure_time, log
 from ohlcv import read_multi_timeframe_ohlcv
 
 
@@ -41,27 +41,23 @@ def RMA(values: pd.DataFrame, length):
     return rma
 
 
+@measure_time
 def insert_atr(timeframe_ohlcv: pt.DataFrame[OHLCV], mode: str = 'pandas_ta', apply_rma: bool = True) -> pd.DataFrame:
-    if Timestamp("2023-11-06 19:29:00") in timeframe_ohlcv.index:
-        pass
-    if mode == 'pandas_ta':
-        timeframe_ohlcv['ATR'] = timeframe_ohlcv.ta.atr(timeperiod=config.ATR_timeperiod,
-                                                       # high='high',
-                                                       # low='low',
-                                                       # close='close',
-                                                       mamode='ema',
-                                                       )
-    elif mode == 'ta_lib':
-        timeframe_ohlcv['ATR'] = tal.ATR(high=timeframe_ohlcv['high'].values, low=timeframe_ohlcv['low'].values,
-                                        close=timeframe_ohlcv['close'].values, timeperiod=config.ATR_timeperiod)
+    if len(timeframe_ohlcv) <= config.ATR_timeperiod:
+        timeframe_ohlcv['ATR'] = pd.NA
     else:
-        raise Exception(f"Unsupported mode:{mode}")
-    # if apply_rma:
-    #     timeframe_ohlcv['ATR1'] = ta.rma(timeframe_ohlcv['TR'], length=config.ATR_timeperiod)
-    #     timeframe_ohlcv['ATR2'] = RMA(timeframe_ohlcv['TR'], length=config.ATR_timeperiod)
-    # else:
-    #     timeframe_ohlcv['ATR2'] = timeframe_ohlcv['TR']
-    # timeframe_ohlcv['ATR'] = _ATR
+        if mode == 'pandas_ta':
+            timeframe_ohlcv['ATR'] = timeframe_ohlcv.ta.atr(timeperiod=config.ATR_timeperiod,
+                                                            # high='high',
+                                                            # low='low',
+                                                            # close='close',
+                                                            # mamode='ema',
+                                                            )
+        elif mode == 'ta_lib':
+            timeframe_ohlcv['ATR'] = tal.ATR(high=timeframe_ohlcv['high'].values, low=timeframe_ohlcv['low'].values,
+                                             close=timeframe_ohlcv['close'].values, timeperiod=config.ATR_timeperiod)
+        else:
+            raise Exception(f"Unsupported mode:{mode}")
     return timeframe_ohlcv
 
 
@@ -109,7 +105,7 @@ def core_generate_multi_timeframe_ohlcva(date_range_str: str = None, file_path: 
     #                                         time_delta=config.ATR_timeperiod * pd.to_timedelta(biggest_timeframe),
     #                                         mode='start')
     # expanded_multi_timeframe_ohlcv = read_multi_timeframe_ohlcv(expanded_date_range)
-    multi_timeframe_ohlcva = pd.DataFrame()
+    multi_timeframe_ohlcva = empty_df(MultiTimeframeOHLCVA)
     for _, timeframe in enumerate(config.timeframes):
         expanded_date_range = expand_date_range(date_range_str,
                                                 time_delta=(config.ATR_timeperiod + 1) * pd.to_timedelta(timeframe),

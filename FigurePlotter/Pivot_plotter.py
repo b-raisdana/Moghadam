@@ -4,7 +4,7 @@ from plotly import graph_objects as plgo
 
 from ohlcv import read_multi_timeframe_ohlcv
 from Config import config
-from DataPreparation import single_timeframe
+from data_preparation import single_timeframe
 from FigurePlotter.OHLVC_plotter import plot_ohlcv
 from FigurePlotter.plotter import save_figure, file_id, timeframe_color
 from Model.MultiTimeframePivot import MultiTimeframePivot

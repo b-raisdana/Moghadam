@@ -9,7 +9,7 @@ from pandera import typing as pt
 
 import helper
 from Config import config
-from DataPreparation import map_symbol
+from data_preparation import map_symbol
 from Model.MultiTimeframeOHLCV import OHLCV
 from helper import log, date_range
 

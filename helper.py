@@ -4,9 +4,11 @@ import time
 import traceback
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Tuple
+from typing import Tuple, TypeVar
 
+import numpy as np
 import pandas as pd
+import pandera
 import pytz
 
 
@@ -14,6 +16,9 @@ class LogSeverity(Enum):
     INFO = "INFO"
     WARNING = "WARNING"
     ERROR = "ERROR"
+
+
+Pandera_DFM_Type = TypeVar('Pandera_DFM_Type', bound=pandera.DataFrameModel)
 
 
 def log(log_message: str, severity: LogSeverity = LogSeverity.WARNING, stack_trace: bool = True) -> None:
@@ -50,13 +55,13 @@ def measure_time(func):
         start_time = time.time()
         function_parameters = (", ".join(
             [
-                str(arg.columns) if isinstance(arg, pd.DataFrame)
-                else 'list...' if isinstance(arg, list)
+                f'{len(arg)}*{arg.columns}' if isinstance(arg, pd.DataFrame)
+                else f'list{np.array(arg).shape}' if isinstance(arg, list)
                 else str(arg)
                 for arg in args
             ] +
             [
-                f'{k}:{str(kwargs[k].columns)}' if isinstance(kwargs[k], pd.DataFrame)
+                f'{k}:{len(kwargs[k])}*{kwargs[k].columns}' if isinstance(kwargs[k], pd.DataFrame)
                 else f'{k}:list...' if isinstance(kwargs[k], list)
                 else f'{k}:{kwargs[k]}'
                 for k in kwargs.keys()
@@ -69,6 +74,26 @@ def measure_time(func):
         return result
 
     return _measure_time
+
+
+# Define a mapping from Pandera data types to pandas data types
+pandera_to_pandas_type_map = {
+    pandera.Float: float,
+    pandera.Int: int,
+    pandera.String: str,
+    pandera.BOOL: bool,
+    # Add more data types as needed
+}
+
+
+# def empty_df(model: Type[Pandera_DFM_Type]) -> pandas.DataFrame:
+#     _empty_df = pd.DataFrame(columns=list(model.to_schema().columns.keys()) +
+#                                       list(model.to_schema().index.columns.keys()))
+#     as_types = dict(model.to_schema().dtypes)
+#     _empty_df.astype(as_types)
+#     return model(pd.DataFrame(columns=list(model.to_schema().columns.keys()) +
+#                                       list(model.to_schema().index.columns.keys()))
+#                  .set_index(list(model.to_schema().index.columns.keys())))
 
 
 def date_range(date_range_str: str) -> Tuple[datetime, datetime]:

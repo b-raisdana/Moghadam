@@ -1,7 +1,7 @@
 import pandas as pd
 
 from Config import config, TREND
-from DataPreparation import single_timeframe
+from data_preparation import single_timeframe
 from FigurePlotter.plotter import save_figure, file_id, plot_multiple_figures
 from PeakValley import peaks_only, valleys_only, major_peaks_n_valleys
 from FigurePlotter.PeakValley_plotter import plot_peaks_n_valleys

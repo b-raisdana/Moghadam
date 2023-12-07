@@ -7,7 +7,7 @@ import pandas as pd
 from plotly import graph_objects as plgo
 
 from Config import config
-from DataPreparation import range_of_data
+from data_preparation import range_of_data
 from helper import measure_time
 
 DEBUG = False

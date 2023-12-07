@@ -3,7 +3,7 @@ from pandera import typing as pt
 from plotly import graph_objects as plgo
 
 from Config import config
-from DataPreparation import single_timeframe, df_timedelta_to_str
+from data_preparation import single_timeframe, df_timedelta_to_str
 from FigurePlotter.OHLVC_plotter import plot_ohlcva
 from FigurePlotter.plotter import plot_multiple_figures, file_id, timeframe_color, save_figure
 from Model.MultiTimeframePeakValleys import MultiTimeframePeakValleys

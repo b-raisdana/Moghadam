@@ -13,7 +13,7 @@ from typing import Union, List
 import psutil
 from pandera import typing as pt
 
-from DataPreparation import map_symbol, extract_file_info, FileInfoSet
+from data_preparation import map_symbol, extract_file_info, FileInfoSet
 from Model.MultiTimeframeOHLCV import OHLCV
 from helper import log
 

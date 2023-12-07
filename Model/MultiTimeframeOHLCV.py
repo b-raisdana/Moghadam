@@ -16,3 +16,5 @@ class OHLCV(pandera.DataFrameModel):
 
 class MultiTimeframeOHLCV(OHLCV, MultiTimeframe):
     pass
+
+

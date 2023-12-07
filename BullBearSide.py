@@ -10,7 +10,7 @@ import PeakValley
 from ohlcv import read_multi_timeframe_ohlcv
 from atr import read_multi_timeframe_ohlcva
 from Config import TopTYPE, config, TREND
-from DataPreparation import read_file, single_timeframe, to_timeframe, cast_and_validate
+from data_preparation import read_file, single_timeframe, to_timeframe, cast_and_validate, empty_df
 from Model.BullBearSide import BullBearSide
 from Model.MultiTimeframeBullBearSide import MultiTimeframeBullBearSide
 from Model.MultiTimeframeCandleTrend import MultiTimeframeCandleTrend
@@ -396,7 +396,9 @@ def multi_timeframe_bull_bear_side_trends(multi_timeframe_candle_trend: pd.DataF
                                           multi_timeframe_ohlcva: pd.DataFrame,
                                           timeframe_shortlist: List['str'] = None) \
         -> pt.DataFrame[MultiTimeframeBullBearSide]:
-    trends = pd.DataFrame()
+    # trends = pd.DataFrame()
+    trends = empty_df(MultiTimeframeBullBearSide)
+
     if timeframe_shortlist is None:
         timeframe_shortlist = config.timeframes
     for timeframe in timeframe_shortlist:
@@ -617,7 +619,8 @@ def single_timeframe_bull_bear_side_trends(single_timeframe_candle_trend: pd.Dat
                                            single_timeframe_peaks_n_valleys, ohlcva: pt.DataFrame[OHLCVA],
                                            timeframe: str) -> pd.DataFrame:
     if ohlcva['ATR'].first_valid_index() is None:
-        return pd.DataFrame()
+        # return pd.DataFrame()
+        return empty_df(BullBearSide)
     single_timeframe_candle_trend = single_timeframe_candle_trend.loc[ohlcva['ATR'].first_valid_index():]
     _trends = detect_trends(single_timeframe_candle_trend, timeframe)
     _trends = add_trend_tops(_trends, single_timeframe_peaks_n_valleys, ohlcva)
@@ -740,7 +743,8 @@ def generate_multi_timeframe_candle_trend(date_range_str: str, timeframe_shortli
                                           file_path: str = config.path_of_data):
     multi_timeframe_ohlcv = read_multi_timeframe_ohlcv(date_range_str)
     multi_timeframe_peaks_n_valleys = read_multi_timeframe_peaks_n_valleys(date_range_str).sort_index(level='date')
-    multi_timeframe_candle_trend = pd.DataFrame()
+    # multi_timeframe_candle_trend = pd.DataFrame()
+    multi_timeframe_candle_trend = empty_df(MultiTimeframeCandleTrend)
     if timeframe_shortlist is None:
         timeframe_shortlist = config.timeframes
     for timeframe in timeframe_shortlist:  # peaks_n_valleys.index.unique(level='timeframe'):

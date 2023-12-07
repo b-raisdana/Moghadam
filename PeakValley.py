@@ -8,8 +8,8 @@ import pandera.typing as pt
 import pytz
 
 from Config import config, INFINITY_TIME_DELTA, TopTYPE
-from DataPreparation import read_file, cast_and_validate, trim_to_date_range, \
-    expand_date_range, after_under_process_date
+from data_preparation import read_file, cast_and_validate, trim_to_date_range, \
+    expand_date_range, after_under_process_date, empty_df
 from MetaTrader import MT
 from Model.MultiTimeframeOHLCV import OHLCV
 from Model.MultiTimeframePeakValleys import PeaksValleys, MultiTimeframePeakValleys
@@ -67,6 +67,7 @@ def calculate_distance(ohlcv: pt.DataFrame[OHLCV], peaks_or_valleys: pt.DataFram
 
         def more_significant(x, y):
             return x > y
+
         def les_significant(x, y):
             return x < y
     else:
@@ -74,6 +75,7 @@ def calculate_distance(ohlcv: pt.DataFrame[OHLCV], peaks_or_valleys: pt.DataFram
 
         def more_significant(x, y):
             return x < y
+
         def les_significant(x, y):
             return x > y
     direction = direction.lower()
@@ -85,7 +87,7 @@ def calculate_distance(ohlcv: pt.DataFrame[OHLCV], peaks_or_valleys: pt.DataFram
         raise Exception(f'Invalid direction: {direction} only right and left are supported.')
     ohlcv = ohlcv.copy()
     tops_to_compare = peaks_or_valleys.copy()
-    tops_with_known_crossing_bar = pd.DataFrame()
+    tops_with_known_crossing_bar = empty_df(PeaksValleys)
     previous_number_of_tops = 0
     while previous_number_of_tops != len(peaks_or_valleys):
         top_indexes = tops_to_compare.index
@@ -113,12 +115,13 @@ def calculate_distance(ohlcv: pt.DataFrame[OHLCV], peaks_or_valleys: pt.DataFram
             ohlcv['left_crossing_time'].ffill(inplace=True)
             ohlcv['left_crossing_value'].ffill(inplace=True)
         # if the next top is less significant the XXX_crossing_time and value both are invalid.
-        valid_crossings = ohlcv.loc[les_significant(ohlcv[reverse + '_top_value'], ohlcv[direction + '_crossing_value'])].index
+        valid_crossings = ohlcv.loc[
+            les_significant(ohlcv[reverse + '_top_value'], ohlcv[direction + '_crossing_value'])].index
         ohlcv.loc[valid_crossings, 'invalid_crossing'] = True
         # invalid_crossings = ohlcv[ohlcv.index not in valid_crossings].index
         # invalid_crossing_tops = ohlcv[not compare_op(ohlcv[compare_column], ohlcv[direction + '_crossing_value'])]
         ohlcv.loc[~valid_crossings, [direction + '_crossing_time', direction + '_crossing_value']] = None
-
+        ohlcv[['high', 'left_top_time', 'left_top_value', 'right_crossing_time', 'right_crossing_value', 'invalid_crossing']]
         tops_with_valid_crossing = tops_to_compare.index.intersection(valid_crossings)
         tops_to_compare.loc[tops_with_valid_crossing, direction + '_distance'] = (
                 ohlcv.loc[tops_with_valid_crossing, direction + '_crossing_time'] - tops_with_valid_crossing)
