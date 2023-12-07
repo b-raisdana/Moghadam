@@ -101,7 +101,7 @@ def calculate_distance(ohlcv: pt.DataFrame[OHLCV], peaks_or_valleys: pt.DataFram
         ohlcv.loc[crossing_times, direction + '_crossing_time'] = crossing_times
         ohlcv.loc[crossing_times, direction + '_crossing_value'] = ohlcv.loc[crossing_times, compare_column]
         # replace the False values in the XXX_crossing_time column with the first non-False value on the appropriate side.
-        # ohlcv.loc[ohlcv[direction + '_crossing_time'] == False, ] = None
+        ohlcv.loc[ohlcv[direction + '_crossing_time'] == False, direction + '_crossing_time'] = pd.NA
         if direction == 'right':
             ohlcv['right_crossing_time'].bfill(inplace=True)
             ohlcv['right_crossing_value'].bfill(inplace=True)
@@ -109,7 +109,8 @@ def calculate_distance(ohlcv: pt.DataFrame[OHLCV], peaks_or_valleys: pt.DataFram
             ohlcv['left_crossing_time'].ffill(inplace=True)
             ohlcv['left_crossing_value'].ffill(inplace=True)
         # if the next top is less significant the XXX_crossing_time and value both are invalid.
-        valid_crossings = ohlcv.loc[compare_op(ohlcv[compare_column], ohlcv[direction + '_crossing_value'])].index
+        valid_crossings = ohlcv.loc[~compare_op(ohlcv[reverse + '_top_value'], ohlcv[direction + '_crossing_value'])].index
+        ohlcv.loc[valid_crossings, 'invalid_crossing'] = True
         # invalid_crossings = ohlcv[ohlcv.index not in valid_crossings].index
         # invalid_crossing_tops = ohlcv[not compare_op(ohlcv[compare_column], ohlcv[direction + '_crossing_value'])]
         ohlcv.loc[~valid_crossings, [direction + '_crossing_time', direction + '_crossing_value']] = None
@@ -129,7 +130,7 @@ def calculate_distance(ohlcv: pt.DataFrame[OHLCV], peaks_or_valleys: pt.DataFram
         previous_number_of_tops = len(tops_to_compare)
         tops_to_compare = tops_to_compare[
             tops_to_compare[direction + '_distance'].isna()]
-        ohlcv = ohlcv[~valid_crossings]
+        ohlcv = ohlcv[~invalid_crossings]
     return peaks_or_valleys
 
 
