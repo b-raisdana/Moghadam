@@ -91,10 +91,9 @@ def read_daily_multi_timeframe_ohlcv(day: datetime) -> MultiTimeframeOHLCV:
     end_str = day.strftime('%y-%m-%d.23-59')
     day_date_range_str = f'{start_str}T{end_str}'
 
-    # Fetch the data for the given day using the old function
     if day.replace(hour=0, minute=0, second=0, microsecond=0) > datetime.now(tz=pytz.UTC):
-        _empty_df = empty_df(MultiTimeframeOHLCV)
-        return _empty_df
+        return empty_df(MultiTimeframeOHLCV)
+    # Fetch the data for the given day using the old function
     return core_read_multi_timeframe_ohlcv(day_date_range_str)
 
 

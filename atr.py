@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 import numpy as np
 import pandas as pd
 import pandas_ta as ta  # noqa
+import pytz
 import talib as tal
 from pandas import Timestamp
 from pandera import typing as pt
@@ -145,5 +146,7 @@ def read_daily_multi_timeframe_ohlcva(day: datetime, timezone='GMT') -> pt.DataF
     end_str = day.strftime('%y-%m-%d.23-59')
     day_date_range_str = f'{start_str}T{end_str}'
 
+    if day.replace(hour=0, minute=0, second=0, microsecond=0) > datetime.now(tz=pytz.UTC):
+        return empty_df(MultiTimeframeOHLCVA)
     # Fetch the data for the given day using the old function
     return core_read_multi_timeframe_ohlcva(day_date_range_str)
