@@ -9,7 +9,7 @@ from data_preparation import expand_date_range, empty_df
 from FigurePlotter.OHLVC_plotter import plot_multi_timeframe_ohlcva, plot_multi_timeframe_ohlcv
 from FigurePlotter.PeakValley_plotter import plot_multi_timeframe_peaks_n_valleys
 from MetaTrader import MT
-from Model.MultiTimeframeOHLCV import MultiTimeframeOHLCV
+from Model.MultiTimeframeOHLCV import MultiTimeframeOHLCV, OHLCV
 from PeakValley import read_multi_timeframe_peaks_n_valleys
 from atr import generate_multi_timeframe_ohlcva, read_multi_timeframe_ohlcva
 from helper import date_range_to_string, log
@@ -36,7 +36,7 @@ if __name__ == "__main__":
 
     generate_multi_timeframe_ohlcv(config.under_process_date_range)
     _ohlcv = read_multi_timeframe_ohlcv(config.under_process_date_range)
-    plot_multi_timeframe_ohlcv(_ohlcv, config.under_process_date_range, show=False)
+    # plot_multi_timeframe_ohlcv(_ohlcv, config.under_process_date_range, show=False)
 
     generate_multi_timeframe_ohlcva(config.under_process_date_range)
     _ohlcva = read_multi_timeframe_ohlcva(config.under_process_date_range)

@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import pandera
 from pandas import Timedelta, DatetimeIndex, Timestamp
-from pandera import typing as pt, Float64
+from pandera import typing as pt, DataType
 
 from Config import config, GLOBAL_CACHE
 from Model import MultiTimeframe
@@ -232,7 +232,7 @@ def timedelta_to_str(time_delta: timedelta, hours: bool = True, minutes: bool = 
 
 
 def read_with_timeframe(data_frame_type: str, date_range_str: str, file_path: str, n_rows: int,
-                        skip_rows: int) -> pd.DataFrame:
+                        skip_rows: int) -> Pandera_DFM_Type:
     """
     Read data from a compressed CSV file, adjusting the index based on the data frame type.
 
@@ -583,17 +583,36 @@ def times_in_date_range(date_range_str: str, timeframe: str,
     return pd.date_range(start=in_timeframe_start_date, end=effective_end_date, freq=frequency)
 
 
+def index_fields(model_class: Type[Pandera_DFM_Type]) -> dict[str, str]:
+    if hasattr(model_class.to_schema().index, 'columns'):
+        # model_class has a MultiIndex
+        # names = list(model_class.to_schema().index.columns.keys())
+        names = model_class.to_schema().index.dtypes
+    else:
+        # model_class has a single Index
+        names = {k: model_class.to_schema().index.dtype for k, v in model_class.__annotations__.items()
+                 if 'pandera.typing.pandas.Index' in str(v.__origin__)}
+    return names
+
+
+def column_fields(model_class: Type[Pandera_DFM_Type]) -> dict[str, DataType]:
+    return model_class.to_schema().dtypes
+    # return list(model_class.to_schema().columns.keys())
+
+
 def empty_df(model_class: Type[Pandera_DFM_Type]) -> Pandera_DFM_Type:
+    as_types = dict(column_fields(model_class), **index_fields(model_class))
     # Create an empty DataFrame with Pandas-compatible data types
     empty_data = {
-        column: [] for column in list(model_class.to_schema().columns.keys()) + list(model_class.to_schema().index.columns.keys())
+        column: [] for column in as_types.keys()
     }
     _empty_df = pd.DataFrame(empty_data)
-    as_types = dict(model_class.to_schema().dtypes, **model_class.to_schema().index.dtypes)
+    as_types = dict(column_fields(model_class), **index_fields(model_class))
     for _name, _type in as_types.items():
         as_types[_name] = _type.type.name
 
+
     _empty_df = _empty_df.astype(as_types)
-    _empty_df.set_index(list(model_class.to_schema().index.columns.keys()), inplace=True)
+    _empty_df.set_index(list(index_fields(model_class).keys()), inplace=True)
     _empty_df = model_class(_empty_df)
     return _empty_df

@@ -121,7 +121,8 @@ def calculate_distance(ohlcv: pt.DataFrame[OHLCV], peaks_or_valleys: pt.DataFram
         # invalid_crossings = ohlcv[ohlcv.index not in valid_crossings].index
         # invalid_crossing_tops = ohlcv[not compare_op(ohlcv[compare_column], ohlcv[direction + '_crossing_value'])]
         ohlcv.loc[~valid_crossings, [direction + '_crossing_time', direction + '_crossing_value']] = None
-        ohlcv[['high', 'left_top_time', 'left_top_value', 'right_crossing_time', 'right_crossing_value', 'invalid_crossing']]
+        ohlcv[['high', 'left_top_time', 'left_top_value', 'right_crossing_time', 'right_crossing_value',
+               'invalid_crossing']]
         tops_with_valid_crossing = tops_to_compare.index.intersection(valid_crossings)
         tops_to_compare.loc[tops_with_valid_crossing, direction + '_distance'] = (
                 ohlcv.loc[tops_with_valid_crossing, direction + '_crossing_time'] - tops_with_valid_crossing)
@@ -406,7 +407,9 @@ def generate_multi_timeframe_peaks_n_valleys(date_range_str, file_path: str = co
 
 
 @measure_time
-def calculate_strength_of_peaks_n_valleys(time_ohlcv, time_peaks_n_valleys):
+def calculate_strength_of_peaks_n_valleys(time_ohlcv: pt.DataFrame[OHLCV],
+                                          time_peaks_n_valleys: pt.DataFrame[PeaksValleys]) \
+        -> pt.DataFrame[PeaksValleys]:
     peaks = calculate_strength(peaks_only(time_peaks_n_valleys), TopTYPE.PEAK, time_ohlcv)
     valleys = calculate_strength(valleys_only(time_peaks_n_valleys), TopTYPE.VALLEY, time_ohlcv)
     return pd.concat([peaks, valleys]).sort_index(level='date')
