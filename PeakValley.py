@@ -12,7 +12,7 @@ from data_preparation import read_file, cast_and_validate, trim_to_date_range, \
     expand_date_range, after_under_process_date, empty_df
 from MetaTrader import MT
 from Model.MultiTimeframeOHLCV import OHLCV
-from Model.MultiTimeframePeakValleys import PeaksValleys, MultiTimeframePeakValleys
+from Model.MultiTimeframePeakValleys import PeakValleys, MultiTimeframePeakValleys
 from helper import measure_time, date_range
 from ohlcv import read_base_timeframe_ohlcv
 
@@ -42,8 +42,8 @@ from ohlcv import read_base_timeframe_ohlcv
 #     peaks_or_valleys['strength'] = peaks_or_valleys['strength'].dt.total_seconds()
 #     return peaks_or_valleys
 
-def calculate_strength(peaks_or_valleys: pt.DataFrame[PeaksValleys], top_type: TopTYPE,
-                       ohlcv: pt.DataFrame[OHLCV]) -> pt.DataFrame[PeaksValleys]:
+def calculate_strength(peaks_or_valleys: pt.DataFrame[PeakValleys], top_type: TopTYPE,
+                       ohlcv: pt.DataFrame[OHLCV]) -> pt.DataFrame[PeakValleys]:
     # todo: test calculate_strength
     if len(peaks_or_valleys) == 0:
         return peaks_or_valleys
@@ -60,8 +60,8 @@ def calculate_strength(peaks_or_valleys: pt.DataFrame[PeaksValleys], top_type: T
     return peaks_or_valleys
 
 
-def calculate_distance(ohlcv: pt.DataFrame[OHLCV], peaks_or_valleys: pt.DataFrame[PeaksValleys], top_type: TopTYPE,
-                       direction: Literal['right', 'left']) -> pt.DataFrame[PeaksValleys]:
+def calculate_distance(ohlcv: pt.DataFrame[OHLCV], peaks_or_valleys: pt.DataFrame[PeakValleys], top_type: TopTYPE,
+                       direction: Literal['right', 'left']) -> pt.DataFrame[PeakValleys]:
     if top_type == TopTYPE.PEAK:
         compare_column = 'high'
 
@@ -87,7 +87,7 @@ def calculate_distance(ohlcv: pt.DataFrame[OHLCV], peaks_or_valleys: pt.DataFram
         raise Exception(f'Invalid direction: {direction} only right and left are supported.')
     ohlcv = ohlcv.copy()
     tops_to_compare = peaks_or_valleys.copy()
-    tops_with_known_crossing_bar = empty_df(PeaksValleys)
+    tops_with_known_crossing_bar = empty_df(PeakValleys)
     previous_number_of_tops = 0
     while previous_number_of_tops != len(peaks_or_valleys):
         top_indexes = tops_to_compare.index
@@ -142,7 +142,7 @@ def calculate_distance(ohlcv: pt.DataFrame[OHLCV], peaks_or_valleys: pt.DataFram
     return peaks_or_valleys
 
 
-def old_calculate_strength(peaks_or_valleys: pt.DataFrame[PeaksValleys], top_type: TopTYPE,
+def old_calculate_strength(peaks_or_valleys: pt.DataFrame[PeakValleys], top_type: TopTYPE,
                            ohlcv: pt.DataFrame[OHLCV]):
     # todo: test calculate_strength
     if len(peaks_or_valleys) == 0:
@@ -342,7 +342,7 @@ def higher_or_eq_timeframe_peaks_n_valleys(peaks_n_valleys: pd.DataFrame, timefr
     return result
 
 
-def top_timeframe(tops: pt.DataFrame[PeaksValleys]) -> pt.DataFrame[PeaksValleys]:
+def top_timeframe(tops: pt.DataFrame[PeakValleys]) -> pt.DataFrame[PeakValleys]:
     """
     _peaks_n_valleys['timeframe'] = [strength_to_timeframe(row['strength']) for index, row in
                                      _peaks_n_valleys.iterrows()]
@@ -408,8 +408,8 @@ def generate_multi_timeframe_peaks_n_valleys(date_range_str, file_path: str = co
 
 @measure_time
 def calculate_strength_of_peaks_n_valleys(time_ohlcv: pt.DataFrame[OHLCV],
-                                          time_peaks_n_valleys: pt.DataFrame[PeaksValleys]) \
-        -> pt.DataFrame[PeaksValleys]:
+                                          time_peaks_n_valleys: pt.DataFrame[PeakValleys]) \
+        -> pt.DataFrame[PeakValleys]:
     peaks = calculate_strength(peaks_only(time_peaks_n_valleys), TopTYPE.PEAK, time_ohlcv)
     valleys = calculate_strength(valleys_only(time_peaks_n_valleys), TopTYPE.VALLEY, time_ohlcv)
     return pd.concat([peaks, valleys]).sort_index(level='date')

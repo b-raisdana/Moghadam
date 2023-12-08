@@ -5,6 +5,7 @@ from sys import exit
 import pandas as pd
 
 from Config import config
+from Model.MultiTimeframePeakValleys import PeakValleys, MultiTimeframePeakValleys
 from data_preparation import expand_date_range, empty_df
 from FigurePlotter.OHLVC_plotter import plot_multi_timeframe_ohlcva, plot_multi_timeframe_ohlcv
 from FigurePlotter.PeakValley_plotter import plot_multi_timeframe_peaks_n_valleys
@@ -33,6 +34,8 @@ if __name__ == "__main__":
     #     # sleep(30)
     #
     # exit(0)
+    t = empty_df(PeakValleys)
+    t = empty_df(MultiTimeframePeakValleys)
 
     generate_multi_timeframe_ohlcv(config.under_process_date_range)
     _ohlcv = read_multi_timeframe_ohlcv(config.under_process_date_range)
@@ -40,7 +43,7 @@ if __name__ == "__main__":
 
     generate_multi_timeframe_ohlcva(config.under_process_date_range)
     _ohlcva = read_multi_timeframe_ohlcva(config.under_process_date_range)
-    plot_multi_timeframe_ohlcva(_ohlcva, show=False)
+    # plot_multi_timeframe_ohlcva(_ohlcva, show=False)
 
     biggest_timeframe = config.timeframes[-1]
     expanded_date_range = expand_date_range(config.under_process_date_range,
@@ -48,7 +51,7 @@ if __name__ == "__main__":
                                             mode='both')
     generate_multi_timeframe_ohlcva(expanded_date_range)
     expanded_ohlcva = read_multi_timeframe_ohlcva(expanded_date_range)
-    plot_multi_timeframe_ohlcva(expanded_ohlcva, show=False)
+    # plot_multi_timeframe_ohlcva(expanded_ohlcva, show=False)
 
     _peaks_and_valleys = read_multi_timeframe_peaks_n_valleys(config.under_process_date_range)
     plot_multi_timeframe_peaks_n_valleys(_peaks_and_valleys, config.under_process_date_range)
