@@ -34,8 +34,9 @@ if __name__ == "__main__":
     #     # sleep(30)
     #
     # exit(0)
-    t = empty_df(PeakValleys)
-    t = empty_df(MultiTimeframePeakValleys)
+
+    # t = empty_df(PeakValleys)
+    # t = empty_df(MultiTimeframePeakValleys)
 
     generate_multi_timeframe_ohlcv(config.under_process_date_range)
     _ohlcv = read_multi_timeframe_ohlcv(config.under_process_date_range)
