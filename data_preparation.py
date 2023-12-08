@@ -50,7 +50,7 @@ def data_is_not_cachable(date_range_str):
 
 def read_file(date_range_str: str, data_frame_type: str, generator: Callable, caster_model: Type[Pandera_DFM_Type]
               , skip_rows=None, n_rows=None, file_path: str = config.path_of_data,
-              zero_size_allowed: Union[None, bool] = None) -> Pandera_DFM_Type:
+              zero_size_allowed: Union[None, bool] = None) -> pd.DataFrame:
     """
     Read data from a file and return a DataFrame. If the file does not exist or the DataFrame does not
     match the expected columns, the generator function is used to create the DataFrame.
@@ -93,7 +93,7 @@ def read_file(date_range_str: str, data_frame_type: str, generator: Callable, ca
         :param caster_model:
     """
     if date_range_str is None:
-        date_range_str = config.under_process_date_range
+        date_range_str = config.processing_date_range
     df = None
     try:
         df = read_with_timeframe(data_frame_type, date_range_str, file_path, n_rows, skip_rows)
@@ -158,6 +158,7 @@ def df_timedelta_to_str(input_time: Union[str, Timedelta], hours=True, ignore_ze
             "Input should be either a pandas timedelta string, float(seconds) or a pandas Timedelta object.")
 
     total_minutes = timedelta_obj.total_seconds() // 60
+    _hours = 0
     if hours:
         _hours = int(total_minutes // 60)
     _minutes = int(total_minutes % 60)
@@ -232,7 +233,7 @@ def timedelta_to_str(time_delta: timedelta, hours: bool = True, minutes: bool = 
 
 
 def read_with_timeframe(data_frame_type: str, date_range_str: str, file_path: str, n_rows: int,
-                        skip_rows: int) -> Pandera_DFM_Type:
+                        skip_rows: int) -> pd.DataFrame:
     """
     Read data from a compressed CSV file, adjusting the index based on the data frame type.
 
@@ -255,7 +256,7 @@ def read_with_timeframe(data_frame_type: str, date_range_str: str, file_path: st
         ohlcv_data = read_with_timeframe('ohlcv', '21-07-01.00-00T21-07-02', '/path/to/data/', n_rows=1000, skip_rows=0)
     """
     if date_range_str is None:
-        date_range_str = config.under_process_date_range
+        date_range_str = config.processing_date_range
     df = pd.read_csv(os.path.join(file_path, f'{data_frame_type}.{date_range_str}.zip'), sep=',', header=0,
                      index_col='date', parse_dates=['date'], skiprows=skip_rows, nrows=n_rows)
     if 'multi_timeframe' in data_frame_type:
@@ -265,7 +266,7 @@ def read_with_timeframe(data_frame_type: str, date_range_str: str, file_path: st
 
 
 # @measure_time
-def single_timeframe(multi_timeframe_data: Type[MultiTimeframe_Type], timeframe) -> pd.DataFrame:
+def single_timeframe(multi_timeframe_data: pt.DataFrame[MultiTimeframe_Type], timeframe) -> pd.DataFrame:
     if 'timeframe' not in multi_timeframe_data.index.names:
         raise Exception(
             f'multi_timeframe_data expected to have "timeframe" in indexes:[{multi_timeframe_data.index.names}]')
@@ -329,12 +330,12 @@ def to_timeframe(time: Union[DatetimeIndex, datetime], timeframe: str, ignore_ca
     return rounded_time
 
 
-def zz_test_index_match_timeframe(data: pd.DataFrame, timeframe: str):
-    for index_value, mapped_index_value in map(lambda x, y: (x, y), data.index, to_timeframe(data.index, timeframe)):
-        if index_value != mapped_index_value:
-            raise Exception(
-                f'In Data({data.columns.names}) found Index({index_value}) not align with timeframe:{timeframe}/{mapped_index_value}\n'
-                f'Indexes:{data.index.values}')
+# def zz_test_index_match_timeframe(data: pd.DataFrame, timeframe: str):
+#     for index_value, mapped_index_value in map(lambda x, y: (x, y), data.index, to_timeframe(data.index, timeframe)):
+#         if index_value != mapped_index_value:
+#             raise Exception(
+#                 f'In Data({data.columns.names}) found Index({index_value}) not align with timeframe:{timeframe}/{mapped_index_value}\n'
+#                 f'Indexes:{data.index.values}')
 
 
 def validate_no_timeframe(data: pd.DataFrame) -> pd.DataFrame:
@@ -344,12 +345,12 @@ def validate_no_timeframe(data: pd.DataFrame) -> pd.DataFrame:
 
 
 def times_tester(df: pd.DataFrame, date_range_str: str, timeframe: str, return_bool: bool = False,
-                 ignore_under_process_date_range: bool = True,
-                 under_process_date_range: str = None,
+                 limit_to_under_process_period: bool = True,
+                 processing_date_range: str = None,
                  exact_match: bool = False,
                  ) -> Union[bool, None]:
-    expected_times = set(times_in_date_range(date_range_str, timeframe, ignore_under_process_date_range,
-                                             under_process_date_range).tz_localize(None))
+    expected_times = set(times_in_date_range(date_range_str, timeframe, limit_to_under_process_period,
+                                             processing_date_range).tz_localize(None))
     if len(df.index) > 0:
         actual_times = set(df.index.tz_localize(tz=None))
     else:
@@ -383,13 +384,13 @@ def times_tester(df: pd.DataFrame, date_range_str: str, timeframe: str, return_b
 
 
 def multi_timeframe_times_tester(multi_timeframe_df: pt.DataFrame[MultiTimeframe], date_range_str: str,
-                                 return_bool: bool = False, ignore_under_process_date_range: bool = True,
-                                 under_process_date_range: str = None):
+                                 return_bool: bool = False, ignore_processing_date_range: bool = True,
+                                 processing_date_range: str = None):
     result = True
     for timeframe in config.timeframes:
         _timeframe_df = single_timeframe(multi_timeframe_df, timeframe)
         result = result & times_tester(_timeframe_df, date_range_str, timeframe, return_bool,
-                                       ignore_under_process_date_range, under_process_date_range)
+                                       ignore_processing_date_range, processing_date_range)
     return result
 
 
@@ -409,10 +410,7 @@ def shift_time(timeframe, shifter):
         raise Exception(f'shifter expected be int or str got type({type(shifter)}) in {shifter}')
 
 
-from collections import ChainMap
-
-
-def all_annotations(cls, include_indexes = False) -> ChainMap:
+def all_annotations(cls, include_indexes=False) -> dict:
     """Returns a dictionary-like ChainMap that includes annotations for all
        attributes defined in cls or inherited from superclasses."""
     all_classes_list = [c.__annotations__ for c in cls.__mro__ if hasattr(c, '__annotations__')]
@@ -443,7 +441,7 @@ def cast_and_validate(data, model_class: Type[Pandera_DFM_Type], return_bool: bo
         try:
             model_class.validate(data, lazy=True)
         except pandera.errors.SchemaErrors as exc:
-            log(exc.schema_errors)
+            log(str(exc.schema_errors))
             return False
         except Exception as e:
             raise e
@@ -451,11 +449,12 @@ def cast_and_validate(data, model_class: Type[Pandera_DFM_Type], return_bool: bo
         model_class.validate(data, lazy=True, )
     if return_bool:
         return True
-    data = data[[column for column in model_class.__fields__.keys() if column not in ['timeframe', 'date']]]
+    columns_to_keep: list[str] = [column for column in model_class.__fields__.keys() if column not in ['timeframe', 'date']]
+    data = data[columns_to_keep]
     return data
 
 
-def apply_as_type(data, model_class):
+def apply_as_type(data, model_class)->pd.DataFrame:
     as_types = {}
     _all_annotations = all_annotations(model_class)
     for attr_name, attr_type in _all_annotations.items():
@@ -542,7 +541,10 @@ def trim_to_date_range(date_range_str: str, df: pd.DataFrame, ignore_duplicate_i
     return df
 
 
-def expand_date_range(date_range_str: str, time_delta: timedelta, mode: str):
+def expand_date_range(date_range_str: str, time_delta: timedelta, mode: str, limit_to_processing_period: bool = None)\
+        ->str:
+    if limit_to_processing_period is None:
+        limit_to_processing_period = config.limit_to_under_process_period
     start, end = date_range(date_range_str)
     if mode == 'start':
         start = start - time_delta
@@ -553,12 +555,15 @@ def expand_date_range(date_range_str: str, time_delta: timedelta, mode: str):
         end = end + time_delta
     else:
         raise Exception(f'mode={mode} not implemented')
+    if limit_to_processing_period:
+        _, processing_period_end = date_range(config.processing_date_range)
+        end = min(end, processing_period_end)
     return date_range_to_string(start=start, end=end)
 
 
 def after_under_process_date(date_range_str):
     start, _ = date_range(date_range_str)
-    _, end = date_range(config.under_process_date_range)
+    _, end = date_range(config.processing_date_range)
     if start > end:
         allow_zero_size = True
     else:
@@ -567,14 +572,16 @@ def after_under_process_date(date_range_str):
 
 
 def times_in_date_range(date_range_str: str, timeframe: str,
-                        ignore_under_process_date_range: bool = True,
-                        under_process_date_range: str = None) -> DatetimeIndex:
+                        ignore_out_of_process_period: bool = True,
+                        processing_date_range: str = None) -> DatetimeIndex:
     start_date, end_date = date_range(date_range_str)
-    if ignore_under_process_date_range:
-        if under_process_date_range is None:
-            under_process_date_range = config.under_process_date_range
-        _, end_of_under_process_scope = date_range(under_process_date_range)
+    if ignore_out_of_process_period:
+        if processing_date_range is None:
+            processing_date_range = config.processing_date_range
+        _, end_of_under_process_scope = date_range(processing_date_range)
         effective_end_date = min(end_date, end_of_under_process_scope)
+    else:
+        raise Exception('effective_end_date is not assigned but used later.')
     in_timeframe_start_date = to_timeframe(start_date, timeframe, ignore_cached_times=True)
     if in_timeframe_start_date < start_date:
         in_timeframe_start_date += pd.to_timedelta(timeframe)
@@ -607,7 +614,7 @@ def column_fields(model_class: Type[Pandera_DFM_Type]) -> dict[str, DataType]:
     # return list(model_class.to_schema().columns.keys())
 
 
-def empty_df(model_class: Type[Pandera_DFM_Type]) -> Pandera_DFM_Type:
+def empty_df(model_class: Type[Pandera_DFM_Type]) -> pd.DataFrame:
     as_types = dict(column_fields(model_class), **index_fields(model_class))
     # Create an empty DataFrame with Pandas-compatible data types
     empty_data = {

@@ -11,14 +11,14 @@ from FigurePlotter.OHLVC_plotter import plot_multi_timeframe_ohlcva, plot_multi_
 from FigurePlotter.PeakValley_plotter import plot_multi_timeframe_peaks_n_valleys
 from MetaTrader import MT
 from Model.MultiTimeframeOHLCV import MultiTimeframeOHLCV, OHLCV
-from PeakValley import read_multi_timeframe_peaks_n_valleys
+from PeakValley import read_multi_timeframe_peaks_n_valleys, multi_timeframe_peaks_n_valleys
 from atr import generate_multi_timeframe_ohlcva, read_multi_timeframe_ohlcva
 from helper import date_range_to_string, log
 from helper import today_morning
 from ohlcv import read_base_timeframe_ohlcv, generate_multi_timeframe_ohlcv, read_multi_timeframe_ohlcv
 
 if __name__ == "__main__":
-    config.under_process_date_range = date_range_to_string(days=0.5)
+    config.processing_date_range = date_range_to_string(days=0.1)
     #
     # file_path: str = config.path_of_data
     # today_morning = today_morning()
@@ -38,27 +38,28 @@ if __name__ == "__main__":
     # t = empty_df(PeakValleys)
     # t = empty_df(MultiTimeframePeakValleys)
 
-    generate_multi_timeframe_ohlcv(config.under_process_date_range)
-    _ohlcv = read_multi_timeframe_ohlcv(config.under_process_date_range)
-    # plot_multi_timeframe_ohlcv(_ohlcv, config.under_process_date_range, show=False)
+    # generate_multi_timeframe_ohlcv(config.processing_date_range)
+    # _ohlcv = read_multi_timeframe_ohlcv(config.processing_date_range)
+    # # plot_multi_timeframe_ohlcv(_ohlcv, config.processing_date_range, show=False)
 
-    generate_multi_timeframe_ohlcva(config.under_process_date_range)
-    _ohlcva = read_multi_timeframe_ohlcva(config.under_process_date_range)
-    # plot_multi_timeframe_ohlcva(_ohlcva, show=False)
+    # generate_multi_timeframe_ohlcva(config.processing_date_range)
+    # _ohlcva = read_multi_timeframe_ohlcva(config.processing_date_range)
+    # # plot_multi_timeframe_ohlcva(_ohlcva, show=False)
 
     biggest_timeframe = config.timeframes[-1]
-    expanded_date_range = expand_date_range(config.under_process_date_range,
+    expanded_date_range = expand_date_range(config.processing_date_range,
                                             time_delta=4 * pd.to_timedelta(biggest_timeframe),
                                             mode='both')
     generate_multi_timeframe_ohlcva(expanded_date_range)
     expanded_ohlcva = read_multi_timeframe_ohlcva(expanded_date_range)
     # plot_multi_timeframe_ohlcva(expanded_ohlcva, show=False)
 
-    _peaks_and_valleys = read_multi_timeframe_peaks_n_valleys(config.under_process_date_range)
-    plot_multi_timeframe_peaks_n_valleys(_peaks_and_valleys, config.under_process_date_range)
-    # generate_multi_timeframe_candle_trend(config.under_process_date_range)
-    # generate_multi_timeframe_bull_bear_side_trends(config.under_process_date_range, timeframe_shortlist=['4H'])
-    # generate_multi_timeframe_bull_bear_side_pivots(config.under_process_date_range, timeframe_shortlist=['4H'])
-    # generate_multi_timeframe_top_pivots(config.under_process_date_range)  # , timeframe_shortlist=['15min'])
+    # _peaks_and_valleys = read_multi_timeframe_peaks_n_valleys(config.processing_date_range)
+    _peaks_and_valleys = multi_timeframe_peaks_n_valleys(config.processing_date_range)
+    plot_multi_timeframe_peaks_n_valleys(_peaks_and_valleys, config.processing_date_range)
+    # generate_multi_timeframe_candle_trend(config.processing_date_range)
+    # generate_multi_timeframe_bull_bear_side_trends(config.processing_date_range, timeframe_shortlist=['4H'])
+    # generate_multi_timeframe_bull_bear_side_pivots(config.processing_date_range, timeframe_shortlist=['4H'])
+    # generate_multi_timeframe_top_pivots(config.processing_date_range)  # , timeframe_shortlist=['15min'])
 
     exit()

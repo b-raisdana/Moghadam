@@ -111,7 +111,7 @@ def generate_multi_timeframe_pivot_levels(date_range_str: str = None):
             timeframe of top
     """
     if date_range_str is None:
-        date_range_str = config.under_process_date_range
+        date_range_str = config.processing_date_range
     multi_timeframe_bull_bear_side_pivots = read_multi_timeframe_bull_bear_side_pivots(date_range_str)
     multi_timeframe_anti_pattern_tops_pivots = read_multi_timeframe_top_pivots(date_range_str)
     # multi_timeframe_color_trend_pivots = read_multi_timeframe_color_trend_pivots()

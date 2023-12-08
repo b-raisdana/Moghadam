@@ -107,7 +107,7 @@ def generate_multi_timeframe_top_pivots(date_range_str: str = None, file_path: s
     # tops of timeframe which the timeframe C
     # is its pattern timeframe
     if date_range_str is None:
-        date_range_str = config.under_process_date_range
+        date_range_str = config.processing_date_range
     _tops_pivots = tops_pivots(date_range_str)
     # plot_multi_timeframe_pivots(_tops_pivots, name='multi_timeframe_top_pivots')
     _tops_pivots.sort_index(inplace=True, level='date')

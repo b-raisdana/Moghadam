@@ -64,7 +64,7 @@ def insert_atr(timeframe_ohlcv: pt.DataFrame[OHLCV], mode: str = 'pandas_ta', ap
 
 def generate_multi_timeframe_ohlcva(date_range_str: str = None, file_path: str = config.path_of_data) -> None:
     if date_range_str is None:
-        date_range_str = config.under_process_date_range
+        date_range_str = config.processing_date_range
 
     start, end = date_range(date_range_str)
 
@@ -90,7 +90,7 @@ def generate_multi_timeframe_ohlcva(date_range_str: str = None, file_path: str =
 def read_multi_timeframe_ohlcva(date_range_str: str = None) \
         -> MultiTimeframeOHLCVA:
     if date_range_str is None:
-        date_range_str = config.under_process_date_range
+        date_range_str = config.processing_date_range
     result = read_file(date_range_str, 'multi_timeframe_ohlcva', generate_multi_timeframe_ohlcva,
                        MultiTimeframeOHLCVA)
     return result
@@ -99,7 +99,7 @@ def read_multi_timeframe_ohlcva(date_range_str: str = None) \
 @measure_time
 def core_generate_multi_timeframe_ohlcva(date_range_str: str = None, file_path: str = config.path_of_data) -> None:
     if date_range_str is None:
-        date_range_str = config.under_process_date_range
+        date_range_str = config.processing_date_range
 
     # biggest_timeframe = config.timeframes[-1]
     # expanded_date_range = expand_date_range(date_range_str,

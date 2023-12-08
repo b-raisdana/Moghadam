@@ -717,7 +717,7 @@ def read_multi_timeframe_candle_trend(date_range_str: str = None):
 def generate_multi_timeframe_bull_bear_side_trends(date_range_str: str = None, file_path: str = config.path_of_data,
                                                    timeframe_shortlist: List['str'] = None):
     if date_range_str is None:
-        date_range_str = config.under_process_date_range
+        date_range_str = config.processing_date_range
     multi_timeframe_ohlcva = read_multi_timeframe_ohlcva(date_range_str)
 
     multi_timeframe_peaks_n_valleys = read_multi_timeframe_peaks_n_valleys(date_range_str)

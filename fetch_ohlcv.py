@@ -5,12 +5,9 @@ from typing import List
 import ccxt
 import pandas as pd
 import pytz
-from pandera import typing as pt
 
-import helper
 from Config import config
 from data_preparation import map_symbol
-from Model.MultiTimeframeOHLCV import OHLCV
 from helper import log, date_range
 
 _ccxt_symbol_map = {
@@ -36,21 +33,31 @@ def map_to_ccxt_symbol(symbol: str) -> str:
     return map_symbol(symbol, _ccxt_symbol_map)
 
 
-def fetch_ohlcv_by_range(date_range_str: str = None, symbol: str = None, base_timeframe=config.timeframes[0]) \
-        -> pt.DataFrame[OHLCV]:
+def fetch_ohlcv_by_range(date_range_str: str = None, symbol: str = None, base_timeframe=config.timeframes[0],
+                         limit_to_under_process_period: bool = None) -> list[object]:
+    if limit_to_under_process_period is None:
+        limit_to_under_process_period = config.limit_to_under_process_period
     if date_range_str is None:
-        date_range_str = config.under_process_date_range
+        date_range_str = config.processing_date_range
     if symbol is None:
         symbol = map_to_ccxt_symbol(config.under_process_symbol)
-    start_date, end_date = date_range(date_range_str)
-    duration = end_date - start_date + pd.to_timedelta(config.timeframes[0])
+    start, end = date_range(date_range_str)
+
+    if limit_to_under_process_period:
+        _, under_process_period_end = date_range(config.processing_date_range)
+        if start > under_process_period_end:
+            return []
+    duration = end - start + pd.to_timedelta(config.timeframes[0])
     limit = int(duration / pd.to_timedelta(base_timeframe))
 
-    response = fetch_ohlcv(symbol, timeframe=base_timeframe, since=start_date, limit=limit)
+    response = fetch_ohlcv(symbol, timeframe=base_timeframe, since=start, limit=limit)
     return response
 
 
-def fetch_ohlcv(symbol, timeframe=config.timeframes[0], since: datetime = None, limit=None, params={}):
+def fetch_ohlcv(symbol, timeframe=config.timeframes[0], since: datetime = None, limit=None, params=None) \
+        -> list[object]:
+    if params is None:
+        params = dict()
     exchange = ccxt.kucoin()
 
     # Convert pandas timeframe to CCXT timeframe
@@ -65,7 +72,8 @@ def fetch_ohlcv(symbol, timeframe=config.timeframes[0], since: datetime = None, 
             this_query_size = min(limit - batch_start, max_query_size)
             response = exchange.fetch_ohlcv(symbol, timeframe=ccxt_timeframe, since=start_timestamp,
                                             limit=min(limit - batch_start, this_query_size), params=params)
-            log(f'fetch_ohlcv@{datetime.fromtimestamp(start_timestamp / 1000)}#{this_query_size}>{len(response)}', stack_trace=False)
+            log(f'fetch_ohlcv@{datetime.fromtimestamp(start_timestamp / 1000)}#{this_query_size}>{len(response)}',
+                stack_trace=False)
             output_list = output_list + response
 
     return output_list

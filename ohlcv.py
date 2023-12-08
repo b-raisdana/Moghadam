@@ -76,7 +76,7 @@ def core_generate_multi_timeframe_ohlcv(date_range_str: str, file_path: str = co
 # @measure_time
 def core_read_multi_timeframe_ohlcv(date_range_str: str = None) -> MultiTimeframeOHLCV:
     if date_range_str is None:
-        date_range_str = config.under_process_date_range
+        date_range_str = config.processing_date_range
     result = read_file(date_range_str, 'multi_timeframe_ohlcv', core_generate_multi_timeframe_ohlcv,
                        MultiTimeframeOHLCV)
     for timeframe in config.timeframes:
@@ -99,7 +99,7 @@ def read_daily_multi_timeframe_ohlcv(day: datetime) -> MultiTimeframeOHLCV:
 
 def read_multi_timeframe_ohlcv(date_range_str: str) -> MultiTimeframeOHLCV:
     if date_range_str is None:
-        date_range_str = config.under_process_date_range
+        date_range_str = config.processing_date_range
     result = read_file(date_range_str, 'multi_timeframe_ohlcv', generate_multi_timeframe_ohlcv,
                        MultiTimeframeOHLCV)
     for timeframe in config.timeframes:
@@ -133,7 +133,7 @@ def generate_multi_timeframe_ohlcv(date_range_str: str = None, file_path: str = 
 # @measure_time
 def core_read_ohlcv(date_range_str: str = None) -> pt.DataFrame[OHLCV]:
     if date_range_str is None:
-        date_range_str = config.under_process_date_range
+        date_range_str = config.processing_date_range
     result = read_file(date_range_str, 'ohlcv', core_generate_ohlcv, OHLCV)
     return result
 
@@ -149,9 +149,9 @@ def read_daily_ohlcv(day: datetime) -> pt.DataFrame[OHLCV]:
 
 
 def read_base_timeframe_ohlcv(date_range_str: str) \
-        -> pt.DataFrame[MultiTimeframeOHLCV]:
+        -> pt.DataFrame[OHLCV]:
     if date_range_str is None:
-        date_range_str = config.under_process_date_range
+        date_range_str = config.processing_date_range
     result = read_file(date_range_str, 'ohlcv', generate_base_timeframe_ohlcv, OHLCV)
     return result
 
@@ -176,7 +176,7 @@ def generate_base_timeframe_ohlcv(date_range_str: str = None, file_path: str = c
 
 def core_generate_ohlcv(date_range_str: str = None, file_path: str = config.path_of_data):
     if date_range_str is None:
-        date_range_str = config.under_process_date_range
+        date_range_str = config.processing_date_range
     raw_ohlcv = fetch_ohlcv_by_range(date_range_str)
     df = pd.DataFrame(raw_ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
     df['date'] = pd.to_datetime(df['timestamp'], unit='ms')

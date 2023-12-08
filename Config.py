@@ -33,8 +33,9 @@ GLOBAL_CACHE = {}
 
 class Config():
     def __init__(self):
-        # self.under_process_date_range = '17-12-24.00-00T17-12-31.23-59'
-        self.under_process_date_range = '17-12-01.00-00T17-12-31.23-59'
+        # self.processing_date_range = '17-12-24.00-00T17-12-31.23-59'
+        self.processing_date_range = '17-12-01.00-00T17-12-31.23-59'
+        self.limit_to_under_process_period = True
         self.under_process_symbol = 'BTCUSDT'
         self.files_to_load = [
             '17-01-01.0-01TO17-12-31.23-59.1min',
