@@ -49,8 +49,8 @@ def calculate_strength(peaks_or_valleys: pt.DataFrame[PeakValleys], top_type: To
         return peaks_or_valleys
     start = ohlcv.index[0]
     end = ohlcv.index[0]
+    peaks_or_valleys=peaks_or_valleys.copy()
     peaks_or_valleys['strength'] = INFINITY_TIME_DELTA
-
     peaks_or_valleys = calculate_distance(ohlcv, peaks_or_valleys, top_type, direction='right')
     peaks_or_valleys = calculate_distance(ohlcv, peaks_or_valleys, top_type, direction='left')
     peaks_or_valleys['strength'] = peaks_or_valleys[['right_distance', 'left_distance']].min()
@@ -121,7 +121,7 @@ def calculate_distance(ohlcv: pt.DataFrame[OHLCV], peaks_or_valleys: pt.DataFram
         # invalid_crossings = ohlcv[ohlcv.index not in valid_crossings].index
         # invalid_crossing_tops = ohlcv[not compare_op(ohlcv[compare_column], ohlcv[direction + '_crossing_value'])]
         ohlcv.loc[~valid_crossings, [direction + '_crossing_time', direction + '_crossing_value']] = None
-        ohlcv[['high', 'left_top_time', 'left_top_value', 'right_crossing_time', 'right_crossing_value',
+        # ohlcv[['high', 'left_top_time', 'left_top_value', 'right_crossing_time', 'right_crossing_value',
                'invalid_crossing']]
         tops_with_valid_crossing = tops_to_compare.index.intersection(valid_crossings)
         tops_to_compare.loc[tops_with_valid_crossing, direction + '_distance'] = (
