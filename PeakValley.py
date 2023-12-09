@@ -40,6 +40,10 @@ from ohlcv import read_base_timeframe_ohlcv
 #     peaks_or_valleys['strength'] = peaks_or_valleys['strength'].dt.total_seconds()
 #     return peaks_or_valleys
 
+def fix_same_value_peaks_or_valleys(peaks_or_valleys: pt.DataFrame[PeakValleys], top_type):
+    same_value_peaks_valleys = peaks_or_valleys[peaks_or_valleys.duplicated(subset=['strength'], keep=False)]
+
+
 def calculate_strength(peaks_or_valleys: pt.DataFrame[PeakValleys], top_type: TopTYPE,
                        ohlcv: pt.DataFrame[OHLCV]) -> pt.DataFrame[PeakValleys]:
     # todo: test calculate_strength
@@ -54,6 +58,7 @@ def calculate_strength(peaks_or_valleys: pt.DataFrame[PeakValleys], top_type: To
     peaks_or_valleys = calculate_distance(ohlcv, peaks_or_valleys, top_type, direction='right')
     peaks_or_valleys = calculate_distance(ohlcv, peaks_or_valleys, top_type, direction='left')
     peaks_or_valleys['strength'] = peaks_or_valleys[['right_distance', 'left_distance']].min(axis='columns')
+    peaks_or_valleys['strength'] = fix_same_value_peaks_or_valleys(peaks_or_valleys, top_type)
     tops_with_unknown_strength = peaks_or_valleys[peaks_or_valleys['strength'].isna()]
     assert len(tops_with_unknown_strength) == 1
     tops_with_strength = peaks_or_valleys[peaks_or_valleys['strength'].notna()]
@@ -67,27 +72,44 @@ def calculate_strength(peaks_or_valleys: pt.DataFrame[PeakValleys], top_type: To
 
 def calculate_distance(ohlcv: pt.DataFrame[OHLCV], peaks_or_valleys: pt.DataFrame[PeakValleys], top_type: TopTYPE,
                        direction: Literal['right', 'left']) -> pt.DataFrame[PeakValleys]:
-    if top_type == TopTYPE.PEAK:
-        compare_column = 'high'
 
-        def more_significant(x, y):
-            return x > y
-
-        def les_significant(x, y):
-            return x < y
-    else:
-        compare_column = 'low'
-
-        def more_significant(x, y):
-            return x < y
-
-        def les_significant(x, y):
-            return x > y
     direction = direction.lower()
     if direction.lower() == 'right':
         reverse = 'left'
+        if top_type == TopTYPE.PEAK:
+            compare_column = 'high'
+
+            def more_significant(x, y):
+                return x > y
+
+            def les_significant(x, y):
+                return x < y
+        else:
+            compare_column = 'low'
+
+            def more_significant(x, y):
+                return x < y
+
+            def les_significant(x, y):
+                return x > y
     elif direction.lower() == 'left':
         reverse = 'right'
+        if top_type == TopTYPE.PEAK:
+            compare_column = 'high'
+
+            def more_significant(x, y):
+                return x > y
+
+            def les_significant(x, y):
+                return x < y
+        else:
+            compare_column = 'low'
+
+            def more_significant(x, y):
+                return x < y
+
+            def les_significant(x, y):
+                return x > y
     else:
         raise Exception(f'Invalid direction: {direction} only right and left are supported.')
     ohlcv = ohlcv.copy()
@@ -102,8 +124,11 @@ def calculate_distance(ohlcv: pt.DataFrame[OHLCV], peaks_or_valleys: pt.DataFram
         else:  # direction == 'left'
             shifted_top_indexes = tops_to_compare.index - pd.to_timedelta(config.timeframes[0])
         # add the high/low of previous peak/valley to OHLCV df
-        ohlcv.drop(columns=[reverse + '_top_time', reverse + '_top_value',
-                            direction + '_crossing_time', direction + '_crossing_value', 'valid_crossing'],
+        ohlcv.drop(columns=['right_top_time', 'right_top_value','left_top_time', 'left_top_value',
+                            'right_crossing', 'left_crossing',
+                            'right_crossing_time', 'right_crossing_value',
+                            'left_crossing_time', 'left_crossing_value',
+                            'valid_crossing'],
                    inplace=True, errors='ignore')
         tops_to_compare.drop(columns=[direction + '_distance'], inplace=True, errors='ignore')
         ohlcv.loc[shifted_top_indexes, reverse + '_top_time'] = top_indexes
@@ -121,6 +146,8 @@ def calculate_distance(ohlcv: pt.DataFrame[OHLCV], peaks_or_valleys: pt.DataFram
         ohlcv.loc[crossing_times, direction + '_crossing_time'] = pd.to_datetime(crossing_times)
         ohlcv.loc[crossing_times, direction + '_crossing_value'] = ohlcv.loc[crossing_times, compare_column]
         # replace the False values in the XXX_crossing_time column with the first non-False value on the appropriate side.
+        if direction.lower() == 'left' and top_type == TopTYPE.VALLEY:
+            pass
         ohlcv.loc[ohlcv[direction + '_crossing_time'] == False, direction + '_crossing_time'] = pd.NA
         if direction == 'right':
             ohlcv['right_crossing_time'].bfill(inplace=True)

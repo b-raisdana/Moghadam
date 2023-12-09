@@ -11,7 +11,8 @@ from FigurePlotter.OHLVC_plotter import plot_multi_timeframe_ohlcva, plot_multi_
 from FigurePlotter.PeakValley_plotter import plot_multi_timeframe_peaks_n_valleys
 from MetaTrader import MT
 from Model.MultiTimeframeOHLCV import MultiTimeframeOHLCV, OHLCV
-from PeakValley import read_multi_timeframe_peaks_n_valleys, multi_timeframe_peaks_n_valleys
+from PeakValley import read_multi_timeframe_peaks_n_valleys, multi_timeframe_peaks_n_valleys, \
+    generate_multi_timeframe_peaks_n_valleys
 from atr import generate_multi_timeframe_ohlcva, read_multi_timeframe_ohlcva
 from helper import date_range_to_string, log
 from helper import today_morning
@@ -46,7 +47,9 @@ if __name__ == "__main__":
     # _ohlcva = read_multi_timeframe_ohlcva(config.processing_date_range)
     # # plot_multi_timeframe_ohlcva(_ohlcva, show=False)
 
-    _peaks_and_valleys = read_multi_timeframe_peaks_n_valleys(config.processing_date_range)
+    _peaks_and_valleys = multi_timeframe_peaks_n_valleys('23-12-06.16-00T23-12-06.23-59')
+    # generate_multi_timeframe_peaks_n_valleys('23-12-06.16-00T23-12-06.23-59')#config.processing_date_range)
+    # _peaks_and_valleys = read_multi_timeframe_peaks_n_valleys('23-12-06.16-00T23-12-06.23-59')
     plot_multi_timeframe_peaks_n_valleys(_peaks_and_valleys, config.processing_date_range)
     # generate_multi_timeframe_candle_trend(config.processing_date_range)
     # generate_multi_timeframe_bull_bear_side_trends(config.processing_date_range, timeframe_shortlist=['4H'])
