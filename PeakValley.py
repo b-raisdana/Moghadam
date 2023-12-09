@@ -46,19 +46,22 @@ def calculate_strength(peaks_or_valleys: pt.DataFrame[PeakValleys], top_type: To
     if len(peaks_or_valleys) == 0:
         return peaks_or_valleys
     start = ohlcv.index[0]
-    end = ohlcv.index[0]
+    end = ohlcv.index[-1]
     peaks_or_valleys = peaks_or_valleys.copy()
     peaks_or_valleys['strength'] = INFINITY_TIME_DELTA
+    peaks_or_valleys['start_distance'] = peaks_or_valleys.index - start
+    peaks_or_valleys['end_distance'] = end - peaks_or_valleys.index
     peaks_or_valleys = calculate_distance(ohlcv, peaks_or_valleys, top_type, direction='right')
     peaks_or_valleys = calculate_distance(ohlcv, peaks_or_valleys, top_type, direction='left')
-    peaks_or_valleys['strength'] = peaks_or_valleys[['right_distance', 'left_distance']].min(axis=1)
+    peaks_or_valleys['strength'] = peaks_or_valleys[['right_distance', 'left_distance']].min(axis='columns')
     tops_with_unknown_strength = peaks_or_valleys[peaks_or_valleys['strength'].isna()]
     assert len(tops_with_unknown_strength) == 1
     tops_with_strength = peaks_or_valleys[peaks_or_valleys['strength'].notna()]
-    assert len(tops_with_strength)>0
-    peaks_or_valleys.loc[tops_with_strength, 'permanent_strength'] = (
-            (peaks_or_valleys.loc[tops_with_strength, 'strength'] > (tops_with_strength - start)) and
-            (peaks_or_valleys.loc[tops_with_strength, 'strength'] > (end - tops_with_strength)))
+
+    peaks_or_valleys.loc[tops_with_strength.index, 'permanent_strength'] = (
+            (tops_with_strength['strength'] < tops_with_strength['start_distance']) &
+            (tops_with_strength['strength'] < tops_with_strength['end_distance']))
+    peaks_or_valleys['strength'] = peaks_or_valleys[['strength', 'start_distance', 'end_distance']].min(axis='columns')
     return peaks_or_valleys
 
 
@@ -91,15 +94,20 @@ def calculate_distance(ohlcv: pt.DataFrame[OHLCV], peaks_or_valleys: pt.DataFram
     tops_to_compare = peaks_or_valleys.copy()
     tops_with_known_crossing_bar = empty_df(PeakValleys)
     previous_number_of_tops = 0
-    while previous_number_of_tops != len(tops_to_compare):
+    number_of_crossed_tops = 1
+    while number_of_crossed_tops > 0:
         top_indexes = tops_to_compare.index
+        if direction == 'right':
+            shifted_top_indexes = tops_to_compare.index + pd.to_timedelta(config.timeframes[0])
+        else:  # direction == 'left'
+            shifted_top_indexes = tops_to_compare.index - pd.to_timedelta(config.timeframes[0])
         # add the high/low of previous peak/valley to OHLCV df
         ohlcv.drop(columns=[reverse + '_top_time', reverse + '_top_value',
-               direction + '_crossing_time', direction + '_crossing_value', 'valid_crossing'],
+                            direction + '_crossing_time', direction + '_crossing_value', 'valid_crossing'],
                    inplace=True, errors='ignore')
         tops_to_compare.drop(columns=[direction + '_distance'], inplace=True, errors='ignore')
-        ohlcv.loc[top_indexes, reverse + '_top_time'] = top_indexes
-        ohlcv.loc[top_indexes, reverse + '_top_value'] = tops_to_compare[compare_column]
+        ohlcv.loc[shifted_top_indexes, reverse + '_top_time'] = top_indexes
+        ohlcv.loc[shifted_top_indexes, reverse + '_top_value'] = tops_to_compare[compare_column].tolist()
         if direction == 'right':
             ohlcv['left_top_value'].ffill(inplace=True)
             ohlcv['left_top_time'].ffill(inplace=True)
@@ -107,10 +115,10 @@ def calculate_distance(ohlcv: pt.DataFrame[OHLCV], peaks_or_valleys: pt.DataFram
             ohlcv['right_top_value'].bfill(inplace=True)
             ohlcv['right_top_time'].bfill(inplace=True)
         # if high/low of OHLCV is higher/lower than peak/valley high/low it is crossing the peak/valley
-        ohlcv[direction + '_crossing_time'] = more_significant(ohlcv[compare_column], ohlcv[reverse + '_top_value'])
-        crossing_times = ohlcv[ohlcv[direction + '_crossing_time'] == True].index
+        ohlcv[direction + '_crossing'] = more_significant(ohlcv[compare_column], ohlcv[reverse + '_top_value'])
+        crossing_times = ohlcv[ohlcv[direction + '_crossing'] == True].index
         # replace the True values in XXX_crossing_time column with the index(Timestamp) of the crossing bars.
-        ohlcv.loc[crossing_times, direction + '_crossing_time'] = crossing_times
+        ohlcv.loc[crossing_times, direction + '_crossing_time'] = pd.to_datetime(crossing_times)
         ohlcv.loc[crossing_times, direction + '_crossing_value'] = ohlcv.loc[crossing_times, compare_column]
         # replace the False values in the XXX_crossing_time column with the first non-False value on the appropriate side.
         ohlcv.loc[ohlcv[direction + '_crossing_time'] == False, direction + '_crossing_time'] = pd.NA
@@ -122,28 +130,35 @@ def calculate_distance(ohlcv: pt.DataFrame[OHLCV], peaks_or_valleys: pt.DataFram
             ohlcv['left_crossing_value'].ffill(inplace=True)
         # if the next top is less significant the XXX_crossing_time and value both are invalid.
         ohlcv_valid_crossings = ohlcv.loc[
-            les_significant(ohlcv[reverse + '_top_value'], ohlcv[direction + '_crossing_value'])].index
-        ohlcv.loc[ohlcv_valid_crossings, 'valid_crossing'] = True
-        # invalid_crossings = ohlcv[ohlcv.index not in valid_crossings].index
-        # invalid_crossing_tops = ohlcv[not compare_op(ohlcv[compare_column], ohlcv[direction + '_crossing_value'])]
+            (les_significant(ohlcv[reverse + '_top_value'], ohlcv[direction + '_crossing_value']) &
+             les_significant(ohlcv[compare_column], ohlcv[direction + '_crossing_value']))
+        ].index
         ohlcv_invalid_crossings = ohlcv.index.difference(ohlcv_valid_crossings)
-        ohlcv.loc[ohlcv_invalid_crossings, [direction + '_crossing_time', direction + '_crossing_value']] = None
-        # ohlcv[['high', 'left_top_time', 'left_top_value', 'right_crossing_time', 'right_crossing_value', 'invalid_crossing']]
-        tops_with_valid_crossing = tops_to_compare.index.intersection(ohlcv_valid_crossings)
-        tops_to_compare.loc[tops_with_valid_crossing, direction + '_distance'] = abs(
-                ohlcv.loc[
-                    tops_with_valid_crossing, direction + '_crossing_time'] - tops_with_valid_crossing.to_series())
-        # move to compare with next top
-        if len(tops_with_known_crossing_bar) == 0:
-            tops_with_known_crossing_bar = tops_to_compare[~tops_to_compare[direction + '_distance'].isna()]
-        else:
-            tops_with_known_crossing_bar = pd.concat(
-                [tops_with_known_crossing_bar,
-                 tops_to_compare[~tops_to_compare[direction + '_distance'].isna()]])
-        previous_number_of_tops = len(tops_to_compare)
-        tops_to_compare = tops_to_compare[
-            tops_to_compare[direction + '_distance'].isna()]
-        ohlcv = ohlcv.loc[ohlcv_invalid_crossings]
+        ohlcv['valid_crossing'] = False
+        ohlcv.loc[ohlcv_valid_crossings, 'valid_crossing'] = True
+
+        crossed_tops = ohlcv.loc[ohlcv['valid_crossing'] == True, [reverse + '_top_time', direction + '_crossing_time']]
+        crossed_tops = crossed_tops.drop_duplicates(subset=[reverse + '_top_time', direction + '_crossing_time'])
+        number_of_crossed_tops = len(crossed_tops)
+        if number_of_crossed_tops > 0:
+            crossed_tops[direction + '_distance'] = abs(
+                crossed_tops[reverse + '_top_time'] - crossed_tops[direction + '_crossing_time'])
+            tops_with_valid_crossing = crossed_tops[reverse + '_top_time'].to_list()
+            ohlcv.loc[ohlcv_invalid_crossings, [direction + '_crossing_time', direction + '_crossing_value']] = pd.NA
+            # ohlcv[['high', 'left_top_time', 'left_top_value', 'right_crossing_time', 'right_crossing_value', 'invalid_crossing']]
+            try:
+                tops_to_compare.loc[tops_with_valid_crossing, direction + '_distance'] = (
+                    crossed_tops[direction + '_distance'].to_list())
+            except Exception as e:
+                raise Exception(e)
+            # move to compare with next top
+            if len(tops_with_known_crossing_bar) == 0:
+                tops_with_known_crossing_bar = tops_to_compare.loc[tops_with_valid_crossing]
+            else:
+                tops_with_known_crossing_bar = pd.concat(
+                    [tops_with_known_crossing_bar, tops_to_compare.loc[tops_with_valid_crossing]])
+            tops_to_compare = tops_to_compare[tops_to_compare[direction + '_distance'].isna()]
+            ohlcv = ohlcv.loc[ohlcv_invalid_crossings]
     peaks_or_valleys = pd.concat([tops_to_compare, tops_with_known_crossing_bar]).sort_index(level='date')
     return peaks_or_valleys
 
@@ -359,10 +374,10 @@ def top_timeframe(tops: pt.DataFrame[PeakValleys]) -> pt.DataFrame[PeakValleys]:
     """
     tops['timeframe'] = config.timeframes[0]
     for _, timeframe in enumerate(config.timeframes[1:]):
-        tops.loc[
-            (tops['strength'] >= pd.to_timedelta(timeframe).total_seconds() * 2)
-            , 'timeframe'
-        ] = timeframe
+        eq_or_higher_timeframe = (tops['strength'] >= pd.to_timedelta(timeframe).total_seconds() * 2)
+        tops.loc[eq_or_higher_timeframe, 'timeframe'] = timeframe
+        if eq_or_higher_timeframe.any() == 0:
+            break
     return tops
 
 
@@ -376,7 +391,7 @@ def top_timeframe(tops: pt.DataFrame[PeakValleys]) -> pt.DataFrame[PeakValleys]:
 #     return config.timeframes[-1]
 
 
-def multi_timeframe_peaks_n_valleys(expanded_date_range) -> pt.DataFrame[MultiTimeframePeakValleys]:
+def multi_timeframe_peaks_n_valleys(expanded_date_range: str) -> pt.DataFrame[MultiTimeframePeakValleys]:
     base_ohlcv = read_base_timeframe_ohlcv(expanded_date_range)
 
     _peaks_n_valleys = find_peaks_n_valleys(base_ohlcv, sort_index=False)
@@ -420,7 +435,9 @@ def calculate_strength_of_peaks_n_valleys(time_ohlcv: pt.DataFrame[OHLCV],
         -> pt.DataFrame[PeakValleys]:
     peaks = calculate_strength(peaks_only(time_peaks_n_valleys), TopTYPE.PEAK, time_ohlcv)
     valleys = calculate_strength(valleys_only(time_peaks_n_valleys), TopTYPE.VALLEY, time_ohlcv)
-    return pd.concat([peaks, valleys]).sort_index(level='date')
+    peaks_and_valleys = pd.concat([peaks, valleys]).sort_index(level='date')
+    peaks_and_valleys['strength'] = peaks_and_valleys['strength'].dt.total_seconds()
+    return peaks_and_valleys
 
 
 def read_multi_timeframe_peaks_n_valleys(date_range_str: str = None) \

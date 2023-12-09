@@ -2,6 +2,7 @@ import base64
 import hashlib
 import json
 import os
+import sys
 from datetime import timedelta
 from enum import Enum
 
@@ -99,7 +100,8 @@ class MyEncoder(json.JSONEncoder):
         except AttributeError:
             return str(o)
         except Exception as e:
-            raise e
+            exception_info = sys.exc_info()
+            raise
 
 
 myEncoder = MyEncoder()

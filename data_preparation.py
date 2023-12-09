@@ -537,7 +537,7 @@ def trim_to_date_range(date_range_str: str, df: pd.DataFrame, ignore_duplicate_i
         assert len(duplicate_indices) == 0
     else:
         if len(duplicate_indices) > 0:
-            log(f"Found duplicate indices:" + duplicate_indices)
+            log(f"Found duplicate indices:" + str(duplicate_indices))
     return df
 
 
