@@ -1,6 +1,6 @@
 # import talib as ta
 import os
-from typing import Literal
+from typing import Literal, Callable, Tuple
 
 import pandas as pd
 import pandera.typing as pt
@@ -40,8 +40,26 @@ from ohlcv import read_base_timeframe_ohlcv
 #     peaks_or_valleys['strength'] = peaks_or_valleys['strength'].dt.total_seconds()
 #     return peaks_or_valleys
 
-def fix_same_value_peaks_or_valleys(peaks_or_valleys: pt.DataFrame[PeakValleys], top_type):
-    same_value_peaks_valleys = peaks_or_valleys[peaks_or_valleys.duplicated(subset=['strength'], keep=False)]
+def fix_same_value_peaks_or_valleys(peaks_or_valleys: pt.DataFrame[PeakValleys], top_type: TopTYPE):
+    compare_column, _, _ = top_operators(top_type)
+
+    # raise Exception('Not implemented!')
+    same_value_peaks_valleys = peaks_or_valleys[peaks_or_valleys.duplicated(subset=[compare_column], keep=False)].copy()
+    same_value_peaks_valleys.loc[same_value_peaks_valleys.index[0], 'previous_top'] = pd.NA
+    same_value_peaks_valleys.loc[same_value_peaks_valleys.index[1:], 'previous_top'] = \
+        same_value_peaks_valleys.index[:-1]
+    overlapping_tops = (
+        same_value_peaks_valleys[(same_value_peaks_valleys.index -
+                                  pd.to_datetime(same_value_peaks_valleys['previous_top']))
+                                 < same_value_peaks_valleys['strength']].index
+    )
+    same_value_peaks_valleys['overlapping_tops'] = False
+    same_value_peaks_valleys.loc[overlapping_tops, 'overlapping_tops'] = True
+    peaks_or_valleys.loc[overlapping_tops, 'strength'] = (
+            same_value_peaks_valleys.loc[overlapping_tops].index -
+            same_value_peaks_valleys.loc[overlapping_tops, 'previous_top']
+    )
+    return peaks_or_valleys
 
 
 def calculate_strength(peaks_or_valleys: pt.DataFrame[PeakValleys], top_type: TopTYPE,
@@ -56,12 +74,16 @@ def calculate_strength(peaks_or_valleys: pt.DataFrame[PeakValleys], top_type: To
     peaks_or_valleys['start_distance'] = peaks_or_valleys.index - start
     peaks_or_valleys['end_distance'] = end - peaks_or_valleys.index
     peaks_or_valleys = calculate_distance(ohlcv, peaks_or_valleys, top_type, direction='right')
+    assert not peaks_or_valleys.index.duplicated(False).any()
     peaks_or_valleys = calculate_distance(ohlcv, peaks_or_valleys, top_type, direction='left')
+    assert not peaks_or_valleys.index.duplicated(False).any()
     peaks_or_valleys['strength'] = peaks_or_valleys[['right_distance', 'left_distance']].min(axis='columns')
-    peaks_or_valleys['strength'] = fix_same_value_peaks_or_valleys(peaks_or_valleys, top_type)
+    assert not peaks_or_valleys.index.duplicated(False).any()
+    # peaks_or_valleys['strength'] = fix_same_value_peaks_or_valleys(peaks_or_valleys, top_type)
     tops_with_unknown_strength = peaks_or_valleys[peaks_or_valleys['strength'].isna()]
-    assert len(tops_with_unknown_strength) == 1
+    # assert len(tops_with_unknown_strength) == 1
     tops_with_strength = peaks_or_valleys[peaks_or_valleys['strength'].notna()]
+    assert not tops_with_strength.index.duplicated(False).any()
 
     peaks_or_valleys.loc[tops_with_strength.index, 'permanent_strength'] = (
             (tops_with_strength['strength'] < tops_with_strength['start_distance']) &
@@ -72,7 +94,6 @@ def calculate_strength(peaks_or_valleys: pt.DataFrame[PeakValleys], top_type: To
 
 def calculate_distance(ohlcv: pt.DataFrame[OHLCV], peaks_or_valleys: pt.DataFrame[PeakValleys], top_type: TopTYPE,
                        direction: Literal['right', 'left']) -> pt.DataFrame[PeakValleys]:
-
     direction = direction.lower()
     if direction.lower() == 'right':
         reverse = 'left'
@@ -98,18 +119,18 @@ def calculate_distance(ohlcv: pt.DataFrame[OHLCV], peaks_or_valleys: pt.DataFram
             compare_column = 'high'
 
             def more_significant(x, y):
-                return x > y
+                return x >= y
 
             def les_significant(x, y):
-                return x < y
+                return x <= y
         else:
             compare_column = 'low'
 
             def more_significant(x, y):
-                return x < y
+                return x <= y
 
             def les_significant(x, y):
-                return x > y
+                return x >= y
     else:
         raise Exception(f'Invalid direction: {direction} only right and left are supported.')
     ohlcv = ohlcv.copy()
@@ -124,7 +145,7 @@ def calculate_distance(ohlcv: pt.DataFrame[OHLCV], peaks_or_valleys: pt.DataFram
         else:  # direction == 'left'
             shifted_top_indexes = tops_to_compare.index - pd.to_timedelta(config.timeframes[0])
         # add the high/low of previous peak/valley to OHLCV df
-        ohlcv.drop(columns=['right_top_time', 'right_top_value','left_top_time', 'left_top_value',
+        ohlcv.drop(columns=['right_top_time', 'right_top_value', 'left_top_time', 'left_top_value',
                             'right_crossing', 'left_crossing',
                             'right_crossing_time', 'right_crossing_value',
                             'left_crossing_time', 'left_crossing_value',
@@ -182,12 +203,38 @@ def calculate_distance(ohlcv: pt.DataFrame[OHLCV], peaks_or_valleys: pt.DataFram
             if len(tops_with_known_crossing_bar) == 0:
                 tops_with_known_crossing_bar = tops_to_compare.loc[tops_with_valid_crossing]
             else:
-                tops_with_known_crossing_bar = pd.concat(
-                    [tops_with_known_crossing_bar, tops_to_compare.loc[tops_with_valid_crossing]])
+                # tops_with_known_crossing_bar = pd.concat(
+                #     [tops_with_known_crossing_bar, tops_to_compare.loc[tops_with_valid_crossing]])
+                tops_with_known_crossing_bar.merge(tops_to_compare.loc[tops_with_valid_crossing],
+                                                   how='outer', left_index=True, right_index=True)
+            assert not tops_with_known_crossing_bar.index.duplicated(keep=False).any()
             tops_to_compare = tops_to_compare[tops_to_compare[direction + '_distance'].isna()]
             ohlcv = ohlcv.loc[ohlcv_invalid_crossings]
-    peaks_or_valleys = pd.concat([tops_to_compare, tops_with_known_crossing_bar]).sort_index(level='date')
-    return peaks_or_valleys
+    # peaks_or_valleys = pd.merge(tops_with_known_crossing_bar, tops_to_compare).sort_index(level='date')
+    tops_with_known_crossing_bar.merge(tops_to_compare,
+                                       how='outer', left_index=True, right_index=True)
+    assert not tops_with_known_crossing_bar.index.duplicated(keep=False).any()
+    return tops_with_known_crossing_bar
+
+
+def top_operators(top_type: TopTYPE) -> Tuple[str, Callable[[float, float], bool], Callable[[float, float], bool]]:
+    if top_type == TopTYPE.PEAK:
+        compare_column = 'high'
+
+        def more_significant(x, y):
+            return x > y
+
+        def les_significant(x, y):
+            return x < y
+    else:
+        compare_column = 'low'
+
+        def more_significant(x, y):
+            return x < y
+
+        def les_significant(x, y):
+            return x > y
+    return compare_column, les_significant, more_significant
 
 
 # def old_calculate_strength(peaks_or_valleys: pt.DataFrame[PeakValleys], top_type: TopTYPE,
