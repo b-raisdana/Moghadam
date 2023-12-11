@@ -5,6 +5,7 @@ from typing import Literal, Callable, Tuple
 
 import pandas as pd
 import pandera.typing as pt
+from pandas._typing import Axes
 
 from Config import config, INFINITY_TIME_DELTA, TopTYPE
 from MetaTrader import MT
@@ -41,26 +42,26 @@ from ohlcv import read_base_timeframe_ohlcv
 #     peaks_or_valleys['strength'] = peaks_or_valleys['strength'].dt.total_seconds()
 #     return peaks_or_valleys
 
-def fix_same_value_peaks_or_valleys(peaks_or_valleys: pt.DataFrame[PeakValleys], top_type: TopTYPE):
-    compare_column, _, _ = top_operators(top_type)
-
-    # raise Exception('Not implemented!')
-    same_value_peaks_valleys = peaks_or_valleys[peaks_or_valleys.duplicated(subset=[compare_column], keep=False)].copy()
-    same_value_peaks_valleys.loc[same_value_peaks_valleys.index[0], 'previous_top'] = pd.NA
-    same_value_peaks_valleys.loc[same_value_peaks_valleys.index[1:], 'previous_top'] = \
-        same_value_peaks_valleys.index[:-1]
-    overlapping_tops = (
-        same_value_peaks_valleys[(same_value_peaks_valleys.index -
-                                  pd.to_datetime(same_value_peaks_valleys['previous_top']))
-                                 < same_value_peaks_valleys['strength']].index
-    )
-    same_value_peaks_valleys['overlapping_tops'] = False
-    same_value_peaks_valleys.loc[overlapping_tops, 'overlapping_tops'] = True
-    peaks_or_valleys.loc[overlapping_tops, 'strength'] = (
-            same_value_peaks_valleys.loc[overlapping_tops].index -
-            same_value_peaks_valleys.loc[overlapping_tops, 'previous_top']
-    )
-    return peaks_or_valleys
+# def fix_same_value_peaks_or_valleys(peaks_or_valleys: pt.DataFrame[PeakValleys], top_type: TopTYPE):
+#     compare_column, _, _ = top_operators(top_type)
+#
+#     # raise Exception('Not implemented!')
+#     same_value_peaks_valleys = peaks_or_valleys[peaks_or_valleys.duplicated(subset=[compare_column], keep=False)].copy()
+#     same_value_peaks_valleys.loc[same_value_peaks_valleys.index[0], 'previous_top'] = pd.NA
+#     same_value_peaks_valleys.loc[same_value_peaks_valleys.index[1:], 'previous_top'] = \
+#         same_value_peaks_valleys.index[:-1]
+#     overlapping_tops = (
+#         same_value_peaks_valleys[(same_value_peaks_valleys.index -
+#                                   pd.to_datetime(same_value_peaks_valleys['previous_top']))
+#                                  < same_value_peaks_valleys['strength']].index
+#     )
+#     same_value_peaks_valleys['overlapping_tops'] = False
+#     same_value_peaks_valleys.loc[overlapping_tops, 'overlapping_tops'] = True
+#     peaks_or_valleys.loc[overlapping_tops, 'strength'] = (
+#             same_value_peaks_valleys.loc[overlapping_tops].index -
+#             same_value_peaks_valleys.loc[overlapping_tops, 'previous_top']
+#     )
+#     return peaks_or_valleys
 
 
 def calculate_strength(peaks_or_valleys: pt.DataFrame[PeakValleys], top_type: TopTYPE,
@@ -93,93 +94,78 @@ def calculate_strength(peaks_or_valleys: pt.DataFrame[PeakValleys], top_type: To
     return peaks_or_valleys
 
 
-def map_times(left_list, right_list, fill: str, start: datetime, end: datetime):
+def shift_over(needles: Axes, reference: Axes, side: str, start=None, end=None) -> Axes:
     """
-    forward		1 2 3 5 10 20
-backward 	1 2 3 6 9 15 20
+    it will merge the indexes for both forward and backward and return. missing indexes in forward will be filled
+    forward and missing indexes of backward will be filled backward.\n
+    to find adjacent or nearest PREVIOUS row we can use as:\n
+    mapped_list = shift_over(needles, reference, 'forward')\n
+    to find adjacent or nearest NEXT row we can use as:\n
+    mapped_list = shift_over(needles, reference, 'backward')
 
-			1 2 3 5 6  9  10 15 20
-forward		1 2 3 5 10 10 10 20 20
-backward	1 2 3 3 6  9  9	 15 20
+    :param needles: needles list
+    :param reference: reference list
+    :param start: filtering the start of output indexes
+    :param end: filtering the rnd of output indexes
+    :param side: should be either "forward" or "backward". use "forward" to get the PREVIOUS reference for needles and
+    use "backward" to get the NEXT reference for needles
+    :return: Axes indexed as the combination of forward and backward indexes and 2 columns:
+        'forward': forward input mapped to indexes and forward filled.
+        'backward': backward input mapped to indexes and backward filled.
 
+    Example:\n
+    reference.index	    1 2 3 5 10 20       \n
+    needles.index    	1 2 3 6 9 15 20     \n
 
+    shift_over(needles, reference, 'forward'):
+    mapped_list.index   1  2 3 5 6 9  10 15 20      \n
+    forward(reference)  NA 1 2 3 5 5  5  10 10      \n
+    backward(needles)   2  3 6 6 9 15 15 20 NA      \n
+    return:
+                        1  2 3 6 9 15 20 \n
+                        NA 1 2 5 5 10 10
 
-ohlcv		1 2 3 5 10 20
-top 		1 2 3 6 9 15 20
-fill		forward
-adjacent	1:1 2:2 3:3 6:10 9:10 15:20 20:20
-
-		1 2 3 5 6  9  10 15 20
-ohlcv	1 2 3 5 10 10 10 20 20
-top		1 2 3 3 6  9  15 15 20
-    :param left_list:
-    :param right_list:
-    :param fill:
-    :param start:
-    :param end:
-    :return:
+    shift_over(needles, reference, 'backward'):
+    mapped_list.index   1  2 3  5  6  9 10 15 20
+    forward(needles)    NA 1 2  3  3  6  9  9 15
+    backward(reference) 2  3 5 10 10 10 20 20 NA
+    return:
+                        1 2 3  6  9 15 20   \n
+                        2 3 5 10 10 20 NA
     """
-    fill = fill.lower()
-    if fill not in ['forward', 'backward']:
-        raise Exception('Direction must be either "forward" or "backward"')
-    df = pd.DataFrame(index=left_list)
-    df.insert(right_list, allow_duplicates=False)
-    df.sort_index()
-    df['left'] = left_list
-    df['right'] = right_list
-    if fill == 'forward':
-        df['left'].ffill(inplace=True)
-    else:  # direction == 'backward':
-        df['left'].bfill(inplace=True)
-    # filter out of range items
-    df = df[(df.index >= start) & (df.index <= end)]
+    side = side.lower()
+    if side == 'forward':
+        forward = reference
+        backward = needles
+    elif side == 'backward':
+        forward = needles
+        backward = reference
+    else:
+        raise Exception('side should be either "forward" or "backward".')
+    df = pd.DataFrame(index=forward.append(backward).unique())
+    df.sort_index(inplace=True)
+    if side == 'forward':
+        df.loc[forward, 'forward'] = forward
+        df['forward'] = df['forward'].ffill().shift(1)
+    elif side == 'backward':
+        df.loc[backward, 'backward'] = backward
+        df['backward'] = df['backward'].bfill().shift(-1)
+    if start is not None:
+        df = df[df.index >= start]
+    if end is not None:
+        df = df[df.index >= end]
+    if side == 'forward':
+        return df.loc[needles, 'forward'].to_list()
+    elif side == 'backward':
+        return df.loc[needles, 'backward'].to_list()
 
 
 def calculate_distance(ohlcv: pt.DataFrame[OHLCV], peaks_or_valleys: pt.DataFrame[PeakValleys], top_type: TopTYPE,
                        direction: Literal['right', 'left']) -> pt.DataFrame[PeakValleys]:
-    direction = direction.lower()
-    if direction.lower() == 'right':
-        reverse = 'left'
-        if top_type == TopTYPE.PEAK:
-            compare_column = 'high'
-
-            def more_significant(x, y):
-                return x > y
-
-            def les_significant(x, y):
-                return x < y
-        else:
-            compare_column = 'low'
-
-            def more_significant(x, y):
-                return x < y
-
-            def les_significant(x, y):
-                return x > y
-    elif direction.lower() == 'left':
-        reverse = 'right'
-        if top_type == TopTYPE.PEAK:
-            compare_column = 'high'
-
-            def more_significant(x, y):
-                return x >= y
-
-            def les_significant(x, y):
-                return x <= y
-        else:
-            compare_column = 'low'
-
-            def more_significant(x, y):
-                return x <= y
-
-            def les_significant(x, y):
-                return x >= y
-    else:
-        raise Exception(f'Invalid direction: {direction} only right and left are supported.')
+    compare_column, direction, les_significant, more_significant, reverse = direction_parameters(direction, top_type)
     ohlcv = ohlcv.copy()
     tops_to_compare = peaks_or_valleys.copy()
     tops_with_known_crossing_bar = empty_df(PeakValleys)
-    previous_number_of_tops = 0
     number_of_crossed_tops = 1
     while number_of_crossed_tops > 0:
         ohlcv.drop(columns=['right_top_time', 'right_top_value', 'left_top_time', 'left_top_value',
@@ -192,36 +178,38 @@ def calculate_distance(ohlcv: pt.DataFrame[OHLCV], peaks_or_valleys: pt.DataFram
 
         top_indexes = tops_to_compare.index
         if direction == 'right':
-            shifted_top_indexes = tops_to_compare.index + pd.to_timedelta(config.timeframes[0])
+            adjacent_ohlcv_index_of_tops = \
+                shift_over(needles=top_indexes, reference=ohlcv.index, side='backward')
         else:  # direction == 'left'
-            shifted_top_indexes = tops_to_compare.index - pd.to_timedelta(config.timeframes[0])
-        shifted_top_indexes = shifted_top_indexes.intersection(ohlcv.index)
-        if direction == 'right':
-            shiftable_top_indexes = shifted_top_indexes - pd.to_timedelta(config.timeframes[0])
-        else:  # direction == 'left'
-            shiftable_top_indexes = shifted_top_indexes + pd.to_timedelta(config.timeframes[0])
-        assert len(shifted_top_indexes) == len(shiftable_top_indexes)
-        ohlcv.loc[top_indexes, f'{direction}_top'] = top_indexes
-        ohlcv[f'{direction}_top'] = ohlcv[f'{direction}_top'].shift(1)
+            adjacent_ohlcv_index_of_tops = \
+                shift_over(needles=top_indexes, reference=ohlcv.index, side='forward')
+        assert len(adjacent_ohlcv_index_of_tops) == len(top_indexes)
+        ohlcv.loc[adjacent_ohlcv_index_of_tops, f'{reverse}_top_time'] = top_indexes
 
         # add the high/low of previous peak/valley to OHLCV df
-        ohlcv.loc[shifted_top_indexes, reverse + '_top_time'] = shiftable_top_indexes
-        ohlcv.loc[shifted_top_indexes, reverse + '_top_value'] = (
-            tops_to_compare.loc[shiftable_top_indexes, compare_column].tolist())
+        ohlcv.loc[adjacent_ohlcv_index_of_tops, reverse + '_top_value'] = \
+            tops_to_compare.loc[top_indexes, compare_column].tolist()
         if direction == 'right':
-            ohlcv['left_top_value'].ffill(inplace=True)
             ohlcv['left_top_time'].ffill(inplace=True)
+            ohlcv['left_top_value'].ffill(inplace=True)
         else:  # direction == 'left'
-            ohlcv['right_top_value'].bfill(inplace=True)
             ohlcv['right_top_time'].bfill(inplace=True)
+            ohlcv['right_top_value'].bfill(inplace=True)
         # if high/low of OHLCV is higher/lower than peak/valley high/low it is crossing the peak/valley
         ohlcv[f'{direction}_crossing'] = more_significant(ohlcv[compare_column], ohlcv[reverse + '_top_value'])
         crossing_ohlcv = ohlcv[ohlcv[f'{direction}_crossing'] == True].index
-        # replace the True values in XXX_crossing_time column with the index(Timestamp) of the crossing bars.
-        ohlcv.loc[crossing_ohlcv, f'{direction}_crossing_time'] = pd.to_datetime(crossing_ohlcv)
-        ohlcv.loc[crossing_ohlcv, f'{direction}_crossing_value'] = ohlcv.loc[crossing_ohlcv, compare_column]
-        # replace the False values in the XXX_crossing_time column with the first non-False value on the appropriate side.
-        if direction.lower() == 'left' and top_type == TopTYPE.VALLEY:
+
+        if direction == 'right':
+            shifted_crossing_ohlcv = \
+                ohlcv[ohlcv[f'{direction}_crossing'].shift(-1) == True].index
+        else:  # direction == 'left'
+            shifted_crossing_ohlcv = \
+                ohlcv[ohlcv[f'{direction}_crossing'].shift(1) == True].index
+
+        ohlcv.loc[shifted_crossing_ohlcv, f'{direction}_crossing_time'] = pd.to_datetime(crossing_ohlcv)
+        ohlcv.loc[shifted_crossing_ohlcv, f'{direction}_crossing_value'] = \
+            ohlcv.loc[crossing_ohlcv, compare_column].to_list()
+        if direction.lower() == 'left':
             pass
         if direction == 'right':
             ohlcv[f'{direction}_crossing_time'].bfill(inplace=True)
@@ -229,70 +217,80 @@ def calculate_distance(ohlcv: pt.DataFrame[OHLCV], peaks_or_valleys: pt.DataFram
         else:  # direction == 'left'
             ohlcv[f'{direction}_crossing_time'].ffill(inplace=True)
             ohlcv[f'{direction}_crossing_value'].ffill(inplace=True)
-        # if the next top is less significant the XXX_crossing_time and value both are invalid.
-        # ohlcv_valid_crossings = ohlcv.loc[
-        #     (les_significant(ohlcv[reverse + '_top_value'], ohlcv[f'{direction}_crossing_value']) &
-        #      les_significant(ohlcv[compare_column], ohlcv[f'{direction}_crossing_value']))
-        # ].index
-        # ohlcv_invalid_crossings = ohlcv.index.difference(ohlcv_valid_crossings)
-        # ohlcv['valid_crossing'] = False
-        # ohlcv.loc[ohlcv_valid_crossings, 'valid_crossing'] = True
         ohlcv['masked_ohlcv'] = les_significant(ohlcv[compare_column], ohlcv[f'{direction}_crossing_value'])
         masked_ohlcv = ohlcv[ohlcv['masked_ohlcv'] == True].index
         crossed_tops = masked_ohlcv.intersection(top_indexes)
-        # crossed_tops = ohlcv.loc[ohlcv['valid_crossing'] == True, [reverse + '_top_time', f'{direction}_crossing_time']]
-        # crossed_tops = crossed_tops.drop_duplicates(subset=[reverse + '_top_time', f'{direction}_crossing_time'])
         number_of_crossed_tops = len(crossed_tops)
         if number_of_crossed_tops > 0:
             tops_to_compare.loc[crossed_tops, direction + '_distance'] = (
                 abs(pd.to_datetime(crossed_tops) - ohlcv.loc[crossed_tops, f'{direction}_crossing_time']))
-            # tops_with_valid_crossing = crossed_tops[reverse + '_top_time'].to_list()
-            # ohlcv.loc[ohlcv_invalid_crossings, [f'{direction}_crossing_time', f'{direction}_crossing_value']] = pd.NA
-            # ohlcv[['high', 'left_top_time', 'left_top_value', 'right_crossing_time', 'right_crossing_value', 'invalid_crossing']]
-            # try:
-            #     tops_to_compare.loc[crossed_tops.index, direction + '_distance'] = (
-            #         crossed_tops[direction + '_distance'].to_list())
-            # except Exception as e:
-            #     raise Exception(e)
-            # move to compare with next top
             if len(tops_with_known_crossing_bar) == 0:
                 tops_with_known_crossing_bar = tops_to_compare.loc[crossed_tops]
             else:
                 tops_with_known_crossing_bar = pd.concat(
                     [tops_with_known_crossing_bar, tops_to_compare.loc[crossed_tops]])
-                # tops_with_known_crossing_bar.merge(tops_to_compare.loc[crossed_tops],
-                #                                    how='outer', left_index=True, right_index=True)
             if tops_with_known_crossing_bar.index.duplicated(keep=False).any():
-                pass
+                raise Exception('Should be unique')
             tops_to_compare.drop(crossed_tops,
                                  inplace=True)  # = tops_to_compare[tops_to_compare[direction + '_distance'].isna()]
-            # do not drop ohlcv to prevent shifted_top_indexes become out of range
-            # ohlcv.drop(crossing_ohlcv, inplace=True)
-    # peaks_or_valleys = pd.merge(tops_with_known_crossing_bar, tops_to_compare).sort_index(level='date')
-    tops_with_known_crossing_bar.merge(tops_to_compare,
-                                       how='outer', left_index=True, right_index=True)
+    tops_with_known_crossing_bar = pd.concat([tops_with_known_crossing_bar, tops_to_compare]).sort_index()
     assert not tops_with_known_crossing_bar.index.duplicated(keep=False).any()
+    assert len(tops_with_known_crossing_bar) == len(peaks_or_valleys)
     return tops_with_known_crossing_bar
 
 
-def top_operators(top_type: TopTYPE) -> Tuple[str, Callable[[float, float], bool], Callable[[float, float], bool]]:
-    if top_type == TopTYPE.PEAK:
-        compare_column = 'high'
+def direction_parameters(direction, top_type):
+    direction = direction.lower()
+    if direction.lower() == 'right':
+        reverse = 'left'
+        compare_column, les_significant, more_significant = top_operators(top_type)
+    elif direction.lower() == 'left':
+        reverse = 'right'
+        compare_column, les_significant, more_significant = top_operators(top_type, equal_is_significant=True)
 
-        def more_significant(x, y):
-            return x > y
-
-        def les_significant(x, y):
-            return x < y
     else:
-        compare_column = 'low'
+        raise Exception(f'Invalid direction: {direction} only right and left are supported.')
+    return compare_column, direction, les_significant, more_significant, reverse
 
-        def more_significant(x, y):
-            return x < y
 
-        def les_significant(x, y):
-            return x > y
+def top_operators(top_type, equal_is_significant: bool = False):
+    if equal_is_significant:
+        if top_type == TopTYPE.PEAK:
+            compare_column = 'high'
+
+            def more_significant(x, y):
+                return x >= y
+
+            def les_significant(x, y):
+                return x <= y
+        else:
+            compare_column = 'low'
+
+            def more_significant(x, y):
+                return x <= y
+
+            def les_significant(x, y):
+                return x >= y
+    else:
+        if top_type == TopTYPE.PEAK:
+            compare_column = 'high'
+
+            def more_significant(x, y):
+                return x > y
+
+            def les_significant(x, y):
+                return x < y
+        else:
+            compare_column = 'low'
+
+            def more_significant(x, y):
+                return x < y
+
+            def les_significant(x, y):
+                return x > y
     return compare_column, les_significant, more_significant
+
+
 
 
 # def old_calculate_strength(peaks_or_valleys: pt.DataFrame[PeakValleys], top_type: TopTYPE,

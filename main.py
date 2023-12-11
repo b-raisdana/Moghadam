@@ -44,10 +44,10 @@ if __name__ == "__main__":
     # # plot_multi_timeframe_ohlcv(_ohlcv, config.processing_date_range, show=False)
 
     # generate_multi_timeframe_ohlcva(config.processing_date_range)
-    # _ohlcva = read_multi_timeframe_ohlcva(config.processing_date_range)
-    # # plot_multi_timeframe_ohlcva(_ohlcva, show=False)
+    # _ohlcva = read_multi_timeframe_ohlcva(date_range)
+    # plot_multi_timeframe_ohlcva(_ohlcva, show=False)
 
-    _peaks_and_valleys = multi_timeframe_peaks_n_valleys('23-12-06.16-00T23-12-06.23-59')
+    _peaks_and_valleys = multi_timeframe_peaks_n_valleys(config.processing_date_range)
     # generate_multi_timeframe_peaks_n_valleys('23-12-06.16-00T23-12-06.23-59')#config.processing_date_range)
     # _peaks_and_valleys = read_multi_timeframe_peaks_n_valleys('23-12-06.16-00T23-12-06.23-59')
     plot_multi_timeframe_peaks_n_valleys(_peaks_and_valleys, config.processing_date_range)
