@@ -4,8 +4,10 @@ from sys import exit
 
 import pandas as pd
 
+from BullBearSidePivot import generate_multi_timeframe_bull_bear_side_pivots
 from Config import config
 from Model.MultiTimeframePeakValleys import PeakValleys, MultiTimeframePeakValleys
+from PeakValleyPivots import generate_multi_timeframe_top_pivots
 from data_preparation import expand_date_range, empty_df
 from FigurePlotter.OHLVC_plotter import plot_multi_timeframe_ohlcva, plot_multi_timeframe_ohlcv
 from FigurePlotter.PeakValley_plotter import plot_multi_timeframe_peaks_n_valleys
@@ -20,9 +22,9 @@ from ohlcv import read_base_timeframe_ohlcv, generate_multi_timeframe_ohlcv, rea
 
 if __name__ == "__main__":
     config.processing_date_range = date_range_to_string(days=60)
-    #
-    # file_path: str = config.path_of_data
-    # today_morning = today_morning()
+
+    file_path: str = config.path_of_data
+    today_morning = today_morning()
     # for month in range(0, 2):
     #     date_range_str = date_range_to_string(days=30, end=today_morning - timedelta(days=30 * month))
     #     log(f'date_range_str{date_range_str}')
@@ -47,13 +49,13 @@ if __name__ == "__main__":
     # _ohlcva = read_multi_timeframe_ohlcva(date_range)
     # plot_multi_timeframe_ohlcva(_ohlcva, show=False)
 
-    _peaks_and_valleys = multi_timeframe_peaks_n_valleys(config.processing_date_range)
-    # generate_multi_timeframe_peaks_n_valleys('23-12-06.16-00T23-12-06.23-59')#config.processing_date_range)
+    # _peaks_and_valleys = multi_timeframe_peaks_n_valleys(config.processing_date_range)
+    generate_multi_timeframe_peaks_n_valleys(config.processing_date_range)#config.processing_date_range)
     # _peaks_and_valleys = read_multi_timeframe_peaks_n_valleys('23-12-06.16-00T23-12-06.23-59')
-    plot_multi_timeframe_peaks_n_valleys(_peaks_and_valleys, config.processing_date_range)
+    # plot_multi_timeframe_peaks_n_valleys(_peaks_and_valleys, config.processing_date_range)
     # generate_multi_timeframe_candle_trend(config.processing_date_range)
     # generate_multi_timeframe_bull_bear_side_trends(config.processing_date_range, timeframe_shortlist=['4H'])
-    # generate_multi_timeframe_bull_bear_side_pivots(config.processing_date_range, timeframe_shortlist=['4H'])
-    # generate_multi_timeframe_top_pivots(config.processing_date_range)  # , timeframe_shortlist=['15min'])
+    generate_multi_timeframe_bull_bear_side_pivots(config.processing_date_range)
+    generate_multi_timeframe_top_pivots(config.processing_date_range)
 
     exit()

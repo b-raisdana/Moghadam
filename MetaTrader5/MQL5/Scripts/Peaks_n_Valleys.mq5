@@ -61,7 +61,7 @@ int load_tops()
      {
       string line;
       fileCSV.Read(line); // Read the header
-      if(line != "timeframe,date,open,high,low,close,volume,peak_or_valley,strength")
+      if(line != "timeframe,date,open,high,low,close,volume,peak_or_valley,strength,permanent_strength")
         {
          Print("Invalid input file format in "+ file_name +line);
          return -1;
