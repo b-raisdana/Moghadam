@@ -401,22 +401,20 @@ def insert_previous_n_next_top(top_type, peaks_n_valleys: pt.DataFrame[PeakValle
     tops[next_value_col] = tops[high_or_low].shift(1)
 
     previous_tops = pd.DataFrame(index=tops.index.get_level_values('date').shift(1, config.timeframes[0])).sort_index()
-    previous_tops[prev_index_col] =  tops.index.get_level_values('date').unique().tolist()
-    previous_tops[prev_value_col] =  tops[high_or_low].tolist()
+    previous_tops[prev_index_col] = tops.index.get_level_values('date').unique().tolist()
+    previous_tops[prev_value_col] = tops[high_or_low].tolist()
     # Using `merge_asof` to efficiently merge the previous and next values
-    ohlcv = pd.merge_asof(ohlcv.sort_index(),
-                          previous_tops,
+    ohlcv = pd.merge_asof(ohlcv.sort_index(), previous_tops,
                           left_index=True, right_index=True, direction='backward', suffixes=('_x', ''))
     # for col in ohlcv.columns:
     #     if col.endswith('_x') or col.endswith('_y'):
     #         ohlcv.drop(col, axis=1, inplace=True)
 
     next_tops = pd.DataFrame(index=tops.index.get_level_values('date').shift(-1, config.timeframes[0])).sort_index()
-    next_tops[prev_index_col] =  tops.index.get_level_values('date').unique().tolist()
-    next_tops[prev_value_col] =  tops[high_or_low].tolist()
+    next_tops[prev_index_col] = tops.index.get_level_values('date').unique().tolist()
+    next_tops[prev_value_col] = tops[high_or_low].tolist()
     # Using `merge_asof` to efficiently merge the previous and next values
-    ohlcv = pd.merge_asof(ohlcv.sort_index(),
-                          next_tops,
+    ohlcv = pd.merge_asof(ohlcv.sort_index(), next_tops,
                           left_index=True, right_index=True, direction='forward', suffixes=('_x', ''))
     # ohlcv = pd.merge_asof(ohlcv.sort_index(),
     #                       # tops[[next_index_col, next_value_col]].set_index(next_index_col).sort_index(),
