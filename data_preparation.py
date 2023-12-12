@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 import pandera
 from pandas import Timedelta, DatetimeIndex, Timestamp
+from pandas._typing import Axes
 from pandera import typing as pt, DataType
 
 from Config import config, GLOBAL_CACHE
@@ -630,3 +631,69 @@ def empty_df(model_class: Type[Pandera_DFM_Type]) -> pd.DataFrame:
     _empty_df.set_index(list(index_fields(model_class).keys()), inplace=True)
     _empty_df = model_class(_empty_df)
     return _empty_df
+
+
+def shift_over(needles: Axes, reference: Axes, side: str, start=None, end=None) -> Axes:
+    """
+    it will merge the indexes for both forward and backward and return. missing indexes in forward will be filled
+    forward and missing indexes of backward will be filled backward.\n
+    to find adjacent or nearest PREVIOUS row we can use as:\n
+    mapped_list = shift_over(needles, reference, 'forward')\n
+    to find adjacent or nearest NEXT row we can use as:\n
+    mapped_list = shift_over(needles, reference, 'backward')
+
+    :param needles: needles list
+    :param reference: reference list
+    :param start: filtering the start of output indexes
+    :param end: filtering the rnd of output indexes
+    :param side: should be either "forward" or "backward". use "forward" to get the PREVIOUS reference for needles and
+    use "backward" to get the NEXT reference for needles
+    :return: Axes indexed as the combination of forward and backward indexes and 2 columns:
+        'forward': forward input mapped to indexes and forward filled.
+        'backward': backward input mapped to indexes and backward filled.
+
+    Example:\n
+    reference.index	    1 2 3 5 10 20       \n
+    needles.index    	1 2 3 6 9 15 20     \n
+
+    shift_over(needles, reference, 'forward'):
+    mapped_list.index   1  2 3 5 6 9  10 15 20      \n
+    forward(reference)  NA 1 2 3 5 5  5  10 10      \n
+    backward(needles)   2  3 6 6 9 15 15 20 NA      \n
+    return:
+                        1  2 3 6 9 15 20 \n
+                        NA 1 2 5 5 10 10
+
+    shift_over(needles, reference, 'backward'):
+    mapped_list.index   1  2 3  5  6  9 10 15 20
+    forward(needles)    NA 1 2  3  3  6  9  9 15
+    backward(reference) 2  3 5 10 10 10 20 20 NA
+    return:
+                        1 2 3  6  9 15 20   \n
+                        2 3 5 10 10 20 NA
+    """
+    side = side.lower()
+    if side == 'forward':
+        forward = reference
+        backward = needles
+    elif side == 'backward':
+        forward = needles
+        backward = reference
+    else:
+        raise Exception('side should be either "forward" or "backward".')
+    df = pd.DataFrame(index=forward.append(backward).unique())
+    df.sort_index(inplace=True)
+    if side == 'forward':
+        df.loc[forward, 'forward'] = forward
+        df['forward'] = df['forward'].ffill().shift(1)
+    elif side == 'backward':
+        df.loc[backward, 'backward'] = backward
+        df['backward'] = df['backward'].bfill().shift(-1)
+    if start is not None:
+        df = df[df.index >= start]
+    if end is not None:
+        df = df[df.index >= end]
+    if side == 'forward':
+        return df.loc[needles, 'forward'].to_list()
+    elif side == 'backward':
+        return df.loc[needles, 'backward'].to_list()

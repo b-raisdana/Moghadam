@@ -4,14 +4,13 @@ from typing import Literal
 
 import pandas as pd
 import pandera.typing as pt
-from pandas._typing import Axes
 
 from Config import config, INFINITY_TIME_DELTA, TopTYPE
 from MetaTrader import MT
 from Model.MultiTimeframeOHLCV import OHLCV
 from Model.MultiTimeframePeakValleys import PeakValleys, MultiTimeframePeakValleys
 from data_preparation import read_file, cast_and_validate, trim_to_date_range, \
-    expand_date_range, after_under_process_date, empty_df
+    expand_date_range, after_under_process_date, empty_df, shift_over
 from helper import measure_time, date_range
 from ohlcv import read_base_timeframe_ohlcv
 
@@ -35,7 +34,7 @@ def calculate_strength(peaks_or_valleys: pt.DataFrame[PeakValleys], top_type: To
     assert not peaks_or_valleys.index.duplicated(False).any()
     # peaks_or_valleys['strength'] = fix_same_value_peaks_or_valleys(peaks_or_valleys, top_type)
     tops_with_unknown_strength = peaks_or_valleys[peaks_or_valleys['strength'].isna()]
-    # assert len(tops_with_unknown_strength) == 1
+    assert len(tops_with_unknown_strength) == 1
     tops_with_strength = peaks_or_valleys[peaks_or_valleys['strength'].notna()]
     assert not tops_with_strength.index.duplicated(False).any()
 
@@ -44,72 +43,6 @@ def calculate_strength(peaks_or_valleys: pt.DataFrame[PeakValleys], top_type: To
             (tops_with_strength['strength'] < tops_with_strength['end_distance']))
     peaks_or_valleys['strength'] = peaks_or_valleys[['strength', 'start_distance', 'end_distance']].min(axis='columns')
     return peaks_or_valleys
-
-
-def shift_over(needles: Axes, reference: Axes, side: str, start=None, end=None) -> Axes:
-    """
-    it will merge the indexes for both forward and backward and return. missing indexes in forward will be filled
-    forward and missing indexes of backward will be filled backward.\n
-    to find adjacent or nearest PREVIOUS row we can use as:\n
-    mapped_list = shift_over(needles, reference, 'forward')\n
-    to find adjacent or nearest NEXT row we can use as:\n
-    mapped_list = shift_over(needles, reference, 'backward')
-
-    :param needles: needles list
-    :param reference: reference list
-    :param start: filtering the start of output indexes
-    :param end: filtering the rnd of output indexes
-    :param side: should be either "forward" or "backward". use "forward" to get the PREVIOUS reference for needles and
-    use "backward" to get the NEXT reference for needles
-    :return: Axes indexed as the combination of forward and backward indexes and 2 columns:
-        'forward': forward input mapped to indexes and forward filled.
-        'backward': backward input mapped to indexes and backward filled.
-
-    Example:\n
-    reference.index	    1 2 3 5 10 20       \n
-    needles.index    	1 2 3 6 9 15 20     \n
-
-    shift_over(needles, reference, 'forward'):
-    mapped_list.index   1  2 3 5 6 9  10 15 20      \n
-    forward(reference)  NA 1 2 3 5 5  5  10 10      \n
-    backward(needles)   2  3 6 6 9 15 15 20 NA      \n
-    return:
-                        1  2 3 6 9 15 20 \n
-                        NA 1 2 5 5 10 10
-
-    shift_over(needles, reference, 'backward'):
-    mapped_list.index   1  2 3  5  6  9 10 15 20
-    forward(needles)    NA 1 2  3  3  6  9  9 15
-    backward(reference) 2  3 5 10 10 10 20 20 NA
-    return:
-                        1 2 3  6  9 15 20   \n
-                        2 3 5 10 10 20 NA
-    """
-    side = side.lower()
-    if side == 'forward':
-        forward = reference
-        backward = needles
-    elif side == 'backward':
-        forward = needles
-        backward = reference
-    else:
-        raise Exception('side should be either "forward" or "backward".')
-    df = pd.DataFrame(index=forward.append(backward).unique())
-    df.sort_index(inplace=True)
-    if side == 'forward':
-        df.loc[forward, 'forward'] = forward
-        df['forward'] = df['forward'].ffill().shift(1)
-    elif side == 'backward':
-        df.loc[backward, 'backward'] = backward
-        df['backward'] = df['backward'].bfill().shift(-1)
-    if start is not None:
-        df = df[df.index >= start]
-    if end is not None:
-        df = df[df.index >= end]
-    if side == 'forward':
-        return df.loc[needles, 'forward'].to_list()
-    elif side == 'backward':
-        return df.loc[needles, 'backward'].to_list()
 
 
 def calculate_distance(ohlcv: pt.DataFrame[OHLCV], peaks_or_valleys: pt.DataFrame[PeakValleys], top_type: TopTYPE,
@@ -311,26 +244,26 @@ def find_peaks_n_valleys(base_ohlcv: pd.DataFrame,
 
 
 @measure_time
-def major_peaks_n_valleys(multi_timeframe_peaks_n_valleys: pd.DataFrame, timeframe: str) \
+def major_peaks_n_valleys(_multi_timeframe_peaks_n_valleys: pd.DataFrame, timeframe: str) \
         -> pt.DataFrame[MultiTimeframePeakValleys]:
     """
     Filter rows from multi_timeframe_peaks_n_valleys with a timeframe equal to or greater than the specified timeframe.
 
     Parameters:
-        multi_timeframe_peaks_n_valleys (pd.DataFrame): DataFrame containing peaks and valleys data with 'timeframe' index.
+        _multi_timeframe_peaks_n_valleys (pd.DataFrame): DataFrame containing peaks and valleys data with 'timeframe' index.
         timeframe (str): The timeframe to filter rows.
 
     Returns:
         pd.DataFrame: DataFrame containing rows with timeframe equal to or greater than the specified timeframe.
     """
-    result = higher_or_eq_timeframe_peaks_n_valleys(multi_timeframe_peaks_n_valleys, timeframe)
+    result = higher_or_eq_timeframe_peaks_n_valleys(_multi_timeframe_peaks_n_valleys, timeframe)
     return result
 
 
 def higher_or_eq_timeframe_peaks_n_valleys(peaks_n_valleys: pd.DataFrame, timeframe: str):
     try:
         index = config.timeframes.index(timeframe)
-    except ValueError as e:
+    except ValueError:
         raise Exception(f'timeframe:{timeframe} should be in [{config.timeframes}]!')
     except Exception as e:
         raise e
@@ -443,18 +376,18 @@ def old_insert_previous_n_next_top(top_type: TopTYPE, peaks_n_valleys, ohlcv):
     return ohlcv
 
 
-def insert_previous_n_next_top(top_type, peaks_n_valleys, ohlcv):
-    raise Exception('not tested')
+def insert_previous_n_next_top(top_type, peaks_n_valleys: pt.DataFrame[PeakValleys], ohlcv: pt.DataFrame[OHLCV]) \
+        -> pt.DataFrame[OHLCV]:
     # Define columns
-    prev_index_col = f'previous_top_index'
-    prev_value_col = f'previous_top_value'
-    next_index_col = f'next_top_index'
-    next_value_col = f'next_top_value'
+    prev_index_col = f'previous_{top_type.value}_index'
+    prev_value_col = f'previous_{top_type.value}_value'
+    next_index_col = f'next_{top_type.value}_index'
+    next_value_col = f'next_{top_type.value}_value'
 
-    # Ensure columns exist
-    for col in [prev_index_col, prev_value_col, next_index_col, next_value_col]:
-        if col not in ohlcv.columns:
-            ohlcv[col] = None
+    # # Ensure columns exist
+    # for col in [prev_index_col, prev_value_col, next_index_col, next_value_col]:
+    #     if col not in ohlcv.columns:
+    #         ohlcv[col] = None
 
     # Filter the relevant tops
     tops = peaks_n_valleys[peaks_n_valleys['peak_or_valley'] == top_type.value].copy()
@@ -462,20 +395,38 @@ def insert_previous_n_next_top(top_type, peaks_n_valleys, ohlcv):
     high_or_low = 'high' if top_type == TopTYPE.PEAK else 'low'
 
     # Using `shift()` to create the previous and next columns
-    tops[prev_index_col] = tops.index.to_series().shift(-1)
+    tops[prev_index_col] = tops.index.get_level_values('date').unique().to_series().shift(1).tolist()
     tops[prev_value_col] = tops[high_or_low].shift(-1)
-    tops[next_index_col] = tops.index.to_series().shift(1)
+    tops[next_index_col] = tops.index.get_level_values('date').unique().to_series().shift(-1).tolist()
     tops[next_value_col] = tops[high_or_low].shift(1)
 
+    previous_tops = pd.DataFrame(index=tops.index.get_level_values('date').shift(1, config.timeframes[0])).sort_index()
+    previous_tops[prev_index_col] =  tops.index.get_level_values('date').unique().tolist()
+    previous_tops[prev_value_col] =  tops[high_or_low].tolist()
     # Using `merge_asof` to efficiently merge the previous and next values
-    ohlcv = pd.merge_asof(ohlcv.sort_index(), tops[[prev_index_col, prev_value_col]],
-                          left_index=True, right_index=True, direction='forward', suffixes=('', '_y'))
-    ohlcv = pd.merge_asof(ohlcv.sort_index(), tops[[next_index_col, next_value_col]],
-                          left_index=True, right_index=True, direction='backward', suffixes=('', '_y'))
+    ohlcv = pd.merge_asof(ohlcv.sort_index(),
+                          previous_tops,
+                          left_index=True, right_index=True, direction='backward', suffixes=('_x', ''))
+    # for col in ohlcv.columns:
+    #     if col.endswith('_x') or col.endswith('_y'):
+    #         ohlcv.drop(col, axis=1, inplace=True)
 
-    # Cleaning any duplicate columns
-    for col in ohlcv.columns:
-        if col.endswith('_y'):
-            ohlcv.drop(col, axis=1, inplace=True)
+    next_tops = pd.DataFrame(index=tops.index.get_level_values('date').shift(-1, config.timeframes[0])).sort_index()
+    next_tops[prev_index_col] =  tops.index.get_level_values('date').unique().tolist()
+    next_tops[prev_value_col] =  tops[high_or_low].tolist()
+    # Using `merge_asof` to efficiently merge the previous and next values
+    ohlcv = pd.merge_asof(ohlcv.sort_index(),
+                          next_tops,
+                          left_index=True, right_index=True, direction='forward', suffixes=('_x', ''))
+    # ohlcv = pd.merge_asof(ohlcv.sort_index(),
+    #                       # tops[[next_index_col, next_value_col]].set_index(next_index_col).sort_index(),
+    #                       (tops.loc[tops[next_index_col].notna(), [next_index_col, next_value_col]]
+    #                        .reset_index(level='timeframe', drop=True).sort_index()),
+    #                       left_index=True, right_index=True, direction='backward', suffixes=('_x', ''))
+
+    # # Cleaning any duplicate columns
+    # for col in ohlcv.columns:
+    #     if col.endswith('_x') or col.endswith('_y'):
+    #         ohlcv.drop(col, axis=1, inplace=True)
 
     return ohlcv

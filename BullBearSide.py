@@ -22,13 +22,15 @@ from helper import log, measure_time
 
 
 @measure_time
-def insert_previous_n_next_tops(single_timeframe_peaks_n_valleys, ohlcv):
+def insert_previous_n_next_tops(single_timeframe_peaks_n_valleys: pt.DataFrame[PeakValley], ohlcv: pt.DataFrame[OHLCV])\
+        ->pt.DataFrame[OHLCV]:
     ohlcv = insert_previous_n_next_top(TopTYPE.PEAK, single_timeframe_peaks_n_valleys, ohlcv)
     ohlcv = insert_previous_n_next_top(TopTYPE.VALLEY, single_timeframe_peaks_n_valleys, ohlcv)
     return ohlcv
 
 
-def single_timeframe_candles_trend(ohlcv: pd.DataFrame, single_timeframe_peaks_n_valley: pd.DataFrame) -> pd.DataFrame:
+def single_timeframe_candles_trend(ohlcv: pt.DataFrame[OHLCV],
+                                   single_timeframe_peaks_n_valley: pt.DataFrame[PeakValley]) -> pd.DataFrame:
     # Todo: Not tested!
     candle_trend = insert_previous_n_next_tops(single_timeframe_peaks_n_valley, ohlcv)
     candle_trend['bull_bear_side'] = TREND.SIDE.value
