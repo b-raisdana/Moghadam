@@ -1,4 +1,3 @@
-import os
 import re
 import string
 from dataclasses import dataclass
@@ -8,6 +7,7 @@ from typing import Callable, Union, List, Type
 import numpy as np
 import pandas as pd
 import pandera
+import pytz
 from pandas import Timedelta, DatetimeIndex, Timestamp
 from pandas._typing import Axes
 from pandera import typing as pt, DataType
@@ -15,7 +15,7 @@ from pandera import typing as pt, DataType
 from Config import config, GLOBAL_CACHE
 from Model import MultiTimeframe
 from Model.MultiTimeframe import MultiTimeframe_Type
-from helper import log, date_range, date_range_to_string, morning, Pandera_DFM_Type
+from helper import log, date_range, date_range_to_string, morning, Pandera_DFM_Type, LogSeverity
 
 
 def range_of_data(data: pd.DataFrame) -> str:
@@ -44,7 +44,7 @@ def range_of_data(data: pd.DataFrame) -> str:
 # @cache
 def data_is_not_cachable(date_range_str):
     _, end = date_range(date_range_str)
-    if end > morning(datetime.utcnow()):
+    if end > morning(datetime.utcnow().replace(tzinfo=pytz.UTC)):
         return True
     return False
 
@@ -233,6 +233,10 @@ def timedelta_to_str(time_delta: timedelta, hours: bool = True, minutes: bool = 
     return result
 
 
+import os
+import pandas as pd
+
+
 def read_with_timeframe(data_frame_type: str, date_range_str: str, file_path: str, n_rows: int,
                         skip_rows: int) -> pd.DataFrame:
     """
@@ -241,6 +245,7 @@ def read_with_timeframe(data_frame_type: str, date_range_str: str, file_path: st
     This function reads data from a compressed CSV file based on the specified data frame type and date range.
     It adjusts the index of the resulting DataFrame according to the data frame type. If the data frame type
     includes 'multi_timeframe', it sets the index with both 'timeframe' and 'date' levels and swaps them.
+    The 'date' index is assumed to be UTC.
 
     Parameters:
         data_frame_type (str): The type of data frame being read, such as 'ohlcv', 'ohlcva', or 'multi_timeframe_ohlcva'.
@@ -260,9 +265,15 @@ def read_with_timeframe(data_frame_type: str, date_range_str: str, file_path: st
         date_range_str = config.processing_date_range
     df = pd.read_csv(os.path.join(file_path, f'{data_frame_type}.{date_range_str}.zip'), sep=',', header=0,
                      index_col='date', parse_dates=['date'], skiprows=skip_rows, nrows=n_rows)
+
+    # Convert the 'date' index to UTC if it's timezone-unaware
+    if df.index.tz is None:
+        df.index = df.index.tz_localize('UTC')
+
     if 'multi_timeframe' in data_frame_type:
         df.set_index('timeframe', append=True, inplace=True)
         df = df.swaplevel()
+
     return df
 
 
@@ -279,56 +290,100 @@ def single_timeframe(multi_timeframe_data: pt.DataFrame[MultiTimeframe_Type], ti
     return validate_no_timeframe(single_timeframe_data.droplevel('timeframe'))
 
 
-def to_timeframe(time: Union[DatetimeIndex, datetime], timeframe: str, ignore_cached_times: bool = False) -> datetime:
+def to_timeframe(time: Union[DatetimeIndex, datetime, Timestamp], timeframe: str, ignore_cached_times: bool = False) \
+        -> Union[datetime, DatetimeIndex]:
     """
-    Round the given datetime to the nearest time based on the specified timeframe.
+    Round down the given datetime or DatetimeIndex to the nearest time based on the specified timeframe.
+
+    This function adjusts a datetime or each datetime in a DatetimeIndex to align with the start of a specified timeframe, such as '1min', '5min', '1H', etc. It is particularly useful for aligning timestamps to regular intervals.
 
     Parameters:
-        time (datetime): The datetime to be rounded.
-        timeframe (str): The desired timeframe (e.g., '1min', '5min', '1H', etc.).
+        time (Union[DatetimeIndex, datetime, Timestamp]): The datetime or DatetimeIndex to be rounded.
+        timeframe (str): The desired timeframe to round to (e.g., '1min', '5min', '1H', etc.).
+        ignore_cached_times (bool): If True, bypasses checking the time against a global cache of valid times.
 
     Returns:
-        datetime: The rounded datetime that corresponds to the nearest time within the specified timeframe.
-        :param ignore_cached_times:
+        Union[datetime, DatetimeIndex]: The rounded datetime or DatetimeIndex, where each datetime value is adjusted to the start of the nearest interval as specified by the timeframe.
+
+    Raises:
+        Exception: If time types are incompatible, or if rounding requirements are not met.
     """
-    # if time == Timestamp("2023-11-12 00:00:00+00:00") and timeframe == '1W':
-    #     pass
+
+    # Function to round a single datetime
+    def round_single_datetime(dt: Union[datetime, Timestamp]):
+        if pd.to_timedelta(timeframe) >= timedelta(days=7):
+            rounded_dt = dt.replace(hour=0, minute=0, second=0, microsecond=0)
+            day_of_week = dt.weekday()
+            rounded_dt = rounded_dt - timedelta(days=day_of_week)
+        else:
+            rounded_timestamp = (dt.timestamp() // seconds_in_timeframe) * seconds_in_timeframe
+            if isinstance(dt, datetime):
+                rounded_dt = datetime.fromtimestamp(rounded_timestamp, tz=dt.tzinfo)
+            else:  # isinstance(dt, Timestamp)
+                rounded_dt = pd.Timestamp(rounded_timestamp * 10 ** 9, tz=dt.tzinfo)
+        return rounded_dt
+
     # Calculate the timedelta for the specified timeframe
     timeframe_timedelta = pd.to_timedelta(timeframe)
-
-    # Calculate the number of seconds in the timedelta
     seconds_in_timeframe = timeframe_timedelta.total_seconds()
-    if pd.to_timedelta(timeframe) >= timedelta(minutes=30):
-        if time.tzinfo is None:
-            raise Exception('To round times to timeframes > 30 minutes timezone is significant')
-    assert not isinstance(time, DatetimeIndex)
 
-    if isinstance(time, datetime) or isinstance(time, Timestamp):
-        if pd.to_timedelta(timeframe) >= timedelta(days=7):
-            rounded_time = time.replace(hour=0, minute=0, second=0, microsecond=0)
-            day_of_week = time.weekday()  # (time.day_of_week + 1) % 7
-            rounded_time = rounded_time - timedelta(days=day_of_week)
-        else:
-            rounded_timestamp = (time.timestamp() // seconds_in_timeframe) * seconds_in_timeframe
-            # Convert the rounded timestamp back to datetime
-            if isinstance(time, datetime):
-                rounded_time = time.fromtimestamp(rounded_timestamp, tz=time.tzinfo)
-            else:  # isinstance(time, Timestamp)
-                rounded_time = pd.Timestamp(rounded_timestamp * 10 ** 9, tz=time.tzinfo)
-        if not ignore_cached_times:
-            if f'valid_times_{timeframe}' not in GLOBAL_CACHE.keys():
-                raise Exception(f'valid_times_{timeframe} not initialized in GLOBAL_CACHE')
-            if rounded_time not in GLOBAL_CACHE[f'valid_times_{timeframe}']:
-                raise Exception(f'time {rounded_time} not found in GLOBAL_CACHE[valid_times_{timeframe}]!')
+    if pd.to_timedelta(timeframe) >= timedelta(minutes=30):
+        if getattr(time, 'tzinfo', None) is None:
+            raise Exception('To round times to timeframes > 30 minutes, timezone is significant')
+
+    if isinstance(time, (datetime, Timestamp)):
+        rounded_time = round_single_datetime(time)
+    elif isinstance(time, DatetimeIndex):
+        rounded_time = time.to_series().apply(round_single_datetime)
     else:
-        raise Exception(f'Invalid type of time:{type(time)}')
-    # if tz is not None:
-    #     # if isinstance(rounded_time, datetime):
-    #     #     rounded_time = rounded_time.replace(tzinfo=tz)
-    #     if isinstance(rounded_time, Timestamp):
-    #         rounded_time = rounded_time.tz_localize(tz)
-    assert abs(rounded_time - time) < timeframe_timedelta
+        raise Exception(f'Invalid type of time: {type(time)}')
+
+    if not ignore_cached_times:
+        check_time_in_cache(rounded_time, timeframe)
+
     return rounded_time
+    # # Calculate the timedelta for the specified timeframe
+    # timeframe_timedelta = pd.to_timedelta(timeframe)
+    #
+    # # Calculate the number of seconds in the timedelta
+    # seconds_in_timeframe = timeframe_timedelta.total_seconds()
+    # if pd.to_timedelta(timeframe) >= timedelta(minutes=30):
+    #     if time.tzinfo is None:
+    #         raise Exception('To round times to timeframes > 30 minutes timezone is significant')
+    # assert not isinstance(time, DatetimeIndex)
+    #
+    # if isinstance(time, datetime) or isinstance(time, Timestamp):
+    #     if pd.to_timedelta(timeframe) >= timedelta(days=7):
+    #         rounded_time = time.replace(hour=0, minute=0, second=0, microsecond=0)
+    #         day_of_week = time.weekday()  # (time.day_of_week + 1) % 7
+    #         rounded_time = rounded_time - timedelta(days=day_of_week)
+    #     else:
+    #         rounded_timestamp = (time.timestamp() // seconds_in_timeframe) * seconds_in_timeframe
+    #         # Convert the rounded timestamp back to datetime
+    #         if isinstance(time, datetime):
+    #             rounded_time = time.fromtimestamp(rounded_timestamp, tz=time.tzinfo)
+    #         else:  # isinstance(time, Timestamp)
+    #             rounded_time = pd.Timestamp(rounded_timestamp * 10 ** 9, tz=time.tzinfo)
+    #     if not ignore_cached_times:
+    #         if f'valid_times_{timeframe}' not in GLOBAL_CACHE.keys():
+    #             raise Exception(f'valid_times_{timeframe} not initialized in GLOBAL_CACHE')
+    #         if rounded_time not in GLOBAL_CACHE[f'valid_times_{timeframe}']:
+    #             raise Exception(f'time {rounded_time} not found in GLOBAL_CACHE[valid_times_{timeframe}]!')
+    # else:
+    #     raise Exception(f'Invalid type of time:{type(time)}')
+    # assert abs(rounded_time - time) < timeframe_timedelta
+    # return rounded_time
+
+
+def check_time_in_cache(time, timeframe):
+    cache_key = f'valid_times_{timeframe}'
+    if cache_key not in GLOBAL_CACHE.keys():
+        raise Exception(f'{cache_key} not initialized in GLOBAL_CACHE')
+    if isinstance(time, DatetimeIndex) or isinstance(time, pd.Series):
+        if not time.isin(GLOBAL_CACHE[cache_key]).all():
+            raise Exception(f'Some times not found in GLOBAL_CACHE[valid_times_{timeframe}]!')
+    elif time not in GLOBAL_CACHE[cache_key]:
+        raise Exception(f'time {time} not found in GLOBAL_CACHE[valid_times_{timeframe}]!')
 
 
 # def zz_test_index_match_timeframe(data: pd.DataFrame, timeframe: str):
@@ -442,7 +497,7 @@ def cast_and_validate(data, model_class: Type[Pandera_DFM_Type], return_bool: bo
         try:
             model_class.validate(data, lazy=True)
         except pandera.errors.SchemaErrors as exc:
-            log(str(exc.schema_errors))
+            log(str(exc.schema_errors), LogSeverity.WARNING, stack_trace=False)
             return False
         except Exception as e:
             raise e
@@ -450,17 +505,20 @@ def cast_and_validate(data, model_class: Type[Pandera_DFM_Type], return_bool: bo
         model_class.validate(data, lazy=True, )
     if return_bool:
         return True
-    columns_to_keep: list[str] = [column for column in model_class.__fields__.keys() if column not in ['timeframe', 'date']]
+    columns_to_keep: list[str] = [column for column in model_class.__fields__.keys() if
+                                  column not in ['timeframe', 'date']]
     data = data[columns_to_keep]
     return data
 
 
-def apply_as_type(data, model_class)->pd.DataFrame:
+def apply_as_type(data, model_class) -> pd.DataFrame:
     as_types = {}
     _all_annotations = all_annotations(model_class)
     for attr_name, attr_type in _all_annotations.items():
         if 'timestamp' in str(attr_type).lower() and 'timestamp' not in str(data.dtypes.loc[attr_name]).lower():
-            as_types[attr_name] = 'datetime64[s]'
+            as_types[attr_name] = 'datetime64[ns, UTC]'
+        if 'datetimetzdtype' in str(attr_type).lower() and 'datetimetzdtype' not in str(data.dtypes.loc[attr_name]).lower():
+            as_types[attr_name] = 'datetime64[ns, UTC]'
         elif 'timedelta' in str(attr_type).lower() and 'timedelta' not in str(data.dtypes.loc[attr_name]).lower():
             as_types[attr_name] = 'timedelta64[s]'
             # as_types[attr_name] = pandera.typing.Timedelta
@@ -472,6 +530,7 @@ def apply_as_type(data, model_class)->pd.DataFrame:
                     attr_name in data.columns and astype not in str(data.dtypes.loc[attr_name]).lower()):
                 as_types[attr_name] = astype
     if len(as_types) > 0:
+        # log(as_types)
         data = data.astype(as_types)
     return data
 
@@ -530,20 +589,20 @@ def trim_to_date_range(date_range_str: str, df: pd.DataFrame, ignore_duplicate_i
     start, end = date_range(date_range_str)
     date_indexes = df.index.get_level_values(level='date')
     df = df[
-        (date_indexes >= np.datetime64(start)) &
-        (date_indexes <= np.datetime64(end))
+        (date_indexes >= start) &
+        (date_indexes <= end)
         ]
     duplicate_indices = df.index[df.index.duplicated()].unique()
     if not ignore_duplicate_index:
         assert len(duplicate_indices) == 0
-    else:
-        if len(duplicate_indices) > 0:
-            log(f"Found duplicate indices:" + str(duplicate_indices))
+    # else:
+    #     if len(duplicate_indices) > 0:
+    #         log(f"Found duplicate indices:" + str(duplicate_indices))
     return df
 
 
-def expand_date_range(date_range_str: str, time_delta: timedelta, mode: str, limit_to_processing_period: bool = None)\
-        ->str:
+def expand_date_range(date_range_str: str, time_delta: timedelta, mode: str, limit_to_processing_period: bool = None) \
+        -> str:
     if limit_to_processing_period is None:
         limit_to_processing_period = config.limit_to_under_process_period
     start, end = date_range(date_range_str)

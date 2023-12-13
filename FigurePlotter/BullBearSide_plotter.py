@@ -2,31 +2,31 @@ from datetime import timedelta
 from typing import List
 
 import pandas as pd
-from pandas import Timestamp
 from plotly import graph_objects as plgo
 
+import PeakValley
 from Config import TREND, config
-from data_preparation import single_timeframe
-from FigurePlotter.plotter import file_id, save_figure, plot_multiple_figures
-from PeakValley import peaks_only, valleys_only, major_peaks_n_valleys
 from FigurePlotter.PeakValley_plotter import plot_peaks_n_valleys
+from FigurePlotter.plotter import file_id, save_figure, plot_multiple_figures
+from Model.BullBearSide import BullBearSide
+from Model.MultiTimeframeOHLCV import OHLCV
+from PeakValley import peaks_only, valleys_only, major_peaks_n_valleys
+from data_preparation import single_timeframe
 from helper import measure_time, log
-
+from pandera import typing as pt
 MAX_NUMBER_OF_PLOT_SCATTERS = 5000
 
 
-def plot_single_timeframe_bull_bear_side_trends(single_timeframe_ohlcva: pd.DataFrame, peaks_n_valleys: pd.DataFrame,
-                                                boundaries: pd.DataFrame,
+def plot_single_timeframe_bull_bear_side_trends(single_timeframe_ohlcva: pt.DataFrame[OHLCV],
+                                                peaks_n_valleys: pt.DataFrame[PeakValley],
+                                                boundaries: pt.DataFrame[BullBearSide],
                                                 name: str = '', show: bool = True,
                                                 html_path: str = '', save: bool = True) -> plgo.Figure:
     fig = plot_peaks_n_valleys(single_timeframe_ohlcva, peaks=peaks_only(peaks_n_valleys),
                                valleys=valleys_only(peaks_n_valleys), name=name, show=False, save=False)
     remained_number_of_scatters = MAX_NUMBER_OF_PLOT_SCATTERS
     for _start, _trend in boundaries.iterrows():
-        if _start == Timestamp('2017-01-04 11:17:00'):
-            pass
-        trend_peaks_n_valleys = boundary_including_peaks_valleys(peaks_n_valleys, _start,
-                                                                 _trend['end'])
+        trend_peaks_n_valleys = peaks_valleys_in_range(peaks_n_valleys, _start, _trend['end'])
         included_candles = single_timeframe_ohlcva.loc[_start: _trend['end']].index
         trend_peaks = peaks_only(trend_peaks_n_valleys)['high'].sort_index(level='date')
         trend_valleys = valleys_only(trend_peaks_n_valleys)['low'].sort_index(level='date', ascending=False)
@@ -107,7 +107,6 @@ def plot_multi_timeframe_bull_bear_side_trends(multi_timeframe_ohlcva, multi_tim
                           show=show, save=save)
 
 
-def boundary_including_peaks_valleys(peaks_n_valleys: pd.DataFrame, boundary_start: pd.Timestamp,
-                                     boundary_end: pd.Timestamp):
-    return peaks_n_valleys.loc[(peaks_n_valleys.index.get_level_values('date') >= boundary_start) &
-                               (peaks_n_valleys.index.get_level_values('date') <= boundary_end)]
+def peaks_valleys_in_range(peaks_n_valleys: pd.DataFrame, start: pd.Timestamp, end: pd.Timestamp):
+    return peaks_n_valleys.loc[(peaks_n_valleys.index.get_level_values('date') >= start) &
+                               (peaks_n_valleys.index.get_level_values('date') <= end)]

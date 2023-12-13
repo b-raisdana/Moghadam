@@ -21,7 +21,7 @@ class LogSeverity(Enum):
 Pandera_DFM_Type = TypeVar('Pandera_DFM_Type', bound=pandera.DataFrameModel)
 
 
-def log(log_message: str, severity: LogSeverity = LogSeverity.WARNING, stack_trace: bool = True) -> None:
+def log(log_message: str, severity: LogSeverity = LogSeverity.INFO, stack_trace: bool = True) -> None:
     """
     Log a message with an optional severity level and stack trace.
 
@@ -99,11 +99,11 @@ pandera_to_pandas_type_map = {
 def date_range(date_range_str: str) -> Tuple[datetime, datetime]:
     start_date_string, end_date_string = date_range_str.split('T')
     start_date = datetime.strptime(start_date_string, '%y-%m-%d.%H-%M')
-    if start_date.tzinfo is None:
-        start_date = start_date.replace(tzinfo=pytz.utc)
+    # if start_date.tzinfo is None:
+    start_date = start_date.replace(tzinfo=pytz.utc)
     end_date = datetime.strptime(end_date_string, '%y-%m-%d.%H-%M')
-    if end_date.tzinfo is None:
-        end_date = end_date.replace(tzinfo=pytz.utc)
+    # if end_date.tzinfo is None:
+    end_date = end_date.replace(tzinfo=pytz.utc)
     return start_date, end_date
 
 
@@ -128,6 +128,6 @@ def today_morning(tz=pytz.utc) -> datetime:
 
 def morning(date_time: datetime, tz=pytz.utc):
     # return tz.localize(datetime.combine(date_time.date(), time(0, 0)), is_dst=None)
-    if date_time.tzinfo is None or date_time.tzinfo.utcoffset(date_time) is None:
-        date_time = tz.localize(date_time, is_dst=None)
+    # if date_time.tzinfo is None or date_time.tzinfo.utcoffset(date_time) is None:
+    #     date_time = tz.localize(date_time, is_dst=None)
     return date_time.replace(hour=0, minute=0, second=0)

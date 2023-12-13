@@ -15,7 +15,7 @@ from data_preparation import read_file, trim_to_date_range, single_timeframe, ex
 from Model.MultiTimeframeOHLCV import MultiTimeframeOHLCV, OHLCV
 from Model.MultiTimeframeOHLCVA import MultiTimeframeOHLCVA
 from helper import date_range, measure_time, log
-from ohlcv import read_multi_timeframe_ohlcv
+from ohlcv import read_multi_timeframe_ohlcv, cache_times
 
 
 def RMA(values: pd.DataFrame, length):
@@ -93,6 +93,7 @@ def read_multi_timeframe_ohlcva(date_range_str: str = None) \
         date_range_str = config.processing_date_range
     result = read_file(date_range_str, 'multi_timeframe_ohlcva', generate_multi_timeframe_ohlcva,
                        MultiTimeframeOHLCVA)
+    cache_times(result)
     return result
 
 
@@ -133,10 +134,7 @@ def core_read_multi_timeframe_ohlcva(date_range_str: str = None) \
         -> pt.DataFrame[MultiTimeframeOHLCVA]:
     result = read_file(date_range_str, 'multi_timeframe_ohlcva', core_generate_multi_timeframe_ohlcva,
                        MultiTimeframeOHLCVA)
-    for timeframe in config.timeframes:
-        if f'valid_times_{timeframe}' not in GLOBAL_CACHE.keys():
-            GLOBAL_CACHE[f'valid_times_{timeframe}'] = \
-                single_timeframe(result, timeframe).index.get_level_values('date').tolist()
+    cache_times(result)
     return result
 
 

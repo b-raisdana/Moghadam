@@ -54,10 +54,11 @@ def fetch_ohlcv_by_range(date_range_str: str = None, symbol: str = None, base_ti
     return response
 
 
-def fetch_ohlcv(symbol, timeframe=config.timeframes[0], since: datetime = None, limit=None, params=None) \
+def fetch_ohlcv(symbol, timeframe=config.timeframes[0], start_time: datetime = None, limit=None, params=None) \
         -> list[object]:
     if params is None:
         params = dict()
+    assert start_time.tzinfo == pytz.utc
     exchange = ccxt.kucoin()
 
     # Convert pandas timeframe to CCXT timeframe
@@ -66,7 +67,6 @@ def fetch_ohlcv(symbol, timeframe=config.timeframes[0], since: datetime = None, 
     width_of_timeframe = pd.to_timedelta(timeframe).seconds
     max_query_size = 1000
     for batch_start in range(0, limit, max_query_size):
-        start_time = since.replace(tzinfo=pytz.UTC)
         if start_time < datetime.utcnow().replace(tzinfo=pytz.utc):
             start_timestamp = int(start_time.timestamp() + batch_start * width_of_timeframe) * 1000
             this_query_size = min(limit - batch_start, max_query_size)

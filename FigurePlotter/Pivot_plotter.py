@@ -2,33 +2,14 @@ import pandas as pd
 from pandera import typing as pt
 from plotly import graph_objects as plgo
 
-from ohlcv import read_multi_timeframe_ohlcv
 from Config import config
-from data_preparation import single_timeframe
 from FigurePlotter.OHLVC_plotter import plot_ohlcv
 from FigurePlotter.plotter import save_figure, file_id, timeframe_color
 from Model.MultiTimeframePivot import MultiTimeframePivot
 from Model.Pivot import Pivot
+from data_preparation import single_timeframe
 from helper import measure_time
-
-"""
-class Pivot(pandera.DataFrameModel):
-    date: pt.Index[datetime]
-    movement_start_time: pt.Series[datetime]
-    movement_start_value: pt.Series[datetime]
-    return_end_time: pt.Series[datetime]
-    return_end_value: pt.Series[datetime]
-    level: pt.Series[float]
-    internal_margin: pt.Series[float]
-    external_margin: pt.Series[float]
-    is_active: pt.Series[bool]
-    hit: pt.Series[int]
-    is_overlap_of: pt.Series[bool]
-
-
-class MultiTimeframePivot(Pivot, MultiTimeframe):
-    pass
-"""
+from ohlcv import read_multi_timeframe_ohlcv
 
 
 @measure_time

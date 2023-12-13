@@ -316,8 +316,8 @@ def generate_multi_timeframe_peaks_n_valleys(date_range_str, file_path: str = co
     _peaks_n_valleys = multi_timeframe_peaks_n_valleys(expanded_date_range)
     start, end = date_range(date_range_str)
     _peaks_n_valleys = _peaks_n_valleys.loc[
-        (start.replace(tzinfo=None) < _peaks_n_valleys.index.get_level_values(level='date')) &
-        (_peaks_n_valleys.index.get_level_values(level='date') < end.replace(tzinfo=None))]
+        (start < _peaks_n_valleys.index.get_level_values(level='date')) &
+        (_peaks_n_valleys.index.get_level_values(level='date') < end)]
     # plot_multi_timeframe_peaks_n_valleys(_peaks_n_valleys, date_range_str)
     _peaks_n_valleys.sort_index(inplace=True, level='date')
     _peaks_n_valleys = trim_to_date_range(date_range_str, _peaks_n_valleys, ignore_duplicate_index=True)
@@ -397,9 +397,6 @@ def insert_previous_n_next_top(top_type, peaks_n_valleys: pt.DataFrame[PeakValle
     # Using `shift()` to create the previous and next columns
     tops[prev_index_col] = tops.index.get_level_values('date').unique().to_series().shift(1).tolist()
     tops[prev_value_col] = tops[high_or_low].shift(-1)
-    tops[next_index_col] = tops.index.get_level_values('date').unique().to_series().shift(-1).tolist()
-    tops[next_value_col] = tops[high_or_low].shift(1)
-
     previous_tops = pd.DataFrame(index=tops.index.get_level_values('date').shift(1, config.timeframes[0])).sort_index()
     previous_tops[prev_index_col] = tops.index.get_level_values('date').unique().tolist()
     previous_tops[prev_value_col] = tops[high_or_low].tolist()
@@ -410,9 +407,11 @@ def insert_previous_n_next_top(top_type, peaks_n_valleys: pt.DataFrame[PeakValle
     #     if col.endswith('_x') or col.endswith('_y'):
     #         ohlcv.drop(col, axis=1, inplace=True)
 
+    tops[next_index_col] = tops.index.get_level_values('date').unique().to_series().shift(-1).tolist()
+    tops[next_value_col] = tops[high_or_low].shift(1)
     next_tops = pd.DataFrame(index=tops.index.get_level_values('date').shift(-1, config.timeframes[0])).sort_index()
-    next_tops[prev_index_col] = tops.index.get_level_values('date').unique().tolist()
-    next_tops[prev_value_col] = tops[high_or_low].tolist()
+    next_tops[next_index_col] = tops.index.get_level_values('date').unique().tolist()
+    next_tops[next_value_col] = tops[high_or_low].tolist()
     # Using `merge_asof` to efficiently merge the previous and next values
     ohlcv = pd.merge_asof(ohlcv.sort_index(), next_tops,
                           left_index=True, right_index=True, direction='forward', suffixes=('_x', ''))
@@ -423,8 +422,9 @@ def insert_previous_n_next_top(top_type, peaks_n_valleys: pt.DataFrame[PeakValle
     #                       left_index=True, right_index=True, direction='backward', suffixes=('_x', ''))
 
     # # Cleaning any duplicate columns
-    # for col in ohlcv.columns:
-    #     if col.endswith('_x') or col.endswith('_y'):
-    #         ohlcv.drop(col, axis=1, inplace=True)
+    for col in ohlcv.columns:
+        if col.endswith('_x') or col.endswith('_y'):
+            # ohlcv.drop(col, axis=1, inplace=True)
+            raise Exception(f'Duplicate merge on same column:{col}')
 
     return ohlcv

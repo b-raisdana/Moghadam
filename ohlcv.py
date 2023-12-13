@@ -6,10 +6,10 @@ import pytz
 from pandera import typing as pt
 
 from Config import config, GLOBAL_CACHE
-from data_preparation import read_file, single_timeframe, cast_and_validate, trim_to_date_range, to_timeframe, \
-    after_under_process_date, multi_timeframe_times_tester, times_tester, empty_df
 from MetaTrader import MT
 from Model.MultiTimeframeOHLCV import MultiTimeframeOHLCV, OHLCV
+from data_preparation import read_file, single_timeframe, cast_and_validate, trim_to_date_range, to_timeframe, \
+    after_under_process_date, multi_timeframe_times_tester, times_tester, empty_df
 from fetch_ohlcv import fetch_ohlcv_by_range
 from helper import measure_time, date_range, date_range_to_string
 
@@ -79,9 +79,10 @@ def core_read_multi_timeframe_ohlcv(date_range_str: str = None) -> MultiTimefram
         date_range_str = config.processing_date_range
     result = read_file(date_range_str, 'multi_timeframe_ohlcv', core_generate_multi_timeframe_ohlcv,
                        MultiTimeframeOHLCV)
-    for timeframe in config.timeframes:
-        GLOBAL_CACHE[f'valid_times_{timeframe}'] = \
-            single_timeframe(result, timeframe).index.get_level_values('date').tolist()
+    # for timeframe in config.timeframes:
+    #     GLOBAL_CACHE[f'valid_times_{timeframe}'] = \
+    #         single_timeframe(result, timeframe).index.get_level_values('date').tolist()
+    cache_times(result)
     return result
 
 
@@ -102,10 +103,15 @@ def read_multi_timeframe_ohlcv(date_range_str: str) -> MultiTimeframeOHLCV:
         date_range_str = config.processing_date_range
     result = read_file(date_range_str, 'multi_timeframe_ohlcv', generate_multi_timeframe_ohlcv,
                        MultiTimeframeOHLCV)
-    for timeframe in config.timeframes:
-        GLOBAL_CACHE[f'valid_times_{timeframe}'] = \
-            single_timeframe(result, timeframe).index.get_level_values('date').tolist()
+    cache_times(result)
     return result
+
+
+def cache_times(result):
+    for timeframe in config.timeframes:
+        if f'valid_times_{timeframe}' not in GLOBAL_CACHE.keys():
+            GLOBAL_CACHE[f'valid_times_{timeframe}'] = \
+                single_timeframe(result, timeframe).index.get_level_values('date').tolist()
 
 
 @measure_time
@@ -179,7 +185,7 @@ def core_generate_ohlcv(date_range_str: str = None, file_path: str = config.path
         date_range_str = config.processing_date_range
     raw_ohlcv = fetch_ohlcv_by_range(date_range_str)
     df = pd.DataFrame(raw_ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
-    df['date'] = pd.to_datetime(df['timestamp'], unit='ms')
+    df['date'] = pd.to_datetime(df['timestamp'], unit='ms', utc=True)
     df.set_index('date', inplace=True)
     df.drop(columns=['timestamp'], inplace=True)
     cast_and_validate(df, OHLCV, zero_size_allowed=after_under_process_date(date_range_str))

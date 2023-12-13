@@ -1,20 +1,21 @@
 from datetime import datetime
+from typing import Annotated
 
+import pandas as pd
 import pandera
 from pandas import Timestamp
 from pandera import typing as pt
 
 
 class Pivot(pandera.DataFrameModel):
-    date: pt.Index[Timestamp]
-
+    date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
     level: pt.Series[float]
     internal_margin: pt.Series[float]
     external_margin: pt.Series[float]
-    activation_time: pt.Series[Timestamp]
-    ttl: pt.Series[Timestamp]  # = pandera.Field(nullable=True)
-    deactivated_at: pt.Series[Timestamp] = pandera.Field(nullable=True)
-    archived_at: pt.Series[Timestamp] = pandera.Field(nullable=True)
+    activation_time: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
+    ttl: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]  # = pandera.Field(nullable=True)
+    deactivated_at: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
+    archived_at: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
     hit: pt.Series[int] = pandera.Field(nullable=True, coerce=True)
     is_overlap_of: pt.Series[str] = pandera.Field(nullable=True)
 
@@ -42,7 +43,7 @@ class Pivot(pandera.DataFrameModel):
         return output
 
 class BullBearSidePivot(Pivot):
-    movement_start_time: pt.Series[Timestamp] = pandera.Field(nullable=True)
+    movement_start_time: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
     movement_start_value: pt.Series[float] = pandera.Field(nullable=True)
-    return_end_time: pt.Series[Timestamp] = pandera.Field(nullable=True)
+    return_end_time: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
     return_end_value: pt.Series[float] = pandera.Field(nullable=True)

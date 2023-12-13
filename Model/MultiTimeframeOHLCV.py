@@ -1,12 +1,14 @@
+from typing import Annotated  # python 3.9+
+
+import pandas as pd
 import pandera
-from pandas import Timestamp
 from pandera import typing as pt
 
 from Model.MultiTimeframe import MultiTimeframe
 
 
 class OHLCV(pandera.DataFrameModel):
-    date: pt.Index[Timestamp]
+    date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
     open: pt.Series[float]
     close: pt.Series[float]
     high: pt.Series[float]
@@ -16,5 +18,3 @@ class OHLCV(pandera.DataFrameModel):
 
 class MultiTimeframeOHLCV(OHLCV, MultiTimeframe):
     pass
-
-
