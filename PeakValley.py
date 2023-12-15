@@ -7,8 +7,8 @@ import pandera.typing as pt
 
 from Config import config, INFINITY_TIME_DELTA, TopTYPE
 from MetaTrader import MT
-from Model.MultiTimeframeOHLCV import OHLCV
-from Model.MultiTimeframePeakValleys import PeakValleys, MultiTimeframePeakValleys
+from Model.OHLCV import OHLCV
+from Model.eakValleys import PeakValleys, MultiTimeframePeakValleys
 from data_preparation import read_file, cast_and_validate, trim_to_date_range, \
     expand_date_range, after_under_process_date, empty_df, shift_over
 from helper import measure_time, date_range
@@ -317,7 +317,7 @@ def generate_multi_timeframe_peaks_n_valleys(date_range_str, file_path: str = co
     start, end = date_range(date_range_str)
     _peaks_n_valleys = _peaks_n_valleys.loc[
         (start < _peaks_n_valleys.index.get_level_values(level='date')) &
-        (_peaks_n_valleys.index.get_level_values(level='date') < end)]
+        (_peaks_n_valleys.index.get_level_values(level='date') < end)].copy()
     # plot_multi_timeframe_peaks_n_valleys(_peaks_n_valleys, date_range_str)
     _peaks_n_valleys.sort_index(inplace=True, level='date')
     _peaks_n_valleys = trim_to_date_range(date_range_str, _peaks_n_valleys, ignore_duplicate_index=True)

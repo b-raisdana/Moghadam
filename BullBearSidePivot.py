@@ -9,11 +9,11 @@ from Config import config
 from data_preparation import single_timeframe, expected_movement_size, trigger_timeframe, read_file, \
     cast_and_validate, anti_pattern_timeframe, after_under_process_date, empty_df
 from MetaTrader import MT
+from Model.Pivot import MultiTimeframePivot
 from Model.BullBearSide import BullBearSide
-from Model.MultiTimeframePivot import MultiTimeframePivot
-from Model.Pivot import BullBearSidePivot
+from Model.BullBearSidePivot import BullBearSidePivot
 from PeakValley import read_multi_timeframe_peaks_n_valleys, major_peaks_n_valleys
-from Pivots import level_ttl
+from ClassicPivot import level_ttl
 from PivotsHelper import pivots_level_n_margins
 from atr import read_multi_timeframe_ohlcva
 from helper import measure_time
@@ -24,10 +24,10 @@ def remove_overlapping_trends(timeframe_trends: pt.DataFrame[BullBearSide]) -> p
         Remove overlapping trends from a DataFrame by selecting the trend with the maximum 'movement' within each date group.
 
         Args:
-            timeframe_trends (pd.DataFrame[BullBearSide]): A DataFrame containing trend data.
+            timeframe_trends (pd.DataFrame[Model.BullBearSide.BullBearSide]): A DataFrame containing trend data.
 
         Returns:
-            pd.DataFrame[BullBearSide]: A DataFrame with overlapping trends removed.
+            pd.DataFrame[Model.BullBearSide.BullBearSide]: A DataFrame with overlapping trends removed.
         """
     # Group the DataFrame by 'date' and find the index of the row with the maximum 'movement' within each group
     max_movement_indices = timeframe_trends.groupby('movement_start_time')['movement'].idxmax()
@@ -250,7 +250,7 @@ def generate_multi_timeframe_bull_bear_side_pivots(date_range_str: str = None,
     multi_timeframe_pivots.to_csv(
         os.path.join(file_path, f'multi_timeframe_bull_bear_side_pivots.{date_range_str}.zip'),
         compression='zip')
-    MT.extract_to_data_path(os.path.join(file_path, f'multi_timeframe_bull_bear_side_pivots.{date_range_str}.zip'))
+    MT.extract_to_data_pathfC(os.path.join(file_path, f'multi_timeframe_bull_bear_side_pivots.{date_range_str}.zip'))
 
     """
         in all boundaries with movement >= 1 ATR:

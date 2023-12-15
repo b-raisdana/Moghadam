@@ -50,15 +50,15 @@ def fetch_ohlcv_by_range(date_range_str: str = None, symbol: str = None, base_ti
     duration = end - start + pd.to_timedelta(config.timeframes[0])
     limit = int(duration / pd.to_timedelta(base_timeframe))
 
-    response = fetch_ohlcv(symbol, timeframe=base_timeframe, since=start, limit=limit)
+    response = fetch_ohlcv(symbol, timeframe=base_timeframe, start=start, limit=limit)
     return response
 
 
-def fetch_ohlcv(symbol, timeframe=config.timeframes[0], start_time: datetime = None, limit=None, params=None) \
+def fetch_ohlcv(symbol, timeframe=config.timeframes[0], start: datetime = None, limit=None, params=None) \
         -> list[object]:
     if params is None:
         params = dict()
-    assert start_time.tzinfo == pytz.utc
+    assert start.tzinfo == pytz.utc
     exchange = ccxt.kucoin()
 
     # Convert pandas timeframe to CCXT timeframe
@@ -67,8 +67,8 @@ def fetch_ohlcv(symbol, timeframe=config.timeframes[0], start_time: datetime = N
     width_of_timeframe = pd.to_timedelta(timeframe).seconds
     max_query_size = 1000
     for batch_start in range(0, limit, max_query_size):
-        if start_time < datetime.utcnow().replace(tzinfo=pytz.utc):
-            start_timestamp = int(start_time.timestamp() + batch_start * width_of_timeframe) * 1000
+        if start < datetime.utcnow().replace(tzinfo=pytz.utc):
+            start_timestamp = int(start.timestamp() + batch_start * width_of_timeframe) * 1000
             this_query_size = min(limit - batch_start, max_query_size)
             response = exchange.fetch_ohlcv(symbol, timeframe=ccxt_timeframe, since=start_timestamp,
                                             limit=min(limit - batch_start, this_query_size), params=params)

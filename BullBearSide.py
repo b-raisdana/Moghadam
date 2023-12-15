@@ -8,11 +8,10 @@ from pandas import Timestamp
 
 import PeakValley
 from Config import TopTYPE, config, TREND
-from Model.BullBearSide import BullBearSide
-from Model.MultiTimeframeBullBearSide import MultiTimeframeBullBearSide
-from Model.MultiTimeframeCandleTrend import MultiTimeframeCandleTrend
-from Model.MultiTimeframeOHLCV import OHLCV
-from Model.MultiTimeframeOHLCVA import OHLCVA
+from Model.BullBearSide import MultiTimeframeBullBearSide, BullBearSide
+from Model.CandleTrend import MultiTimeframeCandleTrend
+from Model.OHLCV import OHLCV
+from Model.OHLCVA import OHLCVA
 from PeakValley import peaks_only, valleys_only, read_multi_timeframe_peaks_n_valleys, major_peaks_n_valleys, \
     insert_previous_n_next_top
 from atr import read_multi_timeframe_ohlcva
@@ -545,10 +544,10 @@ def ignore_weak_trend(_boundaries: pt.DataFrame[BullBearSide]) -> pt.DataFrame[B
     Remove weak trends from the DataFrame.
 
     Parameters:
-        _boundaries (pt.DataFrame[BullBearSide]): A DataFrame containing trend boundary data.
+        _boundaries (pt.DataFrame[Model.BullBearSide.BullBearSide]): A DataFrame containing trend boundary data.
 
     Returns:
-        pt.DataFrame[BullBearSide]: A DataFrame with weak trends removed.
+        pt.DataFrame[Model.BullBearSide.BullBearSide]: A DataFrame with weak trends removed.
 
     Example:
         # Assuming you have a DataFrame '_boundaries' with the required columns and data

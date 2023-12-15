@@ -2,8 +2,9 @@ from typing import Annotated
 
 import pandas as pd
 import pandera
-from pandas import Timestamp
 from pandera import typing as pt
+
+from Model.MultiTimeframe import MultiTimeframe
 
 
 class BullBearSide(pandera.DataFrameModel):
@@ -23,5 +24,8 @@ class BullBearSide(pandera.DataFrameModel):
     movement_start_time: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
     movement_end_time: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
 
+
+class MultiTimeframeBullBearSide(BullBearSide, MultiTimeframe):
+    pass
 
 

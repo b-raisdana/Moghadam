@@ -14,7 +14,7 @@ from pandera import typing as pt, DataType
 
 from Config import config, GLOBAL_CACHE
 from Model import MultiTimeframe
-from Model.MultiTimeframe import MultiTimeframe_Type
+from Model.MultiTimeframe import MultiTimeframe_Type, MultiTimeframe
 from helper import log, date_range, date_range_to_string, morning, Pandera_DFM_Type, LogSeverity
 
 
@@ -517,7 +517,8 @@ def apply_as_type(data, model_class) -> pd.DataFrame:
     for attr_name, attr_type in _all_annotations.items():
         if 'timestamp' in str(attr_type).lower() and 'timestamp' not in str(data.dtypes.loc[attr_name]).lower():
             as_types[attr_name] = 'datetime64[ns, UTC]'
-        if 'datetimetzdtype' in str(attr_type).lower() and 'datetimetzdtype' not in str(data.dtypes.loc[attr_name]).lower():
+        if 'datetimetzdtype' in str(attr_type).lower() and 'datetimetzdtype' not in str(
+                data.dtypes.loc[attr_name]).lower():
             as_types[attr_name] = 'datetime64[ns, UTC]'
         elif 'timedelta' in str(attr_type).lower() and 'timedelta' not in str(data.dtypes.loc[attr_name]).lower():
             as_types[attr_name] = 'timedelta64[s]'

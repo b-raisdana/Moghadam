@@ -7,9 +7,9 @@ from Config import config
 from data_preparation import single_timeframe, anti_trigger_timeframe, cast_and_validate, \
     read_file, after_under_process_date, empty_df
 from MetaTrader import MT
-from Model.MultiTimeframePivot import MultiTimeframePivot
+from Model.Pivot import MultiTimeframePivot
 from PeakValley import read_multi_timeframe_peaks_n_valleys
-from Pivots import level_ttl
+from ClassicPivot import level_ttl
 from PivotsHelper import pivots_level_n_margins
 from atr import read_multi_timeframe_ohlcva
 from helper import measure_time

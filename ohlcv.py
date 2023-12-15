@@ -7,7 +7,7 @@ from pandera import typing as pt
 
 from Config import config, GLOBAL_CACHE
 from MetaTrader import MT
-from Model.MultiTimeframeOHLCV import MultiTimeframeOHLCV, OHLCV
+from Model.OHLCV import MultiTimeframeOHLCV, OHLCV
 from data_preparation import read_file, single_timeframe, cast_and_validate, trim_to_date_range, to_timeframe, \
     after_under_process_date, multi_timeframe_times_tester, times_tester, empty_df
 from fetch_ohlcv import fetch_ohlcv_by_range

@@ -4,15 +4,16 @@ from sys import exit
 
 import pandas as pd
 
-from BullBearSidePivot import generate_multi_timeframe_bull_bear_side_pivots
+from BullBearSidePivot import generate_multi_timeframe_bull_bear_side_pivots, read_multi_timeframe_bull_bear_side_pivots
+from ClassicPivot import read_pivots
 from Config import config
-from Model.MultiTimeframePeakValleys import PeakValleys, MultiTimeframePeakValleys
-from PeakValleyPivots import generate_multi_timeframe_top_pivots
+from Model.eakValleys import PeakValleys, MultiTimeframePeakValleys
+from PeakValleyPivots import generate_multi_timeframe_top_pivots, read_multi_timeframe_top_pivots
 from data_preparation import expand_date_range, empty_df
 from FigurePlotter.OHLVC_plotter import plot_multi_timeframe_ohlcva, plot_multi_timeframe_ohlcv
 from FigurePlotter.PeakValley_plotter import plot_multi_timeframe_peaks_n_valleys
 from MetaTrader import MT
-from Model.MultiTimeframeOHLCV import MultiTimeframeOHLCV, OHLCV
+from Model.OHLCV import MultiTimeframeOHLCV, OHLCV
 from PeakValley import read_multi_timeframe_peaks_n_valleys, multi_timeframe_peaks_n_valleys, \
     generate_multi_timeframe_peaks_n_valleys
 from atr import generate_multi_timeframe_ohlcva, read_multi_timeframe_ohlcva
@@ -23,8 +24,8 @@ from ohlcv import read_base_timeframe_ohlcv, generate_multi_timeframe_ohlcv, rea
 if __name__ == "__main__":
     config.processing_date_range = date_range_to_string(days=60)
 
-    file_path: str = config.path_of_data
-    today_morning = today_morning()
+    # file_path: str = config.path_of_data
+    # today_morning = today_morning()
     # for month in range(0, 2):
     #     date_range_str = date_range_to_string(days=30, end=today_morning - timedelta(days=30 * month))
     #     log(f'date_range_str{date_range_str}')
@@ -56,7 +57,6 @@ if __name__ == "__main__":
     # plot_multi_timeframe_peaks_n_valleys(_peaks_and_valleys, config.processing_date_range)
     # generate_multi_timeframe_candle_trend(config.processing_date_range)
     # generate_multi_timeframe_bull_bear_side_trends(config.processing_date_range, timeframe_shortlist=['4H'])
-    generate_multi_timeframe_bull_bear_side_pivots(config.processing_date_range)
-    generate_multi_timeframe_top_pivots(config.processing_date_range)
+    _pivots = read_pivots(config.processing_date_range)
 
     exit()

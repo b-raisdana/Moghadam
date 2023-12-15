@@ -12,8 +12,8 @@ from pandera import typing as pt
 from Config import config, GLOBAL_CACHE
 from data_preparation import read_file, trim_to_date_range, single_timeframe, expand_date_range, \
     multi_timeframe_times_tester, empty_df
-from Model.MultiTimeframeOHLCV import MultiTimeframeOHLCV, OHLCV
-from Model.MultiTimeframeOHLCVA import MultiTimeframeOHLCVA
+from Model.OHLCV import MultiTimeframeOHLCV, OHLCV
+from Model.OHLCVA import MultiTimeframeOHLCVA
 from helper import date_range, measure_time, log
 from ohlcv import read_multi_timeframe_ohlcv, cache_times
 

@@ -3,8 +3,9 @@ from typing import Annotated
 
 import pandas as pd
 import pandera
-from pandas import Timestamp
 from pandera import typing as pt
+
+from Model.MultiTimeframe import MultiTimeframe
 
 
 class Pivot(pandera.DataFrameModel):
@@ -42,8 +43,6 @@ class Pivot(pandera.DataFrameModel):
             output += f"O{pivot_info['is_overlap_of']}"
         return output
 
-class BullBearSidePivot(Pivot):
-    movement_start_time: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
-    movement_start_value: pt.Series[float] = pandera.Field(nullable=True)
-    return_end_time: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
-    return_end_value: pt.Series[float] = pandera.Field(nullable=True)
+
+class MultiTimeframePivot(Pivot, MultiTimeframe):
+    hit: pt.Series[int] = pandera.Field()

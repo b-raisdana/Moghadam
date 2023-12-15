@@ -9,7 +9,7 @@ from Config import TREND, config
 from FigurePlotter.PeakValley_plotter import plot_peaks_n_valleys
 from FigurePlotter.plotter import file_id, save_figure, plot_multiple_figures
 from Model.BullBearSide import BullBearSide
-from Model.MultiTimeframeOHLCV import OHLCV
+from Model.OHLCV import OHLCV
 from PeakValley import peaks_only, valleys_only, major_peaks_n_valleys
 from data_preparation import single_timeframe
 from helper import measure_time, log

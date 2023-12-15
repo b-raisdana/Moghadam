@@ -14,7 +14,7 @@ import psutil
 from pandera import typing as pt
 
 from data_preparation import map_symbol, extract_file_info, FileInfoSet
-from Model.MultiTimeframeOHLCV import OHLCV
+from Model.OHLCV import OHLCV
 from helper import log
 
 # def mt5_client() -> Mt5:
