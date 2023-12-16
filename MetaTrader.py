@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import struct
 import subprocess
 import time
@@ -13,8 +12,8 @@ from typing import Union, List
 import psutil
 from pandera import typing as pt
 
-from data_preparation import map_symbol, extract_file_info, FileInfoSet
 from Model.OHLCV import OHLCV
+from data_preparation import map_symbol, extract_file_info, FileInfoSet
 from helper import log
 
 # def mt5_client() -> Mt5:
@@ -92,6 +91,42 @@ def compare_tree(left: ET.Element, right: ET.Element, path_to_root: List[str] = 
     for key in set(left_as_dict.keys()).intersection(set(right_as_dict.keys())):
         result = result and compare_tree(left_as_dict[key], right_as_dict[key], path_to_root + [left.tag])
     return result
+
+
+import os
+
+
+def check_file_sizes():
+    """
+    Check if all files in the given directory are less than the specified size.
+
+    Args:
+    directory (str): The directory to check.
+    max_size_mb (int): The maximum file size in MB.
+
+    Returns:
+    bool: True if all files are less than max_size_mb, False otherwise.
+    """
+    max_size_bytes = max_size_mb * 1024 * 1024  # Convert MB to bytes
+    files_larger_than_max_size = []
+
+    for filename in os.listdir(directory):
+        file_path = os.path.join(directory, filename)
+        if os.path.isfile(file_path):
+            size = os.path.getsize(file_path)
+            if size > max_size_bytes:
+                files_larger_than_max_size.append(filename)
+
+    if files_larger_than_max_size:
+        # Log files that are larger than the specified size
+        print("Files larger than {}MB:".format(max_size_mb))
+        for filename in files_larger_than_max_size:
+            print(filename)
+        return False
+    else:
+        return True
+
+    # Example usage
 
 
 def text_to_attribute(element: ET.Element) -> ET.Element:
@@ -262,6 +297,7 @@ class MT:
                     _destination_file = path.join(destination_folder, 'Custom' + source_file_info.symbol + '.' +
                                                   source_file_info.file_type + '.csv')
                     os.rename(_source_file, _destination_file)
+                    log(f'The file {_destination_file} Generated! Run specific loader in MT5.', stack_trace=False)
         return
 
     @classmethod

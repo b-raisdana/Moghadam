@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 from enum import Enum
 from typing import Tuple, Union
 
@@ -237,10 +237,6 @@ def pivot_exact_overlapped(pivot_time, multi_timeframe_pivots):
             raise Exception(f'Expected to find only one root_pivot but found({len(root_pivot)}):{root_pivot}')
     # return new_pivots
     # raise Exception(f'Expected to find a root_pivot but found zero')
-
-
-def level_ttl(timeframe) -> datetime.timedelta:
-    return 512 * pd.to_timedelta(timeframe)
 
 
 def update_hit(active_timeframe_pivots: pt.DataFrame[Pivot], all_timerame_pivots) -> pt.DataFrame[Pivot]:

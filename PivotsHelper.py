@@ -1,3 +1,5 @@
+import datetime
+
 import pandas as pd
 from pandas import Timestamp
 
@@ -156,3 +158,7 @@ def pivot_margins(pivots: pd.DataFrame, _type: TopTYPE, pivot_peaks_or_valleys: 
     pivots.loc[focused_pivots_times, ['internal_margin', 'external_margin']] = \
         focused_pivots[['internal_margin', 'external_margin']]
     return pivots
+
+
+def level_ttl(timeframe) -> datetime.timedelta:
+    return 512 * pd.to_timedelta(timeframe)

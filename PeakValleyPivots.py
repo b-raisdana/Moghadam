@@ -9,8 +9,7 @@ from data_preparation import single_timeframe, anti_trigger_timeframe, cast_and_
 from MetaTrader import MT
 from Model.Pivot import MultiTimeframePivot
 from PeakValley import read_multi_timeframe_peaks_n_valleys
-from ClassicPivot import level_ttl
-from PivotsHelper import pivots_level_n_margins
+from PivotsHelper import pivots_level_n_margins, level_ttl
 from atr import read_multi_timeframe_ohlcva
 from helper import measure_time
 

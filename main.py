@@ -24,20 +24,20 @@ from ohlcv import read_base_timeframe_ohlcv, generate_multi_timeframe_ohlcv, rea
 if __name__ == "__main__":
     config.processing_date_range = date_range_to_string(days=60)
 
-    # file_path: str = config.path_of_data
-    # today_morning = today_morning()
-    # for month in range(0, 2):
-    #     date_range_str = date_range_to_string(days=30, end=today_morning - timedelta(days=30 * month))
-    #     log(f'date_range_str{date_range_str}')
-    #     ohlcv = read_base_timeframe_ohlcv(date_range_str)
-    #     ohlcv = ohlcv[['open', 'high', 'low', 'close', 'volume']]
-    #     ohlcv.to_csv(os.path.join(file_path, f'ohlcv.{date_range_str}.zip'),
-    #                  compression='zip')
-    #     MT.extract_to_data_path(os.path.join(file_path, f'ohlcv.{date_range_str}.zip'))
-    #     MT.load_rates()
-    #     # sleep(30)
-    #
-    # exit(0)
+    file_path: str = config.path_of_data
+    today_morning = today_morning()
+    for month in range(0, 2):
+        date_range_str = date_range_to_string(days=30, end=today_morning - timedelta(days=30 * month))
+        log(f'date_range_str{date_range_str}')
+        ohlcv = read_base_timeframe_ohlcv(date_range_str)
+        ohlcv = ohlcv[['open', 'high', 'low', 'close', 'volume']]
+        ohlcv.to_csv(os.path.join(file_path, f'ohlcv.{date_range_str}.zip'),
+                     compression='zip')
+        MT.extract_to_data_path(os.path.join(file_path, f'ohlcv.{date_range_str}.zip'))
+        MT.load_rates()
+        # sleep(30)
+
+    exit(0)
 
     # t = empty_df(PeakValleys)
     # t = empty_df(MultiTimeframePeakValleys)

@@ -13,8 +13,7 @@ from Model.Pivot import MultiTimeframePivot
 from Model.BullBearSide import BullBearSide
 from Model.BullBearSidePivot import BullBearSidePivot
 from PeakValley import read_multi_timeframe_peaks_n_valleys, major_peaks_n_valleys
-from ClassicPivot import level_ttl
-from PivotsHelper import pivots_level_n_margins
+from PivotsHelper import pivots_level_n_margins, level_ttl
 from atr import read_multi_timeframe_ohlcva
 from helper import measure_time
 
@@ -250,7 +249,7 @@ def generate_multi_timeframe_bull_bear_side_pivots(date_range_str: str = None,
     multi_timeframe_pivots.to_csv(
         os.path.join(file_path, f'multi_timeframe_bull_bear_side_pivots.{date_range_str}.zip'),
         compression='zip')
-    MT.extract_to_data_pathfC(os.path.join(file_path, f'multi_timeframe_bull_bear_side_pivots.{date_range_str}.zip'))
+    MT.extract_to_data_path(os.path.join(file_path, f'multi_timeframe_bull_bear_side_pivots.{date_range_str}.zip'))
 
     """
         in all boundaries with movement >= 1 ATR:
