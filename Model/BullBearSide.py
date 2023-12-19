@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from typing import Annotated
 
 import pandas as pd
@@ -29,3 +30,15 @@ class MultiTimeframeBullBearSide(BullBearSide, MultiTimeframe):
     pass
 
 
+def bull_bear_side_repr(_start: datetime, _trend, boundaries):
+    text = f'{_trend["bull_bear_side"].replace("_TREND", "")}: ' \
+           f'{_start.strftime("%H:%M")}-{_trend["end"].strftime("%H:%M")}:'
+    if hasattr(_trend, "movement"):
+        text += f'\nM:{_trend["movement"]:.2f}'
+    if hasattr(_trend, "duration"):
+        text += f'D:{_trend["duration"] / timedelta(hours=1):.2f}h'
+    if hasattr(_trend, "strength"):
+        text += f'S:{_trend["strength"]:.2f}'
+    if hasattr(_trend, "ATR"):
+        text += f'ATR:{_trend["ATR"]:.2f}'
+    return text

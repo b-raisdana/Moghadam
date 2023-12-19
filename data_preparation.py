@@ -13,7 +13,6 @@ from pandas._typing import Axes
 from pandera import typing as pt, DataType
 
 from Config import config, GLOBAL_CACHE
-from Model import MultiTimeframe
 from Model.MultiTimeframe import MultiTimeframe_Type, MultiTimeframe
 from helper import log, date_range, date_range_to_string, morning, Pandera_DFM_Type, LogSeverity
 
@@ -267,8 +266,11 @@ def read_with_timeframe(data_frame_type: str, date_range_str: str, file_path: st
                      index_col='date', parse_dates=['date'], skiprows=skip_rows, nrows=n_rows)
 
     # Convert the 'date' index to UTC if it's timezone-unaware
-    if df.index.tz is None:
-        df.index = df.index.tz_localize('UTC')
+    if len(df) > 0:
+        if not hasattr(df.index, 'tz'):
+            pass
+        if df.index.tz is None:
+            df.index = df.index.tz_localize('UTC')
 
     if 'multi_timeframe' in data_frame_type:
         df.set_index('timeframe', append=True, inplace=True)
@@ -406,9 +408,9 @@ def times_tester(df: pd.DataFrame, date_range_str: str, timeframe: str, return_b
                  exact_match: bool = False,
                  ) -> Union[bool, None]:
     expected_times = set(times_in_date_range(date_range_str, timeframe, limit_to_under_process_period,
-                                             processing_date_range).tz_localize(None))
+                                             processing_date_range))
     if len(df.index) > 0:
-        actual_times = set(df.index.tz_localize(tz=None))
+        actual_times = set(df.index)
     else:
         actual_times = set()
 
@@ -757,3 +759,15 @@ def shift_over(needles: Axes, reference: Axes, side: str, start=None, end=None) 
         return df.loc[needles, 'forward'].to_list()
     elif side == 'backward':
         return df.loc[needles, 'backward'].to_list()
+
+
+def concat(left: pd.DataFrame, right: pd.DataFrame):
+    if len(left) > 0:
+        if len(right) > 0:
+            left = pd.concat([left, right])
+    else:
+        if len(right) > 0:
+            left = right
+        else:
+            left = pd.DataFrame()
+    return left

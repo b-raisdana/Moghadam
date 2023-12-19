@@ -10,7 +10,7 @@ from Config import config
 from Model.OHLCV import OHLCV
 from Model.Pivot import MultiTimeframePivot, Pivot
 from PeakValleyPivots import read_multi_timeframe_top_pivots
-from data_preparation import single_timeframe, empty_df
+from data_preparation import single_timeframe, empty_df, concat
 from helper import measure_time
 
 
@@ -66,7 +66,7 @@ def update_passed_levels(timeframe_active_pivots: pt.DataFrame[Pivot],
     timeframe_active_pivots['passing_time'] = passing_time(timeframe_active_pivots, timeframe_ohlcv)
     passed_pivots = timeframe_active_pivots[timeframe_active_pivots['passing_time'].notna()].index
     timeframe_inactive_pivots: pt.DataFrame[Pivot] = (
-        pd.concat([timeframe_inactive_pivots, timeframe_active_pivots.loc[passed_pivots]]))
+        concat(timeframe_inactive_pivots, timeframe_active_pivots.loc[passed_pivots]))
     timeframe_active_pivots.drop(labels=passed_pivots, inplace=True)
     return timeframe_active_pivots, timeframe_inactive_pivots
 
@@ -96,10 +96,10 @@ def update_active_levels(multi_timeframe_active_pivots: pt.DataFrame[MultiTimefr
         timeframe_active_pivots, timeframe_inactive_pivots = (
             inactivate_3rd_hit(timeframe_active_pivots, timeframe_inactive_pivots))
 
-        final_multi_timeframe_active_pivots = (pd.concat([final_multi_timeframe_active_pivots, timeframe_active_pivots])
+        final_multi_timeframe_active_pivots = (concat(final_multi_timeframe_active_pivots, timeframe_active_pivots)
                                                .sort_index(level='date'))
         final_multi_timeframe_inactive_pivots = (
-            pd.concat([final_multi_timeframe_inactive_pivots, timeframe_inactive_pivots])
+            concat(final_multi_timeframe_inactive_pivots, timeframe_inactive_pivots)
             .sort_index(level='date'))
 
     return multi_timeframe_active_pivots, multi_timeframe_inactive_pivots
@@ -209,11 +209,11 @@ def read_pivots(date_range_str) -> pt.DataFrame[Pivot]:
     multi_timeframe_bull_bear_side_pivots = read_multi_timeframe_bull_bear_side_pivots(date_range_str)
     multi_timeframe_anti_pattern_tops_pivots = read_multi_timeframe_top_pivots(date_range_str)
     # multi_timeframe_color_trend_pivots = read_multi_timeframe_color_trend_pivots()
-    multi_timeframe_pivots = pd.concat([
+    multi_timeframe_pivots = concat(
         multi_timeframe_bull_bear_side_pivots,
         # multi_timeframe_color_trend_pivots,
         multi_timeframe_anti_pattern_tops_pivots,
-    ])
+    )
     return multi_timeframe_pivots
 
 

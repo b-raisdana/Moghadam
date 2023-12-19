@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import struct
 import subprocess
 import time
@@ -14,7 +15,7 @@ from pandera import typing as pt
 
 from Model.OHLCV import OHLCV
 from data_preparation import map_symbol, extract_file_info, FileInfoSet
-from helper import log
+from helper import log, LogSeverity
 
 # def mt5_client() -> Mt5:
 #     global META_TRADER_IS_INITIALIZED
@@ -42,7 +43,7 @@ def tree_to_dict(element: ET.Element) -> dict:
     return output
 
 
-def compare_tree(left: ET.Element, right: ET.Element, path_to_root: List[str] = []) -> bool:
+def compare_tree(left: ET.Element, right: ET.Element, path_to_root: List[str] = [], debug: bool = False) -> bool:
     compare_ignored_keys = [
         'id',
         'description',
@@ -55,22 +56,22 @@ def compare_tree(left: ET.Element, right: ET.Element, path_to_root: List[str] = 
     ]
     result = True
     if left.tag != right.tag:
-        log(f"{path_to_root}->{left.tag}: Different tags ({left.tag} / {right.tag})", stack_trace=False)
+        if debug: log(f"{path_to_root}->{left.tag}: Different tags ({left.tag} / {right.tag})", stack_trace=False)
         result = False
     left_only_attributes = set(left.attrib.keys()).difference(right.attrib.keys())
     if len(left_only_attributes) > 0:
-        log(f"{path_to_root}->{left.tag}[{','.join(left_only_attributes)}]: "
-            f"attributes only in right_element!", stack_trace=False)
+        if debug: log(f"{path_to_root}->{left.tag}[{','.join(left_only_attributes)}]: "
+                      f"attributes only in right_element!", stack_trace=False)
         result = False
     right_only_attributes = set(right.attrib.keys()).difference(left.attrib.keys())
     if len(right_only_attributes) > 0:
-        log(f"{path_to_root}->{left.tag}[{','.join(right_only_attributes)}]: "
-            f"attributes only in right_element!", stack_trace=False)
+        if debug: log(f"{path_to_root}->{left.tag}[{','.join(right_only_attributes)}]: "
+                      f"attributes only in right_element!", stack_trace=False)
         result = False
     for key in set(left.attrib.keys()).intersection(right.attrib.keys()):
         if key not in compare_ignored_keys and left.attrib[key] != right.attrib[key]:
-            log(f"{path_to_root}->{left.tag}[{key}]: "
-                f"\{left.attrib[key]} != {right.attrib[key]}", stack_trace=False)
+            if debug: log(f"{path_to_root}->{left.tag}[{key}]: "
+                          f"\{left.attrib[key]} != {right.attrib[key]}", stack_trace=False)
             result = False
     left_as_dict = {}
     for child in left:
@@ -80,23 +81,21 @@ def compare_tree(left: ET.Element, right: ET.Element, path_to_root: List[str] = 
         right_as_dict[child.tag] = child
     left_only_children_tags = set(left_as_dict.keys()).difference(right_as_dict.keys())
     if len(left_only_children_tags) > 0:
-        log(f"{path_to_root}->{left.tag}[{','.join(left_only_children_tags)}]: "
-            f"children only in left_element!", stack_trace=False)
+        if debug: log(f"{path_to_root}->{left.tag}[{','.join(left_only_children_tags)}]: "
+                      f"children only in left_element!", stack_trace=False)
         result = False
     right_only_children_tags = set(right_as_dict.keys()).difference(left_as_dict.keys())
     if len(right_only_children_tags) > 0:
-        log(f"{path_to_root}->{left.tag}[{','.join(right_only_children_tags)}]: "
-            f"children only in right_element!", stack_trace=False)
+        if debug: log(f"{path_to_root}->{left.tag}[{','.join(right_only_children_tags)}]: "
+                      f"children only in right_element!", stack_trace=False)
         result = False
     for key in set(left_as_dict.keys()).intersection(set(right_as_dict.keys())):
         result = result and compare_tree(left_as_dict[key], right_as_dict[key], path_to_root + [left.tag])
     return result
 
 
-import os
-
-
-def check_file_sizes():
+def check_file_sizes(directory='./MetaTrader5/Bases/Custom/history/CustomBTCUSDT', max_size_mb=100,
+                     raise_exception: bool = True):
     """
     Check if all files in the given directory are less than the specified size.
 
@@ -108,21 +107,22 @@ def check_file_sizes():
     bool: True if all files are less than max_size_mb, False otherwise.
     """
     max_size_bytes = max_size_mb * 1024 * 1024  # Convert MB to bytes
-    files_larger_than_max_size = []
+    files_larger_than_max_size = False
 
     for filename in os.listdir(directory):
         file_path = os.path.join(directory, filename)
         if os.path.isfile(file_path):
             size = os.path.getsize(file_path)
             if size > max_size_bytes:
-                files_larger_than_max_size.append(filename)
+                log(f"Files larger than {max_size_mb}MB:{file_path}={size}", LogSeverity.ERROR, stack_trace=False)
+                files_larger_than_max_size = True
 
     if files_larger_than_max_size:
-        # Log files that are larger than the specified size
-        print("Files larger than {}MB:".format(max_size_mb))
-        for filename in files_larger_than_max_size:
-            print(filename)
-        return False
+        if raise_exception:
+            raise Exception(f"Fix files larger than {max_size_mb}MB to prevent MT corrupted database.")
+        else:
+            log(f"Fix files larger than {max_size_mb}MB to prevent MT corrupted database.", LogSeverity.ERROR)
+            return False
     else:
         return True
 
@@ -345,6 +345,7 @@ class MT:
         cls.check_custom_profile_chart_content()
         cls.autoit_exists()
         cls.autoit_runner_script_exists()
+        check_file_sizes()
 
     @classmethod
     def load_rates(cls):
@@ -377,7 +378,7 @@ class MT:
                     log(f"MetaTrader 5 process not found (pid={process.pid}).", stack_trace=False)
 
     @classmethod
-    def check_custom_profile_chart_content(cls):
+    def check_custom_profile_chart_content(cls, debug: bool = False):
         # Parse the content of chart01.chr and chart01.chr.original as XML
         with open(cls.chart_config_file_full_path, 'r', encoding='utf-16-le') as chart_file:
             chart_content = chart_file.read()

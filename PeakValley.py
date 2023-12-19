@@ -10,7 +10,7 @@ from MetaTrader import MT
 from Model.OHLCV import OHLCV
 from Model.eakValleys import PeakValleys, MultiTimeframePeakValleys
 from data_preparation import read_file, cast_and_validate, trim_to_date_range, \
-    expand_date_range, after_under_process_date, empty_df, shift_over
+    expand_date_range, after_under_process_date, empty_df, shift_over, concat
 from helper import measure_time, date_range
 from ohlcv import read_base_timeframe_ohlcv
 
@@ -112,13 +112,13 @@ def calculate_distance(ohlcv: pt.DataFrame[OHLCV], peaks_or_valleys: pt.DataFram
             if len(tops_with_known_crossing_bar) == 0:
                 tops_with_known_crossing_bar = tops_to_compare.loc[crossed_tops]
             else:
-                tops_with_known_crossing_bar = pd.concat(
-                    [tops_with_known_crossing_bar, tops_to_compare.loc[crossed_tops]])
+                tops_with_known_crossing_bar = concat(
+                    tops_with_known_crossing_bar, tops_to_compare.loc[crossed_tops])
             if tops_with_known_crossing_bar.index.duplicated(keep=False).any():
                 raise Exception('Should be unique')
             tops_to_compare.drop(crossed_tops,
                                  inplace=True)  # = tops_to_compare[tops_to_compare[direction + '_distance'].isna()]
-    tops_with_known_crossing_bar = pd.concat([tops_with_known_crossing_bar, tops_to_compare]).sort_index()
+    tops_with_known_crossing_bar = concat(tops_with_known_crossing_bar, tops_to_compare).sort_index()
     assert not tops_with_known_crossing_bar.index.duplicated(keep=False).any()
     assert len(tops_with_known_crossing_bar) == len(peaks_or_valleys)
     return tops_with_known_crossing_bar
@@ -216,7 +216,7 @@ def valleys_only(peaks_n_valleys: pd.DataFrame) -> pd.DataFrame:
 
 
 def merge_tops(peaks: pd.DataFrame, valleys: pd.DataFrame) -> pd.DataFrame:
-    return pd.concat([peaks, valleys]).sort_index(level='date')
+    return concat(peaks, valleys).sort_index(level='date')
 
 
 def find_peaks_n_valleys(base_ohlcv: pd.DataFrame,
@@ -238,7 +238,7 @@ def find_peaks_n_valleys(base_ohlcv: pd.DataFrame,
             none_repeating_ohlcv['low'] < none_repeating_ohlcv['low'].shift(-1))
     _valleys = none_repeating_ohlcv.loc[mask_of_valleys].copy()
     _valleys['peak_or_valley'] = TopTYPE.VALLEY.value
-    _peaks_n_valleys: pt.DataFrame[PeakValleys] = pd.concat([_peaks, _valleys])
+    _peaks_n_valleys: pt.DataFrame[PeakValleys] = concat(_peaks, _valleys)
     _peaks_n_valleys = _peaks_n_valleys.loc[:, ['open', 'high', 'low', 'close', 'volume', 'peak_or_valley']]
     return _peaks_n_valleys.sort_index(level='date') if sort_index else _peaks_n_valleys
 
@@ -334,7 +334,7 @@ def calculate_strength_of_peaks_n_valleys(time_ohlcv: pt.DataFrame[OHLCV],
         -> pt.DataFrame[PeakValleys]:
     peaks = calculate_strength(peaks_only(time_peaks_n_valleys), TopTYPE.PEAK, time_ohlcv)
     valleys = calculate_strength(valleys_only(time_peaks_n_valleys), TopTYPE.VALLEY, time_ohlcv)
-    peaks_and_valleys = pd.concat([peaks, valleys]).sort_index(level='date')
+    peaks_and_valleys = concat(peaks, valleys).sort_index(level='date')
     peaks_and_valleys['strength'] = peaks_and_valleys['strength'].dt.total_seconds()
     return peaks_and_valleys
 
@@ -375,7 +375,7 @@ def old_insert_previous_n_next_top(top_type: TopTYPE, peaks_n_valleys, ohlcv):
         ohlcv.loc[is_next_for_indexes, f'next_top_value'] = tops.iloc[i][high_or_low]
     return ohlcv
 
-
+@measure_time
 def insert_previous_n_next_top(top_type, peaks_n_valleys: pt.DataFrame[PeakValleys], ohlcv: pt.DataFrame[OHLCV]) \
         -> pt.DataFrame[OHLCV]:
     # Define columns
@@ -383,45 +383,27 @@ def insert_previous_n_next_top(top_type, peaks_n_valleys: pt.DataFrame[PeakValle
     prev_value_col = f'previous_{top_type.value}_value'
     next_index_col = f'next_{top_type.value}_index'
     next_value_col = f'next_{top_type.value}_value'
-
-    # # Ensure columns exist
-    # for col in [prev_index_col, prev_value_col, next_index_col, next_value_col]:
-    #     if col not in ohlcv.columns:
-    #         ohlcv[col] = None
-
     # Filter the relevant tops
     tops = peaks_n_valleys[peaks_n_valleys['peak_or_valley'] == top_type.value].copy()
-
     high_or_low = 'high' if top_type == TopTYPE.PEAK else 'low'
-
     # Using `shift()` to create the previous and next columns
     tops[prev_index_col] = tops.index.get_level_values('date').unique().to_series().shift(1).tolist()
     tops[prev_value_col] = tops[high_or_low].shift(-1)
     previous_tops = pd.DataFrame(index=tops.index.get_level_values('date').shift(1, config.timeframes[0])).sort_index()
     previous_tops[prev_index_col] = tops.index.get_level_values('date').unique().tolist()
     previous_tops[prev_value_col] = tops[high_or_low].tolist()
-    # Using `merge_asof` to efficiently merge the previous and next values
+    # merge the previous and next values
     ohlcv = pd.merge_asof(ohlcv.sort_index(), previous_tops,
                           left_index=True, right_index=True, direction='backward', suffixes=('_x', ''))
-    # for col in ohlcv.columns:
-    #     if col.endswith('_x') or col.endswith('_y'):
-    #         ohlcv.drop(col, axis=1, inplace=True)
-
     tops[next_index_col] = tops.index.get_level_values('date').unique().to_series().shift(-1).tolist()
     tops[next_value_col] = tops[high_or_low].shift(1)
     next_tops = pd.DataFrame(index=tops.index.get_level_values('date').shift(-1, config.timeframes[0])).sort_index()
     next_tops[next_index_col] = tops.index.get_level_values('date').unique().tolist()
     next_tops[next_value_col] = tops[high_or_low].tolist()
-    # Using `merge_asof` to efficiently merge the previous and next values
+    # merge the previous and next values
     ohlcv = pd.merge_asof(ohlcv.sort_index(), next_tops,
                           left_index=True, right_index=True, direction='forward', suffixes=('_x', ''))
-    # ohlcv = pd.merge_asof(ohlcv.sort_index(),
-    #                       # tops[[next_index_col, next_value_col]].set_index(next_index_col).sort_index(),
-    #                       (tops.loc[tops[next_index_col].notna(), [next_index_col, next_value_col]]
-    #                        .reset_index(level='timeframe', drop=True).sort_index()),
-    #                       left_index=True, right_index=True, direction='backward', suffixes=('_x', ''))
-
-    # # Cleaning any duplicate columns
+    # Cleaning any duplicate columns
     for col in ohlcv.columns:
         if col.endswith('_x') or col.endswith('_y'):
             # ohlcv.drop(col, axis=1, inplace=True)

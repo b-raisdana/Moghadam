@@ -7,7 +7,7 @@ from pandera import typing as pt
 from BullBearSide import read_multi_timeframe_bull_bear_side_trends, previous_trend
 from Config import config
 from data_preparation import single_timeframe, expected_movement_size, trigger_timeframe, read_file, \
-    cast_and_validate, anti_pattern_timeframe, after_under_process_date, empty_df
+    cast_and_validate, anti_pattern_timeframe, after_under_process_date, empty_df, concat
 from MetaTrader import MT
 from Model.Pivot import MultiTimeframePivot
 from Model.BullBearSide import BullBearSide
@@ -74,6 +74,8 @@ def multi_timeframe_bull_bear_side_pivots(date_range_str: str = None, timeframe_
         timeframe_trends = single_timeframe(multi_timeframe_trends, timeframe)
         _expected_movement_size = expected_movement_size(timeframe_trends['ATR'])
         if len(timeframe_trends) > 0:
+            if timeframe == '15min':
+                pass
             timeframe_trends['previous_trend'], timeframe_trends['previous_trend_movement'] = previous_trend(
                 timeframe_trends)
             _pivot_trends = timeframe_trends[
@@ -120,7 +122,7 @@ def multi_timeframe_bull_bear_side_pivots(date_range_str: str = None, timeframe_
                 _pivots['timeframe'] = anti_pattern_timeframe(timeframe)
                 _pivots.set_index('timeframe', append=True, inplace=True)
                 _pivots = _pivots.swaplevel()
-                multi_timeframe_pivots = pd.concat([_pivots, multi_timeframe_pivots])
+                multi_timeframe_pivots = concat(multi_timeframe_pivots, _pivots)
     multi_timeframe_pivots = cast_and_validate(multi_timeframe_pivots, MultiTimeframePivot,
                                                zero_size_allowed=after_under_process_date(date_range_str))
     return multi_timeframe_pivots

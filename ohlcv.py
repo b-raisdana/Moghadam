@@ -9,7 +9,7 @@ from Config import config, GLOBAL_CACHE
 from MetaTrader import MT
 from Model.OHLCV import MultiTimeframeOHLCV, OHLCV
 from data_preparation import read_file, single_timeframe, cast_and_validate, trim_to_date_range, to_timeframe, \
-    after_under_process_date, multi_timeframe_times_tester, times_tester, empty_df
+    after_under_process_date, multi_timeframe_times_tester, times_tester, empty_df, concat
 from fetch_ohlcv import fetch_ohlcv_by_range
 from helper import measure_time, date_range, date_range_to_string
 
@@ -64,7 +64,7 @@ def core_generate_multi_timeframe_ohlcv(date_range_str: str, file_path: str = co
             _timeframe_ohlcv.insert(0, 'timeframe', timeframe)
             _timeframe_ohlcv.set_index('timeframe', append=True, inplace=True)
             _timeframe_ohlcv = _timeframe_ohlcv.swaplevel()
-            multi_timeframe_ohlcv = pd.concat([multi_timeframe_ohlcv, _timeframe_ohlcv])
+            multi_timeframe_ohlcv = concat(multi_timeframe_ohlcv, _timeframe_ohlcv)
     multi_timeframe_ohlcv = trim_to_date_range(date_range_str, multi_timeframe_ohlcv)
     multi_timeframe_ohlcv.sort_index(inplace=True, level='date')
     assert multi_timeframe_times_tester(multi_timeframe_ohlcv, date_range_str)

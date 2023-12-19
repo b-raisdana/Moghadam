@@ -6,15 +6,14 @@ import pandas as pd
 import pandas_ta as ta  # noqa
 import pytz
 import talib as tal
-from pandas import Timestamp
 from pandera import typing as pt
 
-from Config import config, GLOBAL_CACHE
-from data_preparation import read_file, trim_to_date_range, single_timeframe, expand_date_range, \
-    multi_timeframe_times_tester, empty_df
-from Model.OHLCV import MultiTimeframeOHLCV, OHLCV
+from Config import config
+from Model.OHLCV import OHLCV
 from Model.OHLCVA import MultiTimeframeOHLCVA
-from helper import date_range, measure_time, log
+from data_preparation import read_file, trim_to_date_range, single_timeframe, expand_date_range, \
+    multi_timeframe_times_tester, empty_df, concat
+from helper import date_range, measure_time
 from ohlcv import read_multi_timeframe_ohlcv, cache_times
 
 
@@ -87,8 +86,7 @@ def generate_multi_timeframe_ohlcva(date_range_str: str = None, file_path: str =
               compression='zip')
 
 
-def read_multi_timeframe_ohlcva(date_range_str: str = None) \
-        -> MultiTimeframeOHLCVA:
+def read_multi_timeframe_ohlcva(date_range_str: str = None) -> pt.DataFrame[MultiTimeframeOHLCVA]:
     if date_range_str is None:
         date_range_str = config.processing_date_range
     result = read_file(date_range_str, 'multi_timeframe_ohlcva', generate_multi_timeframe_ohlcva,
@@ -120,7 +118,7 @@ def core_generate_multi_timeframe_ohlcva(date_range_str: str = None, file_path: 
         timeframe_ohlcva['timeframe'] = timeframe
         timeframe_ohlcva.set_index('timeframe', append=True, inplace=True)
         timeframe_ohlcva = timeframe_ohlcva.swaplevel()
-        multi_timeframe_ohlcva = pd.concat([timeframe_ohlcva, multi_timeframe_ohlcva])
+        multi_timeframe_ohlcva = concat(multi_timeframe_ohlcva, timeframe_ohlcva)
     multi_timeframe_ohlcva.sort_index(level='date', inplace=True)
 
     multi_timeframe_ohlcva = trim_to_date_range(date_range_str, multi_timeframe_ohlcva)

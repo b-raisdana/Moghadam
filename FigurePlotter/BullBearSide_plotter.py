@@ -1,4 +1,3 @@
-from datetime import timedelta
 from typing import List
 
 import pandas as pd
@@ -8,7 +7,7 @@ import PeakValley
 from Config import TREND, config
 from FigurePlotter.PeakValley_plotter import plot_peaks_n_valleys
 from FigurePlotter.plotter import file_id, save_figure, plot_multiple_figures
-from Model.BullBearSide import BullBearSide
+from Model.BullBearSide import BullBearSide, bull_bear_side_repr
 from Model.OHLCV import OHLCV
 from PeakValley import peaks_only, valleys_only, major_peaks_n_valleys
 from data_preparation import single_timeframe
@@ -36,16 +35,7 @@ def plot_single_timeframe_bull_bear_side_trends(single_timeframe_ohlcva: pt.Data
              [single_timeframe_ohlcva.loc[_trend['end'], 'close']] + trend_valleys.values.tolist()[::-1]
         fill_color = 'green' if _trend['bull_bear_side'] == TREND.BULLISH.value else \
             'red' if _trend['bull_bear_side'] == TREND.BEARISH.value else 'gray'
-        text = f'{_trend["bull_bear_side"].replace("_TREND", "")}: ' \
-               f'{_start.strftime("%H:%M")}-{_trend["end"].strftime("%H:%M")}:'
-        if 'movement' in boundaries.columns.tolist():
-            text += f'\nM:{_trend["movement"]:.2f}'
-        if 'duration' in boundaries.columns.tolist():
-            text += f'D:{_trend["duration"] / timedelta(hours=1):.2f}h'
-        if 'strength' in boundaries.columns.tolist():
-            text += f'S:{_trend["strength"]:.2f}'
-        if 'ATR' in boundaries.columns.tolist():
-            text += f'ATR:{_trend["ATR"]:.2f}'
+        text = bull_bear_side_repr(_start, _trend, boundaries)
         if remained_number_of_scatters > 0:
             fig.add_scatter(x=xs, y=ys, fill="toself",  # fillcolor=fill_color,
                             fillpattern=dict(fgopacity=0.5, shape='.'),

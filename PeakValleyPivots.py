@@ -65,7 +65,7 @@ def tops_pivots(date_range_str) -> pt.DataFrame[MultiTimeframePivot]:
             _pivots['timeframe'] = timeframe
             _pivots.set_index('timeframe', append=True, inplace=True)
             _pivots = _pivots.swaplevel()
-            multi_timeframe_pivots = pd.concat([multi_timeframe_pivots, _pivots])
+            multi_timeframe_pivots = pd.concat(multi_timeframe_pivots, _pivots)
     multi_timeframe_pivots.sort_index(level='date', inplace=True)
     multi_timeframe_pivots = cast_and_validate(multi_timeframe_pivots, MultiTimeframePivot,
                                                zero_size_allowed=after_under_process_date(date_range_str))

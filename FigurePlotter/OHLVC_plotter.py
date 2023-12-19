@@ -137,7 +137,7 @@ def plot_ohlcva(ohlcva: pd.DataFrame, save: bool = True, show: bool = True, name
         yaxis2=dict(
             fixedrange=False  # Allows zooming on the y-axis for the second subplot
         ),
-        height=800, width=1200, title_text=f"OHLCV and ATR Chart for {name}")
+        height=800, width=1200, title_text=name)
     master_fig.update_yaxes(title_text="Price", row=1, col=1)
     master_fig.update_yaxes(title_text="ATR", row=2, col=1)
 
