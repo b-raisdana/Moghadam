@@ -5,7 +5,7 @@ from pandera import typing as pt
 
 from Config import config
 from data_preparation import single_timeframe, anti_trigger_timeframe, cast_and_validate, \
-    read_file, after_under_process_date, empty_df
+    read_file, after_under_process_date, empty_df, concat
 from MetaTrader import MT
 from Model.Pivot import MultiTimeframePivot
 from PeakValley import read_multi_timeframe_peaks_n_valleys
@@ -40,9 +40,7 @@ def tops_pivots(date_range_str) -> pt.DataFrame[MultiTimeframePivot]:
         '''
         _pivots = _pivots.loc[ohlcv_start + pd.to_timedelta(anti_trigger_timeframe(timeframe)):]
         anti_trigger_timeframe_ohlcva = single_timeframe(_multi_timeframe_ohlcva, anti_trigger_timeframe(timeframe))
-        '''
-        we use the 1H chart for 1D tops because they are creating 1H classic levels.
-        '''
+        # we use the 1H chart for 1D tops because they are creating 1H classic levels.
         timeframe_ohlcva = single_timeframe(_multi_timeframe_ohlcva, timeframe)
         trigger_timeframe_ohlcva = single_timeframe(_multi_timeframe_ohlcva, timeframe)  # trigger_timeframe(timeframe))
         _pivots = pivots_level_n_margins(pivot_peaks_or_valleys=_pivots, timeframe_pivots=_pivots,
@@ -58,14 +56,11 @@ def tops_pivots(date_range_str) -> pt.DataFrame[MultiTimeframePivot]:
         _pivots['is_overlap_of'] = None
         _pivots['deactivated_at'] = None
         _pivots['archived_at'] = None
-
         if len(_pivots) > 0:
-            # _pivots = cast_and_validate(_pivots, Pivot)
-            # _pivots['timeframe'] = anti_pattern_timeframe(timeframe)
             _pivots['timeframe'] = timeframe
             _pivots.set_index('timeframe', append=True, inplace=True)
             _pivots = _pivots.swaplevel()
-            multi_timeframe_pivots = pd.concat(multi_timeframe_pivots, _pivots)
+            multi_timeframe_pivots = concat(multi_timeframe_pivots, _pivots)
     multi_timeframe_pivots.sort_index(level='date', inplace=True)
     multi_timeframe_pivots = cast_and_validate(multi_timeframe_pivots, MultiTimeframePivot,
                                                zero_size_allowed=after_under_process_date(date_range_str))

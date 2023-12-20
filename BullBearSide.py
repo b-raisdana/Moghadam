@@ -6,12 +6,12 @@ import pandas as pd
 import pandera.typing as pt
 from pandas import Timestamp
 
-import PeakValley
 from Config import TopTYPE, config, TREND
 from Model.BullBearSide import MultiTimeframeBullBearSide, BullBearSide
 from Model.CandleTrend import MultiTimeframeCandleTrend
 from Model.OHLCV import OHLCV
 from Model.OHLCVA import OHLCVA
+from Model.PeakValley import PeakValley, MultiTimeframePeakValley
 from PeakValley import peaks_only, valleys_only, read_multi_timeframe_peaks_n_valleys, major_peaks_n_valleys, \
     insert_previous_n_next_top
 from atr import read_multi_timeframe_ohlcva
@@ -107,46 +107,92 @@ def single_timeframe_candles_trend(ohlcv: pt.DataFrame[OHLCV],
 #                         last_peak_before_boundary['high']
 #     return single_timeframe_boundaries
 
-def add_toward_top_to_trend(timeframe_boundaries, timeframe_peaks, timeframe_valleys, timeframe, trend):
-    # todo: test 'add_toward_top_to_trend'
-    raise Exception("Not tested")
-    if trend == TREND.BULLISH.value:
+def expand_trend_by_near_tops(timeframe_boundaries: pt.DataFrame[BullBearSide],
+                              timeframe_peaks: pt.DataFrame[MultiTimeframePeakValley],
+                              timeframe_valleys: pt.DataFrame[MultiTimeframePeakValley], trend: TREND):
+    timeframe_boundaries['movement_end_time'] = timeframe_boundaries['end']
+    timeframe_boundaries['movement_start_time'] = timeframe_boundaries.index
+    timeframe_boundaries['movement_end_value'] = pd.Series(dtype=float)
+    timeframe_boundaries['movement_start_value'] = pd.Series(dtype=float)
+    if len(timeframe_boundaries) == 0:
+        return timeframe_boundaries
+    if trend == TREND.BULLISH:
         movement_end_column = 'high'
         movement_end_tops = timeframe_peaks
         movement_start_column = 'low'
         movement_start_tops = timeframe_valleys
-    elif trend == TREND.BEARISH.value:
+
+        timeframe_boundaries['movement_start_value'] = timeframe_boundaries['internal_low']
+        timeframe_boundaries['movement_end_value'] = timeframe_boundaries['internal_high']
+
+        def more_significant_end(x: float, y: float):
+            return x > y
+
+        def more_significant_start(x: float, y: float):
+            return x < y
+    elif trend == TREND.BEARISH:
         movement_end_column = 'low'
         movement_end_tops = timeframe_valleys
         movement_start_column = 'high'
         movement_start_tops = timeframe_peaks
+
+        timeframe_boundaries['movement_start_value'] = timeframe_boundaries['internal_high']
+        timeframe_boundaries['movement_end_value'] = timeframe_boundaries['internal_low']
+
+        def more_significant_end(x: float, y: float):
+            return x < y
+
+        def more_significant_start(x: float, y: float):
+            return x > y
     else:
-        raise Exception(f"Invalid boundary['bull_bear_side']={boundary['bull_bear_side']}")
-    boundary_next_top_indexes = (movement_end_tops.index.get_level_value(level='date')
-                                 .shift(1, freq=config.timeframes[0]).tolist())
+        raise Exception(f"Invalid boundary['bull_bear_side']={trend}")
+    boundary_next_top_indexes = movement_end_tops.index.shift(-1, freq=config.timeframes[0])
     shifted_next_tops = pd.DataFrame(index=boundary_next_top_indexes)
     shifted_next_tops['next_top_time'] = movement_end_tops.index.tolist()
-    shifted_next_tops['next_top_value'] = movement_end_tops[movement_end_column]
-    timeframe_boundaries = pd.merge_asof(timeframe_boundaries, shifted_next_tops, direction='backward',
-                                         left_index=True, right_index=True)
-    timeframe_boundaries['movement_end_time'] = timeframe_boundaries['next_top_time']
-    timeframe_boundaries['movement_end_value'] = timeframe_boundaries['next_top_value']
+    shifted_next_tops['next_top_value'] = movement_end_tops[movement_end_column].tolist()
 
-    boundary_previous_top_indexes = (movement_start_tops.index.get_level_value(level='date')
-                                     .shift(-1, freq=config.timeframes[0]).tolist())
+    boundary_previous_top_indexes = movement_start_tops.index.shift(1, freq=config.timeframes[0])
     shifted_previous_tops = pd.DataFrame(index=boundary_previous_top_indexes)
-    shifted_previous_tops['previous_top_time'] = movement_end_tops.index.tolist()
-    shifted_previous_tops['previous_top_value'] = movement_end_tops[movement_start_column]
-    timeframe_boundaries = pd.merge_asof(timeframe_boundaries, shifted_previous_tops, direction='backward',
-                                         left_index=True, right_index=True)
-    timeframe_boundaries['movement_start_time'] = timeframe_boundaries['previous_top_time']
-    timeframe_boundaries['movement_start_value'] = timeframe_boundaries['previous_top_value']
+    shifted_previous_tops['previous_top_time'] = movement_start_tops.index.tolist()
+    shifted_previous_tops['previous_top_value'] = movement_start_tops[movement_start_column].tolist()
+
+    previous_round_movement_end_time = []
+    previous_round_movement_start_time = []
+    # todo: test this loop
+    while (
+            (previous_round_movement_end_time != timeframe_boundaries['movement_end_time'])
+            or
+            (previous_round_movement_start_time != timeframe_boundaries['movement_start_time'])
+    ):
+        previous_round_movement_end_time = timeframe_boundaries['movement_end_time']
+        previous_round_movement_start_time = timeframe_boundaries['movement_start_time']
+
+        timeframe_boundaries = pd.merge_asof(timeframe_boundaries, shifted_next_tops, direction='forward',
+                                             left_on='movement_end_time', right_index=True)
+
+        end_expandable_indexes = timeframe_boundaries[more_significant_end(
+            timeframe_boundaries[f'next_top_value'], timeframe_boundaries[f'internal_{movement_end_column}'])].index
+        timeframe_boundaries.loc[end_expandable_indexes, 'movement_end_time'] = \
+            timeframe_boundaries.loc[end_expandable_indexes, 'next_top_time']
+        timeframe_boundaries.loc[end_expandable_indexes, 'movement_end_value'] = \
+            timeframe_boundaries.loc[end_expandable_indexes, 'next_top_value']
+
+        timeframe_boundaries = pd.merge_asof(timeframe_boundaries, shifted_previous_tops, direction='backward',
+                                             left_index=True, right_index=True)
+
+        start_expandable_indexes = timeframe_boundaries[more_significant_start(
+            timeframe_boundaries[f'previous_top_value'], timeframe_boundaries[f'internal_{movement_start_column}'])].index
+        timeframe_boundaries.loc[start_expandable_indexes, 'movement_start_time'] = \
+            timeframe_boundaries.loc[start_expandable_indexes, 'previous_top_time']
+        timeframe_boundaries.loc[start_expandable_indexes, 'movement_start_value'] = \
+            timeframe_boundaries.loc[start_expandable_indexes, 'previous_top_value']
+    return timeframe_boundaries
 
 
 @measure_time
-def add_toward_top_to_trends(_timeframe_bull_bear_side_trends: pt.DataFrame[BullBearSide],
-                             _timeframe_peaks_n_valleys: pd.DataFrame,
-                             timeframe: str) -> pd.DataFrame:
+def expand_trends_by_near_tops(_timeframe_bull_bear_side_trends: pt.DataFrame[BullBearSide],
+                               _timeframe_peaks_n_valleys: pd.DataFrame,
+                               timeframe: str) -> pd.DataFrame:
     """
     Expand boundaries towards the previous trend top.
 
@@ -175,7 +221,6 @@ def add_toward_top_to_trends(_timeframe_bull_bear_side_trends: pt.DataFrame[Bull
                                                      '15min')
         print(updated_boundaries)
     """
-    # todo: does not work correctly
     if 'movement_start_time' not in _timeframe_bull_bear_side_trends.columns:
         _timeframe_bull_bear_side_trends['movement_start_time'] = pd.Series(dtype='datetime64[ns, UTC]')
     if 'movement_end_time' not in _timeframe_bull_bear_side_trends.columns:
@@ -184,24 +229,28 @@ def add_toward_top_to_trends(_timeframe_bull_bear_side_trends: pt.DataFrame[Bull
         _timeframe_bull_bear_side_trends['movement_start_value'] = pd.Series(dtype=float)
     if 'movement_end_value' not in _timeframe_bull_bear_side_trends.columns:
         _timeframe_bull_bear_side_trends['movement_end_value'] = pd.Series(dtype=float)
-    if not _timeframe_bull_bear_side_trends.index.is_unique:
-        raise Exception('We expect the single_timeframe_boundaries index be unique but isn\'t. '
-                        'So we may have unexpected results after renaming DataFrame index to move boundary start.')
-    timeframe_peaks = peaks_only(_timeframe_peaks_n_valleys).sort_index(level='date')
-    timeframe_valleys = valleys_only(_timeframe_peaks_n_valleys).sort_index(level='date')
+    if len(_timeframe_bull_bear_side_trends) > 0:
+        if not _timeframe_bull_bear_side_trends.index.is_unique:
+            raise Exception('We expect the single_timeframe_boundaries index be unique but isn\'t. '
+                            'So we may have unexpected results after renaming DataFrame index to move boundary start.')
+        timeframe_peaks = peaks_only(_timeframe_peaks_n_valleys).sort_index(level='date')
+        timeframe_valleys = valleys_only(_timeframe_peaks_n_valleys).sort_index(level='date')
 
-    bullish_indexes = _timeframe_bull_bear_side_trends[
-        _timeframe_bull_bear_side_trends['bull_bear_side'] == TREND.BULLISH.value
-        ].index
-    bearish_indexes = _timeframe_bull_bear_side_trends[
-        _timeframe_bull_bear_side_trends['bull_bear_side'] == TREND.BEARISH.value
-        ].index
-    _timeframe_bull_bear_side_trends.loc[bullish_indexes] = \
-        add_toward_top_to_trend(_timeframe_bull_bear_side_trends.loc[bullish_indexes],
-                                timeframe_peaks, timeframe_valleys, timeframe, trend=TREND.BULLISH)
-    _timeframe_bull_bear_side_trends.loc[bearish_indexes] = \
-        add_toward_top_to_trend(_timeframe_bull_bear_side_trends.loc[bearish_indexes],
-                                timeframe_peaks, timeframe_valleys, timeframe, trend=TREND.BEARISH)
+        bullish_indexes = _timeframe_bull_bear_side_trends[
+            _timeframe_bull_bear_side_trends['bull_bear_side'] == TREND.BULLISH.value
+            ].index
+        bearish_indexes = _timeframe_bull_bear_side_trends[
+            _timeframe_bull_bear_side_trends['bull_bear_side'] == TREND.BEARISH.value
+            ].index
+        if len(bullish_indexes) > 0:
+            _timeframe_bull_bear_side_trends.loc[bullish_indexes] = \
+                expand_trend_by_near_tops(_timeframe_bull_bear_side_trends.loc[bullish_indexes],
+                                          timeframe_peaks, timeframe_valleys, trend=TREND.BULLISH)
+        if len(bearish_indexes) > 0:
+            _timeframe_bull_bear_side_trends.loc[bearish_indexes] = \
+                expand_trend_by_near_tops(_timeframe_bull_bear_side_trends.loc[bearish_indexes],
+                                          timeframe_peaks, timeframe_valleys, trend=TREND.BEARISH)
+    assert not _timeframe_bull_bear_side_trends.isna().all(axis=1).any()
     return _timeframe_bull_bear_side_trends
 
 
@@ -547,20 +596,7 @@ def multi_timeframe_bull_bear_side_trends(multi_timeframe_candle_trend: pd.DataF
         timeframe_trends['timeframe'] = timeframe
         timeframe_trends.set_index('timeframe', append=True, inplace=True)
         timeframe_trends = timeframe_trends.swaplevel().sort_index(level='date')
-        if len(timeframe_trends) > 0:
-            trends = concat(trends, timeframe_trends)
-    # trends = trends[
-    #     [column for column in config.multi_timeframe_bull_bear_side_trends_columns if column != 'timeframe']]
-    # trends = trends.astype({
-    #     'end': np.datetime64,
-    #     'bull_bear_side': "string",
-    #     'ATR': np.float64,
-    #     'internal_high': np.float64, 'internal_low': np.float64, 'high_time': np.datetime64, 'low_time': np.datetime64,
-    #     'movement_start_value': 'float', 'movement_end_value': 'float',
-    #     'movement_start_time': np.datetime64, 'movement_end_time': np.datetime64,
-    #     'movement': 'float'
-    # })
-    # MultiTimeframeBullBearSide.validate(trends)
+        trends = concat(trends, timeframe_trends)
     trends = cast_and_validate(trends, MultiTimeframeBullBearSide)
     return trends
 
@@ -568,31 +604,29 @@ def multi_timeframe_bull_bear_side_trends(multi_timeframe_candle_trend: pd.DataF
 @measure_time
 def add_trend_extremum(_boundaries, single_timeframe_peak_n_valley: pt.DataFrame[PeakValley],
                        ohlcv: pt.DataFrame[OHLCV]):
+    _boundaries['internal_high'] = pd.Series(dtype=float)
+    _boundaries['high_time'] = pd.Series(dtype='datetime64[ns, UTC]')
+    _boundaries['internal_low'] = pd.Series(dtype=float)
+    _boundaries['low_time'] = pd.Series(dtype='datetime64[ns, UTC]')
+    if len(_boundaries) == 0:
+        return _boundaries
     _boundaries = _boundaries.copy()
-    # if 'internal_high' not in _boundaries.columns:
-    #     _boundaries['internal_high'] = None
-    # if 'internal_low' not in _boundaries.columns:
-    #     _boundaries['internal_low'] = None
-    # if 'high_time' not in _boundaries.columns:
-    #     _boundaries['high_time'] = None
-    # if 'low_time' not in _boundaries.columns:
-    #     _boundaries['low_time'] = None
     single_timeframe_peak_n_valley.reset_index(level='timeframe', inplace=True)
     _boundaries = _boundaries[:-1]
     for start, _boundary in _boundaries.iterrows():
-        boundary_internal_tops = single_timeframe_peak_n_valley[
-            (start < single_timeframe_peak_n_valley.index.get_level_values('date'))
-            & (single_timeframe_peak_n_valley.index.get_level_values('date') < _boundary['end'])]
-        if len(boundary_internal_tops) > 0:
-            _boundaries.loc[start, 'internal_high'] = boundary_internal_tops['high'].max()
-            _boundaries.loc[start, 'high_time'] = pd.to_datetime(boundary_internal_tops['high'].idxmax())
-            _boundaries.loc[start, 'internal_low'] = boundary_internal_tops['low'].min()
-            _boundaries.loc[start, 'low_time'] = pd.to_datetime(boundary_internal_tops['low'].idxmin())
-        else:
-            _boundaries.loc[start, 'internal_high'] = ohlcv.loc[start:_boundary['end'], 'high'].max()
-            _boundaries.loc[start, 'high_time'] = ohlcv.loc[start:_boundary['end'], 'high'].idxmax()
-            _boundaries.loc[start, 'internal_low'] = ohlcv.loc[start:_boundary['end'], 'low'].min()
-            _boundaries.loc[start, 'low_time'] = ohlcv.loc[start:_boundary['end'], 'low'].idxmin()
+        # boundary_internal_tops = single_timeframe_peak_n_valley[
+        #     (start < single_timeframe_peak_n_valley.index.get_level_values('date'))
+        #     & (single_timeframe_peak_n_valley.index.get_level_values('date') < _boundary['end'])]
+        # if len(boundary_internal_tops) > 0:
+        #     _boundaries.loc[start, 'internal_high'] = boundary_internal_tops['high'].max()
+        #     _boundaries.loc[start, 'high_time'] = (boundary_internal_tops['high'].idxmax())
+        #     _boundaries.loc[start, 'internal_low'] = boundary_internal_tops['low'].min()
+        #     _boundaries.loc[start, 'low_time'] = (boundary_internal_tops['low'].idxmin())
+        # else:
+        _boundaries.loc[start, 'internal_high'] = ohlcv.loc[start:_boundary['end'], 'high'].max()
+        _boundaries.loc[start, 'high_time'] = (ohlcv.loc[start:_boundary['end'], 'high'].idxmax())
+        _boundaries.loc[start, 'internal_low'] = ohlcv.loc[start:_boundary['end'], 'low'].min()
+        _boundaries.loc[start, 'low_time'] = (ohlcv.loc[start:_boundary['end'], 'low'].idxmin())
     return _boundaries
 
 
@@ -647,14 +681,14 @@ def add_canal_lines(_boundaries, single_timeframe_peaks_n_valleys):
     return _boundaries
 
 
-def trend_ATRs(single_timeframe_boundaries: pt.DataFrame[BullBearSide], ohlcva: pt.DataFrame[OHLCVA]):
+def trend_ATRs(timeframe_boundaries: pt.DataFrame[BullBearSide], ohlcva: pt.DataFrame[OHLCVA]):
     _boundaries_ATRs = [boundary_ATRs(_boundary_index, _boundary['end'], ohlcva) for _boundary_index, _boundary in
-                        single_timeframe_boundaries.iterrows()]
+                        timeframe_boundaries.iterrows()]
 
     for _i, _ATRs in enumerate(_boundaries_ATRs):
         if len(_ATRs) == 0:
             raise Exception(f'Boundary with no ATRs! '
-                            f'({single_timeframe_boundaries.index[_i]}:{single_timeframe_boundaries.iloc[_i, "end"]})')
+                            f'({timeframe_boundaries.index[_i]}:{timeframe_boundaries.iloc[_i, "end"]})')
     # min = [min(_ATRs) for _ATRs in _boundaries_ATRs]
     # max = [max(_ATRs) for _ATRs in _boundaries_ATRs]
     # average = [sum(_ATRs) / len(_ATRs) for _ATRs in _boundaries_ATRs]
@@ -707,22 +741,16 @@ def trend_movement(_boundaries: pt.DataFrame[BullBearSide]) -> pt.Series[float]:
             # Assuming you have a DataFrame '_boundaries' with the required columns
             result = trend_movement(_boundaries)
         """
-    try:
+    if len(_boundaries) > 0:
         t = _boundaries[['internal_high', 'movement_start_value', 'movement_end_value']].max(axis='columns') \
             - _boundaries[['internal_low', 'movement_start_value', 'movement_end_value']].min(axis='columns')
-    except Exception as e:
-        raise
-    return t
+        return t
+    else:
+        return pd.Series(dtype=float)
 
 
 def trend_strength(_boundaries):
     return _boundaries['rate'] / _boundaries['ATR']
-
-
-def test_boundary_ATR(_boundaries: pt.DataFrame[BullBearSide]) -> bool:
-    if _boundaries['ATR'].isnull().any():
-        raise Exception(f'Nan ATR in: {_boundaries[_boundaries["ATR"].isna()]}')
-    return True
 
 
 def previous_trend(trends: pt.DataFrame[BullBearSide]) -> Tuple[List[Optional[int]], List[Optional[float]]]:
@@ -766,23 +794,23 @@ def single_timeframe_bull_bear_side_trends(single_timeframe_candle_trend: pd.Dat
     single_timeframe_candle_trend = single_timeframe_candle_trend.loc[ohlcva['ATR'].first_valid_index():]
     _trends = detect_trends(single_timeframe_candle_trend, timeframe)
     _trends = add_trend_extremum(_trends, single_timeframe_peaks_n_valleys, ohlcva)
-    _trends = add_toward_top_to_trend(_trends, single_timeframe_peaks_n_valleys, timeframe)
+    _trends = expand_trends_by_near_tops(_trends, single_timeframe_peaks_n_valleys, timeframe)
     _trends['movement'] = trend_movement(_trends)
     _trends['ATR'] = trend_ATRs(_trends, ohlcva=ohlcva)
-    test_boundary_ATR(_trends)
+    assert not _trends['ATR'].isnull().any()
     _trends['duration'] = trend_duration(_trends)
     _trends['rate'] = trend_rate(_trends, timeframe)
     _trends['strength'] = trend_strength(_trends)
-    _trends = cast_and_validate(_trends, BullBearSide)
+    _trends = cast_and_validate(_trends, BullBearSide, zero_size_allowed=True)
     return _trends
 
 
-def boundary_ATRs(_boundary_start: Timestamp, _boudary_end: Timestamp, ohlcva: pt.DataFrame[OHLCVA]) -> List[float]:
-    _boundary_ATRs = ohlcva.loc[_boundary_start:_boudary_end, 'ATR']
+def boundary_ATRs(start: Timestamp, end: Timestamp, ohlcva: pt.DataFrame[OHLCVA]) -> List[float]:
+    _boundary_ATRs = ohlcva.loc[start:end, 'ATR']
     if len(_boundary_ATRs[_boundary_ATRs.notnull()]) <= 0:
         raise Exception(f'Boundaries expected to be generated over candles with ATR but in '
-                        f'{_boundary_start}-{_boudary_end} there is not any valid ATR!')
-    return ohlcva.loc[_boundary_start:_boudary_end, 'ATR']  # .fillna(0)
+                        f'{start}-{end} there is not any valid ATR!')
+    return ohlcva.loc[start:end, 'ATR']  # .fillna(0)
 
 
 def detect_trends(single_timeframe_candle_trend, timeframe: str) -> pt.DataFrame[BullBearSide]:
@@ -790,16 +818,16 @@ def detect_trends(single_timeframe_candle_trend, timeframe: str) -> pt.DataFrame
     if len(single_timeframe_candle_trend) < 2:
         _boundaries = single_timeframe_candle_trend
         _boundaries['bull_bear_side'] = pd.NA
-        _boundaries['end'] = pd.NA
+        _boundaries['end'] = pd.Series(dtype='datetime64[ns, UTC]')
         return _boundaries[['bull_bear_side', 'end']]
     # single_timeframe_candle_trend.loc[single_timeframe_candle_trend.index[1]:, 'time_of_previous'] = \
     #     single_timeframe_candle_trend.index[:-1]
     single_timeframe_candle_trend['previous_trend'] = single_timeframe_candle_trend['bull_bear_side'].shift(1)
     _boundaries = single_timeframe_candle_trend[
         single_timeframe_candle_trend['previous_trend'] != single_timeframe_candle_trend['bull_bear_side']
-        ]
+        ].copy()
+    _boundaries['end'] = pd.Series(dtype='datetime64[ns, UTC]')
     time_of_last_candle = single_timeframe_candle_trend.index.get_level_values('date')[-1]
-    _boundaries = _boundaries.copy()
     if len(_boundaries) > 1:
         _boundaries.loc[:_boundaries.index[-2], 'end'] = \
             pd.to_datetime(to_timeframe(_boundaries.index.get_level_values('date')[1:], timeframe).tolist())
@@ -833,10 +861,7 @@ def generate_multi_timeframe_bull_bear_side_trends(date_range_str: str = None, f
     multi_timeframe_ohlcva = read_multi_timeframe_ohlcva(date_range_str)
 
     multi_timeframe_peaks_n_valleys = read_multi_timeframe_peaks_n_valleys(date_range_str)
-    # Generate multi-timeframe candle trend
-
     multi_timeframe_candle_trend = read_multi_timeframe_candle_trend(date_range_str)
-    # Generate multi-timeframe trend boundaries
     trends = multi_timeframe_bull_bear_side_trends(multi_timeframe_candle_trend,
                                                    multi_timeframe_peaks_n_valleys,
                                                    multi_timeframe_ohlcva,

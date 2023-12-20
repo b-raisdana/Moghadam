@@ -10,7 +10,7 @@ from atr import generate_multi_timeframe_ohlcva, read_multi_timeframe_ohlcva
 from helper import date_range_to_string
 
 if __name__ == "__main__":
-    config.processing_date_range = date_range_to_string(days=0.1)
+    config.processing_date_range = date_range_to_string(days=1)
     #
     #     file_path: str = config.path_of_data
     #     today_morning = today_morning()
@@ -45,10 +45,11 @@ if __name__ == "__main__":
     # generate_multi_timeframe_peaks_n_valleys(config.processing_date_range)  # config.processing_date_range)
     _peaks_and_valleys = read_multi_timeframe_peaks_n_valleys()
     # plot_multi_timeframe_peaks_n_valleys(_peaks_and_valleys, config.processing_date_range)
+    generate_multi_timeframe_candle_trend(config.processing_date_range)
     generate_multi_timeframe_bull_bear_side_trends()
     bull_bear_side = read_multi_timeframe_bull_bear_side_trends()
     # bull_bear_side = read_multi_timeframe_bull_bear_side_trends()
     plot_multi_timeframe_bull_bear_side_trends(ohlcva, _peaks_and_valleys, bull_bear_side)
-    pivots = read_pivots(config.processing_date_range)
+    # pivots = read_pivots(config.processing_date_range)
 
     exit()

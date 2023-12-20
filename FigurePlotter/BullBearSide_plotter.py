@@ -41,7 +41,7 @@ def plot_single_timeframe_bull_bear_side_trends(single_timeframe_ohlcva: pt.Data
                             fillpattern=dict(fgopacity=0.5, shape='.'),
                             name=f'{_trend["bull_bear_side"].replace("_TREND", "")}: '
                                  f'{_start.strftime("%H:%M")}-{_trend["end"].strftime("%H:%M")}',
-                            line=dict(color=fill_color),
+                            line=dict(color=fill_color, width=0),
                             mode='lines',  # +text',
                             legendgroup=f'{_trend["bull_bear_side"].replace("_TREND", "")}: '
                                         f'{_start.strftime("%H:%M")}-{_trend["end"].strftime("%H:%M")}',

@@ -6,14 +6,14 @@ from Config import config
 from data_preparation import single_timeframe, df_timedelta_to_str
 from FigurePlotter.OHLVC_plotter import plot_ohlcva
 from FigurePlotter.plotter import plot_multiple_figures, file_id, timeframe_color, save_figure
-from Model.eakValleys import MultiTimeframePeakValleys
+from Model.PeakValley import MultiTimeframePeakValley
 from PeakValley import peaks_only, valleys_only, major_peaks_n_valleys
 from atr import read_multi_timeframe_ohlcva
 from helper import measure_time
 
 
 @measure_time
-def plot_multi_timeframe_peaks_n_valleys(multi_timeframe_peaks_n_valleys: pt.DataFrame[MultiTimeframePeakValleys],
+def plot_multi_timeframe_peaks_n_valleys(multi_timeframe_peaks_n_valleys: pt.DataFrame[MultiTimeframePeakValley],
                                          date_range_str: str, show=True, save=True):
     multi_timeframe_ohlcva = read_multi_timeframe_ohlcva(date_range_str)
 

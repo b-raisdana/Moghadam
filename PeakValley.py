@@ -8,15 +8,15 @@ import pandera.typing as pt
 from Config import config, INFINITY_TIME_DELTA, TopTYPE
 from MetaTrader import MT
 from Model.OHLCV import OHLCV
-from Model.eakValleys import PeakValleys, MultiTimeframePeakValleys
+from Model.PeakValley import PeakValley, MultiTimeframePeakValley
 from data_preparation import read_file, cast_and_validate, trim_to_date_range, \
     expand_date_range, after_under_process_date, empty_df, shift_over, concat
 from helper import measure_time, date_range
 from ohlcv import read_base_timeframe_ohlcv
 
 
-def calculate_strength(peaks_or_valleys: pt.DataFrame[PeakValleys], top_type: TopTYPE,
-                       ohlcv: pt.DataFrame[OHLCV]) -> pt.DataFrame[PeakValleys]:
+def calculate_strength(peaks_or_valleys: pt.DataFrame[PeakValley], top_type: TopTYPE,
+                       ohlcv: pt.DataFrame[OHLCV]) -> pt.DataFrame[PeakValley]:
     # todo: test calculate_strength
     if len(peaks_or_valleys) == 0:
         return peaks_or_valleys
@@ -45,12 +45,12 @@ def calculate_strength(peaks_or_valleys: pt.DataFrame[PeakValleys], top_type: To
     return peaks_or_valleys
 
 
-def calculate_distance(ohlcv: pt.DataFrame[OHLCV], peaks_or_valleys: pt.DataFrame[PeakValleys], top_type: TopTYPE,
-                       direction: Literal['right', 'left']) -> pt.DataFrame[PeakValleys]:
+def calculate_distance(ohlcv: pt.DataFrame[OHLCV], peaks_or_valleys: pt.DataFrame[PeakValley], top_type: TopTYPE,
+                       direction: Literal['right', 'left']) -> pt.DataFrame[PeakValley]:
     compare_column, direction, les_significant, more_significant, reverse = direction_parameters(direction, top_type)
     ohlcv = ohlcv.copy()
     tops_to_compare = peaks_or_valleys.copy()
-    tops_with_known_crossing_bar = empty_df(PeakValleys)
+    tops_with_known_crossing_bar = empty_df(PeakValley)
     number_of_crossed_tops = 1
     while number_of_crossed_tops > 0:
         ohlcv.drop(columns=['right_top_time', 'right_top_value', 'left_top_time', 'left_top_value',
@@ -176,7 +176,7 @@ def top_operators(top_type, equal_is_significant: bool = False):
     return compare_column, les_significant, more_significant
 
 
-def map_strength_to_frequency(peaks_valleys: pd.DataFrame) -> pt.DataFrame[PeakValleys]:
+def map_strength_to_frequency(peaks_valleys: pd.DataFrame) -> pt.DataFrame[PeakValley]:
     # peaks_valleys.insert(len(peaks_valleys.columns), 'timeframe', None)
     peaks_valleys['timeframe'] = None
 
@@ -189,7 +189,7 @@ def map_strength_to_frequency(peaks_valleys: pd.DataFrame) -> pt.DataFrame[PeakV
     return peaks_valleys
 
 
-def peaks_only(peaks_n_valleys: pt.DataFrame[PeakValleys]) -> pd.DataFrame:
+def peaks_only(peaks_n_valleys: pt.DataFrame[PeakValley]) -> pd.DataFrame:
     """
         Filter peaks from the DataFrame containing peaks and valleys data.
 
@@ -220,7 +220,7 @@ def merge_tops(peaks: pd.DataFrame, valleys: pd.DataFrame) -> pd.DataFrame:
 
 
 def find_peaks_n_valleys(base_ohlcv: pd.DataFrame,
-                         sort_index: bool = True) -> pt.DataFrame[PeakValleys]:  # , max_cycles=100):
+                         sort_index: bool = True) -> pt.DataFrame[PeakValley]:  # , max_cycles=100):
     mask_of_sequence_of_same_value = (base_ohlcv['high'] == base_ohlcv['high'].shift(1))
     list_of_same_high_lows_sequence = base_ohlcv.loc[mask_of_sequence_of_same_value].index
 
@@ -238,14 +238,14 @@ def find_peaks_n_valleys(base_ohlcv: pd.DataFrame,
             none_repeating_ohlcv['low'] < none_repeating_ohlcv['low'].shift(-1))
     _valleys = none_repeating_ohlcv.loc[mask_of_valleys].copy()
     _valleys['peak_or_valley'] = TopTYPE.VALLEY.value
-    _peaks_n_valleys: pt.DataFrame[PeakValleys] = concat(_peaks, _valleys)
+    _peaks_n_valleys: pt.DataFrame[PeakValley] = concat(_peaks, _valleys)
     _peaks_n_valleys = _peaks_n_valleys.loc[:, ['open', 'high', 'low', 'close', 'volume', 'peak_or_valley']]
     return _peaks_n_valleys.sort_index(level='date') if sort_index else _peaks_n_valleys
 
 
 @measure_time
 def major_peaks_n_valleys(_multi_timeframe_peaks_n_valleys: pd.DataFrame, timeframe: str) \
-        -> pt.DataFrame[MultiTimeframePeakValleys]:
+        -> pt.DataFrame[MultiTimeframePeakValley]:
     """
     Filter rows from multi_timeframe_peaks_n_valleys with a timeframe equal to or greater than the specified timeframe.
 
@@ -272,7 +272,7 @@ def higher_or_eq_timeframe_peaks_n_valleys(peaks_n_valleys: pd.DataFrame, timefr
     return result
 
 
-def top_timeframe(tops: pt.DataFrame[PeakValleys]) -> pt.DataFrame[PeakValleys]:
+def top_timeframe(tops: pt.DataFrame[PeakValley]) -> pt.DataFrame[PeakValley]:
     """
     _peaks_n_valleys['timeframe'] = [strength_to_timeframe(row['strength']) for index, row in
                                      _peaks_n_valleys.iterrows()]
@@ -288,7 +288,7 @@ def top_timeframe(tops: pt.DataFrame[PeakValleys]) -> pt.DataFrame[PeakValleys]:
     return tops
 
 
-def multi_timeframe_peaks_n_valleys(expanded_date_range: str) -> pt.DataFrame[MultiTimeframePeakValleys]:
+def multi_timeframe_peaks_n_valleys(expanded_date_range: str) -> pt.DataFrame[MultiTimeframePeakValley]:
     base_ohlcv = read_base_timeframe_ohlcv(expanded_date_range)
 
     _peaks_n_valleys = find_peaks_n_valleys(base_ohlcv, sort_index=False)
@@ -302,7 +302,7 @@ def multi_timeframe_peaks_n_valleys(expanded_date_range: str) -> pt.DataFrame[Mu
     _peaks_n_valleys = _peaks_n_valleys.sort_index(level='date')
 
     _peaks_n_valleys = (
-        cast_and_validate(_peaks_n_valleys, MultiTimeframePeakValleys,
+        cast_and_validate(_peaks_n_valleys, MultiTimeframePeakValley,
                           zero_size_allowed=after_under_process_date(expanded_date_range)))
     return _peaks_n_valleys
 
@@ -330,8 +330,8 @@ def generate_multi_timeframe_peaks_n_valleys(date_range_str, file_path: str = co
 
 @measure_time
 def calculate_strength_of_peaks_n_valleys(time_ohlcv: pt.DataFrame[OHLCV],
-                                          time_peaks_n_valleys: pt.DataFrame[PeakValleys]) \
-        -> pt.DataFrame[PeakValleys]:
+                                          time_peaks_n_valleys: pt.DataFrame[PeakValley]) \
+        -> pt.DataFrame[PeakValley]:
     peaks = calculate_strength(peaks_only(time_peaks_n_valleys), TopTYPE.PEAK, time_ohlcv)
     valleys = calculate_strength(valleys_only(time_peaks_n_valleys), TopTYPE.VALLEY, time_ohlcv)
     peaks_and_valleys = concat(peaks, valleys).sort_index(level='date')
@@ -340,10 +340,10 @@ def calculate_strength_of_peaks_n_valleys(time_ohlcv: pt.DataFrame[OHLCV],
 
 
 def read_multi_timeframe_peaks_n_valleys(date_range_str: str = None) \
-        -> pt.DataFrame[MultiTimeframePeakValleys]:
+        -> pt.DataFrame[MultiTimeframePeakValley]:
     result = read_file(date_range_str, 'multi_timeframe_peaks_n_valleys',
                        generate_multi_timeframe_peaks_n_valleys,
-                       MultiTimeframePeakValleys)
+                       MultiTimeframePeakValley)
     return result
 
 
@@ -376,7 +376,7 @@ def old_insert_previous_n_next_top(top_type: TopTYPE, peaks_n_valleys, ohlcv):
     return ohlcv
 
 @measure_time
-def insert_previous_n_next_top(top_type, peaks_n_valleys: pt.DataFrame[PeakValleys], ohlcv: pt.DataFrame[OHLCV]) \
+def insert_previous_n_next_top(top_type, peaks_n_valleys: pt.DataFrame[PeakValley], ohlcv: pt.DataFrame[OHLCV]) \
         -> pt.DataFrame[OHLCV]:
     # Define columns
     prev_index_col = f'previous_{top_type.value}_index'

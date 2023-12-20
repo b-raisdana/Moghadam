@@ -120,7 +120,6 @@ def core_generate_multi_timeframe_ohlcva(date_range_str: str = None, file_path: 
         timeframe_ohlcva = timeframe_ohlcva.swaplevel()
         multi_timeframe_ohlcva = concat(multi_timeframe_ohlcva, timeframe_ohlcva)
     multi_timeframe_ohlcva.sort_index(level='date', inplace=True)
-
     multi_timeframe_ohlcva = trim_to_date_range(date_range_str, multi_timeframe_ohlcva)
     assert multi_timeframe_times_tester(multi_timeframe_ohlcva, date_range_str)
     # plot_multi_timeframe_ohlcva(multi_timeframe_ohlcva)

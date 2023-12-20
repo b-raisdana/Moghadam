@@ -409,6 +409,8 @@ def times_tester(df: pd.DataFrame, date_range_str: str, timeframe: str, return_b
                  ) -> Union[bool, None]:
     expected_times = set(times_in_date_range(date_range_str, timeframe, limit_to_under_process_period,
                                              processing_date_range))
+    if len(expected_times) == 0:
+        return True
     if len(df.index) > 0:
         actual_times = set(df.index)
     else:
@@ -637,24 +639,25 @@ def after_under_process_date(date_range_str):
 def times_in_date_range(date_range_str: str, timeframe: str,
                         ignore_out_of_process_period: bool = True,
                         processing_date_range: str = None) -> DatetimeIndex:
-    start_date, end_date = date_range(date_range_str)
+    start, end = date_range(date_range_str)
     if ignore_out_of_process_period:
         if processing_date_range is None:
             processing_date_range = config.processing_date_range
-        _, end_of_under_process_scope = date_range(processing_date_range)
-        effective_end_date = min(end_date, end_of_under_process_scope)
-    else:
-        raise Exception('effective_end_date is not assigned but used later.')
-    in_timeframe_start_date = to_timeframe(start_date, timeframe, ignore_cached_times=True)
-    if in_timeframe_start_date < start_date:
-        in_timeframe_start_date += pd.to_timedelta(timeframe)
-    if timeframe == '1W':
-        frequency = 'W-MON'
-    elif timeframe == 'M':
-        frequency = 'MS'
-    else:
-        frequency = timeframe
-    return pd.date_range(start=in_timeframe_start_date, end=effective_end_date, freq=frequency)
+        under_process_scope_start, under_process_scope_end = date_range(processing_date_range)
+        end = min(end, under_process_scope_end)
+        start = max(start, under_process_scope_start)
+    in_timeframe_start_date = to_timeframe(start, timeframe, ignore_cached_times=True)
+    if start < end:
+        if in_timeframe_start_date < start:
+            in_timeframe_start_date += pd.to_timedelta(timeframe)
+        if timeframe == '1W':
+            frequency = 'W-MON'
+        elif timeframe == 'M':
+            frequency = 'MS'
+        else:
+            frequency = timeframe
+        return pd.date_range(start=in_timeframe_start_date, end=end, freq=frequency)
+    return pd.DatetimeIndex([], tz=pytz.utc)
 
 
 def index_fields(model_class: Type[Pandera_DFM_Type]) -> dict[str, str]:
@@ -762,11 +765,15 @@ def shift_over(needles: Axes, reference: Axes, side: str, start=None, end=None) 
 
 
 def concat(left: pd.DataFrame, right: pd.DataFrame):
-    if len(left) > 0:
-        if len(right) > 0:
-            left = pd.concat([left, right])
+    if not left.empty and not left.isna().all().all():
+        if not right.empty and not right.isna().all().all():
+            # if left.isna().all(axis=0).any():
+            #     pass
+            # if right.isna().all(axis=0).any():
+            #     pass
+            left = pd.concat([left.dropna(axis=1, how='all'), right.dropna(axis=1, how='all')])
     else:
-        if len(right) > 0:
+        if not right.empty and not right.isna().all().all():
             left = right
         else:
             left = pd.DataFrame()
