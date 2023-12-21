@@ -7,7 +7,7 @@ import pandas as pd
 from plotly import graph_objects as plgo
 
 from Config import config
-from data_preparation import range_of_data
+from data_preparation import date_range_of_data
 from helper import measure_time
 
 DEBUG = False
@@ -90,9 +90,9 @@ def file_id(data: pd.DataFrame, name: str = '') -> str:
             print(identifier)  # Output: 'my_data.yy-mm-dd.HH-MMTyy-mm-dd.HH-MM'
         """
     if name is None or name == '':
-        return f'{range_of_data(data)}'
+        return f'{date_range_of_data(data)}'
     else:
-        return f'{name}.{range_of_data(data)}'
+        return f'{name}.{date_range_of_data(data)}'
 
 
 def timeframe_color(timeframe: str) -> str:

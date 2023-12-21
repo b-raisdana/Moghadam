@@ -16,10 +16,28 @@ class LogSeverity(Enum):
     INFO = "INFO"
     WARNING = "WARNING"
     ERROR = "ERROR"
+    DEBUG = "DEBUG"
 
 
 Pandera_DFM_Type = TypeVar('Pandera_DFM_Type', bound=pandera.DataFrameModel)
 
+class bcolors(Enum):
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+__severity_color_map = {
+    LogSeverity.INFO: bcolors.OKGREEN,
+    LogSeverity.WARNING: bcolors.WARNING,
+    LogSeverity.ERROR: bcolors.FAIL,
+    LogSeverity.DEBUG: bcolors.OKGREEN,
+}
 
 def log(log_message: str, severity: LogSeverity = LogSeverity.INFO, stack_trace: bool = True) -> None:
     """
@@ -33,7 +51,10 @@ def log(log_message: str, severity: LogSeverity = LogSeverity.INFO, stack_trace:
     Returns:
         None
     """
-    print(f'{severity.value}@{datetime.now().strftime("%m-%d.%H:%M:%S")}#{log_message}')
+    severity_color = __severity_color_map[severity].value
+    time_color = bcolors.OKBLUE.value
+    print(f'{severity_color}{severity.value}@{time_color}{datetime.now().strftime("%m-%d.%H:%M:%S")}:'
+          f'{severity_color}{log_message}')
     if stack_trace:
         stack = traceback.extract_stack(limit=2 + 1)[:-1]  # Remove the last item
         traceback.print_list(stack)

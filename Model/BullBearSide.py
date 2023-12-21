@@ -42,3 +42,4 @@ def bull_bear_side_repr(_start: datetime, _trend, boundaries):
     if hasattr(_trend, "ATR"):
         text += f'ATR:{_trend["ATR"]:.2f}'
     return text
+

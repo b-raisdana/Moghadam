@@ -4,7 +4,8 @@ import pandas as pd
 from plotly import graph_objects as plgo
 
 import PeakValley
-from Config import TREND, config
+from BullBearSide import most_two_significant_tops
+from Config import TREND, config, TopTYPE
 from FigurePlotter.PeakValley_plotter import plot_peaks_n_valleys
 from FigurePlotter.plotter import file_id, save_figure, plot_multiple_figures
 from Model.BullBearSide import BullBearSide, bull_bear_side_repr
@@ -100,3 +101,27 @@ def plot_multi_timeframe_bull_bear_side_trends(multi_timeframe_ohlcva, multi_tim
 def peaks_valleys_in_range(peaks_n_valleys: pd.DataFrame, start: pd.Timestamp, end: pd.Timestamp):
     return peaks_n_valleys.loc[(peaks_n_valleys.index.get_level_values('date') >= start) &
                                (peaks_n_valleys.index.get_level_values('date') <= end)]
+
+
+def add_canal_lines(_boundaries, single_timeframe_peaks_n_valleys):
+    # todo: test add_canal_lines
+    if _boundaries is None:
+        return _boundaries
+    for i, _boundary in _boundaries.iterrows():
+        if _boundary['bull_bear_side'] == TREND.SIDE.value:
+            continue
+        _peaks = most_two_significant_tops(i, _boundary['end'], single_timeframe_peaks_n_valleys, TopTYPE.PEAK)
+        _valleys = most_two_significant_tops(i, _boundary['end'], single_timeframe_peaks_n_valleys, TopTYPE.VALLEY)
+        if _boundary['bull_bear_side'] == TREND.BULLISH.value:
+            canal_top = _peaks.iloc[0]['high']
+            trend_tops = _valleys['low'].to_numpy()
+        else:
+            canal_top = _valleys.iloc[0]['low']
+            trend_tops = _peaks['high'].to_numpy()
+        trend_acceleration = (trend_tops[1][1] - trend_tops[0][1]) / (trend_tops[1][0] - trend_tops[0][0])
+        trend_base = trend_tops[0][1] - trend_tops[0][0] * trend_acceleration
+        canal_acceleration = trend_acceleration
+        canal_base = canal_top[0][1] - canal_top[0][0] * canal_acceleration
+        _boundaries.iloc[i, ['trend_acceleration', 'trend_base', 'canal_acceleration', 'canal_base']] = \
+            [trend_acceleration, trend_base, canal_acceleration, canal_base]
+    return _boundaries

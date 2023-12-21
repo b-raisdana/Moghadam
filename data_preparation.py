@@ -17,7 +17,7 @@ from Model.MultiTimeframe import MultiTimeframe_Type, MultiTimeframe
 from helper import log, date_range, date_range_to_string, morning, Pandera_DFM_Type, LogSeverity
 
 
-def range_of_data(data: pd.DataFrame) -> str:
+def date_range_of_data(data: pd.DataFrame) -> str:
     """
     Generate a formatted date range string based on the first and last timestamps in the DataFrame's index.
 
@@ -458,7 +458,7 @@ def expected_movement_size(_list: List):
     return _list  # * CandleSize.Standard.value[0]
 
 
-def shift_time(timeframe, shifter):
+def shift_timeframe(timeframe, shifter):
     index = config.timeframes.index(timeframe)
     if type(shifter) == int:
         return config.timeframes[index + shifter]
@@ -543,25 +543,25 @@ def apply_as_type(data, model_class) -> pd.DataFrame:
 def trigger_timeframe(timeframe):
     if config.timeframes.index(timeframe) < -config.timeframe_shifter['trigger']:
         raise Exception(f'{timeframe} has not a trigger time!')
-    return shift_time(timeframe, config.timeframe_shifter['trigger'])
+    return shift_timeframe(timeframe, config.timeframe_shifter['trigger'])
 
 
 def pattern_timeframe(timeframe):
     if config.timeframes.index(timeframe) < -config.timeframe_shifter['pattern']:
         raise Exception(f'{timeframe} has not a pattern time!')
-    return shift_time(timeframe, config.timeframe_shifter['pattern'])
+    return shift_timeframe(timeframe, config.timeframe_shifter['pattern'])
 
 
 def anti_pattern_timeframe(timeframe):
     if config.timeframes.index(timeframe) > len(config.timeframes) + config.timeframe_shifter['pattern'] - 1:
         raise Exception(f'{timeframe} has not an anit pattern time!')
-    return shift_time(timeframe, -config.timeframe_shifter['pattern'])
+    return shift_timeframe(timeframe, -config.timeframe_shifter['pattern'])
 
 
 def anti_trigger_timeframe(timeframe):
     if config.timeframes.index(timeframe) > len(config.timeframes) + config.timeframe_shifter['trigger'] - 1:
         raise Exception(f'{timeframe} has not an anit trigger time!')
-    return shift_time(timeframe, -config.timeframe_shifter['trigger'])
+    return shift_timeframe(timeframe, -config.timeframe_shifter['trigger'])
 
 
 def map_symbol(symbol: str, map_dictionary: dict) -> str:
@@ -737,6 +737,7 @@ def shift_over(needles: Axes, reference: Axes, side: str, start=None, end=None) 
                         1 2 3  6  9 15 20   \n
                         2 3 5 10 10 20 NA
     """
+    # Todo: replace with pd.merge_as
     side = side.lower()
     if side == 'forward':
         forward = reference

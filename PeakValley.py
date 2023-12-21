@@ -34,7 +34,7 @@ def calculate_strength(peaks_or_valleys: pt.DataFrame[PeakValley], top_type: Top
     assert not peaks_or_valleys.index.duplicated(False).any()
     # peaks_or_valleys['strength'] = fix_same_value_peaks_or_valleys(peaks_or_valleys, top_type)
     tops_with_unknown_strength = peaks_or_valleys[peaks_or_valleys['strength'].isna()]
-    assert len(tops_with_unknown_strength) == 1
+    assert len(tops_with_unknown_strength) <= 1
     tops_with_strength = peaks_or_valleys[peaks_or_valleys['strength'].notna()]
     assert not tops_with_strength.index.duplicated(False).any()
 
@@ -59,7 +59,7 @@ def calculate_distance(ohlcv: pt.DataFrame[OHLCV], peaks_or_valleys: pt.DataFram
                             'left_crossing_time', 'left_crossing_value',
                             'valid_crossing'],
                    inplace=True, errors='ignore')
-        tops_to_compare.drop(columns=[direction + '_distance'], inplace=True, errors='ignore')
+        tops_to_compare.drop(columns=[direction + '_distance'], inplace=True)
 
         top_indexes = tops_to_compare.index
         if direction == 'right':
