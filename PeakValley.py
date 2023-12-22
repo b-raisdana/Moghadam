@@ -59,7 +59,7 @@ def calculate_distance(ohlcv: pt.DataFrame[OHLCV], peaks_or_valleys: pt.DataFram
                             'left_crossing_time', 'left_crossing_value',
                             'valid_crossing'],
                    inplace=True, errors='ignore')
-        tops_to_compare.drop(columns=[direction + '_distance'], inplace=True)
+        tops_to_compare.drop(columns=[direction + '_distance'], inplace=True, errors='ignore')
 
         top_indexes = tops_to_compare.index
         if direction == 'right':
@@ -189,7 +189,7 @@ def map_strength_to_frequency(peaks_valleys: pd.DataFrame) -> pt.DataFrame[PeakV
     return peaks_valleys
 
 
-def peaks_only(peaks_n_valleys: pt.DataFrame[PeakValley]) -> pd.DataFrame:
+def peaks_only(peaks_n_valleys: pt.DataFrame[PeakValley]) -> pt.DataFrame[PeakValley]:
     """
         Filter peaks from the DataFrame containing peaks and valleys data.
 
@@ -202,7 +202,7 @@ def peaks_only(peaks_n_valleys: pt.DataFrame[PeakValley]) -> pd.DataFrame:
     return peaks_n_valleys[peaks_n_valleys['peak_or_valley'] == TopTYPE.PEAK.value]
 
 
-def valleys_only(peaks_n_valleys: pd.DataFrame) -> pd.DataFrame:
+def valleys_only(peaks_n_valleys: pd.DataFrame) -> pt.DataFrame[PeakValley]:
     """
         Filter valleys from the DataFrame containing peaks and valleys data.
 

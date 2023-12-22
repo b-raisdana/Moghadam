@@ -5,6 +5,7 @@ from BullBearSide import generate_multi_timeframe_bull_bear_side_trends, read_mu
 from ClassicPivot import read_pivots
 from Config import config
 from FigurePlotter.BullBearSide_plotter import plot_multi_timeframe_bull_bear_side_trends
+from FigurePlotter.PeakValley_plotter import plot_multi_timeframe_peaks_n_valleys
 from PeakValley import read_multi_timeframe_peaks_n_valleys
 from atr import generate_multi_timeframe_ohlcva, read_multi_timeframe_ohlcva
 from helper import date_range_to_string

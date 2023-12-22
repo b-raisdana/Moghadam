@@ -737,7 +737,7 @@ def shift_over(needles: Axes, reference: Axes, side: str, start=None, end=None) 
                         1 2 3  6  9 15 20   \n
                         2 3 5 10 10 20 NA
     """
-    # Todo: replace with pd.merge_as
+    # Todo: replace with pd.merge_asof
     side = side.lower()
     if side == 'forward':
         forward = reference
