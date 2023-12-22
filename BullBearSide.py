@@ -32,7 +32,12 @@ def insert_previous_n_next_tops(single_timeframe_peaks_n_valleys: pt.DataFrame[P
 def single_timeframe_candles_trend(ohlcv: pt.DataFrame[OHLCV],
                                    single_timeframe_peaks_n_valley: pt.DataFrame[PeakValley]) -> pd.DataFrame:
     candle_trend = insert_previous_n_next_tops(single_timeframe_peaks_n_valley, ohlcv)
-    candle_trend['bull_bear_side'] = TREND.SIDE.value
+    candle_trend.loc[
+        candle_trend['next_peak_value'].notna() &
+        candle_trend['previous_peak_value'].notna() &
+        candle_trend['next_valley_value'].notna() &
+        candle_trend['previous_valley_value'].notna() &
+        'bull_bear_side'] = TREND.SIDE.value
     bullish_candles = candle_trend[
         ((candle_trend['next_peak_value'] > candle_trend['previous_peak_value'])
          & (candle_trend['next_valley_value'] > candle_trend['previous_valley_value']))
@@ -49,6 +54,8 @@ def single_timeframe_candles_trend(ohlcv: pt.DataFrame[OHLCV],
         candle_trend.loc[
             bearish_candles,  # todo: the lower valley should be after lower peak
             'bull_bear_side'] = TREND.BEARISH.value
+    candle_trend['bull_bear_side'].ffill(inplace=True)
+    candle_trend['bull_bear_side'].bfill(inplace=True)
     return candle_trend
 
 
