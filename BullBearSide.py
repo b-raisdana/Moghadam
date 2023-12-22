@@ -912,6 +912,7 @@ def boundary_atr(start: Timestamp, end: Timestamp, ohlcva: pt.DataFrame[OHLCVA])
 def detect_trends(single_timeframe_candle_trend, timeframe: str) -> pt.DataFrame[BullBearSide]:
     # todo: revise to handle candles with NA bull_bear_side trend!
     raise Exception('We left here!')
+
     single_timeframe_candle_trend = single_timeframe_candle_trend.copy()
     if len(single_timeframe_candle_trend) < 2:
         _boundaries = single_timeframe_candle_trend
