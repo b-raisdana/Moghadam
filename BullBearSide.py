@@ -32,11 +32,17 @@ def insert_previous_n_next_tops(single_timeframe_peaks_n_valleys: pt.DataFrame[P
 def single_timeframe_candles_trend(ohlcv: pt.DataFrame[OHLCV],
                                    single_timeframe_peaks_n_valley: pt.DataFrame[PeakValley]) -> pd.DataFrame:
     candle_trend = insert_previous_n_next_tops(single_timeframe_peaks_n_valley, ohlcv)
-    candle_trend.loc[
+    candle_trend['bull_bear_side'] = pd.NA
+    candles_with_known_trend = candle_trend.loc[
         candle_trend['next_peak_value'].notna() &
         candle_trend['previous_peak_value'].notna() &
         candle_trend['next_valley_value'].notna() &
-        candle_trend['previous_valley_value'].notna() &
+        candle_trend['previous_valley_value'].notna()].index
+    if len(candles_with_known_trend) == 0:
+        log('Not found any candle with possibly known trend!', severity=LogSeverity.WARNING, stack_trace=False)
+        return candle_trend
+    candle_trend.loc[
+        candles_with_known_trend,
         'bull_bear_side'] = TREND.SIDE.value
     bullish_candles = candle_trend[
         ((candle_trend['next_peak_value'] > candle_trend['previous_peak_value'])
@@ -281,7 +287,7 @@ def add_trend_range(bull_or_bear_trends: pt.DataFrame[BullBearSide],
         raise
     if trend == TREND.BULLISH:
         if not ((bull_or_bear_trends.loc[valid_trends, 'movement_start_value'] <
-                bull_or_bear_trends.loc[valid_trends, 'movement_end_value']).all()):
+                 bull_or_bear_trends.loc[valid_trends, 'movement_end_value']).all()):
             raise
     else:
         if not (bull_or_bear_trends.loc[valid_trends, 'movement_start_value'] >
@@ -904,6 +910,8 @@ def boundary_atr(start: Timestamp, end: Timestamp, ohlcva: pt.DataFrame[OHLCVA])
 
 
 def detect_trends(single_timeframe_candle_trend, timeframe: str) -> pt.DataFrame[BullBearSide]:
+    # todo: revise to handle candles with NA bull_bear_side trend!
+    raise Exception('We left here!')
     single_timeframe_candle_trend = single_timeframe_candle_trend.copy()
     if len(single_timeframe_candle_trend) < 2:
         _boundaries = single_timeframe_candle_trend
