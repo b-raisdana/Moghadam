@@ -383,7 +383,7 @@ def check_time_in_cache(time, timeframe):
         raise Exception(f'{cache_key} not initialized in GLOBAL_CACHE')
     if isinstance(time, DatetimeIndex) or isinstance(time, pd.Series):
         if not time.isin(GLOBAL_CACHE[cache_key]).all():
-            raise Exception(f'Some times not found in GLOBAL_CACHE[valid_times_{timeframe}]!')
+            raise Exception(f'Some times: {time} not found in GLOBAL_CACHE[valid_times_{timeframe}]!')
     elif time not in GLOBAL_CACHE[cache_key]:
         raise Exception(f'time {time} not found in GLOBAL_CACHE[valid_times_{timeframe}]!')
 

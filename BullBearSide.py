@@ -1,4 +1,3 @@
-import datetime
 import os
 from datetime import timedelta
 from typing import Tuple, List, Optional, Literal
@@ -41,7 +40,9 @@ def single_timeframe_candles_trend(ohlcv: pt.DataFrame[OHLCV], timeframe_peaks_n
         candle_trend['next_valley_value'].notna() &
         candle_trend['previous_valley_value'].notna()].index
     if len(candles_with_known_trend) == 0:
-        log('Not found any candle with possibly known trend!', severity=LogSeverity.WARNING, stack_trace=False)
+        log(f'Not found any candle with possibly known trend '
+            f'in ({ohlcv.index[0]}:{ohlcv.index[-1]}#{len(ohlcv)}={ohlcv.head(5)})!',
+            severity=LogSeverity.WARNING, stack_trace=False)
         candle_trend['bull_bear_side'] = TREND.SIDE.value
         if candle_trend['is_final'].isna().any():
             pass
@@ -156,19 +157,34 @@ def expand_trend_by_near_tops(timeframe_bull_or_bear: pt.DataFrame[BullBearSide]
         raise Exception(f"Invalid boundary['bull_bear_side']={trend}")
     shifted_next_tops = shifted_time_and_value(end_tops, 'next', end_significant_column, 'top')
     shifted_previous_tops = shifted_time_and_value(start_tops, 'previous', start_significant_column, 'top')
-    previous_round_movement_end_time = pd.Series()
-    previous_round_movement_start_time = pd.Series()
+    # previous_round_movement_end_time = pd.Series()
+    # previous_round_movement_start_time = pd.Series()
+    timeframe_bull_or_bear['previous_round_movement_end_time'] = pd.NA
+    timeframe_bull_or_bear['previous_round_movement_start_time'] = pd.NA
     possible_end_expandable_indexes = timeframe_bull_or_bear.index
     possible_start_expandable_indexes = timeframe_bull_or_bear.index
-    # todo: test this loop
+
     while (
-            (not previous_round_movement_end_time.equals(timeframe_bull_or_bear['movement_end_time']))
+            timeframe_bull_or_bear['previous_round_movement_end_time'].isna().all()
             or
-            (not previous_round_movement_start_time.equals(timeframe_bull_or_bear['movement_start_time']))
+            timeframe_bull_or_bear['previous_round_movement_start_time'].isna().all()
+            or
+            any(
+                timeframe_bull_or_bear['movement_end_time'] !=
+                timeframe_bull_or_bear['previous_round_movement_end_time'])
+            or
+            any(
+                timeframe_bull_or_bear['movement_start_time'] !=
+                timeframe_bull_or_bear['previous_round_movement_start_time'])
     ):
+        log(f"possibly movable starts:"
+            f"{len(timeframe_bull_or_bear[timeframe_bull_or_bear['previous_round_movement_end_time']!=timeframe_bull_or_bear['movement_end_time']])}"
+            f'possibly movable ends:'
+            f"{len(timeframe_bull_or_bear[timeframe_bull_or_bear['previous_round_movement_start_time']==timeframe_bull_or_bear['movement_start_time']])}"
+            , severity=LogSeverity.DEBUG, stack_trace=False)
         # track if this iteration changed anything.
-        previous_round_movement_end_time = timeframe_bull_or_bear['movement_end_time']
-        previous_round_movement_start_time = timeframe_bull_or_bear['movement_start_time']
+        timeframe_bull_or_bear['previous_round_movement_end_time'] = timeframe_bull_or_bear['movement_end_time']
+        timeframe_bull_or_bear['previous_round_movement_start_time'] = timeframe_bull_or_bear['movement_start_time']
         timeframe_bull_or_bear.drop(
             columns=['next_top_value', 'next_top_time', 'previous_top_time', 'previous_top_value'],
             inplace=True, errors='ignore')
@@ -177,12 +193,14 @@ def expand_trend_by_near_tops(timeframe_bull_or_bear: pt.DataFrame[BullBearSide]
                                                shifted_next_tops, direction='forward',
                                                left_on='movement_end_time', right_index=True)
         end_expandable_indexes = timeframe_bull_or_bear.loc[
+
             timeframe_bull_or_bear.index.isin(possible_end_expandable_indexes) &
             timeframe_bull_or_bear[f'next_top_value'].notna() &
             more_significant_end(
                 timeframe_bull_or_bear[f'next_top_value'],
                 timeframe_bull_or_bear[f'internal_{end_significant_column}'])
             ].index
+
         if len(timeframe_bull_or_bear) == 11:
             pass
         possible_end_expandable_indexes = end_expandable_indexes
