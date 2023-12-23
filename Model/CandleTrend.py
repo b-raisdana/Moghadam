@@ -24,6 +24,7 @@ class CandleTrend(pandera.DataFrameModel):
     next_valley_index: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
     next_valley_value: pt.Series[float] = pandera.Field(nullable=True)
     bull_bear_side: pt.Series[str]
+    is_final: pt.Series[bool]
 
 
 class MultiTimeframeCandleTrend(CandleTrend, MultiTimeframe):
