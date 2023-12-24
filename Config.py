@@ -29,7 +29,6 @@ class TopTYPE(Enum):
     VALLEY = 'valley'
 
 
-GLOBAL_CACHE = {}
 
 
 class Config():
@@ -101,7 +100,7 @@ class MyEncoder(json.JSONEncoder):
             return str(o)
         except Exception as e:
             exception_info = sys.exc_info()
-            raise
+            raise e
 
 
 myEncoder = MyEncoder()
@@ -121,5 +120,6 @@ if not os.path.exists(dump_filename):
         config_file.write(str(config_as_json))
 
 config.id = config_digest
+config.GLOBAL_CACHE = {}
 
 INFINITY_TIME_DELTA = config.INFINITY_TIME_DELTA

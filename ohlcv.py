@@ -5,7 +5,7 @@ import pandas as pd
 import pytz
 from pandera import typing as pt
 
-from Config import config, GLOBAL_CACHE
+from Config import config
 from MetaTrader import MT
 from Model.OHLCV import MultiTimeframeOHLCV, OHLCV
 from data_preparation import read_file, single_timeframe, cast_and_validate, trim_to_date_range, to_timeframe, \
@@ -79,9 +79,6 @@ def core_read_multi_timeframe_ohlcv(date_range_str: str = None) -> MultiTimefram
         date_range_str = config.processing_date_range
     result = read_file(date_range_str, 'multi_timeframe_ohlcv', core_generate_multi_timeframe_ohlcv,
                        MultiTimeframeOHLCV)
-    # for timeframe in config.timeframes:
-    #     GLOBAL_CACHE[f'valid_times_{timeframe}'] = \
-    #         single_timeframe(result, timeframe).index.get_level_values('date').tolist()
     cache_times(result)
     return result
 
@@ -109,8 +106,8 @@ def read_multi_timeframe_ohlcv(date_range_str: str) -> MultiTimeframeOHLCV:
 
 def cache_times(result):
     for timeframe in config.timeframes:
-        if f'valid_times_{timeframe}' not in GLOBAL_CACHE.keys():
-            GLOBAL_CACHE[f'valid_times_{timeframe}'] = \
+        if f'valid_times_{timeframe}' not in config.GLOBAL_CACHE.keys():
+            config.GLOBAL_CACHE[f'valid_times_{timeframe}'] = \
                 single_timeframe(result, timeframe).index.get_level_values('date').tolist()
 
 

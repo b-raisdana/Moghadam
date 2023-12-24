@@ -1,17 +1,17 @@
 from sys import exit
 
 from BullBearSide import generate_multi_timeframe_bull_bear_side_trends, read_multi_timeframe_bull_bear_side_trends, \
-    multi_timeframe_bull_bear_side_trends, generate_multi_timeframe_candle_trend
-from ClassicPivot import read_pivots
+    generate_multi_timeframe_candle_trend
+from BullBearSidePivot import generate_multi_timeframe_bull_bear_side_pivots, read_multi_timeframe_bull_bear_side_pivots
 from Config import config
 from FigurePlotter.BullBearSide_plotter import plot_multi_timeframe_bull_bear_side_trends
-from FigurePlotter.PeakValley_plotter import plot_multi_timeframe_peaks_n_valleys
+from FigurePlotter.Pivot_plotter import plot_multi_timeframe_pivots
 from PeakValley import read_multi_timeframe_peaks_n_valleys
-from atr import generate_multi_timeframe_ohlcva, read_multi_timeframe_ohlcva
+from atr import read_multi_timeframe_ohlcva
 from helper import date_range_to_string
 
 if __name__ == "__main__":
-    config.processing_date_range = date_range_to_string(days=60)
+    config.processing_date_range = date_range_to_string(days=180)
     #
     #     file_path: str = config.path_of_data
     #     today_morning = today_morning()
@@ -50,7 +50,12 @@ if __name__ == "__main__":
     generate_multi_timeframe_bull_bear_side_trends()
     bull_bear_side = read_multi_timeframe_bull_bear_side_trends()
     # bull_bear_side = read_multi_timeframe_bull_bear_side_trends()
-    plot_multi_timeframe_bull_bear_side_trends(ohlcva, _peaks_and_valleys, bull_bear_side)
+    plot_multi_timeframe_bull_bear_side_trends(ohlcva, _peaks_and_valleys, bull_bear_side,
+                                               timeframe_shortlist=['4H', '1D', '1W'])
     # pivots = read_pivots(config.processing_date_range)
 
-    exit()
+    # exit()
+
+    generate_multi_timeframe_bull_bear_side_pivots()
+    _bull_bear_side_pivots = read_multi_timeframe_bull_bear_side_pivots()
+    plot_multi_timeframe_pivots(_bull_bear_side_pivots)

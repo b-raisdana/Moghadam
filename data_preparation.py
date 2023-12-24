@@ -3,6 +3,7 @@ import string
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Callable, Union, List, Type
+from zipfile import BadZipFile
 
 import numpy as np
 import pandas as pd
@@ -12,7 +13,7 @@ from pandas import Timedelta, DatetimeIndex, Timestamp
 from pandas._typing import Axes
 from pandera import typing as pt, DataType
 
-from Config import config, GLOBAL_CACHE
+from Config import config
 from Model.MultiTimeframe import MultiTimeframe_Type, MultiTimeframe
 from helper import log, date_range, date_range_to_string, morning, Pandera_DFM_Type, LogSeverity
 
@@ -262,8 +263,12 @@ def read_with_timeframe(data_frame_type: str, date_range_str: str, file_path: st
     """
     if date_range_str is None:
         date_range_str = config.processing_date_range
-    df = pd.read_csv(os.path.join(file_path, f'{data_frame_type}.{date_range_str}.zip'), sep=',', header=0,
-                     index_col='date', parse_dates=['date'], skiprows=skip_rows, nrows=n_rows)
+    try:
+        file_name = os.path.join(file_path, f'{data_frame_type}.{date_range_str}.zip')
+        df = pd.read_csv(file_name, sep=',', header=0,
+                         index_col='date', parse_dates=['date'], skiprows=skip_rows, nrows=n_rows)
+    except BadZipFile:
+        Exception(f'{file_name} is not a zip file!')
 
     # Convert the 'date' index to UTC if it's timezone-unaware
     if len(df) > 0:
@@ -344,48 +349,17 @@ def to_timeframe(time: Union[DatetimeIndex, datetime, Timestamp], timeframe: str
         check_time_in_cache(rounded_time, timeframe)
 
     return rounded_time
-    # # Calculate the timedelta for the specified timeframe
-    # timeframe_timedelta = pd.to_timedelta(timeframe)
-    #
-    # # Calculate the number of seconds in the timedelta
-    # seconds_in_timeframe = timeframe_timedelta.total_seconds()
-    # if pd.to_timedelta(timeframe) >= timedelta(minutes=30):
-    #     if time.tzinfo is None:
-    #         raise Exception('To round times to timeframes > 30 minutes timezone is significant')
-    # assert not isinstance(time, DatetimeIndex)
-    #
-    # if isinstance(time, datetime) or isinstance(time, Timestamp):
-    #     if pd.to_timedelta(timeframe) >= timedelta(days=7):
-    #         rounded_time = time.replace(hour=0, minute=0, second=0, microsecond=0)
-    #         day_of_week = time.weekday()  # (time.day_of_week + 1) % 7
-    #         rounded_time = rounded_time - timedelta(days=day_of_week)
-    #     else:
-    #         rounded_timestamp = (time.timestamp() // seconds_in_timeframe) * seconds_in_timeframe
-    #         # Convert the rounded timestamp back to datetime
-    #         if isinstance(time, datetime):
-    #             rounded_time = time.fromtimestamp(rounded_timestamp, tz=time.tzinfo)
-    #         else:  # isinstance(time, Timestamp)
-    #             rounded_time = pd.Timestamp(rounded_timestamp * 10 ** 9, tz=time.tzinfo)
-    #     if not ignore_cached_times:
-    #         if f'valid_times_{timeframe}' not in GLOBAL_CACHE.keys():
-    #             raise Exception(f'valid_times_{timeframe} not initialized in GLOBAL_CACHE')
-    #         if rounded_time not in GLOBAL_CACHE[f'valid_times_{timeframe}']:
-    #             raise Exception(f'time {rounded_time} not found in GLOBAL_CACHE[valid_times_{timeframe}]!')
-    # else:
-    #     raise Exception(f'Invalid type of time:{type(time)}')
-    # assert abs(rounded_time - time) < timeframe_timedelta
-    # return rounded_time
 
 
 def check_time_in_cache(time, timeframe):
     cache_key = f'valid_times_{timeframe}'
-    if cache_key not in GLOBAL_CACHE.keys():
-        raise Exception(f'{cache_key} not initialized in GLOBAL_CACHE')
+    if cache_key not in config.GLOBAL_CACHE.keys():
+        raise Exception(f'{cache_key} not initialized in config.GLOBAL_CACHE')
     if isinstance(time, DatetimeIndex) or isinstance(time, pd.Series):
-        if not time.isin(GLOBAL_CACHE[cache_key]).all():
-            raise Exception(f'Some times: {time} not found in GLOBAL_CACHE[valid_times_{timeframe}]!')
-    elif time not in GLOBAL_CACHE[cache_key]:
-        raise Exception(f'time {time} not found in GLOBAL_CACHE[valid_times_{timeframe}]!')
+        if not time.isin(config.GLOBAL_CACHE[cache_key]).all():
+            raise Exception(f'Some times: {time} not found in config.GLOBAL_CACHE[valid_times_{timeframe}]!')
+    elif time not in config.GLOBAL_CACHE[cache_key]:
+        raise Exception(f'time {time} not found in config.GLOBAL_CACHE[valid_times_{timeframe}]!')
 
 
 # def zz_test_index_match_timeframe(data: pd.DataFrame, timeframe: str):

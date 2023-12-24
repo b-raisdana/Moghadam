@@ -78,7 +78,11 @@ def measure_time(func):
 
         end_time = time.time()
         execution_time = end_time - start_time
-        log(f"{func.__name__}({function_parameters}) executed in {execution_time:.3f} seconds", stack_trace=False)
+        execution_tim_color = bcolors.OKBLUE if execution_time < 0.01 \
+            else bcolors.OKGREEN if execution_time < 0.1 \
+            else bcolors.WARNING if execution_time < 1 \
+            else bcolors.FAIL
+        log(f"{func.__name__}({function_parameters}) executed in {execution_tim_color.value}{execution_time:.3f} seconds", stack_trace=False)
         return result
 
     return _measure_time

@@ -76,8 +76,8 @@ def multi_timeframe_bull_bear_side_pivots(date_range_str: str = None, timeframe_
         if len(timeframe_trends) > 0:
             if timeframe == '15min':
                 pass
-            timeframe_trends['previous_trend'], timeframe_trends['previous_trend_movement'] = previous_trend(
-                timeframe_trends)
+            timeframe_trends['previous_trend'], timeframe_trends['previous_trend_movement'] = \
+                previous_trend(timeframe_trends)
             _pivot_trends = timeframe_trends[
                 (timeframe_trends['movement'] > _expected_movement_size)
                 & (timeframe_trends['previous_trend_movement'] > _expected_movement_size * 3)

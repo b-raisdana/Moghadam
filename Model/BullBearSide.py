@@ -25,12 +25,12 @@ class BullBearSide(pandera.DataFrameModel):
     movement_start_time: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
     movement_end_time: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
 
+    @classmethod
+    def repr(cls, _start: datetime, _trend):
+        return bull_bear_side_repr(_start, _trend)
 
-class MultiTimeframeBullBearSide(BullBearSide, MultiTimeframe):
-    pass
 
-
-def bull_bear_side_repr(_start: datetime, _trend, boundaries):
+def bull_bear_side_repr(_start: datetime, _trend):
     text = f'{_trend["bull_bear_side"].replace("_TREND", "")}: ' \
            f'{_start.strftime("%H:%M")}-{_trend["end"].strftime("%H:%M")}:'
     if hasattr(_trend, "movement"):
@@ -43,3 +43,6 @@ def bull_bear_side_repr(_start: datetime, _trend, boundaries):
         text += f'ATR:{_trend["ATR"]:.2f}'
     return text
 
+
+class MultiTimeframeBullBearSide(BullBearSide, MultiTimeframe):
+    pass

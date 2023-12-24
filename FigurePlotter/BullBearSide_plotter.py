@@ -36,7 +36,7 @@ def plot_single_timeframe_bull_bear_side_trends(single_timeframe_ohlcva: pt.Data
              [single_timeframe_ohlcva.loc[_trend['end'], 'close']] + trend_valleys.values.tolist()[::-1]
         fill_color = 'green' if _trend['bull_bear_side'] == TREND.BULLISH.value else \
             'red' if _trend['bull_bear_side'] == TREND.BEARISH.value else 'gray'
-        text = bull_bear_side_repr(_start, _trend, boundaries)
+        text = bull_bear_side_repr(_start, _trend)
         if remained_number_of_scatters > 0:
             fig.add_scatter(x=xs, y=ys, fill="toself",  # fillcolor=fill_color,
                             fillpattern=dict(fgopacity=0.5, shape='.'),

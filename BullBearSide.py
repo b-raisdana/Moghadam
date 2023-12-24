@@ -157,34 +157,34 @@ def expand_trend_by_near_tops(timeframe_bull_or_bear: pt.DataFrame[BullBearSide]
         raise Exception(f"Invalid boundary['bull_bear_side']={trend}")
     shifted_next_tops = shifted_time_and_value(end_tops, 'next', end_significant_column, 'top')
     shifted_previous_tops = shifted_time_and_value(start_tops, 'previous', start_significant_column, 'top')
-    # previous_round_movement_end_time = pd.Series()
-    # previous_round_movement_start_time = pd.Series()
-    timeframe_bull_or_bear['previous_round_movement_end_time'] = pd.NA
-    timeframe_bull_or_bear['previous_round_movement_start_time'] = pd.NA
+    previous_round_movement_end_time = timeframe_bull_or_bear[
+        'movement_end_time']  # pd.Series(dtype='datetime64[ns, UTC]')
+    previous_round_movement_start_time = timeframe_bull_or_bear[
+        'movement_start_time']  # pd.Series(dtype='datetime64[ns, UTC]')
+    # previous_round_movement_end_time = pd.NA
+    # previous_round_movement_start_time = pd.NA
     possible_end_expandable_indexes = timeframe_bull_or_bear.index
     possible_start_expandable_indexes = timeframe_bull_or_bear.index
+    number_of_changed_ends = None
+    number_of_changed_starts = None
 
     while (
-            timeframe_bull_or_bear['previous_round_movement_end_time'].isna().all()
-            or
-            timeframe_bull_or_bear['previous_round_movement_start_time'].isna().all()
-            or
-            any(
-                timeframe_bull_or_bear['movement_end_time'] !=
-                timeframe_bull_or_bear['previous_round_movement_end_time'])
-            or
-            any(
-                timeframe_bull_or_bear['movement_start_time'] !=
-                timeframe_bull_or_bear['previous_round_movement_start_time'])
+            None in [number_of_changed_ends, number_of_changed_starts]
+            or number_of_changed_ends > 0
+            or number_of_changed_starts > 0
+            # timeframe_bull_or_bear['previous_round_movement_end_time'].isna().all()
+            # or
+            # timeframe_bull_or_bear['previous_round_movement_start_time'].isna().all()
+            # or
+            # any(
+            #     timeframe_bull_or_bear['movement_end_time'] !=
+            #     timeframe_bull_or_bear['previous_round_movement_end_time'])
+            # or
+            # any(
+            #     timeframe_bull_or_bear['movement_start_time'] !=
+            #     timeframe_bull_or_bear['previous_round_movement_start_time'])
     ):
-        log(f"possibly movable starts:"
-            f"{len(timeframe_bull_or_bear[timeframe_bull_or_bear['previous_round_movement_end_time']!=timeframe_bull_or_bear['movement_end_time']])}"
-            f'possibly movable ends:'
-            f"{len(timeframe_bull_or_bear[timeframe_bull_or_bear['previous_round_movement_start_time']==timeframe_bull_or_bear['movement_start_time']])}"
-            , severity=LogSeverity.DEBUG, stack_trace=False)
         # track if this iteration changed anything.
-        timeframe_bull_or_bear['previous_round_movement_end_time'] = timeframe_bull_or_bear['movement_end_time']
-        timeframe_bull_or_bear['previous_round_movement_start_time'] = timeframe_bull_or_bear['movement_start_time']
         timeframe_bull_or_bear.drop(
             columns=['next_top_value', 'next_top_time', 'previous_top_time', 'previous_top_value'],
             inplace=True, errors='ignore')
@@ -193,14 +193,12 @@ def expand_trend_by_near_tops(timeframe_bull_or_bear: pt.DataFrame[BullBearSide]
                                                shifted_next_tops, direction='forward',
                                                left_on='movement_end_time', right_index=True)
         end_expandable_indexes = timeframe_bull_or_bear.loc[
-
             timeframe_bull_or_bear.index.isin(possible_end_expandable_indexes) &
             timeframe_bull_or_bear[f'next_top_value'].notna() &
             more_significant_end(
                 timeframe_bull_or_bear[f'next_top_value'],
                 timeframe_bull_or_bear[f'internal_{end_significant_column}'])
             ].index
-
         if len(timeframe_bull_or_bear) == 11:
             pass
         possible_end_expandable_indexes = end_expandable_indexes
@@ -236,6 +234,20 @@ def expand_trend_by_near_tops(timeframe_bull_or_bear: pt.DataFrame[BullBearSide]
             pass
         timeframe_bull_or_bear.loc[start_expandable_indexes, f'internal_{start_significant_column}'] = \
             timeframe_bull_or_bear.loc[start_expandable_indexes, 'previous_top_value']
+        # update while loop condition parameters
+        changed_ends = timeframe_bull_or_bear['movement_end_time'].sort_index().compare(
+            previous_round_movement_end_time.sort_index())
+        number_of_changed_ends = len(changed_ends)
+        changed_starts = timeframe_bull_or_bear['movement_start_time'].sort_index().compare(
+            previous_round_movement_start_time.sort_index())
+        number_of_changed_starts = len(changed_starts)
+        log(f"Changed start={number_of_changed_starts} ends={number_of_changed_ends}"
+            f'possibly movable starts={len(possible_start_expandable_indexes)} '
+            f'ends= {len(possible_end_expandable_indexes)} '
+            , severity=LogSeverity.DEBUG, stack_trace=False)
+        previous_round_movement_end_time = timeframe_bull_or_bear['movement_end_time'].copy()
+        previous_round_movement_start_time = timeframe_bull_or_bear['movement_start_time'].copy()
+
     return timeframe_bull_or_bear
 
 
@@ -829,14 +841,20 @@ def most_two_significant_tops(start, end, single_timeframe_peaks_n_valleys, tops
 
 
 def trends_atr(timeframe_boundaries: pt.DataFrame[BullBearSide], ohlcva: pt.DataFrame[OHLCVA]):
-    _boundaries_ATRs = []
-    for _boundary_index, _boundary in timeframe_boundaries.iterrows():
-        _boundaries_ATRs.append(boundary_atr(_boundary_index, _boundary['end'], ohlcva)
-                                if _boundary['end'] is not pd.NaT
-                                else ohlcva.index[-1]
-                                )
-    # return [sum(_ATRs[_ATRs.notnull()]) / len(_ATRs[_ATRs.notnull()]) for _ATRs in _boundaries_ATRs.values()]
+    ohlcva.loc[timeframe_boundaries.index, 'bbs_index'] = timeframe_boundaries.index.tolist()
+    ohlcva['bbs_index'].ffill(inplace=True)
+    ohlcva['bbs_index'].bfill(inplace=True)
+    _boundaries_ATRs = ohlcva.groupby(by='bbs_index').agg({'ATR': 'mean'})['ATR']
+    assert _boundaries_ATRs.notna().all()
     return _boundaries_ATRs
+    #
+    # for _boundary_index, _boundary in timeframe_boundaries.iterrows():
+    #     _boundaries_ATRs.append(boundary_atr(_boundary_index, _boundary['end'], ohlcva)
+    #                             if _boundary['end'] is not pd.NaT
+    #                             else ohlcva.index[-1]
+    #                             )
+    # # return [sum(_ATRs[_ATRs.notnull()]) / len(_ATRs[_ATRs.notnull()]) for _ATRs in _boundaries_ATRs.values()]
+
 
 
 def trend_rate(_boundaries: pt.DataFrame[BullBearSide], timeframe: str) -> pt.DataFrame[BullBearSide]:
@@ -845,9 +863,14 @@ def trend_rate(_boundaries: pt.DataFrame[BullBearSide], timeframe: str) -> pt.Da
 
 def trend_duration(_boundaries: pt.DataFrame[BullBearSide]) -> pt.Series[timedelta]:
     durations = pd.to_datetime(_boundaries['end']) - pd.to_datetime(_boundaries.index)
-    for index, duration in durations.items():
-        if not duration > timedelta(0):
-            raise Exception(f'Duration must be greater than zero. But @{index}={duration}. in: {_boundaries}')
+    invali_length_boundaries = _boundaries[_boundaries['end'] <= _boundaries.index].index
+    if len(invali_length_boundaries) > 0:
+        message_body = "\n".join([BullBearSide.repr(start, boundary)
+                                  for start, boundary in _boundaries.loc[invali_length_boundaries].itterrows()])
+        raise Exception(f'Invalid duration(s) in:{message_body}')
+    # for index, duration in durations.items():
+    #     if not duration > timedelta(0):
+    #         raise Exception(f'Duration must be greater than zero. But @{index}={duration}. in: {_boundaries}')
     return durations
 
 
@@ -946,7 +969,7 @@ def single_timeframe_bull_bear_side_trends(single_timeframe_candle_trend: pd.Dat
     _trends = expand_trends_by_near_tops(_trends, timeframe_peaks_n_valleys)
     _trends['movement'] = trend_movement(_trends)
     _trends['ATR'] = trends_atr(_trends, ohlcva=ohlcva)
-    assert not _trends['ATR'].isnull().any()
+
     _trends['duration'] = trend_duration(_trends)
     _trends['rate'] = trend_rate(_trends, timeframe)
     _trends['strength'] = trend_strength(_trends)
@@ -954,26 +977,26 @@ def single_timeframe_bull_bear_side_trends(single_timeframe_candle_trend: pd.Dat
     return _trends
 
 
-def boundary_atr(start: Timestamp, end: Timestamp, ohlcva: pt.DataFrame[OHLCVA]) -> List[float]:
-    # if (not hasattr(start, 'tzinfo')):
-    #     if (start.tzinfo != datetime.UTC):
-    #         pass
-    # if (not hasattr(end, 'tzinfo')):
-    #     if (end.tzinfo != datetime.UTC):
-    #         pass
-    try:
-        atr_serial = ohlcva.loc[start:end, 'ATR']
-    except ValueError as e:
-        raise e
-    if atr_serial.isna().all():
-        raise Exception(f'Boundaries expected to be generated over candles with ATR but in '
-                        f'{start}-{end} there is not any valid ATR!')
-    # min = [min(_ATRs) for _ATRs in _boundaries_ATRs]
-    # max = [max(_ATRs) for _ATRs in _boundaries_ATRs]
-    # average = [sum(_ATRs) / len(_ATRs) for _ATRs in _boundaries_ATRs]
-    _sum = atr_serial.sum()
-    count = len(atr_serial[atr_serial.notna()])
-    return _sum / count
+# def boundary_atr(start: Timestamp, end: Timestamp, ohlcva: pt.DataFrame[OHLCVA]) -> List[float]:
+#     # if (not hasattr(start, 'tzinfo')):
+#     #     if (start.tzinfo != datetime.UTC):
+#     #         pass
+#     # if (not hasattr(end, 'tzinfo')):
+#     #     if (end.tzinfo != datetime.UTC):
+#     #         pass
+#     try:
+#         atr_serial = ohlcva.loc[start:end, 'ATR']
+#     except ValueError as e:
+#         raise e
+#     if atr_serial.isna().all():
+#         raise Exception(f'Boundaries expected to be generated over candles with ATR but in '
+#                         f'{start}-{end} there is not any valid ATR!')
+#     # min = [min(_ATRs) for _ATRs in _boundaries_ATRs]
+#     # max = [max(_ATRs) for _ATRs in _boundaries_ATRs]
+#     # average = [sum(_ATRs) / len(_ATRs) for _ATRs in _boundaries_ATRs]
+#     _sum = atr_serial.sum()
+#     count = len(atr_serial[atr_serial.notna()])
+#     return _sum / count
 
 
 def detect_trends(single_timeframe_candle_trend, timeframe: str) -> pt.DataFrame[BullBearSide]:
