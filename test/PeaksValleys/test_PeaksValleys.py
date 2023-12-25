@@ -2,7 +2,6 @@ import pandas as pd
 
 from Config import config
 from PeakValley import zz_find_peaks_n_valleys
-from FigurePlotter.PeakValley_plotter import plot_peaks_n_valleys
 from helper import log
 
 DEBUG = True
