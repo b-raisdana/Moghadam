@@ -1,9 +1,8 @@
 import os
-from datetime import timedelta
 from typing import List, Literal
 
 import pandas as pd
-from pandera import typing as pt, Index, Timestamp
+from pandera import typing as pt, Timestamp
 
 from Config import config, CandleSize
 from Model.BasePattern import BasePattern, MultiTimeframeBasePattern
@@ -13,7 +12,7 @@ from atr import read_multi_timeframe_ohlcva
 from data_preparation import single_timeframe, concat, cast_and_validate, empty_df, read_file
 
 
-def candle_size(base_pattern: pt.DataFrame[BasePattern], ohlcva: pt.DataFrame[OHLCVA]) -> pd.Series(CandleSize):
+def add_candle_size(ohlcva: pt.DataFrame[OHLCVA]) -> pt.DataFrame[OHLCVA]:
     """
     if the candle       (high - low) <= 80% ATR         the candle is Spinning
     if the candle 80% ATR < (high - low) <= 120% ATR    the candle is Standard
@@ -25,17 +24,22 @@ def candle_size(base_pattern: pt.DataFrame[BasePattern], ohlcva: pt.DataFrame[OH
     :return:
     """
     # todo: test candle_size
-    base_pattern.loc[(base_pattern['length'] <= CandleSize.Spinning.value.max, 'size')] = CandleSize.Spinning.name
-    base_pattern.loc[(CandleSize.Standard.value.min < base_pattern['length'])
-                     & (base_pattern['length'] <= CandleSize.Standard.value.max), 'size'] = CandleSize.Spinning.name
-    base_pattern.loc[(CandleSize.Long.value.min < base_pattern['length'])
-                     & (base_pattern['length'] <= CandleSize.Long.value.max), 'size'] = CandleSize.Long.name
-    base_pattern.loc[(CandleSize.Spike.value.min < base_pattern['length']), 'size'] = CandleSize.Spike.name
-    raise base_pattern
+    assert ohlcva['ATR'].notna().all()
+    ohlcva['length'] = ohlcva['high'] - ohlcva['low']
+    ohlcva['atr_ratio'] = ohlcva['length'] / ohlcva['ATR']
+    # todo: we left here
+    raise
+    ohlcva.loc[(ohlcva['atr_ratio'] <= CandleSize.Spinning.value.max), 'size'] = CandleSize.Spinning.name
+    ohlcva.loc[(CandleSize.Standard.value.min < ohlcva['atr_ratio'])
+               & (ohlcva['atr_ratio'] <= CandleSize.Standard.value.max), 'size'] = CandleSize.Spinning.name
+    ohlcva.loc[(CandleSize.Long.value.min < ohlcva['atr_ratio'])
+               & (ohlcva['atr_ratio'] <= CandleSize.Long.value.max), 'size'] = CandleSize.Long.name
+    ohlcva.loc[(CandleSize.Spike.value.min < ohlcva['atr_ratio']), 'size'] = CandleSize.Spike.name
+    return ohlcva
 
 
 def sequence_of_spinning(ohlcva: pt.DataFrame[OHLCVA], timeframe: str, number_of_base_spinning_candles: int = None) \
-        -> Index[Timestamp]:
+        -> pt.Index[Timestamp]:
     """
     Return the index of Spinning candles followed by N Spinning candles.
 
@@ -57,7 +61,7 @@ def sequence_of_spinning(ohlcva: pt.DataFrame[OHLCVA], timeframe: str, number_of
     if len(ohlcva) < number_of_base_spinning_candles + 1:
         raise ValueError(f"Insufficient data ({len(ohlcva)}) "
                          f"for the specified number of base spinning candles ({number_of_base_spinning_candles})")
-    ohlcva['size'] = candle_size(ohlcva)
+    ohlcva = add_candle_size(ohlcva)
     # Check if each candle is spinning
     spinning_candles = ohlcva[ohlcva['size'] == CandleSize.Spinning.name].copy()
     for i in range(number_of_base_spinning_candles):
@@ -101,7 +105,7 @@ def base_from_sequence(_sequence_of_spinning: pt.DataFrame[OHLCVA], timeframe: s
     return base_index
 
 
-def nth_candle_overlap(ohlcva, nth_next_candle) -> pd.Series[float]:
+def nth_candle_overlap(ohlcva, nth_next_candle) -> pt.Series[float]:
     """
     Calculate the coverage of the Nth candle after ohlcva indexes with the previous candle.
 
@@ -119,7 +123,7 @@ def nth_candle_overlap(ohlcva, nth_next_candle) -> pd.Series[float]:
     The result will be a Series with coverage values indexed based on ohlcva.
 
     Returns:
-    - pd.Series: Series indexed as ohlcva with a column representing the coverage.
+    - pt.Series: Series indexed as ohlcva with a column representing the coverage.
     """
     # todo: test nth_candle_overlap
     if nth_next_candle <= 0:
@@ -169,7 +173,7 @@ def timeframe_base_pattern(ohlcva: pt.DataFrame[OHLCVA], timeframe: str, number_
     if number_of_base_spinning_candles is None:
         number_of_base_spinning_candles = config.base_pattern_number_of_spinning_candles
 
-    _sequence_of_spinning_indexes = sequence_of_spinning(ohlcva, timeframe)
+    _sequence_of_spinning_indexes = sequence_of_spinning(ohlcva, timeframe, number_of_base_spinning_candles)
     _sequence_of_spinning = ohlcva.loc[_sequence_of_spinning_indexes].copy()
     for i in range(number_of_base_spinning_candles):
         _sequence_of_spinning[f'next_candle_overlap_{i}'] = nth_candle_overlap(ohlcva, nth_next_candle=i)
@@ -179,7 +183,7 @@ def timeframe_base_pattern(ohlcva: pt.DataFrame[OHLCVA], timeframe: str, number_
     timeframe_base_patterns['internal_high'] = base_lowest_high(base_indexes, ohlcva)
     timeframe_base_patterns['ttl'] = \
         timeframe_base_patterns.index + pd.to_timedelta(timeframe) * config.base_pattern_ttl
-    timeframe_base_patterns['atr'] = ohlcva.loc[timeframe_base_patterns.index, 'ATR']
+    timeframe_base_patterns['ATR'] = ohlcva.loc[timeframe_base_patterns.index, 'ATR']
     update_upper_band_status(timeframe_base_patterns, ohlcva)
     timeframe_base_patterns = cast_and_validate(timeframe_base_patterns, BasePattern)
     return timeframe_base_patterns
@@ -232,6 +236,7 @@ def first_candle_passed_base_margin(inactive_upper_band_bases: pt.DataFrame[Base
     # todo: test first_candle_passed_base_margin
     if band == 'upper':
         high_low = 'high'
+
         def expand(x, y):
             return x + y
     elif band == 'below':
@@ -243,7 +248,7 @@ def first_candle_passed_base_margin(inactive_upper_band_bases: pt.DataFrame[Base
         raise Exception(f"band should be 'upper' or 'below' but '{band}' given!")
     for start, base in inactive_upper_band_bases.iterrows():
         passing_candles = ohlcva.sort_index(level='date').loc[start:base['ttl']] \
-            [ohlcva['low'] < expand(base[f'internal_{high_low}'], base['atr'])]
+            [ohlcva['low'] < expand(base[f'internal_{high_low}'], base['ATR'])]
         if len(passing_candles) > 0:
             inactive_upper_band_bases.loc[f'{band}_band_activated'] = passing_candles.index[0]
     return inactive_upper_band_bases

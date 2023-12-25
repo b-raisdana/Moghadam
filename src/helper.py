@@ -1,5 +1,6 @@
 import datetime
 import functools
+import os.path
 import time
 import traceback
 from datetime import datetime, timedelta
@@ -72,6 +73,10 @@ def measure_time(func):
 
         try:
             result = func(*args, **kwargs)
+        except OSError as e:
+            log(f"Current directory is {os.path.abspath(os.path.curdir)}", stack_trace=False)
+            log(f"Error in {func.__name__}({function_parameters}): {str(e)}", stack_trace=True)
+            raise e  # Re-raise the exception after logging
         except Exception as e:
             log(f"Error in {func.__name__}({function_parameters}): {str(e)}", stack_trace=True)
             raise e # Re-raise the exception after logging

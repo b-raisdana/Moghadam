@@ -40,7 +40,7 @@ def plot_single_timeframe_base_pattern(single_timeframe_ohlcva: pt.DataFrame[OHL
         if base_pattern['below_band_activated'] is not None:
             # add a vertical line equal to ATR of BasePattern at the time price chart goes 1 ATR under below edge.
             xs = [base_pattern['below_band_activated'], base_pattern['below_band_activated']]
-            ys = [base_pattern['internal_low'], base_pattern['internal_low'] - base_pattern['atr']]
+            ys = [base_pattern['internal_low'], base_pattern['internal_low'] - base_pattern['ATR']]
             fig.add_scatter(x=xs, y=ys,  # fill="toself",  # fillcolor=fill_color,
                             # fillpattern=dict(fgopacity=0.5, shape='.'),
                             name=text,
@@ -51,7 +51,7 @@ def plot_single_timeframe_base_pattern(single_timeframe_ohlcva: pt.DataFrame[OHL
         if base_pattern['below_band_activated'] is not None:
             # add a vertical line equal to ATR of BasePattern at the time price chart goes 1 ATR above upper edge.
             xs = [base_pattern['upper_band_activated'], base_pattern['upper_band_activated']]
-            ys = [base_pattern['internal_high'], base_pattern['internal_high'] + base_pattern['atr']]
+            ys = [base_pattern['internal_high'], base_pattern['internal_high'] + base_pattern['ATR']]
             fig.add_scatter(x=xs, y=ys,  # fill="toself",  # fillcolor=fill_color,
                             # fillpattern=dict(fgopacity=0.5, shape='.'),
                             name=text,

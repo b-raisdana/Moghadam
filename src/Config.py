@@ -139,3 +139,16 @@ config.id = config_digest
 config.GLOBAL_CACHE = {}
 
 INFINITY_TIME_DELTA = config.INFINITY_TIME_DELTA
+
+
+def check_working_directory():
+    current_directory = os.path.abspath(os.path.curdir)
+
+    # Check if 'src' and 'data' folders exist
+    src_folder_exists = os.path.exists(os.path.join(current_directory, 'src'))
+    data_folder_exists = os.path.exists(os.path.join(current_directory, 'data'))
+    if not src_folder_exists or not data_folder_exists:
+        raise Exception(f"'src' or 'data' folders not found under working directory({current_directory})")
+
+
+check_working_directory()
