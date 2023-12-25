@@ -1,7 +1,7 @@
 import colorsys
 import os
 import webbrowser
-from typing import List, Tuple
+from typing import List
 
 import pandas as pd
 from plotly import graph_objects as plgo

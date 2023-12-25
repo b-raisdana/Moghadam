@@ -259,11 +259,11 @@ class MT:
         # terminal_info = mt5_client().terminal_info()
         # return terminal_info.data_path
         current_working_dir = os.getcwd()
-        if not path.isfile(path.join(current_working_dir, '../MetaTrader5', 'terminal64.exe')):
+        if not path.isfile(path.join(current_working_dir, 'MetaTrader5', 'terminal64.exe')):
             raise Exception('Install MetaTrader 5 portable under ' +
-                            path.join(current_working_dir, '../MetaTrader5') + '\n' +
+                            path.join(current_working_dir, 'MetaTrader5') + '\n' +
                             'https://drive.google.com/file/d/1YIiteGoiDxaL84ZbTCtccZi713BZssM7/view?usp=drive_link')
-        return path.join(current_working_dir, '../MetaTrader5')  # , 'MQL5')
+        return path.join(current_working_dir, 'MetaTrader5')  # , 'MQL5')
 
     @staticmethod
     def extract_to_data_path(source_file_path: str, make_dir: bool = False,

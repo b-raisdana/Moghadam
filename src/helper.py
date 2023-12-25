@@ -74,7 +74,7 @@ def measure_time(func):
             result = func(*args, **kwargs)
         except Exception as e:
             log(f"Error in {func.__name__}({function_parameters}): {str(e)}", stack_trace=True)
-            raise  # Re-raise the exception after logging
+            raise e # Re-raise the exception after logging
 
         end_time = time.time()
         execution_time = end_time - start_time

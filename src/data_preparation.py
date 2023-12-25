@@ -263,12 +263,12 @@ def read_with_timeframe(data_frame_type: str, date_range_str: str, file_path: st
     """
     if date_range_str is None:
         date_range_str = config.processing_date_range
+    file_name = os.path.join(file_path, f'{data_frame_type}.{date_range_str}.zip')
     try:
-        file_name = os.path.join(file_path, f'{data_frame_type}.{date_range_str}.zip')
         df = pd.read_csv(file_name, sep=',', header=0,
                          index_col='date', parse_dates=['date'], skiprows=skip_rows, nrows=n_rows)
     except BadZipFile:
-        Exception(f'{file_name} is not a zip file!')
+        raise Exception(f'{file_name} is not a zip file!')
 
     # Convert the 'date' index to UTC if it's timezone-unaware
     if len(df) > 0:
@@ -429,7 +429,7 @@ def multi_timeframe_times_tester(multi_timeframe_df: pt.DataFrame[MultiTimeframe
 
 
 def expected_movement_size(_list: List):
-    return _list  # * CandleSize.Standard.value[0]
+    return _list  # * CandleSize.Standard.value.min
 
 
 def shift_timeframe(timeframe, shifter):
@@ -461,7 +461,7 @@ def all_annotations(cls, include_indexes=False) -> dict:
 
 
 def cast_and_validate(data, model_class: Type[Pandera_DFM_Type], return_bool: bool = False,
-                      zero_size_allowed: bool = False) -> Union[pd.DataFrame, bool]:
+                      zero_size_allowed: bool = False, unique_index: bool = False) -> Union[pd.DataFrame, bool]:
     if len(data) == 0:
         if not zero_size_allowed:
             raise Exception('Zero size data!')
@@ -470,6 +470,10 @@ def cast_and_validate(data, model_class: Type[Pandera_DFM_Type], return_bool: bo
                 return True
             else:
                 return empty_df(model_class)
+    if unique_index:
+        if not data.index.is_unique:
+            log("Not tested", severity=LogSeverity.ERROR)
+            raise Exception(f"Expected to be unique but found duplicates:{data.index[data.index.duplicated()]}")
     data = apply_as_type(data, model_class)
     if return_bool:
         try:

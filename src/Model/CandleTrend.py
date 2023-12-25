@@ -2,7 +2,6 @@ from typing import Annotated
 
 import pandas as pd
 import pandera
-from pandas import Timestamp
 from pandera import typing as pt
 
 from Model.MultiTimeframe import MultiTimeframe

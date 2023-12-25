@@ -33,11 +33,14 @@ def single_timeframe_candles_trend(ohlcv: pt.DataFrame[OHLCV], timeframe_peaks_n
     candle_trend = insert_previous_n_next_tops(timeframe_peaks_n_valley, ohlcv)
     candle_trend['bull_bear_side'] = pd.NA
     candle_trend['is_final'] = False
+    if len(ohlcv) == 0:
+        return candle_trend
     candles_with_known_trend = candle_trend.loc[
         candle_trend['next_peak_value'].notna() &
         candle_trend['previous_peak_value'].notna() &
         candle_trend['next_valley_value'].notna() &
         candle_trend['previous_valley_value'].notna()].index
+
     if len(candles_with_known_trend) == 0:
         log(f'Not found any candle with possibly known trend '
             f'in ({ohlcv.index[0]}:{ohlcv.index[-1]}#{len(ohlcv)}={ohlcv.head(5)})!',
@@ -972,7 +975,7 @@ def single_timeframe_bull_bear_side_trends(single_timeframe_candle_trend: pd.Dat
     _trends['duration'] = trend_duration(_trends)
     _trends['rate'] = trend_rate(_trends, timeframe)
     _trends['strength'] = trend_strength(_trends)
-    _trends = cast_and_validate(_trends, BullBearSide, zero_size_allowed=True)
+    _trends = cast_and_validate(_trends, BullBearSide, zero_size_allowed=True, unique_index=True)
     return _trends
 
 

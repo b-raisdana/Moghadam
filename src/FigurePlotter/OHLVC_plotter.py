@@ -94,13 +94,13 @@ def plot_ohlcva(ohlcva: pd.DataFrame, save: bool = True, show: bool = True, name
 
     # Add the ATR boundaries
     sub_fig = add_atr_scatter(sub_fig, ohlcva.index, midpoints=midpoints,
-                              widths=CandleSize.Spinning.value[1] * ohlcva['ATR'],
+                              widths=CandleSize.Spinning.value.max * ohlcva['ATR'],
                               name='Standard')
     sub_fig = add_atr_scatter(sub_fig, ohlcva.index, midpoints=midpoints,
-                              widths=CandleSize.Standard.value[1] * ohlcva['ATR'],
+                              widths=CandleSize.Standard.value.max * ohlcva['ATR'],
                               name='Long')
     sub_fig = add_atr_scatter(sub_fig, ohlcva.index, midpoints=midpoints,
-                              widths=CandleSize.Long.value[1] * ohlcva['ATR'],
+                              widths=CandleSize.Long.value.max * ohlcva['ATR'],
                               name='Spike')
 
     sub_fig.add_scatter(x=ohlcva.index, y=midpoints,

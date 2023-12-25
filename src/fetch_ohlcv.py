@@ -62,6 +62,8 @@ def fetch_ohlcv(symbol, timeframe: str=None, start: datetime = None, limit=None,
         params = dict()
     assert start.tzinfo == pytz.utc
     exchange = ccxt.kucoin()
+    if timeframe is None:
+       timeframe = config.timeframes[0]
 
     # Convert pandas timeframe to CCXT timeframe
     ccxt_timeframe = pandas_to_ccxt_timeframes[timeframe]

@@ -3,19 +3,33 @@ import hashlib
 import json
 import os
 import sys
+from dataclasses import dataclass
 from datetime import timedelta
 from enum import Enum
 
+import numpy as np
 import pandas as pd
 
 from helper import log
 
 
+# class CandleSize(Enum):
+#     Spinning = (0.0, 0.80)
+#     Standard = (0.80, 1.20)
+#     Long = (1.20, 2.5)
+#     Spike = (2.5, 999999999)
+
+
 class CandleSize(Enum):
-    Spinning = (0.0, 0.80)
-    Standard = (0.80, 1.20)
-    Long = (1.20, 2.5)
-    Spike = (2.5, 999999999)
+    @dataclass
+    class MinMax:
+        min: float
+        max: float
+
+    Spinning: MinMax = MinMax(min=0.0, max=0.80)
+    Standard: MinMax = MinMax(min=0.80, max=1.20)
+    Long: MinMax = MinMax(min=1.2, max=2.5)
+    Spike: MinMax = MinMax(min=2.5, max=np.Inf)
 
 
 class TREND(Enum):
@@ -27,8 +41,6 @@ class TREND(Enum):
 class TopTYPE(Enum):
     PEAK = 'peak'
     VALLEY = 'valley'
-
-
 
 
 class Config():

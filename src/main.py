@@ -9,7 +9,7 @@ from atr import read_multi_timeframe_ohlcva
 from helper import date_range_to_string
 
 if __name__ == "__main__":
-    config.processing_date_range = date_range_to_string(days=180)
+    config.processing_date_range = date_range_to_string(days=2)
     #
     #     file_path: str = config.path_of_data
     #     today_morning = today_morning()
