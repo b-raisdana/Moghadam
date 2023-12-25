@@ -1,3 +1,4 @@
+from BasePattern import generate_multi_timeframe_base_patterns
 from BullBearSide import generate_multi_timeframe_bull_bear_side_trends, read_multi_timeframe_bull_bear_side_trends, \
     generate_multi_timeframe_candle_trend
 from BullBearSidePivot import generate_multi_timeframe_bull_bear_side_pivots, read_multi_timeframe_bull_bear_side_pivots
@@ -54,6 +55,9 @@ if __name__ == "__main__":
 
     # exit()
 
-    generate_multi_timeframe_bull_bear_side_pivots()
-    _bull_bear_side_pivots = read_multi_timeframe_bull_bear_side_pivots()
-    plot_multi_timeframe_pivots(_bull_bear_side_pivots)
+    # generate_multi_timeframe_bull_bear_side_pivots()
+    # _bull_bear_side_pivots = read_multi_timeframe_bull_bear_side_pivots()
+    # plot_multi_timeframe_pivots(_bull_bear_side_pivots)
+
+    generate_multi_timeframe_base_patterns()
+    read_multi_timeframe_base_patterns()

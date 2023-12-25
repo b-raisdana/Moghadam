@@ -101,6 +101,10 @@ class Config():
 
         self.ATR_timeperiod = 14
 
+        self.base_pattern_ttl = 4 * 4 * 4 * 4
+        self.base_pattern_number_of_spinning_candles = 2
+        self.base_pattern_candle_min_backward_coverage = 0.8
+
         self.id = ""
 
 
