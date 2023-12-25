@@ -27,11 +27,9 @@ def add_candle_size(ohlcva: pt.DataFrame[OHLCVA]) -> pt.DataFrame[OHLCVA]:
     assert ohlcva['ATR'].notna().all()
     ohlcva['length'] = ohlcva['high'] - ohlcva['low']
     ohlcva['atr_ratio'] = ohlcva['length'] / ohlcva['ATR']
-    # todo: we left here
-    raise
     ohlcva.loc[(ohlcva['atr_ratio'] <= CandleSize.Spinning.value.max), 'size'] = CandleSize.Spinning.name
     ohlcva.loc[(CandleSize.Standard.value.min < ohlcva['atr_ratio'])
-               & (ohlcva['atr_ratio'] <= CandleSize.Standard.value.max), 'size'] = CandleSize.Spinning.name
+               & (ohlcva['atr_ratio'] <= CandleSize.Standard.value.max), 'size'] = CandleSize.Standard.name
     ohlcva.loc[(CandleSize.Long.value.min < ohlcva['atr_ratio'])
                & (ohlcva['atr_ratio'] <= CandleSize.Long.value.max), 'size'] = CandleSize.Long.name
     ohlcva.loc[(CandleSize.Spike.value.min < ohlcva['atr_ratio']), 'size'] = CandleSize.Spike.name
@@ -63,6 +61,8 @@ def sequence_of_spinning(ohlcva: pt.DataFrame[OHLCVA], timeframe: str, number_of
                          f"for the specified number of base spinning candles ({number_of_base_spinning_candles})")
     ohlcva = add_candle_size(ohlcva)
     # Check if each candle is spinning
+    # todo: we left here
+    raise
     spinning_candles = ohlcva[ohlcva['size'] == CandleSize.Spinning.name].copy()
     for i in range(number_of_base_spinning_candles):
         nth_next_candle_indexes = spinning_candles.index.shift(i, frequency=timeframe)
