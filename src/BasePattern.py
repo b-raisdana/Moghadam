@@ -13,7 +13,7 @@ from atr import read_multi_timeframe_ohlcva
 from data_preparation import single_timeframe, concat, cast_and_validate, empty_df, read_file
 
 
-def candle_size(ohlcva: pt.DataFrame[OHLCVA]) -> pd.Series(CandleSize):
+def candle_size(base_pattern: pt.DataFrame[BasePattern], ohlcva: pt.DataFrame[OHLCVA]) -> pd.Series(CandleSize):
     """
     if the candle       (high - low) <= 80% ATR         the candle is Spinning
     if the candle 80% ATR < (high - low) <= 120% ATR    the candle is Standard
@@ -24,7 +24,14 @@ def candle_size(ohlcva: pt.DataFrame[OHLCVA]) -> pd.Series(CandleSize):
     :param ohlcva:
     :return:
     """
-    raise Exception('Not implemented')
+    # todo: test candle_size
+    base_pattern.loc[(base_pattern['length'] <= CandleSize.Spinning.value.max, 'size')] = CandleSize.Spinning.name
+    base_pattern.loc[(CandleSize.Standard.value.min < base_pattern['length'])
+                     & (base_pattern['length'] <= CandleSize.Standard.value.max), 'size'] = CandleSize.Spinning.name
+    base_pattern.loc[(CandleSize.Long.value.min < base_pattern['length'])
+                     & (base_pattern['length'] <= CandleSize.Long.value.max), 'size'] = CandleSize.Long.name
+    base_pattern.loc[(CandleSize.Spike.value.min < base_pattern['length']), 'size'] = CandleSize.Spike.name
+    raise base_pattern
 
 
 def sequence_of_spinning(ohlcva: pt.DataFrame[OHLCVA], timeframe: str, number_of_base_spinning_candles: int = None) \
@@ -172,6 +179,8 @@ def timeframe_base_pattern(ohlcva: pt.DataFrame[OHLCVA], timeframe: str, number_
     timeframe_base_patterns['internal_high'] = base_lowest_high(base_indexes, ohlcva)
     timeframe_base_patterns['ttl'] = \
         timeframe_base_patterns.index + pd.to_timedelta(timeframe) * config.base_pattern_ttl
+    timeframe_base_patterns['atr'] = ohlcva.loc[timeframe_base_patterns.index, 'ATR']
+    update_upper_band_status(timeframe_base_patterns, ohlcva)
     timeframe_base_patterns = cast_and_validate(timeframe_base_patterns, BasePattern)
     return timeframe_base_patterns
 
@@ -216,3 +225,34 @@ def read_multi_timeframe_base_patterns(date_range_str: str = None) -> pt.DataFra
         generate_multi_timeframe_base_patterns,
         MultiTimeframeBasePattern)
     return result
+
+
+def first_candle_passed_base_margin(inactive_upper_band_bases: pt.DataFrame[BasePattern], ohlcva: pt.DataFrame[OHLCVA],
+                                    band: Literal['upper', 'below']) -> pt.DataFrame[BasePattern]:
+    # todo: test first_candle_passed_base_margin
+    if band == 'upper':
+        high_low = 'high'
+        def expand(x, y):
+            return x + y
+    elif band == 'below':
+        high_low = 'low'
+
+        def expand(x, y):
+            return x - y
+    else:
+        raise Exception(f"band should be 'upper' or 'below' but '{band}' given!")
+    for start, base in inactive_upper_band_bases.iterrows():
+        passing_candles = ohlcva.sort_index(level='date').loc[start:base['ttl']] \
+            [ohlcva['low'] < expand(base[f'internal_{high_low}'], base['atr'])]
+        if len(passing_candles) > 0:
+            inactive_upper_band_bases.loc[f'{band}_band_activated'] = passing_candles.index[0]
+    return inactive_upper_band_bases
+
+
+def update_upper_band_status(inactive_upper_band_bases: pt.DataFrame[BasePattern], ohlcva: pt.DataFrame[OHLCVA]):
+    assert inactive_upper_band_bases['upper_band'].isna().all()
+    inactive_upper_band_bases['first_candle_passed_bellow_margin'] = \
+        first_candle_passed_base_margin(inactive_upper_band_bases, ohlcva, band='below')
+    inactive_upper_band_bases['first_candle_passed_upper_margin'] = \
+        first_candle_passed_base_margin(inactive_upper_band_bases, ohlcva, band='upper')
+    return inactive_upper_band_bases

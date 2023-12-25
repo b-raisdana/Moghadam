@@ -1,8 +1,9 @@
-from BasePattern import generate_multi_timeframe_base_patterns
+from BasePattern import generate_multi_timeframe_base_patterns, read_multi_timeframe_base_patterns
 from BullBearSide import generate_multi_timeframe_bull_bear_side_trends, read_multi_timeframe_bull_bear_side_trends, \
     generate_multi_timeframe_candle_trend
 from BullBearSidePivot import generate_multi_timeframe_bull_bear_side_pivots, read_multi_timeframe_bull_bear_side_pivots
 from Config import config
+from FigurePlotter.BasePattern_plotter import plot_multi_timeframe_base_pattern
 from FigurePlotter.BullBearSide_plotter import plot_multi_timeframe_bull_bear_side_trends
 from FigurePlotter.Pivot_plotter import plot_multi_timeframe_pivots
 from PeakValley import read_multi_timeframe_peaks_n_valleys
@@ -60,4 +61,7 @@ if __name__ == "__main__":
     # plot_multi_timeframe_pivots(_bull_bear_side_pivots)
 
     generate_multi_timeframe_base_patterns()
-    read_multi_timeframe_base_patterns()
+    _base_patterns = read_multi_timeframe_base_patterns()
+    plot_multi_timeframe_base_pattern(
+        ohlcva, _peaks_and_valleys
+    )
