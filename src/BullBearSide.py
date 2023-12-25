@@ -593,9 +593,7 @@ def expand_trends_by_near_tops(_timeframe_bull_bear_side_trends: pt.DataFrame[Bu
 # def boundary_previous_top(boundary_start: datetime, boundary: pd.Series, single_timeframe_peaks_or_valleys,
 #                           trend: TREND) \
 #         -> (pd.Timestamp, pd.Series):
-#     # todo: we left here
 #     index_of_best_top_before_boundary = None
-#     # todo: eliminate .sort_index(level='date')
 #     previous_tops = single_timeframe_peaks_or_valleys.loc[
 #         single_timeframe_peaks_or_valleys.index.get_level_values('date') < boundary_start
 #         ].sort_index(level='date')
@@ -672,7 +670,6 @@ def expand_trends_by_near_tops(_timeframe_bull_bear_side_trends: pt.DataFrame[Bu
 
 # def boundary_next_top(boundary_end: pd.Timestamp, boundary, single_timeframe_peaks_or_valleys, trend: TREND) \
 #         -> (pd.Timestamp, pd.Series):
-#     # todo: eliminate .sort_index(level='date')
 #     index_of_best_top_after_boundary = None
 #     next_tops = single_timeframe_peaks_or_valleys.loc[
 #         single_timeframe_peaks_or_valleys.index.get_level_values('date') > boundary_end
@@ -834,6 +831,7 @@ def add_trend_extremum(_boundaries, single_timeframe_peak_n_valley: pt.DataFrame
 
 def most_two_significant_tops(start, end, single_timeframe_peaks_n_valleys, tops_type: TopTYPE) -> pd.DataFrame:
     # todo: test most_two_significant_valleys
+    log('test most_two_significant_valleys', severity=LogSeverity.ERROR)
     filtered_valleys = single_timeframe_peaks_n_valleys.loc[
         (single_timeframe_peaks_n_valleys.index >= start) &
         (single_timeframe_peaks_n_valleys.index <= end) &
@@ -1002,7 +1000,6 @@ def single_timeframe_bull_bear_side_trends(single_timeframe_candle_trend: pd.Dat
 
 
 def detect_trends(single_timeframe_candle_trend, timeframe: str) -> pt.DataFrame[BullBearSide]:
-    # todo: revise to handle candles with NA bull_bear_side trend!
     single_timeframe_candle_trend = single_timeframe_candle_trend.copy()
     if single_timeframe_candle_trend['bull_bear_side'].isna().any():
         pass
@@ -1091,19 +1088,3 @@ def generate_multi_timeframe_candle_trend(date_range_str: str, timeframe_shortli
                                         compression='zip')
     return multi_timeframe_candle_trend
 
-# def merge_retracing_trends():
-#     """
-#     if:
-#         2 BULL/BEAR trends of the same direction separated only by at most one SIDE trend
-#         SIDE trend movement is less than 1 ATR
-#         SIDE trend duration is less than 3 full candles
-#     then:
-#         merge 2 BULL/BEAR trends together
-#         remove SIDE trend
-#     if 2 BULL/BEAR trends of the same direction
-#     :return:
-#     """
-#     # todo: implement merge_retracing_trends
-#     raise Exception('Not implemented')
-#
-#

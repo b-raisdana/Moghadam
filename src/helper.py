@@ -42,12 +42,12 @@ __severity_color_map = {
 }
 
 
-def log(log_message: str, severity: LogSeverity = LogSeverity.INFO, stack_trace: bool = True) -> None:
+def log(message: str, severity: LogSeverity = LogSeverity.INFO, stack_trace: bool = True) -> None:
     """
     Log a message with an optional severity level and stack trace.
 
     Args:
-        log_message (str): The message to be logged.
+        message (str): The message to be logged.
         severity (LogSeverity, optional): The severity level of the log message. Defaults to LogSeverity.WARNING.
         stack_trace (bool, optional): Whether to include a stack trace in the log message. Defaults to True.
 
@@ -57,7 +57,7 @@ def log(log_message: str, severity: LogSeverity = LogSeverity.INFO, stack_trace:
     severity_color = __severity_color_map[severity].value
     time_color = bcolors.OKBLUE.value
     print(f'{severity_color}{severity.value}@{time_color}{datetime.now().strftime("%m-%d.%H:%M:%S")}:'
-          f'{severity_color}{log_message}')
+          f'{severity_color}{message}')
     if stack_trace:
         stack = traceback.extract_stack(limit=2 + 1)[:-1]  # Remove the last item
         traceback.print_list(stack)

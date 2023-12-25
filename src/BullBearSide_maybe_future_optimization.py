@@ -27,7 +27,6 @@ from helper import log
 #                       Index: 'start' timestamp of the trend
 #     :return: Merged and cleaned trends DataFrame.
 #     """
-#     # todo: test merge_overlapped_trends
 #     # merged_trends = pd.DataFrame()
 #     trends.sort_index(inplace=True, level='date')
 #     for _idx in range(len(trends) - 1):

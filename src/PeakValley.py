@@ -17,7 +17,6 @@ from ohlcv import read_base_timeframe_ohlcv
 
 def calculate_strength(peaks_or_valleys: pt.DataFrame[PeakValley], top_type: TopTYPE,
                        ohlcv: pt.DataFrame[OHLCV]) -> pt.DataFrame[PeakValley]:
-    # todo: test calculate_strength
     if len(peaks_or_valleys) == 0:
         return peaks_or_valleys
     start = ohlcv.index[0]
