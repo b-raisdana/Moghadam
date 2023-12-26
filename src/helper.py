@@ -76,10 +76,10 @@ def measure_time(func):
         except OSError as e:
             log(f"Current directory is {os.path.abspath(os.path.curdir)}", stack_trace=False)
             log(f"Error in {func.__name__}({function_parameters}): {str(e)}", stack_trace=True)
-            raise e  # Re-raise the exception after logging
+            raise e
         except Exception as e:
             log(f"Error in {func.__name__}({function_parameters}): {str(e)}", stack_trace=True)
-            raise e # Re-raise the exception after logging
+            raise
 
         end_time = time.time()
         execution_time = end_time - start_time
@@ -87,7 +87,8 @@ def measure_time(func):
             else bcolors.OKGREEN if execution_time < 0.1 \
             else bcolors.WARNING if execution_time < 1 \
             else bcolors.FAIL
-        log(f"{func.__name__}({function_parameters}) executed in {execution_tim_color.value}{execution_time:.3f} seconds", stack_trace=False)
+        log(f"{func.__name__}({function_parameters}) "
+            f"executed in {execution_tim_color.value}{execution_time:.3f} seconds", stack_trace=False)
         return result
 
     return _measure_time

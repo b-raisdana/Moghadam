@@ -5,6 +5,7 @@ from BullBearSidePivot import generate_multi_timeframe_bull_bear_side_pivots, re
 from Config import config
 from FigurePlotter.BasePattern_plotter import plot_multi_timeframe_base_pattern
 from FigurePlotter.BullBearSide_plotter import plot_multi_timeframe_bull_bear_side_trends
+from FigurePlotter.OHLVC_plotter import plot_multi_timeframe_ohlcva
 from FigurePlotter.Pivot_plotter import plot_multi_timeframe_pivots
 from PeakValley import read_multi_timeframe_peaks_n_valleys
 from atr import read_multi_timeframe_ohlcva
@@ -40,7 +41,7 @@ if __name__ == "__main__":
 
     # generate_multi_timeframe_ohlcva()
     ohlcva = read_multi_timeframe_ohlcva()
-    # plot_multi_timeframe_ohlcva(_ohlcva, show=False)
+    # plot_multi_timeframe_ohlcva(ohlcva, show=False)
 
     # _peaks_and_valleys = multi_timeframe_peaks_n_valleys(config.processing_date_range)
     # generate_multi_timeframe_peaks_n_valleys(config.processing_date_range)  # config.processing_date_range)

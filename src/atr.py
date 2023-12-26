@@ -102,11 +102,6 @@ def core_generate_multi_timeframe_ohlcva(date_range_str: str = None, file_path: 
         date_range_str = config.processing_date_range
     if file_path is None:
         file_path = config.path_of_data
-    # biggest_timeframe = config.timeframes[-1]
-    # expanded_date_range = expand_date_range(date_range_str,
-    #                                         time_delta=config.ATR_timeperiod * pd.to_timedelta(biggest_timeframe),
-    #                                         mode='start')
-    # expanded_multi_timeframe_ohlcv = read_multi_timeframe_ohlcv(expanded_date_range)
     multi_timeframe_ohlcva = empty_df(MultiTimeframeOHLCVA)
     for _, timeframe in enumerate(config.timeframes):
         expanded_date_range = expand_date_range(date_range_str,
@@ -114,7 +109,6 @@ def core_generate_multi_timeframe_ohlcva(date_range_str: str = None, file_path: 
                                                 mode='start')
         expanded_date_multi_timeframe_ohlcv = read_multi_timeframe_ohlcv(expanded_date_range)
         timeframe_ohlcv = single_timeframe(expanded_date_multi_timeframe_ohlcv, timeframe)
-        # _single_timeframe_ohlcva = insert_atr(single_timeframe(expanded_multi_timeframe_ohlcv, timeframe))
         timeframe_ohlcva = insert_atr(timeframe_ohlcv)
         timeframe_ohlcva.dropna(subset=['ATR'], inplace=True)
         timeframe_ohlcva['timeframe'] = timeframe

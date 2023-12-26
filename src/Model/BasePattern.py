@@ -13,6 +13,10 @@ class BasePattern(pandera.DataFrameModel):
     end: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
     ttl: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
     ATR: pt.Series[float]
+    zero_trigger_candle: pt.Series[bool]
+    u_pattern_ATR: pt.Series[float]
+    u_trigger_ATR: pt.Series[float]
+    ATR: pt.Series[float]
     internal_high: pt.Series[float]
     internal_low: pt.Series[float]
     upper_band_activated: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)

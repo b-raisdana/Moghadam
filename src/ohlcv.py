@@ -195,7 +195,6 @@ def core_generate_ohlcv(date_range_str: str = None, file_path: str = None):
     df.drop(columns=['timestamp'], inplace=True)
     cast_and_validate(df, OHLCV, zero_size_allowed=after_under_process_date(date_range_str))
     assert times_tester(df, date_range_str, timeframe=config.timeframes[0])
-   
     df.to_csv(os.path.join(file_path, f'ohlcv.{date_range_str}.zip'), compression='zip')
     if config.load_data_to_meta_trader:
         MT.extract_to_data_path(os.path.join(file_path, f'ohlcv.{date_range_str}.zip'))
