@@ -10,7 +10,8 @@ pandas_ta
 # conda install -c conda-forge ta-lib
 # TA-Lib~=0.4.19
 pytest~=7.4.2
-pandera~=0.16.0
+pandera
+backtrader[plotting]
 ccxt~=4.0.86
 MetaTrader5
 # beautifulsoup4
