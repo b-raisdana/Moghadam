@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Annotated, Optional
+from typing import Annotated
 
 import pandas as pd
 import pandera
@@ -14,24 +14,39 @@ class BasePattern(pandera.DataFrameModel):
     ttl: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
     ATR: pt.Series[float]
     zero_trigger_candle: pt.Series[bool]
-    u_pattern_ATR: pt.Series[float]
-    u_trigger_ATR: pt.Series[float]
+    a_pattern_ATR: pt.Series[float]
+    a_trigger_ATR: pt.Series[float]
     ATR: pt.Series[float]
     internal_high: pt.Series[float]
     internal_low: pt.Series[float]
     upper_band_activated: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
-    bellow_band_activated: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
+    below_band_activated: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
 
     @classmethod
-    def repr(cls, _start: datetime, pattern):
-        text = f'BASE: ' \
-               f'{_start.strftime("%H:%M")}-{pattern["end"].strftime("%H:%M") if pattern["end"] is not None else ""}:' \
-               f'{pattern["internal_low"]}-{pattern["internal_high"]}={pattern["internal_high"] - pattern["internal_low"]}'\
-               f'ATR={pattern["ATR"]}'
-        if hasattr(pattern, 'upper_band_activated') and pattern['upper_band_activated'] is not None:
+    def full_repr(cls, _start: datetime, timeframe:str, pattern):
+        effective_end = '/'.join([
+            pattern["end"].strftime("%H:%M") if pd.notna(pattern["end"]) else "",
+            pattern["ttl"].strftime("%H:%M") if pd.notna(pattern["ttl"]) else ""
+        ])
+        text = f'BASE/{timeframe}' \
+               f'{_start.strftime("%H:%M")}-{effective_end} ' \
+               f'{pattern["internal_low"]}-{pattern["internal_high"]}' \
+               f'={pattern["internal_high"] - pattern["internal_low"]:.1f}' \
+               f' ATR={pattern["ATR"]:.1f}'
+        if hasattr(pattern, 'upper_band_activated') and pd.notna(pattern['upper_band_activated']):
             text += f"U@{pattern['upper_band_activated'].strftime('%H:%M')}"
-        if hasattr(pattern, 'bellow_band_activated') and pattern['bellow_band_activated'] is not None:
-            text += f"U@{pattern['bellow_band_activated'].strftime('%H:%M')}"
+        if hasattr(pattern, 'below_band_activated') and pd.notna(pattern['below_band_activated']):
+            text += f"B@{pattern['below_band_activated'].strftime('%H:%M')}"
+        return text
+
+    @classmethod
+    def name_repr(cls, _start: datetime, timeframe:str, pattern):
+        effective_end = '/'.join([
+            pattern["end"].strftime("%H:%M") if pd.notna(pattern["end"]) else "",
+            pattern["ttl"].strftime("%H:%M") if pd.notna(pattern["ttl"]) else ""
+        ])
+        text = f'BASE{timeframe}' \
+               f'{_start.strftime("%H:%M")}-{effective_end} '
         return text
 
 

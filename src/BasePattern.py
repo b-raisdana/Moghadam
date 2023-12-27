@@ -63,14 +63,25 @@ def sequence_of_spinning(ohlcva: pt.DataFrame[OHLCVA], timeframe: str, number_of
         raise ValueError(f"Insufficient data ({len(ohlcva)}) "
                          f"for the specified number of base spinning candles ({number_of_base_spinning_candles})")
     ohlcva = add_candle_size(ohlcva)
+    loop_shift = config.base_pattern_index_shift_after_last_candle_in_the_sequence
     # Check if each candle is spinning
-    spinning_candles = ohlcva[ohlcva['size'] == CandleSize.Spinning.name].copy()
-    for i in range(1, number_of_base_spinning_candles):
+    # ignore (number_of_base_spinning_candles + loop_shift) first candles to make sure shifted times are exsisting.
+    if timeframe == '15min':
+        pass
+    spinning_candles = ohlcva.iloc[number_of_base_spinning_candles + loop_shift -1 :]\
+        .loc[ohlcva['size'] == CandleSize.Spinning.name].copy()
+    for i in range(loop_shift, number_of_base_spinning_candles + loop_shift):
         nth_previous_candle_indexes = spinning_candles.index.shift(-i, freq=timeframe)
+        if timeframe == '15min':
+            pass
         spinning_candles[f'previous_candle_size_{i}'] = ohlcva.loc[nth_previous_candle_indexes, 'size'].tolist()
     candle_size_columns = spinning_candles.filter(like='previous_candle_size_')
     _sequence_of_spinning = (candle_size_columns == CandleSize.Spinning.name).all(axis='columns')
-    return spinning_candles[_sequence_of_spinning].index.shift(1, freq='1min')
+    if config.base_pattern_index_shift_after_last_candle_in_the_sequence == 0:
+        return spinning_candles[_sequence_of_spinning].index
+    else:
+        return spinning_candles[_sequence_of_spinning].index.shift(
+            config.base_pattern_index_shift_after_last_candle_in_the_sequence, freq='1min')
 
 
 def base_from_sequence(_sequence_of_spinning: pt.DataFrame[OHLCVA], ohlcva: pt.DataFrame[OHLCVA],
@@ -100,13 +111,12 @@ def base_from_sequence(_sequence_of_spinning: pt.DataFrame[OHLCVA], ohlcva: pt.D
 
     # timeframe_base_patterns is the next index after enough (config.base_pattern_candle_min_backward_coverage)
     # sequential candles
-    timeframe_base_patterns = _sequence_of_spinning[is_base].copy()
+    timeframe_base_patterns = _sequence_of_spinning[is_base].copy().shift(1, freq=timeframe)
 
     timeframe_base_patterns = add_high_and_low(timeframe_base_patterns, ohlcva, number_of_base_spinning_candles)
 
     return timeframe_base_patterns
 
-    # # todo: test add_high_and_low
     # for i in range(1, number_of_base_spinning_candles + 1):
     #     df = pd.DataFrame(index=timeframe_base_patterns.index)
     #     df['low'] = ohlcva.loc[timeframe_base_patterns.index.shift(-i), 'low'].tolest()
@@ -128,11 +138,12 @@ def add_previous_candle_overlap(_sequence_of_spinning, ohlcva, number_of_base_sp
     # todo: test add_previous_candle_overlap
     ohlcva['previous_low'] = ohlcva['low'].shift(1)
     ohlcva['previous_high'] = ohlcva['high'].shift(1)
-    for i in range(1, number_of_base_spinning_candles + 1):
-        # if i == 0:
-        #     shifted_index = _sequence_of_spinning.index
-        # else:
-        shifted_index = _sequence_of_spinning.index.shift(-i, freq=timeframe)
+    loop_range_shift = config.base_pattern_index_shift_after_last_candle_in_the_sequence
+    for i in range(loop_range_shift, number_of_base_spinning_candles + loop_range_shift):
+        if i != 0:
+            shifted_index = _sequence_of_spinning.index.shift(-i, freq=timeframe)
+        else:
+            shifted_index = _sequence_of_spinning.index
         _sequence_of_spinning[f'previous_candle_intersect_low_{i}'] = \
             ohlcva.loc[shifted_index, ['low', 'previous_low']].max(axis='columns').tolist()
         _sequence_of_spinning[f'previous_candle_intersect_high_{i}'] = \
@@ -230,7 +241,8 @@ def timeframe_base_pattern(ohlcva: pt.DataFrame[OHLCVA],
     if number_of_base_spinning_candles is None:
         number_of_base_spinning_candles = config.base_pattern_number_of_spinning_candles
 
-    # _sequence_of_spinning_indexes is the index of first candle after sequence!
+    # _sequence_of_spinning_indexes is the index of last candle in the sequence ## first candle after sequence.
+
     _sequence_of_spinning_indexes = sequence_of_spinning(ohlcva, timeframe, number_of_base_spinning_candles)
     _sequence_of_spinning = ohlcva.loc[_sequence_of_spinning_indexes].copy()
 
@@ -245,7 +257,11 @@ def timeframe_base_pattern(ohlcva: pt.DataFrame[OHLCVA],
         to_timeframe(timeframe_base_patterns.index, anti_trigger_timeframe(timeframe)), 'ATR'].tolist()
     update_band_status(timeframe_base_patterns, ohlcva, direction='upper')
     update_band_status(timeframe_base_patterns, ohlcva, direction='below')
-    timeframe_base_patterns = cast_and_validate(timeframe_base_patterns, BasePattern)
+    timeframe_base_patterns['end'] = pd.Series(dtype='datetime64[ns, UTC]')
+    try:
+        timeframe_base_patterns = cast_and_validate(timeframe_base_patterns, BasePattern, zero_size_allowed=True)
+    except Exception as e:
+        raise e
     return timeframe_base_patterns
 
 
@@ -257,7 +273,8 @@ def set_zero_trigger_candle_internal_high_and_lows(timeframe_base_patterns: pt.D
     intersect_length_columns = zero_trigger_candle_patterns.filter(like='previous_candle_intersect_length_',
                                                                    axis='columns')
     zero_trigger_candle_patterns['min_intersect_length'] = intersect_length_columns.idxmin(axis='columns')
-    for i in range(1, number_of_base_spinning_candles + 1):
+    loop_shift = config.base_pattern_index_shift_after_last_candle_in_the_sequence
+    for i in range(loop_shift, number_of_base_spinning_candles + loop_shift):
         overlapped_on_nth_column = zero_trigger_candle_patterns[
             zero_trigger_candle_patterns['min_intersect_length'] == f"previous_candle_intersect_length_{i}"].index
         zero_trigger_candle_patterns.loc[overlapped_on_nth_column, 'internal_low'] = \
@@ -286,7 +303,8 @@ def multi_timeframe_base_patterns(multi_timeframe_ohlcva: pt.DataFrame[MultiTime
                                   timeframe_shortlist: List['str'] = None) -> pt.DataFrame[MultiTimeframePivot]:
     # todo: test multi_timeframe_base_patterns
     if timeframe_shortlist is None:
-        timeframe_shortlist = config.timeframes
+        # the last 3 timeframes will not have a anti_trigger_timeframe!
+        timeframe_shortlist = config.timeframes[:-2]
     _multi_timeframe_base_patterns = empty_df(MultiTimeframeBasePattern)
     for timeframe in timeframe_shortlist:
         ohlcva = single_timeframe(multi_timeframe_ohlcva, timeframe)
@@ -311,7 +329,7 @@ def generate_multi_timeframe_base_patterns(date_range_str: str = None, file_path
     base_patterns = multi_timeframe_base_patterns(multi_timeframe_ohlcva,
                                                   timeframe_shortlist=timeframe_shortlist)
     base_patterns.sort_index(inplace=True, level='date')
-    base_patterns.to_csv(os.path.join(file_path, f'multi_timeframe_bull_bear_side_trends.{date_range_str}.zip'),
+    base_patterns.to_csv(os.path.join(file_path, f'multi_timeframe_base_pattern.{date_range_str}.zip'),
                          compression='zip')
 
 
@@ -328,7 +346,7 @@ def read_multi_timeframe_base_patterns(date_range_str: str = None) -> pt.DataFra
 
 # def first_passed_candle(inactive_upper_band_bases: pt.DataFrame[BasePattern], ohlcva: pt.DataFrame[OHLCVA],
 #                         band: Literal['upper', 'below']) -> pt.DataFrame[BasePattern]:
-#     # todo: test first_candle_passed_base_margin
+#     # todoo: test first_candle_passed_base_margin
 #     if band == 'upper':
 #         high_low = 'high'
 #
@@ -363,7 +381,8 @@ def first_passed_candle(start: datetime, end, level: float, ohlcva: pt.DataFrame
 
     else:
         raise Exception(f"band should be 'upper' or 'below' but '{direction}' given!")
-    passing_candles = ohlcva.sort_index(level='date').loc[start:end][compare(level, ohlcva[high_low])]
+    # todo: resolve UserWarning: Boolean Series key will be reindexed to match DataFrame index.
+    passing_candles = ohlcva.sort_index(level='date').loc[start:end].loc[compare(level, ohlcva[high_low])]
     if len(passing_candles) > 0:
         return passing_candles.index[0]
     return None
@@ -385,6 +404,8 @@ def update_band_status(inactive_bases: pt.DataFrame[BasePattern], ohlcva: pt.Dat
     assert inactive_bases[f'internal_{high_low}'].notna().all()
     if f'{direction}_band_activated' in inactive_bases.columns:
         assert inactive_bases[f'{direction}_band_activated'].isna().all()
+    else:
+        inactive_bases[f'{direction}_band_activated'] = pd.Series(dtype='datetime64[ns, UTC]')
     for start, base in inactive_bases.iterrows():
         inactive_bases.loc[start, f'{direction}_band_activated'] = \
             first_passed_candle(start, base['ttl'], expand(base[f'internal_{high_low}'], base['ATR']), ohlcva,
@@ -400,3 +421,20 @@ def update_below_band_status(inactive_below_band_bases: pt.DataFrame[BasePattern
         inactive_below_band_bases.loc[start, 'upper_band_activated'] = \
             first_passed_candle(start, base['ttl'], base['internal_low'] - base['ATR'], ohlcva, direction='below')
     return inactive_below_band_bases
+
+
+def timeframe_effective_bases(_multi_timeframe_base_pattern, timeframe):
+    try:
+        index = config.timeframes.index(timeframe)
+    except ValueError:
+        raise Exception(f'timeframe:{timeframe} should be in [{config.timeframes}]!')
+    except Exception as e:
+        raise e
+        # result = peaks_n_valleys.loc[peaks_n_valleys.index.isin(config.timeframes[index:], level='timeframe')]
+    if index < (len(config.timeframes) - 1):
+        result = _multi_timeframe_base_pattern.loc[
+            _multi_timeframe_base_pattern.index.get_level_values('timeframe')\
+                .isin(config.timeframes[:index + 1])]
+        return result
+    else:
+        return _multi_timeframe_base_pattern

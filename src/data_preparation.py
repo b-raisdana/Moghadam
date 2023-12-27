@@ -474,7 +474,10 @@ def cast_and_validate(data, model_class: Type[Pandera_DFM_Type], return_bool: bo
         if not data.index.is_unique:
             log("Not tested", severity=LogSeverity.ERROR)
             raise Exception(f"Expected to be unique but found duplicates:{data.index[data.index.duplicated()]}")
-    data = apply_as_type(data, model_class)
+    try:
+        data = apply_as_type(data, model_class, return_bool)
+    except KeyError as e:
+        raise e
     if return_bool:
         try:
             model_class.validate(data, lazy=True)
@@ -487,34 +490,53 @@ def cast_and_validate(data, model_class: Type[Pandera_DFM_Type], return_bool: bo
         model_class.validate(data, lazy=True, )
     if return_bool:
         return True
-    columns_to_keep: list[str] = [column for column in model_class.__fields__.keys() if
-                                  column not in ['timeframe', 'date']]
-    data = data[columns_to_keep]
+    try:
+        columns_to_keep: list[str] = [column for column in model_class.__fields__.keys() if
+                                      column not in ['timeframe', 'date']]
+    except Exception as e:
+        raise e
+    try:
+        data = data[columns_to_keep]
+    except Exception as e:
+        raise e
     return data
 
 
-def apply_as_type(data, model_class) -> pd.DataFrame:
+def apply_as_type(data, model_class, return_bool: bool = False) -> pd.DataFrame:
     as_types = {}
     _all_annotations = all_annotations(model_class)
     for attr_name, attr_type in _all_annotations.items():
-        if 'timestamp' in str(attr_type).lower() and 'timestamp' not in str(data.dtypes.loc[attr_name]).lower():
-            as_types[attr_name] = 'datetime64[ns, UTC]'
-        if 'datetimetzdtype' in str(attr_type).lower() and 'datetimetzdtype' not in str(
-                data.dtypes.loc[attr_name]).lower():
-            as_types[attr_name] = 'datetime64[ns, UTC]'
-        elif 'timedelta' in str(attr_type).lower() and 'timedelta' not in str(data.dtypes.loc[attr_name]).lower():
-            as_types[attr_name] = 'timedelta64[s]'
-            # as_types[attr_name] = pandera.typing.Timedelta
-        elif 'pandera.typing.pandas.Series' in str(attr_type):
-            astype = str(attr_type).replace('pandera.typing.pandas.Series[', '').replace(']', '')
-            trans_table = str.maketrans('', '', string.digits)
-            astype = astype.translate(trans_table)
-            if (astype != 'str' and
-                    attr_name in data.columns and astype not in str(data.dtypes.loc[attr_name]).lower()):
-                as_types[attr_name] = astype
+        if attr_name not in data.dtypes.keys():
+            if return_bool:
+                return False
+            else:
+                raise KeyError(f"'{attr_name}' in {model_class.__name__} but not in data:{data.dtypes}")
+        try:
+            if 'timestamp' in str(attr_type).lower() and 'timestamp' not in str(data.dtypes.loc[attr_name]).lower():
+                as_types[attr_name] = 'datetime64[ns, UTC]'
+            if 'datetimetzdtype' in str(attr_type).lower():
+
+                    if 'datetimetzdtype' not in str(data.dtypes.loc[attr_name]).lower():
+                        as_types[attr_name] = 'datetime64[ns, UTC]'
+                    elif 'timedelta' in str(attr_type).lower() and 'timedelta' not in str(
+                            data.dtypes.loc[attr_name]).lower():
+                        as_types[attr_name] = 'timedelta64[s]'
+                        # as_types[attr_name] = pandera.typing.Timedelta
+            elif 'pandera.typing.pandas.Series' in str(attr_type):
+                astype = str(attr_type).replace('pandera.typing.pandas.Series[', '').replace(']', '')
+                trans_table = str.maketrans('', '', string.digits)
+                astype = astype.translate(trans_table)
+                if (astype != 'str' and
+                        attr_name in data.columns and astype not in str(data.dtypes.loc[attr_name]).lower()):
+                    as_types[attr_name] = astype
+        except Exception as e:
+            raise e
     if len(as_types) > 0:
         # log(as_types)
-        data = data.astype(as_types)
+        try:
+            data = data.astype(as_types)
+        except Exception as e:
+            raise e
     return data
 
 
@@ -532,13 +554,13 @@ def pattern_timeframe(timeframe):
 
 def anti_pattern_timeframe(timeframe):
     if config.timeframes.index(timeframe) > len(config.timeframes) + config.timeframe_shifter['pattern'] - 1:
-        raise Exception(f'{timeframe} has not an anit pattern time!')
+        raise Exception(f'{timeframe} has not an anit-pattern time!')
     return shift_timeframe(timeframe, -config.timeframe_shifter['pattern'])
 
 
 def anti_trigger_timeframe(timeframe):
     if config.timeframes.index(timeframe) > len(config.timeframes) + config.timeframe_shifter['trigger'] - 1:
-        raise Exception(f'{timeframe} has not an anit trigger time!')
+        raise Exception(f'{timeframe} has not an anti-trigger time!')
     return shift_timeframe(timeframe, -config.timeframe_shifter['trigger'])
 
 
@@ -746,11 +768,20 @@ def shift_over(needles: Axes, reference: Axes, side: str, start=None, end=None) 
 def concat(left: pd.DataFrame, right: pd.DataFrame):
     if not left.empty and not left.isna().all().all():
         if not right.empty and not right.isna().all().all():
-            # if left.isna().all(axis=0).any():
-            #     pass
-            # if right.isna().all(axis=0).any():
-            #     pass
+            if left.isna().all(axis=0).any():
+                pass
+            if right.isna().all(axis=0).any():
+                pass
+            right_na_columns = right.dtypes[right.isna().all()]
+            # right_na_column_dtypes = right.dtypes[right_na_columns]
+            left_na_columns = left.dtypes[left.isna().all()]
+            # left_na_column_dtypes = left.dtypes[left_na_columns]
             left = pd.concat([left.dropna(axis=1, how='all'), right.dropna(axis=1, how='all')])
+            for column, d_type in left_na_columns.items():
+                left[column] = pd.Series(dtype=d_type)
+            for column, d_type in right_na_columns.items():
+                if column not in left.columns:
+                    left[column] = pd.Series(dtype=d_type)
     else:
         if not right.empty and not right.isna().all().all():
             left = right
