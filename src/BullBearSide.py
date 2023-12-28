@@ -830,7 +830,6 @@ def add_trend_extremum(_boundaries, single_timeframe_peak_n_valley: pt.DataFrame
 
 
 def most_two_significant_tops(start, end, single_timeframe_peaks_n_valleys, tops_type: TopTYPE) -> pd.DataFrame:
-    # todo: test most_two_significant_valleys
     log('test most_two_significant_valleys', severity=LogSeverity.ERROR)
     filtered_valleys = single_timeframe_peaks_n_valleys.loc[
         (single_timeframe_peaks_n_valleys.index >= start) &

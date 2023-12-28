@@ -25,7 +25,6 @@ def add_candle_size(ohlcva: pt.DataFrame[OHLCVA]) -> pt.DataFrame[OHLCVA]:
     :param ohlcva:
     :return:
     """
-    # todo: test candle_size
     assert ohlcva['ATR'].notna().all()
     ohlcva['length'] = ohlcva['high'] - ohlcva['low']
     ohlcva['atr_ratio'] = ohlcva['length'] / ohlcva['ATR']
@@ -56,7 +55,6 @@ def sequence_of_spinning(ohlcva: pt.DataFrame[OHLCVA], timeframe: str, number_of
     Returns:
     - Index[Timestamp]: Index of Spinning candles followed by N Spinning candles.
     """
-    # todo: test sequence_of_spinning
     if number_of_base_spinning_candles is None:
         number_of_base_spinning_candles = config.base_pattern_number_of_spinning_candles
     if len(ohlcva) < number_of_base_spinning_candles + 1:
@@ -68,7 +66,7 @@ def sequence_of_spinning(ohlcva: pt.DataFrame[OHLCVA], timeframe: str, number_of
     # ignore (number_of_base_spinning_candles + loop_shift) first candles to make sure shifted times are exsisting.
     if timeframe == '15min':
         pass
-    spinning_candles = ohlcva.iloc[number_of_base_spinning_candles + loop_shift -1 :]\
+    spinning_candles = ohlcva.iloc[number_of_base_spinning_candles + loop_shift - 1:] \
         .loc[ohlcva['size'] == CandleSize.Spinning.name].copy()
     for i in range(loop_shift, number_of_base_spinning_candles + loop_shift):
         nth_previous_candle_indexes = spinning_candles.index.shift(-i, freq=timeframe)
@@ -102,7 +100,6 @@ def base_from_sequence(_sequence_of_spinning: pt.DataFrame[OHLCVA], ohlcva: pt.D
     Returns:
     - Index[Timestamp]: Index of rows that satisfy the condition.
     """
-    # todo: test  base_from_sequence
     overlap_columns, _sequence_of_spinning = add_previous_candle_overlap(_sequence_of_spinning, ohlcva,
                                                                          number_of_base_spinning_candles, timeframe)
 
@@ -117,25 +114,8 @@ def base_from_sequence(_sequence_of_spinning: pt.DataFrame[OHLCVA], ohlcva: pt.D
 
     return timeframe_base_patterns
 
-    # for i in range(1, number_of_base_spinning_candles + 1):
-    #     df = pd.DataFrame(index=timeframe_base_patterns.index)
-    #     df['low'] = ohlcva.loc[timeframe_base_patterns.index.shift(-i), 'low'].tolest()
-    #     df['previous_low'] = ohlcva.loc[timeframe_base_patterns.index.shift(-1 - i), 'low'].tolist()
-    #     df['max_low'] = df[['low', 'previous_low']].max(axis='columns')
-    #     df['high'] = ohlcva.loc[timeframe_base_patterns.index.shift(-i), 'high'].tolist()
-    #     df['previous_high'] = ohlcva.loc[timeframe_base_patterns.index.shift(-1 - i), 'high'].tolist()
-    #     df['min_high'] = df[['high', 'previous_high']].min(axis='columns')
-    #     df['intersected_length'] = df['min_high'] - df['max_low']
-    #     assert df['intersected_length'] >= 0
-    #     if 'previous_intersected_length' not in df.columns:
-    #         df['previous_intersected_length'] = df['intersected_length']
-    #     else:
-    #         previous_selected_intersection_is_more_significant = \
-    #             df[df['intersected_length'] > df['previous_intersected_length']].index
-
 
 def add_previous_candle_overlap(_sequence_of_spinning, ohlcva, number_of_base_spinning_candles, timeframe):
-    # todo: test add_previous_candle_overlap
     ohlcva['previous_low'] = ohlcva['low'].shift(1)
     ohlcva['previous_high'] = ohlcva['high'].shift(1)
     loop_range_shift = config.base_pattern_index_shift_after_last_candle_in_the_sequence
@@ -161,63 +141,12 @@ def add_previous_candle_overlap(_sequence_of_spinning, ohlcva, number_of_base_sp
     return overlap_columns, _sequence_of_spinning
 
 
-# def nth_candle_overlap(ohlcva, nth_next_candle) -> pt.Series[float]:
-#     """
-#     Calculate the coverage of the Nth candle after ohlcva indexes with the previous candle.
-#
-#     The coverage is calculated as max((next_high - previous_high), (previous_low - next_low)) / candle_length
-#     where candle_length = high - low.
-#
-#     Parameters:
-#     - ohlcva: DataFrame with columns 'open', 'high', 'low', 'close', and 'volume'.
-#     - nth_next_candle: The Nth candle after ohlcva indexes.
-#
-#     Example usage:
-#     Assuming ohlcva is a DataFrame with columns 'open', 'high', 'low', 'close', and 'volume'
-#     You can call the function like this:
-#     result = nth_candle_overlap(ohlcva, nth_next_candle=3)
-#     The result will be a Series with coverage values indexed based on ohlcva.
-#
-#     Returns:
-#     - pt.Series: Series indexed as ohlcva with a column representing the coverage.
-#     """
-#     # todo: test nth_candle_overlap
-#     if nth_next_candle <= 0:
-#         raise ValueError("nth_next_candle must be a positive integer")
-#     assert (ohlcva['length'] > 0).all()
-#     # Shift the DataFrame by nth_next_candle rows to get the Nth next candle
-#     shifted_ohlcva = ohlcva.shift(-nth_next_candle)
-#     if nth_next_candle - 1 > 0:
-#         previous_ohlcva = ohlcva.shift(-(nth_next_candle - 1))
-#     else:
-#         previous_ohlcva = ohlcva
-#     # how much of next[high] is outside previous[high]
-#     shifted_ohlcva['high_difference'] = shifted_ohlcva['high'] - previous_ohlcva['high']
-#     # how much of next[low] is outside previous[low]
-#     shifted_ohlcva['low_difference'] = previous_ohlcva['low'] - shifted_ohlcva['low']
-#     # shifted_ohlcva['length'] = shifted_ohlcva['high'] - shifted_ohlcva['low']
-#
-#     coverage = 1 - shifted_ohlcva[['high_difference', 'low_difference']].max(axis='columns') / shifted_ohlcva['length']
-#     return coverage
-
-
-# def add_sequence_values(ohlcva, high_low: Literal['high', 'low'], number_of_base_spinning_candles: int):
-#     # ohlcva[f'previous_candle_{high_low}_0'] = ohlcva[high_low]
-#     for i in range(1, number_of_base_spinning_candles + 2):
-#         ohlcva[f'previous_candle_{high_low}_{i}'] = ohlcva[high_low].shift(i)
-#     return ohlcva
-
-
 def base_highest_low(timeframe_base_patterns: pt.DataFrame[BasePattern]) -> pt.Series[float]:
-    # todo: test base_highest_low
-    # ohlcva = add_sequence_values(ohlcva, 'low', number_of_base_spinning_candles)
     _base_highest_low = timeframe_base_patterns.filter(like='previous_candle_intersect_low_').max(axis='columns')
     return _base_highest_low
 
 
 def base_lowest_high(timeframe_base_patterns: pt.DataFrame[BasePattern]) -> pt.Series[float]:
-    # todo: test base_lowest_high
-    # ohlcva = add_sequence_values(ohlcva, 'high', number_of_base_spinning_candles)
     _base_lowest_high = timeframe_base_patterns.filter(like='previous_candle_intersect_high_').min(axis='columns')
     return _base_lowest_high
 
@@ -237,7 +166,6 @@ def timeframe_base_pattern(ohlcva: pt.DataFrame[OHLCVA],
                            a_trigger_ohlcva: pt.DataFrame[OHLCVA],
                            timeframe: str, number_of_base_spinning_candles: int = None) \
         -> pt.DataFrame[BasePattern]:
-    # todo: test  timeframe_base
     if number_of_base_spinning_candles is None:
         number_of_base_spinning_candles = config.base_pattern_number_of_spinning_candles
 
@@ -267,7 +195,6 @@ def timeframe_base_pattern(ohlcva: pt.DataFrame[OHLCVA],
 
 def set_zero_trigger_candle_internal_high_and_lows(timeframe_base_patterns: pt.DataFrame[BasePattern],
                                                    number_of_base_spinning_candles: int) -> pt.DataFrame[BasePattern]:
-    # todo: test set_zero_trigger_candle_internal_high_and_lows
     zero_trigger_candle_patterns = timeframe_base_patterns[timeframe_base_patterns['zero_trigger_candle'] == True] \
         .copy()
     intersect_length_columns = zero_trigger_candle_patterns.filter(like='previous_candle_intersect_length_',
@@ -288,7 +215,6 @@ def set_zero_trigger_candle_internal_high_and_lows(timeframe_base_patterns: pt.D
 
 def update_zero_trigger_candles(timeframe_base_patterns: pt.DataFrame['BasePattern'],
                                 number_of_base_spinning_candles: int) -> pt.DataFrame['BasePattern']:
-    # todo: test find_zero_trigger_candles
     zero_trigger_candles = timeframe_base_patterns[
         timeframe_base_patterns['internal_high'] <= timeframe_base_patterns['internal_low']
         ].index
@@ -301,7 +227,6 @@ def update_zero_trigger_candles(timeframe_base_patterns: pt.DataFrame['BasePatte
 
 def multi_timeframe_base_patterns(multi_timeframe_ohlcva: pt.DataFrame[MultiTimeframeOHLCVA],
                                   timeframe_shortlist: List['str'] = None) -> pt.DataFrame[MultiTimeframePivot]:
-    # todo: test multi_timeframe_base_patterns
     if timeframe_shortlist is None:
         # the last 3 timeframes will not have a anti_trigger_timeframe!
         timeframe_shortlist = config.timeframes[:-2]
@@ -321,7 +246,6 @@ def multi_timeframe_base_patterns(multi_timeframe_ohlcva: pt.DataFrame[MultiTime
 
 def generate_multi_timeframe_base_patterns(date_range_str: str = None, file_path: str = config.path_of_data,
                                            timeframe_shortlist: List['str'] = None):
-    # todo: test generate_multi_timeframe_base_patterns
     if date_range_str is None:
         date_range_str = config.processing_date_range
     multi_timeframe_ohlcva = read_multi_timeframe_ohlcva(date_range_str)
@@ -344,29 +268,9 @@ def read_multi_timeframe_base_patterns(date_range_str: str = None) -> pt.DataFra
     return result
 
 
-# def first_passed_candle(inactive_upper_band_bases: pt.DataFrame[BasePattern], ohlcva: pt.DataFrame[OHLCVA],
-#                         band: Literal['upper', 'below']) -> pt.DataFrame[BasePattern]:
-#     # todoo: test first_candle_passed_base_margin
-#     if band == 'upper':
-#         high_low = 'high'
-#
-#         def expand(x, y):
-#             return x + y
-#     elif band == 'below':
-#         high_low = 'low'
-#
-#         def expand(x, y):
-#             return x - y
-#     else:
-#         raise Exception(f"band should be 'upper' or 'below' but '{band}' given!")
-#
-#     return inactive_upper_band_bases
-
-
 def first_passed_candle(start: datetime, end, level: float, ohlcva: pt.DataFrame[OHLCVA],
                         direction: Literal['upper', 'below']) \
         -> Union[datetime, None]:
-    # todo: test first_candle_passed_base_margin
     if direction == 'upper':
         high_low = 'high'
 
@@ -401,6 +305,8 @@ def update_band_status(inactive_bases: pt.DataFrame[BasePattern], ohlcva: pt.Dat
 
         def expand(x, y):
             return x - y
+    else:
+        raise Exception(f"direction should be 'upper' or 'below'. '{direction}' is not acceptable!")
     assert inactive_bases[f'internal_{high_low}'].notna().all()
     if f'{direction}_band_activated' in inactive_bases.columns:
         assert inactive_bases[f'{direction}_band_activated'].isna().all()
@@ -430,10 +336,9 @@ def timeframe_effective_bases(_multi_timeframe_base_pattern, timeframe):
         raise Exception(f'timeframe:{timeframe} should be in [{config.timeframes}]!')
     except Exception as e:
         raise e
-        # result = peaks_n_valleys.loc[peaks_n_valleys.index.isin(config.timeframes[index:], level='timeframe')]
     if index < (len(config.timeframes) - 1):
         result = _multi_timeframe_base_pattern.loc[
-            _multi_timeframe_base_pattern.index.get_level_values('timeframe')\
+            _multi_timeframe_base_pattern.index.get_level_values('timeframe') \
                 .isin(config.timeframes[:index + 1])]
         return result
     else:

@@ -2,7 +2,7 @@ import re
 import string
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Callable, Union, List, Type
+from typing import Callable, Union, List, Type, Any
 from zipfile import BadZipFile
 
 import numpy as np
@@ -48,6 +48,8 @@ def data_is_not_cachable(date_range_str):
         return True
     return False
 
+def no_generator(*args, **kwargs):
+    raise Exception("There is no Generator and expected to reading be successful ever.")
 
 def read_file(date_range_str: str, data_frame_type: str, generator: Callable, caster_model: Type[Pandera_DFM_Type]
               , skip_rows=None, n_rows=None, file_path: str = config.path_of_data,
@@ -461,7 +463,7 @@ def all_annotations(cls, include_indexes=False) -> dict:
 
 
 def cast_and_validate(data, model_class: Type[Pandera_DFM_Type], return_bool: bool = False,
-                      zero_size_allowed: bool = False, unique_index: bool = False) -> Union[pd.DataFrame, bool]:
+                      zero_size_allowed: bool = False, unique_index: bool = False) -> Any:
     if len(data) == 0:
         if not zero_size_allowed:
             raise Exception('Zero size data!')

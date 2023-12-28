@@ -142,7 +142,6 @@ def update_inactive_levels(update__time, ohlcv: pt.DataFrame[OHLCV],
         if price moved from inner_margin to outer_margin: reset hit count to 0 and mark level as active
     :return:
     """
-    # todo: test update_inactive_levels
     multi_timeframe_pivots = archive_cold_levels(update__time, multi_timeframe_pivots)
     multi_timeframe_pivots = reactivated_passed_levels(multi_timeframe_pivots)
 
