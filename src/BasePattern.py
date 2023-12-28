@@ -7,6 +7,7 @@ from pandera import typing as pt, Timestamp
 
 from Config import config, CandleSize
 from Model.BasePattern import BasePattern, MultiTimeframeBasePattern
+from Model.OHLCV import OHLCV
 from Model.OHLCVA import OHLCVA, MultiTimeframeOHLCVA
 from Model.Pivot import MultiTimeframePivot
 from atr import read_multi_timeframe_ohlcva
@@ -257,6 +258,7 @@ def generate_multi_timeframe_base_patterns(date_range_str: str = None, file_path
                          compression='zip')
 
 
+
 def read_multi_timeframe_base_patterns(date_range_str: str = None) -> pt.DataFrame[MultiTimeframeBasePattern]:
     if date_range_str is None:
         date_range_str = config.processing_date_range
@@ -285,7 +287,7 @@ def first_passed_candle(start: datetime, end, level: float, ohlcva: pt.DataFrame
 
     else:
         raise Exception(f"band should be 'upper' or 'below' but '{direction}' given!")
-    # todo: resolve UserWarning: Boolean Series key will be reindexed to match DataFrame index.
+    # todo: resolve UserWarning: Boolean Series key will be re-indexed to match DataFrame index.
     passing_candles = ohlcva.sort_index(level='date').loc[start:end].loc[compare(level, ohlcva[high_low])]
     if len(passing_candles) > 0:
         return passing_candles.index[0]

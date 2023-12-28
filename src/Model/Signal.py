@@ -56,43 +56,43 @@ class Signal(pt.DataFrame[SignalSchema]):
         result: Signal = read_file(date_range_str, 'signal', no_generator, Signal)
         return result
 
-    @classmethod
-    def place_order(cls, signal: pt.Series[SignalSchema]):
-        side = signal['side']
-        base_asset_amount = signal['base_asset_amount']
-        limit_price = signal['limit_price']
-        stop_loss = signal['stop_loss']
-        take_profit = signal['take_profit']
-        trigger_price = signal['trigger_price']
-
-        # Placeholder for actual order placement logic
-        # Replace this with your order placement code
-        if side == 'buy':
-            order_executor = self.buy
-            bracket_executor = self.sell_bracket
-        elif side == 'sell':
-            order_executor = self.sell
-            bracket_executor = self.buy_bracket
-        else:
-            raise Exception('Unknown side %s' % side)
-        # Placeholder for setting stop loss and take profit
-        if pd.notna(stop_loss) and pd.notna(limit_price):
-            execution_type = ExtendedOrder.StopLimit
-        elif pd.notna(stop_loss):
-            execution_type = ExtendedOrder.Stop
-        elif pd.notna(limit_price):
-            execution_type = ExtendedOrder.Limit
-        else:
-            execution_type = ExtendedOrder.Market
-
-        if pd.notna(take_profit):
-            bracket_executor(size=base_asset_amount, exectype=execution_type, limitprice=take_profit,
-                             price=limit_price, stopprice=stop_loss)
-            # order_executor(
-            #     size=base_asset_amount, exectype=execution_type, price=take_profit, parent=bracket_executor(
-            #         limitprice=take_profit, stopprice=stop_loss
-            #     )
-            # )
-        else:
-            order_executor(size=base_asset_amount, exectype=execution_type, price=stop_loss,
-                           limit_price=limit_price)
+    # @classmethod
+    # def place_order(cls, signal: pt.Series[SignalSchema]):
+    #     side = signal['side']
+    #     base_asset_amount = signal['base_asset_amount']
+    #     limit_price = signal['limit_price']
+    #     stop_loss = signal['stop_loss']
+    #     take_profit = signal['take_profit']
+    #     trigger_price = signal['trigger_price']
+    #
+    #     # Placeholder for actual order placement logic
+    #     # Replace this with your order placement code
+    #     if side == 'buy':
+    #         order_executor = self.buy
+    #         bracket_executor = self.sell_bracket
+    #     elif side == 'sell':
+    #         order_executor = self.sell
+    #         bracket_executor = self.buy_bracket
+    #     else:
+    #         raise Exception('Unknown side %s' % side)
+    #     # Placeholder for setting stop loss and take profit
+    #     if pd.notna(stop_loss) and pd.notna(limit_price):
+    #         execution_type = ExtendedOrder.StopLimit
+    #     elif pd.notna(stop_loss):
+    #         execution_type = ExtendedOrder.Stop
+    #     elif pd.notna(limit_price):
+    #         execution_type = ExtendedOrder.Limit
+    #     else:
+    #         execution_type = ExtendedOrder.Market
+    #
+    #     if pd.notna(take_profit):
+    #         bracket_executor(size=base_asset_amount, exectype=execution_type, limitprice=take_profit,
+    #                          price=limit_price, stopprice=stop_loss)
+    #         # order_executor(
+    #         #     size=base_asset_amount, exectype=execution_type, price=take_profit, parent=bracket_executor(
+    #         #         limitprice=take_profit, stopprice=stop_loss
+    #         #     )
+    #         # )
+    #     else:
+    #         order_executor(size=base_asset_amount, exectype=execution_type, price=stop_loss,
+    #                        limit_price=limit_price)
