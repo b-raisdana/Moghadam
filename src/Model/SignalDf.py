@@ -52,7 +52,7 @@ class SignalSchema(pandera.DataFrameModel):
     main_order_id: pt.Series[int] = pandera.Field(nullable=True)
     # led_to_order_at: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
     order_is_active: pt.Series[bool] = pandera.Field(nullable=True)
-
+SignalSchema.__mro__
 a3 = [c.__annotations__ for c in BasePattern.__mro__ if hasattr(c, '__annotations__')]
 b3 = [c.__annotations__ for c in SignalSchema.__mro__ if hasattr(c, '__annotations__')]
 a0 = all_annotations(BasePattern, include_indexes=True)
