@@ -65,8 +65,8 @@ def sequence_of_spinning(ohlcva: pt.DataFrame[OHLCVA], timeframe: str, number_of
     loop_shift = config.base_pattern_index_shift_after_last_candle_in_the_sequence
     # Check if each candle is spinning
     # ignore (number_of_base_spinning_candles + loop_shift) first candles to make sure shifted times are exsisting.
-    if timeframe == '15min':
-        pass
+    # if timeframe == '15min':
+    #     pass
     spinning_candles = ohlcva.iloc[number_of_base_spinning_candles + loop_shift - 1:] \
         .loc[ohlcva['size'] == CandleSize.Spinning.name].copy()
     for i in range(loop_shift, number_of_base_spinning_candles + loop_shift):

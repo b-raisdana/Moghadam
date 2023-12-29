@@ -10,10 +10,12 @@ from pandera import typing as pt
 
 
 class ExpandedDf:
+    schema_data_frame_model = None
     @classmethod
     def new(cls: Type['ExpandedDf'], **kwargs) -> 'ExpandedDf':
-        if ((not hasattr(cls, 'schema_data_frame_model'))
-                or (not issubclass(cls.schema_data_frame_model, pt.Dataframe))):
+        # todo: test
+        if ((not hasattr(cls, 'schema_data_frame_model')) and (cls.schema_data_frame_model is not None)):
+                # or (not issubclass(cls.schema_data_frame_model, pt.Dataframe))):
             raise Exception(
                 f"{cls.__name__}.schema_data_frame_model should be defined as a subclass of pandera.typing.Dataframe before calling {cls.__name__}.new(...)")
         result = empty_df(cls.schema_data_frame_model)
@@ -57,6 +59,7 @@ class ExpandedDf:
     @classmethod
     def cast_and_validate(cls: Type['ExpandedDf'], instance: Union['ExpandedDf', pd.DataFrame],
                           inplace: bool = True) -> 'ExpandedDf':
+        # todo: test
         result: 'ExpandedDf' = cast_and_validate(instance, cls)
         if inplace:
             instance.__dict__ = result.__dict__
@@ -66,6 +69,8 @@ class ExpandedDf:
 
     @classmethod
     def read(cls: Type['ExpandedDf'], date_range_str) -> 'ExpandedDf':
+        # todo: test
+
         if date_range_str is None:
             date_range_str = config.processing_date_range
         result: 'ExpandedDf' = read_file(date_range_str, 'signal', no_generator, cls)
@@ -73,5 +78,7 @@ class ExpandedDf:
 
     @classmethod
     def concat(cls: Type['ExpandedDf'], left, right) -> 'ExpandedDf':
+        # todo: test
+
         result: 'ExpandedDf' = concat(left, right)
         return result

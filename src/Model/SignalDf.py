@@ -6,16 +6,31 @@ import pandera
 
 from pandera import typing as pt
 
+from Model.BasePattern import BasePattern
 from Model.BaseTickStructure import BaseTickStructure
 from Model.ExpandedDf import ExpandedDf
+from data_preparation import empty_df, index_fields, all_annotations
 
 
 class SignalSchema(pandera.DataFrameModel):
+    # date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
+    # end: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
+    # ttl: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
+    # ATR: pt.Series[float]
+    # zero_trigger_candle: pt.Series[bool]
+    # a_pattern_ATR: pt.Series[float]
+    # a_trigger_ATR: pt.Series[float]
+    # ATR: pt.Series[float]
+    # internal_high: pt.Series[float]
+    # internal_low: pt.Series[float]
+    # upper_band_activated: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
+    # below_band_activated: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
+
     # from start of exact this candle the signal is valid
     date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
     # from start of exact this candle the signal is in-valid
-    reference_multi_index: pt.Series[Union[Tuple[str, Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]]]
-    end: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
+    # reference_multi_index: pt.Series[Union[Tuple[str, Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]]]
+    # end: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
     """
     Limit Orders – regular orders having an amount in base currency (how much you want to buy or sell) and a price in quote currency (for which price you want to buy or sell).
     Market Orders – regular orders having an amount in base currency (how much you want to buy or sell)
@@ -26,7 +41,7 @@ class SignalSchema(pandera.DataFrameModel):
     StopLoss And TakeProfit Orders Attached To A Position – advanced orders, consisting of three orders of types listed above: a regular limit or market order placed to enter a position with stop loss and/or take profit orders that will be placed upon opening that position and will be used to close that position later (when a stop loss is reached, it will close the position and will cancel its take profit counterpart, and vice versa, when a take profit is reached, it will close the position and will cancel its stop loss counterpart, these two counterparts are also known as "OCO orders – one cancels the other), apart from the amount (and price for the limit order) to open a position it will also require a triggerPrice for a stop loss order (with a limit price if it's a stop loss limit order) and/or a triggerPrice for a take profit order (with a limit price if it's a take profit limit order).
     """
     # type: pt.Series[str]  # 'Market', or 'Stop' or 'StopLimit'
-    side: pt.Series[Literal['buy', 'sell']]  # sell or buy
+    side: pt.Series[str]  # sell or buy
     base_asset_amount: pt.Series[float]
     # the worst acceptable price for order execution.
     limit_price: pt.Series[float]  # = pandera.Field(nullable=True)
@@ -35,8 +50,19 @@ class SignalSchema(pandera.DataFrameModel):
     # the condition direction is reverse of limit direction.
     trigger_price: pt.Series[float]  # = pandera.Field(nullable=True)
     main_order_id: pt.Series[int] = pandera.Field(nullable=True)
-    led_to_order_at: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
+    # led_to_order_at: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
     order_is_active: pt.Series[bool] = pandera.Field(nullable=True)
+
+a3 = [c.__annotations__ for c in BasePattern.__mro__ if hasattr(c, '__annotations__')]
+b3 = [c.__annotations__ for c in SignalSchema.__mro__ if hasattr(c, '__annotations__')]
+a0 = all_annotations(BasePattern, include_indexes=True)
+b0 = all_annotations(SignalSchema, include_indexes=True)
+a1 = index_fields(BasePattern)
+b1 = index_fields(SignalSchema)
+# BasePattern.to_schema()
+a = empty_df(BasePattern)
+# SignalSchema.to_schema()
+b = empty_df(SignalSchema)
 
 
 class SignalDf(pt.DataFrame[SignalSchema], ExpandedDf):
