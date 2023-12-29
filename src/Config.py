@@ -105,6 +105,8 @@ class Config():
         self.base_pattern_number_of_spinning_candles = 2
         self.base_pattern_candle_min_backward_coverage = 0.8
         self.base_pattern_index_shift_after_last_candle_in_the_sequence = 0
+        self.base_pattern_order_limit_price_margin_percentage = 0.1
+        self.base_pattern_order_limit_price_margin_percentage = 5
 
         self.id = ""
 

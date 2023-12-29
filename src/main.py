@@ -1,5 +1,5 @@
 from BasePattern import generate_multi_timeframe_base_patterns, read_multi_timeframe_base_patterns
-from BasePatternStrategy import test_strategy
+from BasePatternStrategy import BasePatternStrategy
 from BullBearSide import generate_multi_timeframe_bull_bear_side_trends, read_multi_timeframe_bull_bear_side_trends, \
     generate_multi_timeframe_candle_trend
 from BullBearSidePivot import generate_multi_timeframe_bull_bear_side_pivots, read_multi_timeframe_bull_bear_side_pivots
@@ -41,7 +41,7 @@ if __name__ == "__main__":
     # exit()
 
     # generate_multi_timeframe_ohlcva()
-    # ohlcva = read_multi_timeframe_ohlcva()
+    ohlcva = read_multi_timeframe_ohlcva()
     # plot_multi_timeframe_ohlcva(ohlcva, show=False)
 
     # _peaks_and_valleys = multi_timeframe_peaks_n_valleys(config.processing_date_range)
@@ -62,8 +62,8 @@ if __name__ == "__main__":
     # _bull_bear_side_pivots = read_multi_timeframe_bull_bear_side_pivots()
     # plot_multi_timeframe_pivots(_bull_bear_side_pivots)
 
-    # generate_multi_timeframe_base_patterns()
-    # _base_patterns = read_multi_timeframe_base_patterns()
-    # plot_multi_timeframe_base_pattern(ohlcva, _base_patterns)
+    generate_multi_timeframe_base_patterns()
+    _base_patterns = read_multi_timeframe_base_patterns()
+    plot_multi_timeframe_base_pattern(ohlcva, _base_patterns)
 
-    test_strategy()
+    BasePatternStrategy.test_strategy(cash=1000)

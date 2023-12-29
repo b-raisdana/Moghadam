@@ -229,7 +229,7 @@ def update_zero_trigger_candles(timeframe_base_patterns: pt.DataFrame['BasePatte
 def multi_timeframe_base_patterns(multi_timeframe_ohlcva: pt.DataFrame[MultiTimeframeOHLCVA],
                                   timeframe_shortlist: List['str'] = None) -> pt.DataFrame[MultiTimeframePivot]:
     if timeframe_shortlist is None:
-        # the last 3 timeframes will not have a anti_trigger_timeframe!
+        # the last 3 timeframes will not have an anti_trigger_timeframe!
         timeframe_shortlist = config.timeframes[:-2]
     _multi_timeframe_base_patterns = empty_df(MultiTimeframeBasePattern)
     for timeframe in timeframe_shortlist:

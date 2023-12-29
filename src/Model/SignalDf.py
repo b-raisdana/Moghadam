@@ -1,20 +1,20 @@
 from __future__ import annotations
-from typing import Annotated
+from typing import Annotated, Tuple, Union, Literal
 
 import pandas as pd
 import pandera
 
 from pandera import typing as pt
 
-from Config import config
-from data_preparation import cast_and_validate, read_file, no_generator
-from ohlcv import cache_times
+from Model.BaseTickStructure import BaseTickStructure
+from Model.ExpandedDf import ExpandedDf
 
 
 class SignalSchema(pandera.DataFrameModel):
     # from start of exact this candle the signal is valid
     date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
     # from start of exact this candle the signal is in-valid
+    reference_multi_index: pt.Series[Union[Tuple[str, Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]]]
     end: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
     """
     Limit Orders – regular orders having an amount in base currency (how much you want to buy or sell) and a price in quote currency (for which price you want to buy or sell).
@@ -26,7 +26,7 @@ class SignalSchema(pandera.DataFrameModel):
     StopLoss And TakeProfit Orders Attached To A Position – advanced orders, consisting of three orders of types listed above: a regular limit or market order placed to enter a position with stop loss and/or take profit orders that will be placed upon opening that position and will be used to close that position later (when a stop loss is reached, it will close the position and will cancel its take profit counterpart, and vice versa, when a take profit is reached, it will close the position and will cancel its stop loss counterpart, these two counterparts are also known as "OCO orders – one cancels the other), apart from the amount (and price for the limit order) to open a position it will also require a triggerPrice for a stop loss order (with a limit price if it's a stop loss limit order) and/or a triggerPrice for a take profit order (with a limit price if it's a take profit limit order).
     """
     # type: pt.Series[str]  # 'Market', or 'Stop' or 'StopLimit'
-    side: pt.Series[str]  # sell or buy
+    side: pt.Series[Literal['buy', 'sell']]  # sell or buy
     base_asset_amount: pt.Series[float]
     # the worst acceptable price for order execution.
     limit_price: pt.Series[float]  # = pandera.Field(nullable=True)
@@ -35,64 +35,49 @@ class SignalSchema(pandera.DataFrameModel):
     # the condition direction is reverse of limit direction.
     trigger_price: pt.Series[float]  # = pandera.Field(nullable=True)
     main_order_id: pt.Series[int] = pandera.Field(nullable=True)
+    led_to_order_at: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
+    order_is_active: pt.Series[bool] = pandera.Field(nullable=True)
 
 
-class Signal(pt.DataFrame[SignalSchema]):
+class SignalDf(pt.DataFrame[SignalSchema], ExpandedDf):
     schema_data_frame_model = SignalSchema
 
     @classmethod
-    def cast_and_validate(cls, instance: Signal, inplace: bool = True) -> Signal:
-        result: Signal = cast_and_validate(instance, Signal)
-        if inplace:
-            instance.__dict__ = result.__dict__
-            return instance
+    def is_closed(self, signal: pt.Series[SignalSchema], tick: BaseTickStructure):
+        if signal['side'] == 'buy':
+            if tick.high > signal['take_profit']:
+                return True
+            if tick.low < signal['stop_loss']:
+                return True
+        elif signal['side'] == 'sell':
+            if tick.low < signal['take_profit']:
+                return True
+            if tick.high > signal['stop_loss']:
+                return True
         else:
-            return result
+            raise Exception(f"Unexpected side({signal['side']}) in {signal} should be 'buy' or 'sell'.")
+        return False
 
-    @classmethod
-    def read(cls, date_range_str) -> Signal:
-        if date_range_str is None:
-            date_range_str = config.processing_date_range
-        result: Signal = read_file(date_range_str, 'signal', no_generator, Signal)
-        return result
+    @staticmethod
+    def took_profit(signal: pt.Series[SignalSchema], tick: BaseTickStructure) -> bool:
+        if signal['side'] == 'buy':
+            if tick.high > signal['take_profit']:
+                return True
+        elif signal['side'] == 'sell':
+            if tick.low < signal['take_profit']:
+                return True
+        else:
+            raise Exception(f"Unexpected side({signal['side']}) in {signal} should be 'buy' or 'sell'.")
+        return False
 
-    # @classmethod
-    # def place_order(cls, signal: pt.Series[SignalSchema]):
-    #     side = signal['side']
-    #     base_asset_amount = signal['base_asset_amount']
-    #     limit_price = signal['limit_price']
-    #     stop_loss = signal['stop_loss']
-    #     take_profit = signal['take_profit']
-    #     trigger_price = signal['trigger_price']
-    #
-    #     # Placeholder for actual order placement logic
-    #     # Replace this with your order placement code
-    #     if side == 'buy':
-    #         order_executor = self.buy
-    #         bracket_executor = self.sell_bracket
-    #     elif side == 'sell':
-    #         order_executor = self.sell
-    #         bracket_executor = self.buy_bracket
-    #     else:
-    #         raise Exception('Unknown side %s' % side)
-    #     # Placeholder for setting stop loss and take profit
-    #     if pd.notna(stop_loss) and pd.notna(limit_price):
-    #         execution_type = ExtendedOrder.StopLimit
-    #     elif pd.notna(stop_loss):
-    #         execution_type = ExtendedOrder.Stop
-    #     elif pd.notna(limit_price):
-    #         execution_type = ExtendedOrder.Limit
-    #     else:
-    #         execution_type = ExtendedOrder.Market
-    #
-    #     if pd.notna(take_profit):
-    #         bracket_executor(size=base_asset_amount, exectype=execution_type, limitprice=take_profit,
-    #                          price=limit_price, stopprice=stop_loss)
-    #         # order_executor(
-    #         #     size=base_asset_amount, exectype=execution_type, price=take_profit, parent=bracket_executor(
-    #         #         limitprice=take_profit, stopprice=stop_loss
-    #         #     )
-    #         # )
-    #     else:
-    #         order_executor(size=base_asset_amount, exectype=execution_type, price=stop_loss,
-    #                        limit_price=limit_price)
+    @staticmethod
+    def stopped(signal: pt.Series[SignalSchema], tick: BaseTickStructure) -> bool:
+        if signal['side'] == 'buy':
+            if tick.low < signal['stop_loss']:
+                return True
+        elif signal['side'] == 'sell':
+            if tick.high > signal['stop_loss']:
+                return True
+        else:
+            raise Exception(f"Unexpected side({signal['side']}) in {signal} should be 'buy' or 'sell'.")
+        return False
