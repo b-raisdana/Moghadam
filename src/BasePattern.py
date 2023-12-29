@@ -135,6 +135,8 @@ def add_previous_candle_overlap(_sequence_of_spinning, ohlcva, number_of_base_sp
         _sequence_of_spinning[f'previous_candle_overlap_{i}'] = (
                 _sequence_of_spinning[f'previous_candle_intersect_length_{i}']
                 / ohlcva.loc[shifted_index, 'length'].tolist())
+        _sequence_of_spinning.loc[
+            _sequence_of_spinning[f'previous_candle_intersect_length_{i}'] == 0, f'previous_candle_overlap_{i}'] = 0
     # Filter columns that start with 'next_candle_overlap_'
     overlap_columns = _sequence_of_spinning.filter(like='previous_candle_overlap_', axis='columns')
     assert overlap_columns.notna().all().all()
@@ -256,7 +258,6 @@ def generate_multi_timeframe_base_patterns(date_range_str: str = None, file_path
     base_patterns.sort_index(inplace=True, level='date')
     base_patterns.to_csv(os.path.join(file_path, f'multi_timeframe_base_pattern.{date_range_str}.zip'),
                          compression='zip')
-
 
 
 def read_multi_timeframe_base_patterns(date_range_str: str = None) -> pt.DataFrame[MultiTimeframeBasePattern]:

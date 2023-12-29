@@ -100,6 +100,7 @@ class Config():
         self.load_data_to_meta_trader = False
 
         self.ATR_timeperiod = 14
+        self.ATR_safe_start_expand_multipliers = 1
 
         self.base_pattern_ttl = 4 * 4 * 4 * 4
         self.base_pattern_number_of_spinning_candles = 2

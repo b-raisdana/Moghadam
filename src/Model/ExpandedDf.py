@@ -5,7 +5,6 @@ from typing import TypeVar, Type, Union
 import pandas as pd
 
 from Config import config
-from Model.SignalDf import SignalDf
 from data_preparation import empty_df, all_annotations, cast_and_validate, read_file, no_generator, concat
 from pandera import typing as pt
 
@@ -58,7 +57,7 @@ class ExpandedDf:
     @classmethod
     def cast_and_validate(cls: Type['ExpandedDf'], instance: Union['ExpandedDf', pd.DataFrame],
                           inplace: bool = True) -> 'ExpandedDf':
-        result: 'ExpandedDf' = cast_and_validate(instance, SignalDf)
+        result: 'ExpandedDf' = cast_and_validate(instance, cls)
         if inplace:
             instance.__dict__ = result.__dict__
             return instance
