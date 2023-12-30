@@ -16,7 +16,7 @@ class SignalSchema(pandera.DataFrameModel):
     # from start of exact this candle the signal is in-valid
     reference_multi_date: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
     reference_multi_timeframe: pt.Series[str]
-    end: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True, ignore_na=False)
+    end: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True, default=pd.NA, coerce=True, check_name=True, ignore_na=False)
     """
     Limit Orders – regular orders having an amount in base currency (how much you want to buy or sell) and a price in quote currency (for which price you want to buy or sell).
     Market Orders – regular orders having an amount in base currency (how much you want to buy or sell)
