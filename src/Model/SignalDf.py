@@ -40,6 +40,7 @@ class SignalSchema(pandera.DataFrameModel):
     order_is_active: pt.Series[bool] = pandera.Field(nullable=True, ignore_na=False)
     class Config:
         add_missing_columns = True
+#str(model_class.__annotations__['end'].__args__)
 a = empty_df(SignalSchema)
 pass
 class SignalDf(pt.DataFrame[SignalSchema], ExpandedDf):
