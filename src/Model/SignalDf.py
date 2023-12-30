@@ -41,8 +41,8 @@ class SignalSchema(pandera.DataFrameModel):
     class Config:
         add_missing_columns = True
 # #str(model_class.__annotations__['end'].__args__)
-# a = empty_df(SignalSchema)
-# pass
+a = SignalSchema({})
+pass
 class SignalDf(pt.DataFrame[SignalSchema], ExpandedDf):
     schema_data_frame_model = SignalSchema
 
