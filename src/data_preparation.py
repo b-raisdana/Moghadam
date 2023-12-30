@@ -512,7 +512,7 @@ def apply_as_type(data, model_class, return_bool: bool = False) -> pd.DataFrame:
             if return_bool:
                 return False
             else:
-                raise KeyError(f"'{attr_name}' in {model_class.__name__} but not in data:{data.dtypes}")
+                raise KeyError(f"'{attr_name}' in {model_class.__name__} but not in data:\n{data.dtypes}")
         try:
             if 'timestamp' in str(attr_type).lower() and 'timestamp' not in str(data.dtypes.loc[attr_name]).lower():
                 as_types[attr_name] = 'datetime64[ns, UTC]'

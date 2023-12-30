@@ -4,10 +4,11 @@ from plotly import graph_objects as plgo
 from plotly.subplots import make_subplots
 
 from Config import config, CandleSize
+from Model.OHLCV import OHLCV
 from data_preparation import single_timeframe
 from FigurePlotter.plotter import plot_multiple_figures, file_id, DEBUG, save_figure
 from helper import log, measure_time
-
+from pandera import typing as pt
 
 @measure_time
 def plot_multi_timeframe_ohlcva(multi_timeframe_ohlcva, name: str = '', show: bool = True, save: bool = True) -> None:
@@ -32,6 +33,8 @@ def plot_multi_timeframe_ohlcv(multi_timeframe_ohlcv, date_range_str, show: bool
 
 @measure_time
 def plot_ohlcv(ohlcv: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']),
+               # plot_base_ohlcv: bool = False,
+               base_ohlcv: pt.DataFrame[OHLCV] = None,
                save: bool = True, name: str = '', show: bool = True) -> plgo.Figure:
     """
         Plot OHLC (Open, High, Low, Close) data as a candlestick chart.
@@ -44,6 +47,12 @@ def plot_ohlcv(ohlcv: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']
 
         Returns:
             plgo.Figure: The Plotly figure object containing the OHLC candlestick chart.
+            :param show:
+            :param name:
+            :param save:
+            :param ohlcv:
+            :param base_ohlcv:
+            :param plot_base_ohlcv:
         """
 
     if DEBUG: log(f'data({ohlcv.shape})')
@@ -53,6 +62,13 @@ def plot_ohlcv(ohlcv: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']
                                              close=ohlcv['close']
                                              , name=name
                                              )]).update_yaxes(fixedrange=False).update_layout(yaxis_title=name)
+    if base_ohlcv is not None:
+        fig.add_candlestick(
+            x=base_ohlcv.index.values,
+            open=base_ohlcv['open'], high=base_ohlcv['high'], low=base_ohlcv['low'],
+            close=base_ohlcv['close']
+            , name=config.timeframes[0]
+        )
     if show: fig.show()
     if save:
         file_name = f'ohlcv.{file_id(ohlcv, name)}'
@@ -62,7 +78,8 @@ def plot_ohlcv(ohlcv: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']
 
 
 @measure_time
-def plot_ohlcva(ohlcva: pd.DataFrame, save: bool = True, show: bool = True, name: str = '') -> plgo.Figure:
+def plot_ohlcva(ohlcva: pd.DataFrame, save: bool = True, show: bool = True, name: str = '',
+                base_ohlcv: pt.DataFrame[OHLCV] = None) -> plgo.Figure:
     """
     Plot OHLC data with an additional ATR (Average True Range) boundary.
 
@@ -82,15 +99,19 @@ def plot_ohlcva(ohlcva: pd.DataFrame, save: bool = True, show: bool = True, name
         # Assuming you have the 'ohlcva' DataFrame with the required columns (open, high, low, close, ATR)
         date_range_str = "17-10-06.00-00T17-10-06"
         plot_ohlcva(ohlcva, date_range_str)
+        :param save:
+        :param base_ohlcv:
+        :param show:
+        :param ohlcva:
+        :param name:
     """
     # Create a figure with 2 rows
-
     master_fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.02,
                                row_heights=[0.7, 0.3])  # Adjust row heights as needed
     # Calculate the middle of the boundary (average of open and close)
     midpoints = (ohlcva['high'] + ohlcva['low']) / 2
     # Create a figure using the plot_ohlcv function
-    sub_fig = plot_ohlcv(ohlcva[['open', 'high', 'low', 'close']], show=False, save=False, name=name)
+    sub_fig = plot_ohlcv(ohlcva[['open', 'high', 'low', 'close']], base_ohlcv, show=False, save=False, name=name)
 
     # Add the ATR boundaries
     sub_fig = add_atr_scatter(sub_fig, ohlcva.index, midpoints=midpoints,

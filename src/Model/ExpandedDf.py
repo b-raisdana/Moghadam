@@ -5,7 +5,8 @@ from typing import TypeVar, Type, Union
 import pandas as pd
 
 from Config import config
-from data_preparation import empty_df, all_annotations, cast_and_validate, read_file, no_generator, concat
+from data_preparation import empty_df, all_annotations, cast_and_validate, read_file, no_generator, concat, \
+    column_fields, index_fields
 from pandera import typing as pt
 
 
@@ -20,18 +21,19 @@ class ExpandedDf:
                 f"{cls.__name__}.schema_data_frame_model should be defined as a subclass of pandera.typing.Dataframe before calling {cls.__name__}.new(...)")
         result = empty_df(cls.schema_data_frame_model)
         if len(kwargs) > 0:
-            _all_annotations = all_annotations(cls.schema_data_frame_model)
+            d_types = dict(column_fields(cls.schema_data_frame_model), **index_fields(cls.schema_data_frame_model)) # all_annotations(cls.schema_data_frame_model)
             # # check if all Series fields of required self.schema_data_frame_model are present in kwargs
             # required_fields = set(_all_annotations.keys())
             # provided_fields = set(kwargs.keys())
             # missing_fields = required_fields - provided_fields
             # if missing_fields:
             #     raise ValueError(f"Missing required fields in kwargs: {missing_fields}")
+            # todo: test
             if not 'date' in kwargs.keys():
                 raise Exception("'date' is the mandatory TimestampIndex and is required!")
             date = kwargs['date']
             # check if all of kwargs keys are in Series fields
-            invalid_fields = [field for field in kwargs.keys() if field not in _all_annotations.keys()]
+            invalid_fields = [field for field in kwargs.keys() if field not in d_types.keys()]
             if len(invalid_fields) > 0:
                 raise ValueError(
                     f"Field(s) {', '.join(invalid_fields)} is(are) not a valid field(s) in {cls.__name__}.")
@@ -45,7 +47,7 @@ class ExpandedDf:
                         #     raise TypeError(f"Invalid type for field '{key}'. Expected {expected_d_type}, got {type(value)}.")
                         result.loc[{'timeframe': timeframe, 'date': date, }, key] = value
             else:
-                for key, value in kwargs:
+                for key, value in kwargs.items():
                     if key not in ['date', 'timeframe']:
                         # # check if the type of kwargs values match with appropriate  Series field dtype.
                         # expected_d_type = _all_annotations[key].__args__[0]
@@ -53,14 +55,13 @@ class ExpandedDf:
                         #     raise TypeError(f"Invalid type for field '{key}'. Expected {expected_d_type}, got {type(value)}.")
                         result.loc[date, key] = value
             result = cls.cast_and_validate(result)
-        assert type(result) == cls.__name__
         return result
 
     @classmethod
     def cast_and_validate(cls: Type['ExpandedDf'], instance: Union['ExpandedDf', pd.DataFrame],
                           inplace: bool = True) -> 'ExpandedDf':
         # todo: test
-        result: 'ExpandedDf' = cast_and_validate(instance, cls)
+        result: 'ExpandedDf' = cast_and_validate(instance, cls.schema_data_frame_model)
         if inplace:
             instance.__dict__ = result.__dict__
             return instance

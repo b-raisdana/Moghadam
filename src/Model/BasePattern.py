@@ -9,7 +9,7 @@ from Model.MultiTimeframe import MultiTimeframe
 
 
 class BasePattern(pandera.DataFrameModel):
-    date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
+    date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(check_name=True)
     end: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
     ttl: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
     ATR: pt.Series[float]
@@ -22,8 +22,11 @@ class BasePattern(pandera.DataFrameModel):
     upper_band_activated: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
     below_band_activated: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
 
+
+class MultiTimeframeBasePattern(BasePattern, MultiTimeframe):
+
     @classmethod
-    def full_repr(cls, _start: datetime, timeframe:str, pattern):
+    def full_repr(cls, _start: datetime, timeframe: str, pattern):
         effective_end = '/'.join([
             pattern["end"].strftime("%H:%M") if pd.notna(pattern["end"]) else "",
             pattern["ttl"].strftime("%H:%M") if pd.notna(pattern["ttl"]) else ""
@@ -40,7 +43,7 @@ class BasePattern(pandera.DataFrameModel):
         return text
 
     @classmethod
-    def name_repr(cls, _start: datetime, timeframe:str, pattern):
+    def name_repr(cls, _start: datetime, timeframe: str, pattern):
         effective_end = '/'.join([
             pattern["end"].strftime("%H:%M") if pd.notna(pattern["end"]) else "",
             pattern["ttl"].strftime("%H:%M") if pd.notna(pattern["ttl"]) else ""
@@ -48,7 +51,3 @@ class BasePattern(pandera.DataFrameModel):
         text = f'BASE{timeframe}' \
                f'{_start.strftime("%H:%M")}-{effective_end} '
         return text
-
-
-class MultiTimeframeBasePattern(BasePattern, MultiTimeframe):
-    pass

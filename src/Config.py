@@ -111,6 +111,7 @@ class Config():
 
         self.order_max_capital_risk_precentage = 0.1 # 10%
         self.order_per_order_fixed_base_risk_percentage = 0.01 # 1%
+        self.base_pattern_risk_reward_rate = 5 # 500%
 
         self.id = ""
 

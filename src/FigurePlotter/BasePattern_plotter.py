@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union
 
 from pandera import typing as pt
 from plotly import graph_objects as plgo
@@ -18,9 +18,12 @@ MAX_NUMBER_OF_PLOT_SCATTERS = 5000
 
 def plot_single_timeframe_base_pattern(single_timeframe_ohlcva: pt.DataFrame[OHLCV],
                                        timeframe_base_patterns: pt.DataFrame[BasePattern],
+                                       base_ohlcv: Union[pt.DataFrame[OHLCV] | None],
                                        name: str = '', show: bool = True,
                                        html_path: str = '', save: bool = True) -> plgo.Figure:
-    fig: plgo.Figure = plot_ohlcva(single_timeframe_ohlcva, name=name, show=False, save=False)
+    if len(single_timeframe_ohlcva) == 0:
+        return plot_ohlcva(single_timeframe_ohlcva, name=name, show=False, save=False)
+    fig: plgo.Figure = plot_ohlcva(single_timeframe_ohlcva, base_ohlcv=base_ohlcv, name=name, show=False, save=False)
     # remained_number_of_scatters = MAX_NUMBER_OF_PLOT_SCATTERS
     timeframe_base_patterns['effective_end'] = timeframe_base_patterns[['end', 'ttl']].min(axis=1, skipna=True)
     ohlcva_end = single_timeframe_ohlcva.index[-1]
@@ -31,8 +34,8 @@ def plot_single_timeframe_base_pattern(single_timeframe_ohlcva: pt.DataFrame[OHL
         ys = [base_pattern['internal_low'], base_pattern['internal_low'], \
               base_pattern['internal_high'], base_pattern['internal_high']]
         fill_color = 'blue'
-        name = BasePattern.name_repr(_start, timeframe, base_pattern)
-        text = BasePattern.full_repr(_start, timeframe, base_pattern)
+        name = MultiTimeframeBasePattern.name_repr(_start, timeframe, base_pattern)
+        text = MultiTimeframeBasePattern.full_repr(_start, timeframe, base_pattern)
         fig.add_scatter(x=xs, y=ys, fill="toself",  # fillcolor=fill_color,
                         fillpattern=dict(fgopacity=0.5),
                         name=name,
@@ -85,11 +88,20 @@ def plot_multi_timeframe_base_pattern(multi_timeframe_ohlcva: pt.DataFrame[Multi
     figures = []
     if timeframe_shortlist is None:
         timeframe_shortlist = config.timeframes
+    base_ohlcv = single_timeframe(multi_timeframe_ohlcva, config.timeframes[0])
     for timeframe in timeframe_shortlist:
-        _figure = plot_single_timeframe_base_pattern(
-            single_timeframe(multi_timeframe_ohlcva, timeframe),
-            timeframe_effective_bases(_multi_timeframe_base_pattern, timeframe),
-            show=False, save=False, name=f'{timeframe} boundaries')
+        if timeframe != config.timeframes[0]:
+            _figure = plot_single_timeframe_base_pattern(
+                single_timeframe(multi_timeframe_ohlcva, timeframe),
+                timeframe_effective_bases(_multi_timeframe_base_pattern, timeframe).copy(),
+                base_ohlcv=base_ohlcv,
+                show=False, save=False, name=f'{timeframe} boundaries')
+        else:
+            _figure = plot_single_timeframe_base_pattern(
+                single_timeframe(multi_timeframe_ohlcva, timeframe),
+                timeframe_effective_bases(_multi_timeframe_base_pattern, timeframe).copy(),
+                base_ohlcv=None,
+                show=False, save=False, name=f'{timeframe} boundaries')
         figures.append(_figure)
     plot_multiple_figures(figures, name=f'multi_timeframe_base_pattern.'
                                         f'{multi_timeframe_ohlcva.index[0][1].strftime("%y-%m-%d.%H-%M")}T'

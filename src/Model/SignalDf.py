@@ -1,36 +1,22 @@
-from __future__ import annotations
-from typing import Annotated, Tuple, Union, Literal
+# from __future__ import annotations
+from typing import Annotated, Tuple, Union
 
 import pandas as pd
 import pandera
-
 from pandera import typing as pt
 
-from Model.BasePattern import BasePattern
 from Model.BaseTickStructure import BaseTickStructure
 from Model.ExpandedDf import ExpandedDf
-from data_preparation import empty_df, index_fields, all_annotations
+from data_preparation import empty_df
 
 
 class SignalSchema(pandera.DataFrameModel):
-    # date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
-    # end: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
-    # ttl: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
-    # ATR: pt.Series[float]
-    # zero_trigger_candle: pt.Series[bool]
-    # a_pattern_ATR: pt.Series[float]
-    # a_trigger_ATR: pt.Series[float]
-    # ATR: pt.Series[float]
-    # internal_high: pt.Series[float]
-    # internal_low: pt.Series[float]
-    # upper_band_activated: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
-    # below_band_activated: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
-
     # from start of exact this candle the signal is valid
     date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
     # from start of exact this candle the signal is in-valid
-    # reference_multi_index: pt.Series[Union[Tuple[str, Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]]]
-    # end: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
+    reference_multi_date: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
+    reference_multi_timeframe: pt.Series[str]
+    end: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True, ignore_na=False)
     """
     Limit Orders – regular orders having an amount in base currency (how much you want to buy or sell) and a price in quote currency (for which price you want to buy or sell).
     Market Orders – regular orders having an amount in base currency (how much you want to buy or sell)
@@ -45,26 +31,17 @@ class SignalSchema(pandera.DataFrameModel):
     base_asset_amount: pt.Series[float]
     # the worst acceptable price for order execution.
     limit_price: pt.Series[float]  # = pandera.Field(nullable=True)
-    stop_loss: pt.Series[float] = pandera.Field(nullable=True)
+    stop_loss: pt.Series[float] = pandera.Field(nullable=True, ignore_na=False)
     take_profit: pt.Series[float]  # = pandera.Field(nullable=True)
     # the condition direction is reverse of limit direction.
     trigger_price: pt.Series[float]  # = pandera.Field(nullable=True)
-    main_order_id: pt.Series[int] = pandera.Field(nullable=True)
+    main_order_id: pt.Series[int] = pandera.Field(nullable=True, ignore_na=False)
     # led_to_order_at: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
-    order_is_active: pt.Series[bool] = pandera.Field(nullable=True)
-SignalSchema.__mro__
-a3 = [c.__annotations__ for c in BasePattern.__mro__ if hasattr(c, '__annotations__')]
-b3 = [c.__annotations__ for c in SignalSchema.__mro__ if hasattr(c, '__annotations__')]
-a0 = all_annotations(BasePattern, include_indexes=True)
-b0 = all_annotations(SignalSchema, include_indexes=True)
-a1 = index_fields(BasePattern)
-b1 = index_fields(SignalSchema)
-# BasePattern.to_schema()
-a = empty_df(BasePattern)
-# SignalSchema.to_schema()
-b = empty_df(SignalSchema)
-
-
+    order_is_active: pt.Series[bool] = pandera.Field(nullable=True, ignore_na=False)
+    class Config:
+        add_missing_columns = True
+a = empty_df(SignalSchema)
+pass
 class SignalDf(pt.DataFrame[SignalSchema], ExpandedDf):
     schema_data_frame_model = SignalSchema
 
