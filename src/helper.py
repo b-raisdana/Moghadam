@@ -64,6 +64,26 @@ def log(message: str, severity: LogSeverity = LogSeverity.INFO, stack_trace: boo
         traceback.print_list(stack)
 
 
+def log_D(message: str, stack_trace: bool = False):
+    """
+    log a DEBUG message
+    :param message:
+    :param stack_trace:
+    :return:
+    """
+    log(message, severity=LogSeverity.DEBUG, stack_trace=stack_trace)
+
+
+def log_W(message: str, stack_trace: bool = False):
+    """
+    log a WARNING message
+    :param message:
+    :param stack_trace:
+    :return:
+    """
+    log(message, severity=LogSeverity.WARNING, stack_trace=stack_trace)
+
+
 def measure_time(func):
     @functools.wraps(func)
     def _measure_time(*args, **kwargs):

@@ -5,7 +5,7 @@ from typing import TypeVar, Type, Union
 import pandas as pd
 
 from Config import config
-from data_preparation import empty_df, all_annotations, cast_and_validate, read_file, no_generator, concat
+from data_preparation import empty_df, d_types, cast_and_validate, read_file, no_generator, concat
 from pandera import typing as pt
 
 
@@ -20,7 +20,7 @@ class ExpandedDf:
                 f"{cls.__name__}.schema_data_frame_model should be defined as a subclass of pandera.typing.Dataframe before calling {cls.__name__}.new(...)")
         result = empty_df(cls.schema_data_frame_model)
         if len(kwargs) > 0:
-            _all_annotations = all_annotations(cls.schema_data_frame_model)
+            _all_annotations = d_types(cls.schema_data_frame_model)
             # # check if all Series fields of required self.schema_data_frame_model are present in kwargs
             # required_fields = set(_all_annotations.keys())
             # provided_fields = set(kwargs.keys())
@@ -53,7 +53,7 @@ class ExpandedDf:
                         #     raise TypeError(f"Invalid type for field '{key}'. Expected {expected_d_type}, got {type(value)}.")
                         result.loc[date, key] = value
             result = cls.cast_and_validate(result)
-        assert type(result) == cls.__name__
+        # assert type(result) == cls.__name__
         return result
 
     @classmethod

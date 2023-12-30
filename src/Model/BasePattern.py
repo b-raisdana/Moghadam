@@ -3,13 +3,13 @@ from typing import Annotated
 
 import pandas as pd
 import pandera
-from pandera import typing as pt
+from pandera import typing as pt, Index
 
 from Model.MultiTimeframe import MultiTimeframe
 
 
 class BasePattern(pandera.DataFrameModel):
-    date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
+    date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(check_name=True)
     end: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
     ttl: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
     ATR: pt.Series[float]

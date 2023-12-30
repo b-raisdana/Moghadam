@@ -15,7 +15,7 @@ from pandera import typing as pt, DataType
 
 from Config import config
 from Model.MultiTimeframe import MultiTimeframe_Type, MultiTimeframe
-from helper import log, date_range, date_range_to_string, morning, Pandera_DFM_Type, LogSeverity
+from helper import log, date_range, date_range_to_string, morning, Pandera_DFM_Type, LogSeverity, log_D
 
 
 def date_range_of_data(data: pd.DataFrame) -> str:
@@ -48,8 +48,10 @@ def data_is_not_cachable(date_range_str):
         return True
     return False
 
+
 def no_generator(*args, **kwargs):
     raise Exception("There is no Generator and expected to reading be successful ever.")
+
 
 def read_file(date_range_str: str, data_frame_type: str, generator: Callable, caster_model: Type[Pandera_DFM_Type]
               , skip_rows=None, n_rows=None, file_path: str = config.path_of_data,
@@ -446,20 +448,45 @@ def shift_timeframe(timeframe, shifter):
         raise Exception(f'shifter expected be int or str got type({type(shifter)}) in {shifter}')
 
 
-def all_annotations(cls, include_indexes=False) -> dict:
+def d_types(model_class, include_indexes=False) -> dict:
     """Returns a dictionary-like ChainMap that includes annotations for all
        attributes defined in cls or inherited from superclasses."""
-    all_classes_list = [c.__annotations__ for c in cls.__mro__ if hasattr(c, '__annotations__')]
-    annotations = {}
+    # all_classes_list = [c.__annotations__ for c in model_class.__mro__ if hasattr(c, '__annotations__')]
+    _d_types = {}
     if include_indexes:
         drop_list = ['Config']
     else:
         drop_list = ['date', 'timeframe', 'Config']
-    for single_class_annotations in all_classes_list:
-        for attr_name, attr_type in single_class_annotations.items():
-            if attr_name not in drop_list and '__' not in attr_name:
-                annotations[attr_name] = attr_type
-    return annotations  # ChainMap(*(c.__annotations__ for c in cls.__mro__ if '__annotations__' in c.__dict__))
+    # for single_class in all_classes_list:
+    for single_class in model_class.__mro__:
+        if hasattr(single_class, '__annotations__'):
+            # try:
+            for name, d_t in column_fields(single_class).items():
+                if name in _d_types.keys() and _d_types[name] is not None and d_t is not None:
+                    if _d_types[name] != d_t:
+                        raise Exception(f"Found different d_types for column '{name}' as {_d_types[name]} != {d_t}")
+                if d_t is not None:
+                    _d_types[name] = d_t
+            for name, d_t in index_fields(single_class).items():
+                if name in _d_types.keys() and _d_types[name] is not None and d_t is not None:
+                    if _d_types[name] != d_t:
+                        raise Exception(f"Found different d_types for index '{name}' as {_d_types[name]} != {d_t}. "
+                                        f"It might be because of an Index without '= pandera.Field(nullable=True)'")
+                if d_t is not None:
+                    _d_types[name] = d_t
+            # _d_types = dict(column_fields(single_class)
+            #     **column_fields(single_class),
+            #     **_d_types,
+            #     **index_fields(single_class),
+            # )
+        # except Exception as e:
+        #     raise e
+        # for attr_name, attr_type in dict(column_fields(model_class), **index_fields(model_class)).items():
+        #     annotations[attr_name] = attr_type
+        # # for attr_name, attr_type in single_class.items():
+        # #     if attr_name not in drop_list and '__' not in attr_name:
+        # #         annotations[attr_name] = attr_type
+    return _d_types  # ChainMap(*(c.__annotations__ for c in cls.__mro__ if '__annotations__' in c.__dict__))
 
 
 def cast_and_validate(data, model_class: Type[Pandera_DFM_Type], return_bool: bool = False,
@@ -506,7 +533,7 @@ def cast_and_validate(data, model_class: Type[Pandera_DFM_Type], return_bool: bo
 
 def apply_as_type(data, model_class, return_bool: bool = False) -> pd.DataFrame:
     as_types = {}
-    _all_annotations = all_annotations(model_class)
+    _all_annotations = d_types(model_class)
     for attr_name, attr_type in _all_annotations.items():
         if attr_name not in data.dtypes.keys():
             if return_bool:
@@ -518,12 +545,12 @@ def apply_as_type(data, model_class, return_bool: bool = False) -> pd.DataFrame:
                 as_types[attr_name] = 'datetime64[ns, UTC]'
             if 'datetimetzdtype' in str(attr_type).lower():
 
-                    if 'datetimetzdtype' not in str(data.dtypes.loc[attr_name]).lower():
-                        as_types[attr_name] = 'datetime64[ns, UTC]'
-                    elif 'timedelta' in str(attr_type).lower() and 'timedelta' not in str(
-                            data.dtypes.loc[attr_name]).lower():
-                        as_types[attr_name] = 'timedelta64[s]'
-                        # as_types[attr_name] = pandera.typing.Timedelta
+                if 'datetimetzdtype' not in str(data.dtypes.loc[attr_name]).lower():
+                    as_types[attr_name] = 'datetime64[ns, UTC]'
+                elif 'timedelta' in str(attr_type).lower() and 'timedelta' not in str(
+                        data.dtypes.loc[attr_name]).lower():
+                    as_types[attr_name] = 'timedelta64[s]'
+                    # as_types[attr_name] = pandera.typing.Timedelta
             elif 'pandera.typing.pandas.Series' in str(attr_type):
                 astype = str(attr_type).replace('pandera.typing.pandas.Series[', '').replace(']', '')
                 trans_table = str.maketrans('', '', string.digits)
@@ -665,24 +692,67 @@ def times_in_date_range(date_range_str: str, timeframe: str,
 def index_fields(model_class: Type[Pandera_DFM_Type]) -> dict[str, str]:
     if 'PeakValleys' in model_class.__name__:
         pass
-    if hasattr(model_class.to_schema().index, 'columns'):
+    names = {}
+    if not hasattr(model_class, 'to_schema'):
+        return {}
+    try:
+        model_class.to_schema()
+    except Exception as e:
+        # model_class should be 'DataFrameModel' or 'BaseModel'
+        return {}
+    #     model_class.to_schema()
+    # except (TypeError, NotImplementedError):
+    #     return {}
+    # except Exception as e:
+    #     raise
+    if hasattr(model_class.to_schema(), 'columns'):
         # model_class has a MultiIndex
         # names = list(model_class.to_schema().index.columns.keys())
-        names = model_class.to_schema().index.dtypes
+        if hasattr(model_class.to_schema().index, 'dtype'):
+            # this is a singular Index
+            if model_class.to_schema().index.name is not None:
+                names[model_class.to_schema().index.name] = model_class.to_schema().index.dtype
+            else:
+                log_D(f"The Index of {model_class.__name__} is not set. "
+                      f"Try to make mandatory index name checking on by '= pandera.Field(check_name=True)'!")
+                names['date'] = model_class.to_schema().index.dtype
+        elif hasattr(model_class.to_schema().index, 'dtypes'):
+            # this is a MultiIndex
+            names = model_class.to_schema().index.dtypes
+        else:
+            raise Exception("Unhandled situation!")
     else:
-        # model_class has a single Index
-        all_fields = all_annotations(model_class, include_indexes=True)
-        names = {k: model_class.to_schema().index.dtype for k, v in all_fields.items()
-                 if 'pandera.typing.pandas.Index' in str(v.__origin__)}
+        raise Exception("Unhandled situation!")
+        # # model_class has a single Index
+        # all_fields = all_annotations(model_class, include_indexes=True)
+        # # names = {k: model_class.to_schema().index.dtype for k, v in all_fields.items()
+        # #          if 'pandera.typing.pandas.Index' in str(v.__origin__)}
+        # names = {}
+        # for k, v in all_fields.items():
+        #     if 'pandera.typing.pandas.Index' in str(v.__origin__):
+        #         names[k] = model_class.to_schema().index.dtype
     return names
 
 
 def column_fields(model_class: Type[Pandera_DFM_Type]) -> dict[str, DataType]:
-    return model_class.to_schema().dtypes
-    # return list(model_class.to_schema().columns.keys())
+    if not hasattr(model_class, 'to_schema'):
+        return {}
+    try:
+        return model_class.to_schema().dtypes
+    except Exception as e:
+        # model_class should be 'DataFrameModel' or 'BaseModel'
+        return {}
+
+    # except (TypeError, NotImplementedError):
+    #     return {}
+    # except Exception as e:
+    #     raise e
+    # # return list(model_class.to_schema().columns.keys())
 
 
 def empty_df(model_class: Type[Pandera_DFM_Type]) -> pd.DataFrame:
+    if len(index_fields(model_class).keys()) == 0:
+        raise Exception(f"mro({model_class.__name__})=[{model_class.__mro__}] does not have any Index!")
     as_types = dict(column_fields(model_class), **index_fields(model_class))
     # Create an empty DataFrame with Pandas-compatible data types
     empty_data = {
@@ -693,8 +763,7 @@ def empty_df(model_class: Type[Pandera_DFM_Type]) -> pd.DataFrame:
         as_types[_name] = _type.type.name
 
     _empty_df = _empty_df.astype(as_types)
-    if len(index_fields(model_class).keys()) == 0:
-        pass
+
     _empty_df.set_index(list(index_fields(model_class).keys()), inplace=True)
     _empty_df = model_class(_empty_df)
     return _empty_df

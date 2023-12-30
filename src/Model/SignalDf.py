@@ -1,15 +1,13 @@
 from __future__ import annotations
-from typing import Annotated, Tuple, Union, Literal
+
+from typing import Annotated
 
 import pandas as pd
 import pandera
-
 from pandera import typing as pt
 
-from Model.BasePattern import BasePattern
 from Model.BaseTickStructure import BaseTickStructure
 from Model.ExpandedDf import ExpandedDf
-from data_preparation import empty_df, index_fields, all_annotations
 
 
 class SignalSchema(pandera.DataFrameModel):
@@ -52,17 +50,6 @@ class SignalSchema(pandera.DataFrameModel):
     main_order_id: pt.Series[int] = pandera.Field(nullable=True)
     # led_to_order_at: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
     order_is_active: pt.Series[bool] = pandera.Field(nullable=True)
-SignalSchema.__mro__
-a3 = [c.__annotations__ for c in BasePattern.__mro__ if hasattr(c, '__annotations__')]
-b3 = [c.__annotations__ for c in SignalSchema.__mro__ if hasattr(c, '__annotations__')]
-a0 = all_annotations(BasePattern, include_indexes=True)
-b0 = all_annotations(SignalSchema, include_indexes=True)
-a1 = index_fields(BasePattern)
-b1 = index_fields(SignalSchema)
-# BasePattern.to_schema()
-a = empty_df(BasePattern)
-# SignalSchema.to_schema()
-b = empty_df(SignalSchema)
 
 
 class SignalDf(pt.DataFrame[SignalSchema], ExpandedDf):
