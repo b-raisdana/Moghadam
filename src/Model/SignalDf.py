@@ -16,7 +16,7 @@ class SignalSchema(pandera.DataFrameModel):
     # from start of exact this candle the signal is in-valid
     reference_multi_date: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
     reference_multi_timeframe: pt.Series[str]
-    end: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True, default=pd.NA, coerce=True, check_name=True, ignore_na=False)
+    end: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
     """
     Limit Orders – regular orders having an amount in base currency (how much you want to buy or sell) and a price in quote currency (for which price you want to buy or sell).
     Market Orders – regular orders having an amount in base currency (how much you want to buy or sell)
@@ -31,18 +31,18 @@ class SignalSchema(pandera.DataFrameModel):
     base_asset_amount: pt.Series[float]
     # the worst acceptable price for order execution.
     limit_price: pt.Series[float]  # = pandera.Field(nullable=True)
-    stop_loss: pt.Series[float] = pandera.Field(nullable=True, ignore_na=False)
+    stop_loss: pt.Series[float] = pandera.Field(nullable=True) # , ignore_na=False
     take_profit: pt.Series[float]  # = pandera.Field(nullable=True)
     # the condition direction is reverse of limit direction.
     trigger_price: pt.Series[float]  # = pandera.Field(nullable=True)
-    main_order_id: pt.Series[int] = pandera.Field(nullable=True, ignore_na=False)
+    main_order_id: pt.Series[int] = pandera.Field(nullable=True, default=-1, coerce=True, ignore_na=True)
     # led_to_order_at: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
-    order_is_active: pt.Series[bool] = pandera.Field(nullable=True, ignore_na=False)
+    order_is_active: pt.Series[bool] = pandera.Field(nullable=True, default=False) # , ignore_na=False
     class Config:
         add_missing_columns = True
-#str(model_class.__annotations__['end'].__args__)
-a = empty_df(SignalSchema)
-pass
+# #str(model_class.__annotations__['end'].__args__)
+# a = empty_df(SignalSchema)
+# pass
 class SignalDf(pt.DataFrame[SignalSchema], ExpandedDf):
     schema_data_frame_model = SignalSchema
 

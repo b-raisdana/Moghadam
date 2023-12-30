@@ -139,8 +139,8 @@ class BasePatternStrategy(bt.Strategy):
             base_patterns = self.base_patterns
         if f'{band}_band_signal_generated' not in base_patterns.columns:
             base_patterns[f'{band}_band_signal_generated'] = pd.NA
-        else:
-            pass
+
+
         result = base_patterns[
             (base_patterns[f'{band}_band_activated'].notna() & (
                     base_patterns[f'{band}_band_activated'] <= self.candle().date)) &
@@ -235,7 +235,6 @@ class BasePatternStrategy(bt.Strategy):
             ]
 
     def ordered_signals(self, signal_df: SignalDf = None) -> SignalDf:
-        # todo: test
         if signal_df is None:
             signal_df = self.signal_df
         return signal_df[signal_df['order_is_active'].notna() & signal_df['order_is_active']]
@@ -316,7 +315,6 @@ class BasePatternStrategy(bt.Strategy):
 
     @staticmethod
     def test_strategy(cash: float, date_range_str: str = None):
-        # todo: test
         if date_range_str is None:
             date_range_str = config.processing_date_range
         cerebro = bt.Cerebro()

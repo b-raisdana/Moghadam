@@ -60,7 +60,6 @@ class ExpandedDf:
     @classmethod
     def cast_and_validate(cls: Type['ExpandedDf'], instance: Union['ExpandedDf', pd.DataFrame],
                           inplace: bool = True) -> 'ExpandedDf':
-        # todo: test
         result: 'ExpandedDf' = cast_and_validate(instance, cls.schema_data_frame_model)
         if inplace:
             instance.__dict__ = result.__dict__
