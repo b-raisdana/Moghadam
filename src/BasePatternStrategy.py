@@ -218,7 +218,7 @@ class BasePatternStrategy(bt.Strategy):
             if self.candle_overlaps_base(base_pattern):
                 # todo: test
                 self.add_signal(timeframe, start, base_pattern, band='below')
-                self.base_patterns.loc[timeframe, start, 'below_band_signal_generated'] = self.candle().date
+                self.base_patterns.loc[(timeframe, start), 'below_band_signal_generated'] = self.candle().date
 
     def active_signals(self) -> SignalDf:
         if 'end' not in self.signal_df.columns:
