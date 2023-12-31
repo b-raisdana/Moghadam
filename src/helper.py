@@ -43,7 +43,19 @@ __severity_color_map = {
 }
 
 
-def log(message: str, severity: LogSeverity = LogSeverity.INFO, stack_trace: bool = True) -> None:
+def log_d(message: str, stack_trace: bool = True):
+    log(message, LogSeverity.DEBUG, stack_trace)
+
+
+def log_w(message: str, stack_trace: bool = True):
+    log(message, LogSeverity.WARNING, stack_trace)
+
+
+def log_e(message: str, stack_trace: bool = True):
+    log(message, LogSeverity.ERROR, stack_trace)
+
+
+def log(message: str, severity: LogSeverity = LogSeverity.INFO, stack_trace: bool = True):
     """
     Log a message with an optional severity level and stack trace.
 

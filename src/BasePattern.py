@@ -7,12 +7,12 @@ from pandera import typing as pt, Timestamp
 
 from Config import config, CandleSize
 from Model.BasePattern import BasePattern, MultiTimeframeBasePattern
-from Model.OHLCV import OHLCV
 from Model.OHLCVA import OHLCVA, MultiTimeframeOHLCVA
 from Model.Pivot import MultiTimeframePivot
 from atr import read_multi_timeframe_ohlcva
 from data_preparation import single_timeframe, concat, cast_and_validate, empty_df, read_file, anti_pattern_timeframe, \
     anti_trigger_timeframe, to_timeframe
+from helper import date_range, date_range_to_string
 
 
 def add_candle_size(ohlcva: pt.DataFrame[OHLCVA]) -> pt.DataFrame[OHLCVA]:
@@ -182,10 +182,10 @@ def timeframe_base_pattern(ohlcva: pt.DataFrame[OHLCVA],
     timeframe_base_patterns['ttl'] = \
         timeframe_base_patterns.index + pd.to_timedelta(timeframe) * config.base_pattern_ttl
     timeframe_base_patterns['ATR'] = ohlcva.loc[timeframe_base_patterns.index, 'ATR']
-    timeframe_base_patterns['a_pattern_ATR'] = a_pattern_ohlcva.loc[
-        to_timeframe(timeframe_base_patterns.index, anti_pattern_timeframe(timeframe)), 'ATR'].tolist()
-    timeframe_base_patterns['a_trigger_ATR'] = a_trigger_ohlcva.loc[
-        to_timeframe(timeframe_base_patterns.index, anti_trigger_timeframe(timeframe)), 'ATR'].tolist()
+    a_pattern_times = to_timeframe(timeframe_base_patterns.index, anti_pattern_timeframe(timeframe))
+    timeframe_base_patterns['a_pattern_ATR'] = a_pattern_ohlcva.loc[a_pattern_times, 'ATR'].tolist()
+    a_trigger_times = to_timeframe(timeframe_base_patterns.index, anti_trigger_timeframe(timeframe))
+    timeframe_base_patterns['a_trigger_ATR'] = a_trigger_ohlcva.loc[a_trigger_times, 'ATR'].tolist()
     update_band_status(timeframe_base_patterns, ohlcva, direction='upper')
     update_band_status(timeframe_base_patterns, ohlcva, direction='below')
     timeframe_base_patterns['end'] = pd.Series(dtype='datetime64[ns, UTC]')
@@ -228,16 +228,19 @@ def update_zero_trigger_candles(timeframe_base_patterns: pt.DataFrame['BasePatte
     return timeframe_base_patterns
 
 
-def multi_timeframe_base_patterns(multi_timeframe_ohlcva: pt.DataFrame[MultiTimeframeOHLCVA],
+def multi_timeframe_base_patterns(expanded_multi_timeframe_ohlcva: pt.DataFrame[MultiTimeframeOHLCVA],
                                   timeframe_shortlist: List['str'] = None) -> pt.DataFrame[MultiTimeframePivot]:
     if timeframe_shortlist is None:
         # the last 3 timeframes will not have an anti_trigger_timeframe!
         timeframe_shortlist = config.timeframes[:-2]
+    else:
+        if any([t in timeframe_shortlist for t in config.timeframes[-2:]]):
+            raise Exception(f"timeframes {timeframe_shortlist} should have Anti-Trigger time!")
     _multi_timeframe_base_patterns = empty_df(MultiTimeframeBasePattern)
     for timeframe in timeframe_shortlist:
-        ohlcva = single_timeframe(multi_timeframe_ohlcva, timeframe)
-        a_pattern_ohlcva = single_timeframe(multi_timeframe_ohlcva, anti_pattern_timeframe(timeframe))
-        a_trigger_ohlcva = single_timeframe(multi_timeframe_ohlcva, anti_trigger_timeframe(timeframe))
+        ohlcva = single_timeframe(expanded_multi_timeframe_ohlcva, timeframe)
+        a_pattern_ohlcva = single_timeframe(expanded_multi_timeframe_ohlcva, anti_pattern_timeframe(timeframe))
+        a_trigger_ohlcva = single_timeframe(expanded_multi_timeframe_ohlcva, anti_trigger_timeframe(timeframe))
         _timeframe_bases = timeframe_base_pattern(ohlcva, a_pattern_ohlcva, a_trigger_ohlcva, timeframe)
         _timeframe_bases['timeframe'] = timeframe
         _timeframe_bases.set_index('timeframe', append=True, inplace=True)
@@ -251,8 +254,16 @@ def generate_multi_timeframe_base_patterns(date_range_str: str = None, file_path
                                            timeframe_shortlist: List['str'] = None):
     if date_range_str is None:
         date_range_str = config.processing_date_range
-    multi_timeframe_ohlcva = read_multi_timeframe_ohlcva(date_range_str)
-
+    if timeframe_shortlist is None:
+        # the last 3 timeframes will not have an anti_trigger_timeframe!
+        timeframe_shortlist = config.timeframes[:-2]
+    else:
+        if any([t in timeframe_shortlist for t in config.timeframes[-2:]]):
+            raise Exception(f"timeframes {timeframe_shortlist} should have Anti-Trigger time!")
+    start, end = date_range(date_range_str)
+    expanded_start = to_timeframe(start, anti_trigger_timeframe(timeframe_shortlist[-1]), ignore_cached_times=True)
+    expanded_date_range_str = date_range_to_string(end=end, start=expanded_start)
+    multi_timeframe_ohlcva = read_multi_timeframe_ohlcva(expanded_date_range_str)
     base_patterns = multi_timeframe_base_patterns(multi_timeframe_ohlcva,
                                                   timeframe_shortlist=timeframe_shortlist)
     base_patterns.sort_index(inplace=True, level='date')

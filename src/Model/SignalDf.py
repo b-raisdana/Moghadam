@@ -9,7 +9,7 @@ from pandas import Timestamp
 from pandera import typing as pt
 
 from Model.BaseTickStructure import BaseTickStructure
-from Model.ExpandedDf import ExpandedDf, BasePanderaDFM
+from Model.ExtendedDf import ExtendedDf, BasePanderaDFM
 
 
 class SignalDFM(BasePanderaDFM):
@@ -32,7 +32,7 @@ class SignalDFM(BasePanderaDFM):
     # # type: pt.Series[str]  # 'Market', or 'Stop' or 'StopLimit'
     side: pt.Series[str] = pandera.Field(default='buy')  # sell or buy
 
-    base_asset_amount: pt.Series[float]
+    base_asset_amount: pt.Series[float] = pandera.Field(nullable=True, default=pd.NA)
     # the worst acceptable price for order execution.
     limit_price: pt.Series[float] = pandera.Field(nullable=True, default=pd.NA)
     stop_loss: pt.Series[float] = pandera.Field(nullable=True, default=pd.NA)  # , ignore_na=False
@@ -44,7 +44,7 @@ class SignalDFM(BasePanderaDFM):
     order_is_active: pt.Series[bool] = pandera.Field(nullable=True, default=pd.NA)  # , ignore_na=False
 
 
-class SignalDf(pt.DataFrame[SignalDFM], ExpandedDf):
+class SignalDf(pt.DataFrame[SignalDFM], ExtendedDf):
     schema_data_frame_model = SignalDFM
     _sample_df = pt.DataFrame[SignalDFM]({
         'date': [Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC))],
@@ -96,3 +96,16 @@ class SignalDf(pt.DataFrame[SignalDFM], ExpandedDf):
         return False
 
 
+new_signal = SignalDf.new(
+    {
+        'date': [datetime(2023, 12, 29, 0, 0, tzinfo=pytz.UTC)],
+        'side': ['buy'],
+        'reference_multi_date': [Timestamp('2023-12-26 11:30:00+0000', tz='UTC')],
+        'reference_multi_timeframe': ['15min'],
+        'limit_price': [43270.392300534404],
+        'stop_loss': [42579.2],
+        'take_profit': [43003.40000000002],
+        'trigger_price': [42649.9],
+        'base_asset_amount': [-1.1],
+    }
+)

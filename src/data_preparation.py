@@ -2,7 +2,7 @@ import re
 import string
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Callable, Union, List, Type, Any, Literal
+from typing import Callable, Union, List, Type, Any
 from zipfile import BadZipFile
 
 import numpy as np
@@ -15,7 +15,7 @@ from pandera import typing as pt, DataType
 
 from Config import config
 from Model.MultiTimeframe import MultiTimeframe_Type, MultiTimeframe
-from helper import log, date_range, date_range_to_string, morning, Pandera_DFM_Type, LogSeverity
+from helper import log, date_range, date_range_to_string, morning, Pandera_DFM_Type, LogSeverity, log_d
 
 
 def date_range_of_data(data: pd.DataFrame) -> str:
@@ -320,8 +320,13 @@ def to_timeframe(time: Union[DatetimeIndex, datetime, Timestamp], timeframe: str
         Exception: If time types are incompatible, or if rounding requirements are not met.
     """
 
-    # Function to round a single datetime
     def round_single_datetime(dt: Union[datetime, Timestamp]):
+        """
+        Function to round a single datetime
+        :param dt:
+        :return:
+        """
+
         if pd.to_timedelta(timeframe) >= timedelta(days=7):
             rounded_dt = dt.replace(hour=0, minute=0, second=0, microsecond=0)
             day_of_week = dt.weekday()
@@ -333,7 +338,6 @@ def to_timeframe(time: Union[DatetimeIndex, datetime, Timestamp], timeframe: str
             else:  # isinstance(dt, Timestamp)
                 rounded_dt = pd.Timestamp(rounded_timestamp * 10 ** 9, tz=dt.tzinfo)
         return rounded_dt
-
     # Calculate the timedelta for the specified timeframe
     timeframe_timedelta = pd.to_timedelta(timeframe)
     seconds_in_timeframe = timeframe_timedelta.total_seconds()
@@ -341,7 +345,6 @@ def to_timeframe(time: Union[DatetimeIndex, datetime, Timestamp], timeframe: str
     if pd.to_timedelta(timeframe) >= timedelta(minutes=30):
         if getattr(time, 'tzinfo', None) is None:
             raise Exception('To round times to timeframes > 30 minutes, timezone is significant')
-
     if isinstance(time, (datetime, Timestamp)):
         rounded_time = round_single_datetime(time)
     elif isinstance(time, DatetimeIndex):
@@ -506,36 +509,35 @@ def cast_and_validate(data, model_class: Type[Pandera_DFM_Type], return_bool: bo
     return data
 
 
-def apply_as_type(data: pd.DataFrame, model_class, return_bool: bool = False) -> pd.DataFrame:
-    # as_types = {}
-    # _all_annotations = all_annotations(model_class)
-    # for attr_name, attr_type in _all_annotations.items():
-    #     if attr_name not in data.dtypes.keys():
-    #         if return_bool:
-    #             return False
-    #         else:
-    #             raise KeyError(f"'{attr_name}' in {model_class.__name__} but not in data:\n{data.dtypes}")
-    #     try:
-    #         if 'timestamp' in str(attr_type).lower() and 'timestamp' not in str(data.dtypes.loc[attr_name]).lower():
-    #             as_types[attr_name] = 'datetime64[ns, UTC]'
-    #         if 'datetimetzdtype' in str(attr_type).lower():
-    #
-    #             if 'datetimetzdtype' not in str(data.dtypes.loc[attr_name]).lower():
-    #                 as_types[attr_name] = 'datetime64[ns, UTC]'
-    #             elif 'timedelta' in str(attr_type).lower() and 'timedelta' not in str(
-    #                     data.dtypes.loc[attr_name]).lower():
-    #                 as_types[attr_name] = 'timedelta64[s]'
-    #                 # as_types[attr_name] = pandera.typing.Timedelta
-    #         elif 'pandera.typing.pandas.Series' in str(attr_type):
-    #             astype = str(attr_type).replace('pandera.typing.pandas.Series[', '').replace(']', '')
-    #             trans_table = str.maketrans('', '', string.digits)
-    #             astype = astype.translate(trans_table)
-    #             if (astype != 'str' and
-    #                     attr_name in data.columns and astype not in str(data.dtypes.loc[attr_name]).lower()):
-    #                 as_types[attr_name] = astype
-    #     except Exception as e:
-    #         raise e
-    as_types = column_fields(model_class) #, **index_fields(model_class))
+def apply_as_type(data, model_class, return_bool: bool = False) -> pd.DataFrame:
+    as_types = {}
+    _all_annotations = all_annotations(model_class)
+    for attr_name, attr_type in _all_annotations.items():
+        if attr_name not in data.dtypes.keys():
+            if return_bool:
+                return False
+            else:
+                raise KeyError(f"'{attr_name}' in {model_class.__name__} but not in data:{data.dtypes}")
+        try:
+            if 'timestamp' in str(attr_type).lower() and 'timestamp' not in str(data.dtypes.loc[attr_name]).lower():
+                as_types[attr_name] = 'datetime64[ns, UTC]'
+            if 'datetimetzdtype' in str(attr_type).lower():
+
+                if 'datetimetzdtype' not in str(data.dtypes.loc[attr_name]).lower():
+                    as_types[attr_name] = 'datetime64[ns, UTC]'
+                elif 'timedelta' in str(attr_type).lower() and 'timedelta' not in str(
+                        data.dtypes.loc[attr_name]).lower():
+                    as_types[attr_name] = 'timedelta64[s]'
+                    # as_types[attr_name] = pandera.typing.Timedelta
+            elif 'pandera.typing.pandas.Series' in str(attr_type):
+                astype = str(attr_type).replace('pandera.typing.pandas.Series[', '').replace(']', '')
+                trans_table = str.maketrans('', '', string.digits)
+                astype = astype.translate(trans_table)
+                if (astype != 'str' and
+                        attr_name in data.columns and astype not in str(data.dtypes.loc[attr_name]).lower()):
+                    as_types[attr_name] = astype
+        except Exception as e:
+            raise e
     if len(as_types) > 0:
         # log(as_types)
         try:
@@ -675,72 +677,30 @@ def index_fields(model_class: Type[Pandera_DFM_Type]) -> dict[str, str]:
     else:
         # model_class has a single Index
         all_fields = all_annotations(model_class, include_indexes=True)
-        names = {k: model_class.to_schema().index.dtype.type for k, v in all_fields.items()
+        names = {k: model_class.to_schema().index.dtype for k, v in all_fields.items()
                  if 'pandera.typing.pandas.Index' in str(v.__origin__)}
     return names
 
 
 def column_fields(model_class: Type[Pandera_DFM_Type]) -> dict[str, DataType]:
-    return {key: value.type for key, value in model_class.to_schema().dtypes.items()}
+    return model_class.to_schema().dtypes
     # return list(model_class.to_schema().columns.keys())
 
 
-# def zz_index_fields(model_class: Type[Pandera_DFM_Type]) -> dict[str, str]:
-#     return d_types(model_class, mode='indexes')
-#
-#
-# def zz_column_fields(model_class: Type[Pandera_DFM_Type]) -> dict[str, DataType]:
-#     return d_types(model_class, mode='columns')
-#
-#
-# def zz_d_types(model_class: Type[Pandera_DFM_Type], mode: Literal['indexes', 'columns', 'all'] = 'all') \
-#         -> dict[str, DataType]:
-#     if mode not in ['all', 'indexes', 'columns']:
-#         raise Exception(f'Invalid mode{mode}')
-#     _dtypes = {}
-#     # all_classes_list = [c.__annotations__ for c in model_class.__mro__ if hasattr(c, '__annotations__')]
-#     for t_class in model_class.__mro__:
-#         if hasattr(t_class, '__annotations__'):
-#             d_type_keys = t_class.__annotations__.keys()
-#             for _d_type in d_type_keys:
-#                 if hasattr(t_class.__annotations__[_d_type], '__origin__'):
-#                     if t_class.__annotations__[_d_type].__origin__.__name__ in ['Index', 'Series']:  # 'MultiIndex',
-#                         if mode == 'indexes':
-#                             if t_class.__annotations__[_d_type].__origin__.__name__ != 'Index':
-#                                 continue
-#                         elif mode == 'columns':
-#                             if t_class.__annotations__[_d_type].__origin__.__name__ != 'Series':
-#                                 continue
-#                         if hasattr(t_class.__annotations__[_d_type], '__args__'):
-#                             if len(t_class.__annotations__[_d_type].__args__) != 1:
-#                                 raise Exception('Non-singular __args__ not supported')
-#                             _dtypes[_d_type] = t_class.__annotations__[_d_type].__args__[0]
-#                             while hasattr(_dtypes[_d_type], '__args__'):
-#                                 if len(_dtypes[_d_type].__args__) != 1:
-#                                     raise Exception('Non-singular __args__ not supported')
-#                                 _dtypes[_d_type] = _dtypes[_d_type].__args__[0]
-#                         else:
-#                             pass
-#                 else:
-#                     pass
-#     return _dtypes
-
-
 def empty_df(model_class: Type[Pandera_DFM_Type]) -> pd.DataFrame:
-    _index_fields = index_fields(model_class)
-    as_types = dict(column_fields(model_class), **_index_fields)  # d_types(model_class)
+    as_types = dict(column_fields(model_class), **index_fields(model_class))
     # Create an empty DataFrame with Pandas-compatible data types
     empty_data = {
         column: [] for column in as_types.keys()
     }
     _empty_df = pd.DataFrame(empty_data)
-    # for _name, _type in as_types.items():
-    #     as_types[_name] = _type.type.name
+    for _name, _type in as_types.items():
+        as_types[_name] = _type.type.name
 
     _empty_df = _empty_df.astype(as_types)
-    # if len(_index_fields.keys()) == 0:  # d_types(model_class, mode='indexes')
-    #     pass
-    _empty_df.set_index(list(_index_fields.keys()), inplace=True)  # d_types(model_class, mode='indexes')
+    if len(index_fields(model_class).keys()) == 0:
+        pass
+    _empty_df.set_index(list(index_fields(model_class).keys()), inplace=True)
     _empty_df = model_class(_empty_df)
     return _empty_df
 

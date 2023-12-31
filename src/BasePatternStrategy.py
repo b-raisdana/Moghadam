@@ -140,7 +140,6 @@ class BasePatternStrategy(bt.Strategy):
         if f'{band}_band_signal_generated' not in base_patterns.columns:
             base_patterns[f'{band}_band_signal_generated'] = pd.NA
 
-
         result = base_patterns[
             (base_patterns[f'{band}_band_activated'].notna() & (
                     base_patterns[f'{band}_band_activated'] <= self.candle().date)) &
@@ -168,7 +167,6 @@ class BasePatternStrategy(bt.Strategy):
         """
         base_length = base_pattern['internal_high'] - base_pattern['internal_low']
         if band == 'upper':
-            # todo: test
             side = OrderSide.Buy.value
             limit_price = base_pattern['internal_high'] + \
                           base_pattern['ATR'] * config.base_pattern_order_limit_price_margin_percentage
@@ -183,19 +181,19 @@ class BasePatternStrategy(bt.Strategy):
             take_profit = base_pattern['internal_low'] - base_length * config.base_pattern_risk_reward_rate
             trigger_price = base_pattern['internal_low']
         # todo: reference_multi_date and reference_multi_timeframe never been used.
-        new_signal = SignalDf.new(
-            date=self.candle().date,
-            side=side,
-            reference_multi_date=base_pattern_date,
-            reference_multi_timeframe=base_pattern_timeframe,
+        # todo: use .loc to generate and assign signal in one step.
+        new_signal = SignalDf.new({
+            'date': [self.candle().date],
+            'side': [side],
+            'reference_multi_date': [base_pattern_date],
+            'reference_multi_timeframe': [base_pattern_timeframe],
             # base_asset_amount=self.sizer,
-            limit_price=limit_price,
-            stop_loss=stop_loss,
-            take_profit=take_profit,
-            trigger_price=trigger_price,
-            order_is_active=False,
-        )
-        # todo: test
+            'limit_price': [limit_price],
+            'stop_loss': [stop_loss],
+            'take_profit': [take_profit],
+            'trigger_price': [trigger_price],
+            'order_is_active': [False],
+        })
         self.signal_df = SignalDf.concat(self.signal_df, new_signal)
         log(f"added Signal {new_signal} @ {self.candle()}", severity=LogSeverity.DEBUG, stack_trace=False)
         return self.signal_df
@@ -213,14 +211,14 @@ class BasePatternStrategy(bt.Strategy):
             if self.candle_overlaps_base(base_pattern):
                 # todo: test
                 self.add_signal(timeframe, start, base_pattern, band='upper')
-                self.loc[(timeframe, start), 'upper_band_signal_generated'] = self.candle().date
+                self.base_patterns.loc[(timeframe, start), 'upper_band_signal_generated'] = self.candle().date
         below_overlapping_base_patterns = self.overlapping_base_patterns(
             self.no_signal_active_base_patterns(band='below', base_patterns=self.base_patterns))
         for (timeframe, start), base_pattern in below_overlapping_base_patterns.iterrows():
             if self.candle_overlaps_base(base_pattern):
                 # todo: test
                 self.add_signal(timeframe, start, base_pattern, band='below')
-                self.loc[timeframe, start, 'below_band_signal_generated'] = self.candle().date
+                self.base_patterns.loc[timeframe, start, 'below_band_signal_generated'] = self.candle().date
 
     def active_signals(self) -> SignalDf:
         if 'end' not in self.signal_df.columns:

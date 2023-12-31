@@ -8,7 +8,8 @@ import pandera
 from pandera import typing as pt
 
 from Config import config
-from data_preparation import empty_df, concat, read_with_timeframe, after_under_process_date, datarange_is_not_cachable
+from data_preparation import concat, read_with_timeframe, after_under_process_date, datarange_is_not_cachable
+from helper import log_d
 
 
 class BasePanderaDFM(pandera.DataFrameModel):
@@ -26,29 +27,33 @@ class BasePanderaDFM(pandera.DataFrameModel):
         return cls._sample_obj.drop(cls._sample_obj.index)
 
 
-class ExpandedDf:
+class ExtendedDf:
     schema_data_frame_model: BasePanderaDFM = None
     _sample_df: pd.DataFrame = None
     _empty_df: pd.DataFrame = None
 
     @classmethod
-    def _set_index(cls, data: pt.DataFrame[BasePanderaDFM]) -> BasePanderaDFM:
+    def _set_index(cls, data: pt.DataFrame['BasePanderaDFM']) -> pt.DataFrame['BasePanderaDFM']:
         if 'date' not in data.columns:
-            raise Exception(f"Expected to have a 'date' column in data")
+            raise Exception(f"Expected to find 'date' in data")
         if hasattr(data.index, 'names') and 'timeframe' in data.index.names:
             if 'timeframe' not in data.columns:
-                raise Exception(f"Expected to have a 'timeframe' column in data")
+                raise Exception(
+                    f"'timeframe' is in the indexes of {cls.__name__}.{cls.schema_data_frame_model.__name__} "
+                    f"so it is required!")
             return data.set_index(['timeframe', 'date'])
         else:
             return data.set_index(['date'])
 
     @classmethod
-    def new(cls, dictionary_of_data: dict = {}) -> 'BasePanderaDFM':
+    def new(cls, dictionary_of_data: dict = None) -> pt.DataFrame['BasePanderaDFM']:
         if cls._sample_df is None:
-            raise Exception("{}._sample_obj should be defined before!")
-        if len(dictionary_of_data) > 0:
-            if 'date' not in dictionary_of_data.keys():
-                raise Exception("'date' is the mandatory TimestampIndex and is required!")
+            raise Exception(f"{cls}._sample_obj should be defined before!")
+        if dictionary_of_data is not None:
+            # to prevent ValueError: If using all scalar values, you must pass an index
+            non_list_keys = [key for key, value in dictionary_of_data.items() if not isinstance(value, list)]
+            if len(non_list_keys) > 0:
+                raise Exception(f"Required to receive a dict of lists but {non_list_keys} are passing non-list values!")
             _new = pt.DataFrame[cls.schema_data_frame_model](dictionary_of_data)
             _new = cls._set_index(_new)
             return _new
@@ -59,9 +64,9 @@ class ExpandedDf:
         return _new
 
     @classmethod
-    def cast_and_validate(cls: Type['ExpandedDf'], df: Union['ExpandedDf', pd.DataFrame],
+    def cast_and_validate(cls: Type['ExtendedDf'], df: Union['ExtendedDf', pd.DataFrame],
                           inplace: bool = True, return_bool: bool = False, zero_size_allowed: bool = False,
-                          log_D=None) -> Union['BasePanderaDFM', bool]:
+                          ) -> Union[pt.DataFrame['BasePanderaDFM'], bool]:
         if not zero_size_allowed:
             if len(df) == 0:
                 raise Exception('Zero size data not allowed in parameters!')
@@ -69,7 +74,7 @@ class ExpandedDf:
             result = cls.schema_data_frame_model.validate(df)
         except pandera.errors.SchemaError as e:
             if return_bool:
-                log_D(f"data is not valid according to {cls.schema_data_frame_model.__name__}")
+                log_d(f"data is not valid according to {cls.schema_data_frame_model.__name__}")
                 return False
             else:
                 raise e
@@ -81,66 +86,10 @@ class ExpandedDf:
         else:
             return result
 
-    # @classmethod
-    # def zz_new(cls: Type['ExpandedDf'], **kwargs) -> 'ExpandedDf':
-    #     # todo: test
-    #     if ((not hasattr(cls, 'schema_data_frame_model')) and (cls.schema_data_frame_model is not None)):
-    #         # or (not issubclass(cls.schema_data_frame_model, pt.Dataframe))):
-    #         raise Exception(
-    #             f"{cls.__name__}.schema_data_frame_model should be defined as a subclass of pandera.typing.Dataframe before calling {cls.__name__}.new(...)")
-    #     result = empty_df(cls.schema_data_frame_model)
-    #     if len(kwargs) > 0:
-    #         d_types = dict(column_fields(cls.schema_data_frame_model),
-    #                        **index_fields(cls.schema_data_frame_model))  # all_annotations(cls.schema_data_frame_model)
-    #         # # check if all Series fields of required self.schema_data_frame_model are present in kwargs
-    #         # required_fields = set(_all_annotations.keys())
-    #         # provided_fields = set(kwargs.keys())
-    #         # missing_fields = required_fields - provided_fields
-    #         # if missing_fields:
-    #         #     raise ValueError(f"Missing required fields in kwargs: {missing_fields}")
-    #         # todo: test
-    #         if not 'date' in kwargs.keys():
-    #             raise Exception("'date' is the mandatory TimestampIndex and is required!")
-    #         date = kwargs['date']
-    #         # check if all of kwargs keys are in Series fields
-    #         invalid_fields = [field for field in kwargs.keys() if field not in d_types.keys()]
-    #         if len(invalid_fields) > 0:
-    #             raise ValueError(
-    #                 f"Field(s) {', '.join(invalid_fields)} is(are) not a valid field(s) in {cls.__name__}.")
-    #         if 'timeframe' in kwargs.keys():
-    #             timeframe = kwargs['timeframe']
-    #             for key, value in kwargs:
-    #                 if key not in ['date', 'timeframe']:
-    #                     # # check if the type of kwargs values match with appropriate  Series field dtype.
-    #                     # expected_d_type = _all_annotations[key].__args__[0]
-    #                     # if not isinstance(value, expected_d_type):
-    #                     #     raise TypeError(f"Invalid type for field '{key}'. Expected {expected_d_type}, got {type(value)}.")
-    #                     result.loc[{'timeframe': timeframe, 'date': date, }, key] = value
-    #         else:
-    #             for key, value in kwargs.items():
-    #                 if key not in ['date', 'timeframe']:
-    #                     # # check if the type of kwargs values match with appropriate  Series field dtype.
-    #                     # expected_d_type = _all_annotations[key].__args__[0]
-    #                     # if not isinstance(value, expected_d_type):
-    #                     #     raise TypeError(f"Invalid type for field '{key}'. Expected {expected_d_type}, got {type(value)}.")
-    #                     result.loc[date, key] = value
-    #         result = cls.cast_and_validate(result)
-    #     return result
-    #
-    # @classmethod
-    # def zz_cast_and_validate(cls: Type['ExpandedDf'], instance: Union['ExpandedDf', pd.DataFrame],
-    #                          inplace: bool = True) -> 'ExpandedDf':
-    #     result: 'ExpandedDf' = cast_and_validate(instance, cls.schema_data_frame_model)
-    #     if inplace:
-    #         instance.__dict__ = result.__dict__
-    #         return instance
-    #     else:
-    #         return result
-
     @classmethod
     def read_file(cls, date_range_str: str, data_frame_type: str, generator: Callable,
                   skip_rows=None, n_rows=None, file_path: str = config.path_of_data,
-                  zero_size_allowed: Union[None, bool] = None) -> 'BasePanderaDFM':
+                  zero_size_allowed: Union[None, bool] = None) -> pt.DataFrame['BasePanderaDFM']:
         """
         Read data from a file and return a DataFrame. If the file does not exist or the DataFrame does not
         match the expected columns, the generator function is used to create the DataFrame.
@@ -204,8 +153,9 @@ class ExpandedDf:
         return df
 
     @classmethod
-    def concat(cls: Type['BasePanderaDFM'], left, right) -> 'BasePanderaDFM':
+    def concat(cls, left: pt.DataFrame['BasePanderaDFM'], right: pt.DataFrame['BasePanderaDFM']) -> pt.DataFrame[
+        'BasePanderaDFM']:
         # todo: test
 
-        result: 'BasePanderaDFM' = concat(left, right)
+        result: pt.DataFrame['BasePanderaDFM'] = concat(left, right)
         return result
