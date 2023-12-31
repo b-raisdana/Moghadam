@@ -9,7 +9,7 @@ from FigurePlotter.BullBearSide_plotter import plot_multi_timeframe_bull_bear_si
 from FigurePlotter.OHLVC_plotter import plot_multi_timeframe_ohlcva
 from FigurePlotter.Pivot_plotter import plot_multi_timeframe_pivots
 from Model.OHLCVA import MultiTimeframeOHLCVA
-from Model.SignalDf import SignalDf, SignalSchema
+from Model.SignalDf import SignalDf, SignalDFM
 from PeakValley import read_multi_timeframe_peaks_n_valleys
 from atr import read_multi_timeframe_ohlcva
 # from data_preparation import d_types
