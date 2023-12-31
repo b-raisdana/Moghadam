@@ -42,7 +42,7 @@ def date_range_of_data(data: pd.DataFrame) -> str:
 
 
 # @cache
-def data_is_not_cachable(date_range_str):
+def datarange_is_not_cachable(date_range_str):
     _, end = date_range(date_range_str)
     if end > morning(datetime.utcnow().replace(tzinfo=pytz.UTC)):
         return True
@@ -115,7 +115,7 @@ def read_file(date_range_str: str, data_frame_type: str, generator: Callable, ca
         df = cast_and_validate(df, caster_model, zero_size_allowed=zero_size_allowed)
     else:
         df = cast_and_validate(df, caster_model, zero_size_allowed=zero_size_allowed)
-    if data_is_not_cachable(date_range_str):
+    if datarange_is_not_cachable(date_range_str):
         os.remove(os.path.join(file_path, f'{data_frame_type}.{date_range_str}.zip'))
     return df
 

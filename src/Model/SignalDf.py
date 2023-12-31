@@ -9,28 +9,13 @@ from pandas import Timestamp
 from pandera import typing as pt
 
 from Model.BaseTickStructure import BaseTickStructure
-from Model.ExpandedDf import ExpandedDf
+from Model.ExpandedDf import ExpandedDf, BasePanderaDFM
 
 
-class PanderDFMBaseConfig(pandera.DataFrameModel):
-    _sample_obj: pd.DataFrame = None
-    _empty_obj: pd.DataFrame = None
-    class Config:
-        # to resolve pandera.errors.SchemaError: column ['XXXX'] not in dataframe
-        add_missing_columns = True
-        # to resolve pandera.errors.SchemaError: expected series ['XXXX'/None] to have type datetime64[ns, UTC]
-        # , got object
-        coerce = True
-
-    @classmethod
-    def empty(cls):
-        if cls._sample_obj is None:
-            raise Exception("_sample_obj should be set manually before.")
-        return cls._sample_obj.drop(cls._sample_obj.index)
-
-class SignalDFM(PanderDFMBaseConfig):
+class SignalDFM(BasePanderaDFM):
     # from start of exact this candle the signal is valid
-    date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(unique=True, title='date') # Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
+    date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(unique=True,
+                                                                               title='date')  # Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
     # from start of exact this candle the signal is in-valid
     reference_multi_date: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
     reference_multi_timeframe: pt.Series[str] = pandera.Field(nullable=True)
@@ -45,51 +30,30 @@ class SignalDFM(PanderDFMBaseConfig):
     # StopLoss And TakeProfit Orders Attached To A Position – advanced orders, consisting of three orders of types listed above: a regular limit or market order placed to enter a position with stop loss and/or take profit orders that will be placed upon opening that position and will be used to close that position later (when a stop loss is reached, it will close the position and will cancel its take profit counterpart, and vice versa, when a take profit is reached, it will close the position and will cancel its stop loss counterpart, these two counterparts are also known as "OCO orders – one cancels the other), apart from the amount (and price for the limit order) to open a position it will also require a triggerPrice for a stop loss order (with a limit price if it's a stop loss limit order) and/or a triggerPrice for a take profit order (with a limit price if it's a take profit limit order).
     # """
     # # type: pt.Series[str]  # 'Market', or 'Stop' or 'StopLimit'
-    side: pt.Series[str] = pandera.Field(default='buy') # sell or buy
+    side: pt.Series[str] = pandera.Field(default='buy')  # sell or buy
 
     base_asset_amount: pt.Series[float]
     # the worst acceptable price for order execution.
     limit_price: pt.Series[float] = pandera.Field(nullable=True, default=pd.NA)
     stop_loss: pt.Series[float] = pandera.Field(nullable=True, default=pd.NA)  # , ignore_na=False
-    take_profit: pt.Series[float]  = pandera.Field(nullable=True, default=pd.NA)
+    take_profit: pt.Series[float] = pandera.Field(nullable=True, default=pd.NA)
     # the condition direction is reverse of limit direction.
     trigger_price: pt.Series[float] = pandera.Field(nullable=True, default=pd.NA)
-    main_order_id: pt.Series[int] = pandera.Field(nullable=True, default=pd.NA)
+    main_order_id: pt.Series[int] = pandera.Field(nullable=True, default=0)
     # led_to_order_at: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
     order_is_active: pt.Series[bool] = pandera.Field(nullable=True, default=pd.NA)  # , ignore_na=False
 
 
-
-# #str(model_class.__annotations__['end'].__args__)
-# a = pt.DataFrame[SignalDFM]({})
-
-print(b)
-pass
-
-
 class SignalDf(pt.DataFrame[SignalDFM], ExpandedDf):
     schema_data_frame_model = SignalDFM
-
-    _sample_obj = pt.DataFrame[SignalDFM]({
+    _sample_df = pt.DataFrame[SignalDFM]({
         'date': [Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC))],
         'reference_multi_date': [
             datetime(year=2023, month=12, day=20, hour=10, minute=11, second=13).replace(tzinfo=pytz.UTC)],
         'side': ['buy'],
-    }).set_index(['date'])
+        'base_asset_amount': 1.1,
+    })
     _empty_obj = None
-
-
-
-    @classmethod
-    def new(data: dict):
-        _sample_obj = pt.DataFrame[SignalDFM]({
-            'date': [
-                Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC))],
-            'reference_multi_date': [
-                datetime(year=2023, month=12, day=20, hour=10, minute=11, second=13).replace(tzinfo=pytz.UTC)],
-            'side': ['buy'],
-        })
-        super()
 
     @classmethod
     def is_closed(self, signal: pt.Series[SignalDFM], tick: BaseTickStructure):
@@ -130,3 +94,5 @@ class SignalDf(pt.DataFrame[SignalDFM], ExpandedDf):
         else:
             raise Exception(f"Unexpected side({signal['side']}) in {signal} should be 'buy' or 'sell'.")
         return False
+
+
