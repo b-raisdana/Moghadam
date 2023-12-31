@@ -12,6 +12,17 @@ from pandera import typing as pt
 
 class ExpandedDf:
     schema_data_frame_model = None
+
+    @classmethod
+    def _set_index(cls, data: pt.DataFrame[SignalDFM]):
+        if 'date' not in data.columns:
+            raise Exception(f"Expected to have a 'date' column in data")
+        if hasattr(data.index, 'names') and 'timeframe' in data.index.names:
+            if 'timeframe' not in data.columns:
+                raise Exception(f"Expected to have a 'timeframe' column in data")
+            return data.set_index(['timeframe', 'date'])
+        else:
+            return data.set_index(['date'])
     @classmethod
     def new(cls: Type['ExpandedDf'], **kwargs) -> 'ExpandedDf':
         # todo: test

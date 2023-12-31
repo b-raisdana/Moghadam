@@ -47,29 +47,21 @@ class SignalDFM(PanderDFMBaseConfig):
     # # type: pt.Series[str]  # 'Market', or 'Stop' or 'StopLimit'
     side: pt.Series[str] = pandera.Field(default='buy') # sell or buy
 
-    # base_asset_amount: pt.Series[float]
-    # # the worst acceptable price for order execution.
-    # limit_price: Optional[pt.Series[float]] = pandera.Field(nullable=True, default=pd.NA, ignore_na=True)
-    # stop_loss: Optional[pt.Series[float]] = pandera.Field(nullable=True, default=pd.NA)  # , ignore_na=False
-    # take_profit: Optional[pt.Series[float]]  = pandera.Field(nullable=True, default=pd.NA)
-    # # the condition direction is reverse of limit direction.
-    # trigger_price: Optional[pt.Series[float]] = pandera.Field(nullable=True, default=pd.NA)
-    # main_order_id: Optional[pt.Series[int]] = pandera.Field(nullable=True, default=pd.NA)
-    # # led_to_order_at: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
-    # order_is_active: Optional[pt.Series[bool]] = pandera.Field(nullable=True, default=pd.NA)  # , ignore_na=False
+    base_asset_amount: pt.Series[float]
+    # the worst acceptable price for order execution.
+    limit_price: pt.Series[float] = pandera.Field(nullable=True, default=pd.NA)
+    stop_loss: pt.Series[float] = pandera.Field(nullable=True, default=pd.NA)  # , ignore_na=False
+    take_profit: pt.Series[float]  = pandera.Field(nullable=True, default=pd.NA)
+    # the condition direction is reverse of limit direction.
+    trigger_price: pt.Series[float] = pandera.Field(nullable=True, default=pd.NA)
+    main_order_id: pt.Series[int] = pandera.Field(nullable=True, default=pd.NA)
+    # led_to_order_at: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
+    order_is_active: pt.Series[bool] = pandera.Field(nullable=True, default=pd.NA)  # , ignore_na=False
 
 
 
 # #str(model_class.__annotations__['end'].__args__)
 # a = pt.DataFrame[SignalDFM]({})
-_sample_obj = pt.DataFrame[SignalDFM]({
-    'date': [Timestamp(datetime(year=2023, month=12, day=20, hour=10, minute=11, second=13).replace(tzinfo=pytz.UTC))],
-    'timeframe': ['1min'],
-    # 'reference_multi_date': [datetime(year=2023, month=12, day=20, hour=10, minute=11, second=13).replace(tzinfo=pytz.UTC)],
-    'side': ['buy'],
-}).set_index(['date'])
-_empty_obj = _sample_obj.drop(b.index[0])
-c = pt.DataFrame[SignalDFM]()
 
 print(b)
 pass
@@ -77,6 +69,27 @@ pass
 
 class SignalDf(pt.DataFrame[SignalDFM], ExpandedDf):
     schema_data_frame_model = SignalDFM
+
+    _sample_obj = pt.DataFrame[SignalDFM]({
+        'date': [Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC))],
+        'reference_multi_date': [
+            datetime(year=2023, month=12, day=20, hour=10, minute=11, second=13).replace(tzinfo=pytz.UTC)],
+        'side': ['buy'],
+    }).set_index(['date'])
+    _empty_obj = None
+
+
+
+    @classmethod
+    def new(data: dict):
+        _sample_obj = pt.DataFrame[SignalDFM]({
+            'date': [
+                Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC))],
+            'reference_multi_date': [
+                datetime(year=2023, month=12, day=20, hour=10, minute=11, second=13).replace(tzinfo=pytz.UTC)],
+            'side': ['buy'],
+        })
+        super()
 
     @classmethod
     def is_closed(self, signal: pt.Series[SignalDFM], tick: BaseTickStructure):
