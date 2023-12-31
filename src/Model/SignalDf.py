@@ -31,7 +31,7 @@ class SignalDFM(BasePanderaDFM):
     # """
     # # type: pt.Series[str]  # 'Market', or 'Stop' or 'StopLimit'
     side: pt.Series[str] = pandera.Field(default='buy')  # sell or buy
-
+    # if NaN sizer should give the appropriate size.
     base_asset_amount: pt.Series[float] = pandera.Field(nullable=True, default=pd.NA)
     # the worst acceptable price for order execution.
     limit_price: pt.Series[float] = pandera.Field(nullable=True, default=pd.NA)
