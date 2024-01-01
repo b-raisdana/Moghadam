@@ -5,7 +5,7 @@ import pandas as pd
 import pandera
 from pandera import typing as pt
 
-from Model.MultiTimeframe import MultiTimeframe
+from PanderaDFM.MultiTimeframe import MultiTimeframe
 
 
 class Pivot(pandera.DataFrameModel):

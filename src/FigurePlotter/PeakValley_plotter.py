@@ -3,13 +3,13 @@ from pandera import typing as pt
 from plotly import graph_objects as plgo
 
 from Config import config
-from data_preparation import single_timeframe, df_timedelta_to_str
+from helper.data_preparation import single_timeframe, df_timedelta_to_str
 from FigurePlotter.OHLVC_plotter import plot_ohlcva
 from FigurePlotter.plotter import plot_multiple_figures, file_id, timeframe_color, save_figure
-from Model.PeakValley import MultiTimeframePeakValley
+from PanderaDFM.PeakValley import MultiTimeframePeakValley
 from PeakValley import peaks_only, valleys_only, major_peaks_n_valleys
 from atr import read_multi_timeframe_ohlcva
-from helper import measure_time
+from helper.helper import measure_time
 
 
 @measure_time

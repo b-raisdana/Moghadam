@@ -7,8 +7,8 @@ import pandas as pd
 import pytz
 
 from Config import config
-from data_preparation import map_symbol
-from helper import log, date_range
+from helper.data_preparation import map_symbol
+from helper.helper import log, date_range
 
 _ccxt_symbol_map = {
     'BTCUSDT': 'BTC/USDT',

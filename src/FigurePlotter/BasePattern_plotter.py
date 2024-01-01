@@ -7,11 +7,11 @@ from BasePattern import timeframe_effective_bases
 from Config import config
 from FigurePlotter.OHLVC_plotter import plot_ohlcva
 from FigurePlotter.plotter import file_id, save_figure, plot_multiple_figures
-from Model.BasePattern import BasePattern, MultiTimeframeBasePattern
-from Model.OHLCV import OHLCV
-from Model.OHLCVA import MultiTimeframeOHLCVA
-from data_preparation import single_timeframe
-from helper import measure_time
+from PanderaDFM.BasePattern import BasePattern, MultiTimeframeBasePattern
+from PanderaDFM.OHLCV import OHLCV
+from PanderaDFM.OHLCVA import MultiTimeframeOHLCVA
+from helper.data_preparation import single_timeframe
+from helper.helper import measure_time
 
 MAX_NUMBER_OF_PLOT_SCATTERS = 5000
 

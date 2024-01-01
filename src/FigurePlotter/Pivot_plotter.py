@@ -5,9 +5,9 @@ from plotly import graph_objects as plgo
 from Config import config
 from FigurePlotter.OHLVC_plotter import plot_ohlcv
 from FigurePlotter.plotter import save_figure, file_id, timeframe_color
-from Model.Pivot import MultiTimeframePivot, Pivot
-from data_preparation import single_timeframe
-from helper import measure_time
+from PanderaDFM.Pivot import MultiTimeframePivot, Pivot
+from helper.data_preparation import single_timeframe
+from helper.helper import measure_time
 from ohlcv import read_multi_timeframe_ohlcv
 
 

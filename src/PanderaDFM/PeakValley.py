@@ -1,7 +1,7 @@
 import pandera
 
-from Model.MultiTimeframe import MultiTimeframe
-from Model.OHLCV import OHLCV
+from PanderaDFM.MultiTimeframe import MultiTimeframe
+from PanderaDFM.OHLCV import OHLCV
 
 
 class PeakValley(OHLCV):

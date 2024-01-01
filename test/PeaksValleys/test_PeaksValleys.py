@@ -2,7 +2,7 @@ import pandas as pd
 
 from Config import config
 from PeakValley import zz_find_peaks_n_valleys
-from helper import log
+from helper.helper import log
 
 DEBUG = True
 

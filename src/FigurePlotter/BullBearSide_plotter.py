@@ -8,11 +8,11 @@ from BullBearSide import most_two_significant_tops
 from Config import TREND, config, TopTYPE
 from FigurePlotter.PeakValley_plotter import plot_peaks_n_valleys
 from FigurePlotter.plotter import file_id, save_figure, plot_multiple_figures
-from Model.BullBearSide import BullBearSide, bull_bear_side_repr
-from Model.OHLCV import OHLCV
+from PanderaDFM.BullBearSide import BullBearSide, bull_bear_side_repr
+from PanderaDFM.OHLCV import OHLCV
 from PeakValley import peaks_only, valleys_only, major_peaks_n_valleys
-from data_preparation import single_timeframe
-from helper import measure_time, log
+from helper.data_preparation import single_timeframe
+from helper.helper import measure_time, log
 from pandera import typing as pt
 MAX_NUMBER_OF_PLOT_SCATTERS = 5000
 

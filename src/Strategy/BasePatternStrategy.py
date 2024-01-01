@@ -10,10 +10,11 @@ from pandera import typing as pt
 
 from BasePattern import read_multi_timeframe_base_patterns
 from Config import config
-from Model.BasePattern import MultiTimeframeBasePattern
-from Model.BaseTickStructure import BaseTickStructure
-from Model.SignalDf import SignalDf
-from helper import log, log_d
+from PanderaDFM.BasePattern import MultiTimeframeBasePattern
+from PanderaDFM.BaseTickStructure import BaseTickStructure
+from PanderaDFM.SignalDf import SignalDf, SignalDFM
+from Strategy.ExtendedOrder import ExtendedOrder
+from helper.helper import log, log_d
 from ohlcv import read_base_timeframe_ohlcv
 
 
@@ -50,15 +51,15 @@ class MySizer(bt.Sizer):
 
 
 class ExtendedStrategy(bt.Strategy):
-    signal_df: pt.DataFrame[SignalDf.schema_data_frame_model]
-    main_orders: Dict[np.float64, bt.Order]
-    stop_orders: Dict[np.float64, bt.Order]
-    profit_orders: Dict[np.float64, bt.Order]
-    archived_orders: Dict[np.float64, bt.Order]
-    date_range_str: str
+    signal_df: pt.DataFrame[SignalDFM] = SignalDf.new()
+    main_orders: Dict[np.float64, bt.Order] = {}
+    stop_orders: Dict[np.float64, bt.Order] = {}
+    profit_orders: Dict[np.float64, bt.Order] = {}
+    archived_orders: Dict[np.float64, bt.Order] = {}
+    date_range_str: str = None
     initial_cash: float = None
 
-    def candle(self, backward_index: int = 0):
+    def candle(self, backward_index: int = 0) -> BaseTickStructure:
         return BaseTickStructure(
             date=bt.num2date(self.datas[0].datetime[backward_index]).replace(tzinfo=pytz.UTC),
             close=self.datas[0].close[backward_index],
@@ -69,7 +70,6 @@ class ExtendedStrategy(bt.Strategy):
         )
 
     # def debug_datas_structure(self):
-    #     # todo: test
     #     for i, data in enumerate(self.datas[:min(5, len(self.datas))]):
     #         print(f"Data Feed {i + 1}:", type(data))
     #         print("Attributes:")
@@ -121,13 +121,13 @@ class ExtendedStrategy(bt.Strategy):
             raise Exception(f"Order:{order} Unexpected status {order.status}")
 
     def ordered_signals(self, signal_df: SignalDf = None) -> SignalDf:
-        # todo: test
         if signal_df is None:
             signal_df = self.signal_df
         return signal_df[signal_df['order_is_active'].notna() & signal_df['order_is_active']]
 
     def next(self):
-        self.set_sizer()
+        if len(self.main_orders) > 0:
+            self.verify_triple_oder_status()
         # self.update_bases() the base patterns are prepared before!
         self.extract_signals()
         # self.update_orders()
@@ -178,9 +178,10 @@ class ExtendedStrategy(bt.Strategy):
         for start, signal in active_signals.iterrows():
             # todo: test
             bracket_executor, order_executor = self.executors(signal)
-            execution_type = self.execution_type(signal)
+            execution_type = SignalDf.execution_type(signal)
             if pd.notna(signal['take_profit']):
                 main_order: bt.Order
+                # todo: check_trigger does not inherit from ExtendedOrder and does not accept trigger_price=signal['trigger_price']
                 main_order, stop_order, profit_order = bracket_executor(size=signal['base_asset_amount'],
                                                                         exectype=execution_type,
                                                                         limitprice=signal['take_profit'],
@@ -191,9 +192,9 @@ class ExtendedStrategy(bt.Strategy):
                 self.add_order_info(main_order, signal, start, 'main')
                 self.add_order_info(stop_order, signal, start, 'stop')
                 self.add_order_info(profit_order, signal, start, 'profit')
-                self.main_orders.loc[order_id] = main_order
-                self.stop_orders.loc[order_id] = stop_order
-                self.profit_orders.loc[order_id] = profit_order
+                self.main_orders[order_id] = main_order
+                self.stop_orders[order_id] = stop_order
+                self.profit_orders[order_id] = profit_order
                 # order_executor(
                 #     size=base_asset_amount, exectype=execution_type, price=take_profit, parent=bracket_executor(
                 #         limitprice=take_profit, stopprice=stop_loss
@@ -201,7 +202,7 @@ class ExtendedStrategy(bt.Strategy):
                 # )
                 self.signal_df.loc[start, 'order_id'] = order_id
                 log_d(f"Signal:{signal} ordered "
-                      f"M:{main_order.__str__()} S:{stop_order.__str()} P:{profit_order.__str()}")
+                      f"M:{main_order.__str__()} S:{stop_order.__str__()} P:{profit_order.__str__()}")
             else:
                 raise Exception('Expected all signals have take_profit')
                 # order_id = order_executor(size=signal['base_asset_amount'], exectype=execution_type,
@@ -209,6 +210,7 @@ class ExtendedStrategy(bt.Strategy):
                 #                                limit_price=signal['limit_price'],
                 #                                trigger_price=signal['trigger_price'])
                 # self.signal_df.loc[start, 'order_id'] = order_id
+
     def verify_triple_oder_status(self):
         '''
         check:
@@ -219,10 +221,12 @@ class ExtendedStrategy(bt.Strategy):
          (canceled) also
         :return:
         '''
+        assert len(self.main_orders) == len(self.stop_orders)
+        assert len(self.main_orders) == len(self.profit_orders)
         for index, order in self.main_orders:
-            if order.status in [bt.Order.Created, bt.Order., ]
-
-        not_implemeneted
+            if ExtendedOrder.is_open(order):
+                assert ExtendedOrder.is_open(self.stop_orders[index])
+                assert ExtendedOrder.is_open(self.profit_orders[index])
 
     def executors(self, signal):
         if signal['side'] == 'buy':
@@ -232,6 +236,7 @@ class ExtendedStrategy(bt.Strategy):
             # todo: test
             order_executor = self.sell
             bracket_executor = self.buy_bracket
+            self.check_trigger()
         else:
             raise Exception('Unknown side %s' % signal['side'])
         return bracket_executor, order_executor
@@ -241,20 +246,11 @@ class BasePatternStrategy(ExtendedStrategy):
     base_patterns: pt.DataFrame[MultiTimeframeBasePattern]
 
     def add_base_patterns(self):
-        self.base_patterns = read_multi_timeframe_base_patterns(
-            self.date_range_str)
+        self.base_patterns = read_multi_timeframe_base_patterns(self.date_range_str)
 
     def __init__(self):
         self.add_base_patterns()
-        super()
-
-    def set_sizer(self):
-        # only runs once on first data
-        if self.initial_cash is None:
-            self.initial_cash = self.broker.get_cash()
-            if self.initial_cash is None or not self.initial_cash > 0:
-                raise Exception(f"Cash expected to be positive but is {self.initial_cash}")
-            super(MySizer)
+        super().__init__()
 
     def overlapping_base_patterns(self, base_patterns: pt.DataFrame[MultiTimeframeBasePattern] = None) \
             -> pt.DataFrame[MultiTimeframeBasePattern]:
@@ -309,10 +305,13 @@ class BasePatternStrategy(ExtendedStrategy):
             trigger_price = base_pattern['internal_low']
         # todo: reference_multi_date and reference_multi_timeframe never been used.
         # todo: use .loc to generate and assign signal in one step.
-        effective_end = base_pattern[['end', 'ttl']].min(skipna=True)
+        if pd.notna(base_pattern['end']):
+            effective_end = base_pattern['end']
+        else:
+            effective_end = base_pattern['ttl']
         new_signal = SignalDf.new({
             'date': [self.candle().date],
-            'end': effective_end,
+            'end': [effective_end],
             'side': [side],
             'reference_multi_date': [base_pattern_date],
             'reference_multi_timeframe': [base_pattern_timeframe],
@@ -324,7 +323,7 @@ class BasePatternStrategy(ExtendedStrategy):
             'order_is_active': [False],
         })
         self.signal_df = SignalDf.concat(self.signal_df, new_signal)
-        log_d(f"added Signal {new_signal} @ {self.candle()}")
+        log_d(f"added Signal {SignalDf.to_str(new_signal)} @ {self.candle().date}")
         return self.signal_df
 
     def candle_overlaps_base(self, base_pattern):
@@ -347,25 +346,26 @@ class BasePatternStrategy(ExtendedStrategy):
                 self.add_signal(timeframe, start, base_pattern, band='below')
                 self.base_patterns.loc[(timeframe, start), 'below_band_signal_generated'] = self.candle().date
 
-
-@staticmethod
-def test_strategy(cash: float, date_range_str: str = None):
-    if date_range_str is None:
-        date_range_str = config.processing_date_range
-    cerebro = bt.Cerebro()
-    cerebro.addstrategy(BasePatternStrategy)
-    raw_data = read_base_timeframe_ohlcv(date_range_str)
-    data = bt.feeds.PandasData(dataname=raw_data, datetime=None, open=0, close=1, high=2, low=3, volume=4,
-                               openinterest=-1)
-    cerebro.adddata(data)
-    cerebro.broker.set_cash(cash)
-    print('Starting Portfolio Value: %.2f' % cerebro.broker.getvalue())
-    cerebro.run()
-    # todo: test
-    print('Final Portfolio Value: %.2f' % cerebro.broker.getvalue())
+    @staticmethod
+    def test_strategy(cash: float, date_range_str: str = None):
+        if date_range_str is None:
+            date_range_str = config.processing_date_range
+        cerebro = bt.Cerebro()
+        cerebro.addstrategy(BasePatternStrategy)
+        cerebro.addsizer(MySizer)
+        raw_data = read_base_timeframe_ohlcv(date_range_str)
+        data = bt.feeds.PandasData(dataname=raw_data, datetime=None, open=0, close=1, high=2, low=3, volume=4,
+                                   openinterest=-1)
+        cerebro.adddata(data)
+        cerebro.broker.set_cash(cash)
+        print('Starting Portfolio Value: %.2f' % cerebro.broker.getvalue())
+        cerebro.run()
+        # todo: test
+        print('Final Portfolio Value: %.2f' % cerebro.broker.getvalue())
 
 
 def order_name(cls, order: bt.Order):
+    # todo: test
     # TRX<13USDT@0.02
     name = (f"Order"
             f"{('<' if order.isbuy() else '>')}"

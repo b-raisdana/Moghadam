@@ -4,10 +4,10 @@ from plotly import graph_objects as plgo
 from plotly.subplots import make_subplots
 
 from Config import config, CandleSize
-from Model.OHLCV import OHLCV
-from data_preparation import single_timeframe
+from PanderaDFM.OHLCV import OHLCV
+from helper.data_preparation import single_timeframe
 from FigurePlotter.plotter import plot_multiple_figures, file_id, DEBUG, save_figure
-from helper import log, measure_time
+from helper.helper import log, measure_time
 from pandera import typing as pt
 
 @measure_time

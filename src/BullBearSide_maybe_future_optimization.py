@@ -4,9 +4,9 @@ import pandas as pd
 from pandera import typing as pt
 
 from BullBearSide import bull_bear_side_repr
-from Model.BullBearSide import BullBearSide
+from PanderaDFM.BullBearSide import BullBearSide
 from Config import TREND
-from helper import log
+from helper.helper import log
 
 
 # def zz_merge_overlapped_single_timeframe_trends(trends: pt.DataFrame[BullBearSide], timeframe: str):

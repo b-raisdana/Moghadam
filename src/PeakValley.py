@@ -7,11 +7,11 @@ import pandera.typing as pt
 
 from Config import config, INFINITY_TIME_DELTA, TopTYPE
 from MetaTrader import MT
-from Model.OHLCV import OHLCV
-from Model.PeakValley import PeakValley, MultiTimeframePeakValley
-from data_preparation import read_file, cast_and_validate, trim_to_date_range, \
+from PanderaDFM.OHLCV import OHLCV
+from PanderaDFM.PeakValley import PeakValley, MultiTimeframePeakValley
+from helper.data_preparation import read_file, cast_and_validate, trim_to_date_range, \
     expand_date_range, after_under_process_date, empty_df, shift_over, concat
-from helper import measure_time, date_range
+from helper.helper import measure_time, date_range
 from ohlcv import read_base_timeframe_ohlcv
 
 

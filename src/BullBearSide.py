@@ -6,17 +6,17 @@ import pandas as pd
 import pandera.typing as pt
 
 from Config import TopTYPE, config, TREND
-from Model.BullBearSide import MultiTimeframeBullBearSide, BullBearSide, bull_bear_side_repr
-from Model.CandleTrend import MultiTimeframeCandleTrend, CandleTrend
-from Model.OHLCV import OHLCV
-from Model.OHLCVA import OHLCVA
-from Model.PeakValley import PeakValley, MultiTimeframePeakValley
+from PanderaDFM.BullBearSide import MultiTimeframeBullBearSide, BullBearSide, bull_bear_side_repr
+from PanderaDFM.CandleTrend import MultiTimeframeCandleTrend, CandleTrend
+from PanderaDFM.OHLCV import OHLCV
+from PanderaDFM.OHLCVA import OHLCVA
+from PanderaDFM.PeakValley import PeakValley, MultiTimeframePeakValley
 from PeakValley import peaks_only, valleys_only, read_multi_timeframe_peaks_n_valleys, major_peaks_n_valleys, \
     insert_previous_n_next_top
 from atr import read_multi_timeframe_ohlcva
-from data_preparation import read_file, single_timeframe, to_timeframe, cast_and_validate, empty_df, concat, \
+from helper.data_preparation import read_file, single_timeframe, to_timeframe, cast_and_validate, empty_df, concat, \
     date_range_of_data
-from helper import log, measure_time, LogSeverity
+from helper.helper import log, measure_time, LogSeverity
 from ohlcv import read_multi_timeframe_ohlcv
 
 
@@ -878,10 +878,10 @@ def ignore_weak_trend(_boundaries: pt.DataFrame[BullBearSide]) -> pt.DataFrame[B
     Remove weak trends from the DataFrame.
 
     Parameters:
-        _boundaries (pt.DataFrame[Model.BullBearSide.BullBearSide]): A DataFrame containing trend boundary data.
+        _boundaries (pt.DataFrame[Strategy.BullBearSide.BullBearSide]): A DataFrame containing trend boundary data.
 
     Returns:
-        pt.DataFrame[Model.BullBearSide.BullBearSide]: A DataFrame with weak trends removed.
+        pt.DataFrame[Strategy.BullBearSide.BullBearSide]: A DataFrame with weak trends removed.
 
     Example:
         # Assuming you have a DataFrame '_boundaries' with the required columns and data

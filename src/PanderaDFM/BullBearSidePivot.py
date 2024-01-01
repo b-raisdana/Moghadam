@@ -4,7 +4,7 @@ import pandas as pd
 import pandera
 from pandera import typing as pt
 
-from Model.Pivot import Pivot
+from PanderaDFM.Pivot import Pivot
 
 
 class BullBearSidePivot(Pivot):

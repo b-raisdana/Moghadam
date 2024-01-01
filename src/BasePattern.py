@@ -6,13 +6,13 @@ import pandas as pd
 from pandera import typing as pt, Timestamp
 
 from Config import config, CandleSize
-from Model.BasePattern import BasePattern, MultiTimeframeBasePattern
-from Model.OHLCVA import OHLCVA, MultiTimeframeOHLCVA
-from Model.Pivot import MultiTimeframePivot
+from PanderaDFM.BasePattern import BasePattern, MultiTimeframeBasePattern
+from PanderaDFM.OHLCVA import OHLCVA, MultiTimeframeOHLCVA
+from PanderaDFM.Pivot import MultiTimeframePivot
 from atr import read_multi_timeframe_ohlcva
-from data_preparation import single_timeframe, concat, cast_and_validate, empty_df, read_file, anti_pattern_timeframe, \
+from helper.data_preparation import single_timeframe, concat, cast_and_validate, empty_df, read_file, anti_pattern_timeframe, \
     anti_trigger_timeframe, to_timeframe
-from helper import date_range, date_range_to_string
+from helper.helper import date_range, date_range_to_string
 
 
 def add_candle_size(ohlcva: pt.DataFrame[OHLCVA]) -> pt.DataFrame[OHLCVA]:

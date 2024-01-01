@@ -1,19 +1,9 @@
-from BasePattern import generate_multi_timeframe_base_patterns, read_multi_timeframe_base_patterns
-from BasePatternStrategy import BasePatternStrategy
-from BullBearSide import generate_multi_timeframe_bull_bear_side_trends, read_multi_timeframe_bull_bear_side_trends, \
-    generate_multi_timeframe_candle_trend
-from BullBearSidePivot import generate_multi_timeframe_bull_bear_side_pivots, read_multi_timeframe_bull_bear_side_pivots
 from Config import config
-from FigurePlotter.BasePattern_plotter import plot_multi_timeframe_base_pattern
-from FigurePlotter.BullBearSide_plotter import plot_multi_timeframe_bull_bear_side_trends
-from FigurePlotter.OHLVC_plotter import plot_multi_timeframe_ohlcva
-from FigurePlotter.Pivot_plotter import plot_multi_timeframe_pivots
-from Model.OHLCVA import MultiTimeframeOHLCVA
-from Model.SignalDf import SignalDf, SignalDFM
-from PeakValley import read_multi_timeframe_peaks_n_valleys
+from Strategy.BasePatternStrategy import BasePatternStrategy
 from atr import read_multi_timeframe_ohlcva
+from helper.helper import date_range_to_string
+
 # from data_preparation import d_types
-from helper import date_range_to_string
 
 if __name__ == "__main__":
     config.processing_date_range = date_range_to_string(days=2)

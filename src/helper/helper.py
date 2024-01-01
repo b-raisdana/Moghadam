@@ -43,7 +43,7 @@ __severity_color_map = {
 }
 
 
-def log_d(message: str, stack_trace: bool = True):
+def log_d(message: str, stack_trace: bool = False):
     log(message, LogSeverity.DEBUG, stack_trace)
 
 

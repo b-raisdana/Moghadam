@@ -10,7 +10,7 @@ from enum import Enum
 import numpy as np
 import pandas as pd
 
-from helper import log
+from helper.helper import log
 
 
 # class CandleSize(Enum):
@@ -128,14 +128,11 @@ class MyEncoder(json.JSONEncoder):
 
 
 myEncoder = MyEncoder()
-DEBUG = False
 config = Config()
 config_as_json = myEncoder.encode(config)
-if DEBUG: log(str(config_as_json))
 config_digest = str.translate(base64.b64encode(hashlib.md5(config_as_json.encode('utf-8')).digest())
                               .decode('ascii'), {ord('+'): '', ord('/'): '', ord('='): '', })
 
-if DEBUG: log(config_digest)
 dump_filename = os.path.join(config.path_of_logs, f'Config.{config_digest}.json')
 if not os.path.exists(config.path_of_logs):
     os.makedirs(config.path_of_logs)

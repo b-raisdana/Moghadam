@@ -7,11 +7,11 @@ from pandera import typing as pt
 
 from Config import config
 from MetaTrader import MT
-from Model.OHLCV import MultiTimeframeOHLCV, OHLCV
-from data_preparation import read_file, single_timeframe, cast_and_validate, trim_to_date_range, to_timeframe, \
+from PanderaDFM.OHLCV import MultiTimeframeOHLCV, OHLCV
+from helper.data_preparation import read_file, single_timeframe, cast_and_validate, trim_to_date_range, to_timeframe, \
     after_under_process_date, multi_timeframe_times_tester, times_tester, empty_df, concat
 from fetch_ohlcv import fetch_ohlcv_by_range
-from helper import measure_time, date_range, date_range_to_string
+from helper.helper import measure_time, date_range, date_range_to_string
 
 
 # # @measure_time

@@ -13,9 +13,9 @@ from typing import Union, List
 import psutil
 from pandera import typing as pt
 
-from Model.OHLCV import OHLCV
-from data_preparation import map_symbol, extract_file_info, FileInfoSet
-from helper import log, LogSeverity
+from PanderaDFM.OHLCV import OHLCV
+from helper.data_preparation import map_symbol, extract_file_info, FileInfoSet
+from helper.helper import log, LogSeverity
 
 # def mt5_client() -> Mt5:
 #     global META_TRADER_IS_INITIALIZED

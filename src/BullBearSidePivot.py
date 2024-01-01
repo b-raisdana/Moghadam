@@ -7,15 +7,15 @@ from pandera import typing as pt
 from BullBearSide import read_multi_timeframe_bull_bear_side_trends, previous_trend
 from Config import config
 from MetaTrader import MT
-from Model.BullBearSide import BullBearSide
-from Model.BullBearSidePivot import BullBearSidePivot
-from Model.Pivot import MultiTimeframePivot
+from PanderaDFM.BullBearSide import BullBearSide
+from PanderaDFM.BullBearSidePivot import BullBearSidePivot
+from PanderaDFM.Pivot import MultiTimeframePivot
 from PeakValley import read_multi_timeframe_peaks_n_valleys, major_peaks_n_valleys
 from PivotsHelper import pivots_level_n_margins, level_ttl
 from atr import read_multi_timeframe_ohlcva
-from data_preparation import single_timeframe, expected_movement_size, trigger_timeframe, read_file, \
+from helper.data_preparation import single_timeframe, expected_movement_size, trigger_timeframe, read_file, \
     cast_and_validate, anti_pattern_timeframe, after_under_process_date, empty_df, concat
-from helper import measure_time
+from helper.helper import measure_time
 
 
 def remove_overlapping_trends(timeframe_trends: pt.DataFrame[BullBearSide]) -> pt.DataFrame[BullBearSide]:
@@ -23,10 +23,10 @@ def remove_overlapping_trends(timeframe_trends: pt.DataFrame[BullBearSide]) -> p
         Remove overlapping trends from a DataFrame by selecting the trend with the maximum 'movement' within each date group.
 
         Args:
-            timeframe_trends (pd.DataFrame[Model.BullBearSide.BullBearSide]): A DataFrame containing trend data.
+            timeframe_trends (pd.DataFrame[Strategy.BullBearSide.BullBearSide]): A DataFrame containing trend data.
 
         Returns:
-            pd.DataFrame[Model.BullBearSide.BullBearSide]: A DataFrame with overlapping trends removed.
+            pd.DataFrame[Strategy.BullBearSide.BullBearSide]: A DataFrame with overlapping trends removed.
         """
     # Group the DataFrame by 'date' and find the index of the row with the maximum 'movement' within each group
     max_movement_indices = timeframe_trends.groupby('movement_start_time')['movement'].idxmax()

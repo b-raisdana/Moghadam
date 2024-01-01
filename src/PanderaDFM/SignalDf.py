@@ -2,7 +2,7 @@
 from datetime import datetime
 from typing import Annotated
 
-import backtrader
+import backtrader as bt
 import numpy as np
 import pandas as pd
 import pandera
@@ -10,16 +10,16 @@ import pytz
 from pandas import Timestamp
 from pandera import typing as pt
 
-from Model.BaseTickStructure import BaseTickStructure
-from Model.ExtendedDf import ExtendedDf, BasePanderaDFM
+from PanderaDFM.BaseTickStructure import BaseTickStructure
+from PanderaDFM.ExtendedDf import ExtendedDf, BasePanderaDFM
 
 
 class SignalDFM(BasePanderaDFM):
     # from start of exact this candle the signal is valid
     date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(unique=True, title='date')
     # from start of exact this candle the signal is in-valid
-    reference_multi_date: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
-    reference_multi_timeframe: pt.Series[str] = pandera.Field(nullable=True)
+    reference_date: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
+    reference_timeframe: pt.Series[str] = pandera.Field(nullable=True)
     end: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
     """
     Limit Orders – regular orders having an amount in base currency (how much you want to buy or sell) and a price in quote currency (for which price you want to buy or sell).
@@ -32,16 +32,17 @@ class SignalDFM(BasePanderaDFM):
     """
     side: pt.Series[str] = pandera.Field(default='buy')  # sell or buy
     # if NaN sizer should give the appropriate size.
-    base_asset_amount: pt.Series[float] = pandera.Field(nullable=True, default=pd.NA)
+    base_asset_amount: pt.Series[float] = pandera.Field(nullable=True, default=None)
+    # default=pd.NA pandera.errors.ParserError: Could not coerce <class 'pandas.core.series.Series'> data_container into type float64
     # the worst acceptable price for order execution.
-    limit_price: pt.Series[float] = pandera.Field(nullable=True, default=pd.NA)
-    stop_loss: pt.Series[float] = pandera.Field(nullable=True, default=pd.NA)  # , ignore_na=False
-    take_profit: pt.Series[float] = pandera.Field(nullable=True, default=pd.NA)
+    limit_price: pt.Series[float] = pandera.Field(nullable=True, default=None)
+    stop_loss: pt.Series[float] = pandera.Field(nullable=True, default=None)  # , ignore_na=False
+    take_profit: pt.Series[float] = pandera.Field(nullable=True, default=None)
     # the condition direction is reverse of limit direction.
-    trigger_price: pt.Series[float] = pandera.Field(nullable=True, default=pd.NA)
-    order_id: pt.Series[np.float64] = pandera.Field(nullable=True, default=pd.NA)
+    trigger_price: pt.Series[float] = pandera.Field(nullable=True, default=None)
+    order_id: pt.Series[np.float64] = pandera.Field(nullable=True, default=None)
     led_to_order_at: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
-    order_is_active: pt.Series[bool] = pandera.Field(nullable=True, default=pd.NA)  # , ignore_na=False
+    order_is_active: pt.Series[bool] = pandera.Field(nullable=True, default=None)  # , ignore_na=False
 
     @pandera.dataframe_check
     def end_after_start_check(cls, df, *args, **kwargs):
@@ -49,15 +50,12 @@ class SignalDFM(BasePanderaDFM):
         return df['end'] > df['date']
 
 
-class SignalDf(ExtendedDf, backtrader.OrderBase):
+class SignalDf(ExtendedDf):
     schema_data_frame_model = SignalDFM
     _sample_df = pt.DataFrame[SignalDFM]({
         'date': [Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC))],
         'end': [Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=2).replace(tzinfo=pytz.UTC))],
-        'reference_multi_date': [
-            datetime(year=2023, month=12, day=20, hour=10, minute=11, second=13).replace(tzinfo=pytz.UTC)],
         'side': ['buy'],
-        'base_asset_amount': 1.1,
     })
     _empty_obj = None
 
@@ -104,22 +102,23 @@ class SignalDf(ExtendedDf, backtrader.OrderBase):
 
     @staticmethod
     def execution_type(signal):
-        if pd.notna(signal['stop_loss']) and pd.notna(signal['limit_price']):
-            execution_type = SignalDf.StopLimit
-        elif pd.notna(signal['stop_loss']):
+        signal_dict = signal.to_dict()
+        if pd.notna(signal_dict['stop_loss']) and pd.notna(signal_dict['limit_price']):
+            execution_type = bt.Order.StopLimit
+        elif pd.notna(signal_dict['stop_loss']):
             # todo: test
-            execution_type = SignalDf.Stop
-        elif pd.notna(signal['limit_price']):
+            execution_type = bt.Order.Stop
+        elif pd.notna(signal_dict['limit_price']):
             # todo: test
-            execution_type = SignalDf.Limit
+            execution_type = bt.Order.Limit
         else:
             # todo: test
-            execution_type = SignalDf.Market
+            execution_type = bt.Order.Market
         return execution_type
 
     @classmethod
-    def to_str(cls, start, signal: pt.Series[SignalDFM]):
-        result = (f"Signal@{start}-{signal['end']}:"
+    def to_str(cls, signal: pt.Series[SignalDFM]):
+        result = (f"Signal@{signal.index}-{signal['end']}:"
                   f"{SignalDf.execution_type(signal)}"
                   f"{signal['base_asset_amount']}@{signal['limit_price']}SL{signal['limit_price']}"
                   f"TP{signal['take_profit']}TR{signal['trigger_price']}")
