@@ -2,6 +2,7 @@
 from datetime import datetime
 from typing import Annotated
 
+import numpy as np
 import pandas as pd
 import pandera
 import pytz
@@ -19,7 +20,7 @@ class SignalDFM(BasePanderaDFM):
     # from start of exact this candle the signal is in-valid
     reference_multi_date: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
     reference_multi_timeframe: pt.Series[str] = pandera.Field(nullable=True)
-    end: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
+    end: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
     # """
     # Limit Orders – regular orders having an amount in base currency (how much you want to buy or sell) and a price in quote currency (for which price you want to buy or sell).
     # Market Orders – regular orders having an amount in base currency (how much you want to buy or sell)
@@ -39,15 +40,21 @@ class SignalDFM(BasePanderaDFM):
     take_profit: pt.Series[float] = pandera.Field(nullable=True, default=pd.NA)
     # the condition direction is reverse of limit direction.
     trigger_price: pt.Series[float] = pandera.Field(nullable=True, default=pd.NA)
-    main_order_id: pt.Series[int] = pandera.Field(nullable=True, default=0)
-    # led_to_order_at: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
+    order_id: pt.Series[np.float64] = pandera.Field(nullable=True, default=pd.NA)
+    led_to_order_at: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
     order_is_active: pt.Series[bool] = pandera.Field(nullable=True, default=pd.NA)  # , ignore_na=False
+
+    @pandera.dataframe_check
+    def end_after_start_check(cls, df, *args, **kwargs):
+        # Custom check to ensure 'end' is after 'date'
+        return df['end'] > df['date']
 
 
 class SignalDf(pt.DataFrame[SignalDFM], ExtendedDf):
     schema_data_frame_model = SignalDFM
     _sample_df = pt.DataFrame[SignalDFM]({
         'date': [Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC))],
+        'end': [Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=2).replace(tzinfo=pytz.UTC))],
         'reference_multi_date': [
             datetime(year=2023, month=12, day=20, hour=10, minute=11, second=13).replace(tzinfo=pytz.UTC)],
         'side': ['buy'],
@@ -57,19 +64,20 @@ class SignalDf(pt.DataFrame[SignalDFM], ExtendedDf):
 
     @classmethod
     def is_closed(self, signal: pt.Series[SignalDFM], tick: BaseTickStructure):
-        if signal['side'] == 'buy':
-            if tick.high > signal['take_profit']:
-                return True
-            if tick.low < signal['stop_loss']:
-                return True
-        elif signal['side'] == 'sell':
-            if tick.low < signal['take_profit']:
-                return True
-            if tick.high > signal['stop_loss']:
-                return True
-        else:
-            raise Exception(f"Unexpected side({signal['side']}) in {signal} should be 'buy' or 'sell'.")
-        return False
+        raise ("Not used before")
+        # if signal['side'] == 'buy':
+        #     if tick.high > signal['take_profit']:
+        #         return True
+        #     if tick.low < signal['stop_loss']:
+        #         return True
+        # elif signal['side'] == 'sell':
+        #     if tick.low < signal['take_profit']:
+        #         return True
+        #     if tick.high > signal['stop_loss']:
+        #         return True
+        # else:
+        #     raise Exception(f"Unexpected side({signal['side']}) in {signal} should be 'buy' or 'sell'.")
+        # return False
 
     @staticmethod
     def took_profit(signal: pt.Series[SignalDFM], tick: BaseTickStructure) -> bool:
@@ -94,18 +102,3 @@ class SignalDf(pt.DataFrame[SignalDFM], ExtendedDf):
         else:
             raise Exception(f"Unexpected side({signal['side']}) in {signal} should be 'buy' or 'sell'.")
         return False
-
-
-new_signal = SignalDf.new(
-    {
-        'date': [datetime(2023, 12, 29, 0, 0, tzinfo=pytz.UTC)],
-        'side': ['buy'],
-        'reference_multi_date': [Timestamp('2023-12-26 11:30:00+0000', tz='UTC')],
-        'reference_multi_timeframe': ['15min'],
-        'limit_price': [43270.392300534404],
-        'stop_loss': [42579.2],
-        'take_profit': [43003.40000000002],
-        'trigger_price': [42649.9],
-        'base_asset_amount': [-1.1],
-    }
-)
