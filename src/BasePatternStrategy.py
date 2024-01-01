@@ -12,7 +12,6 @@ from BasePattern import read_multi_timeframe_base_patterns
 from Config import config
 from Model.BasePattern import MultiTimeframeBasePattern
 from Model.BaseTickStructure import BaseTickStructure
-from Model.ExtendedOrder import ExtendedOrder
 from Model.SignalDf import SignalDf
 from helper import log, log_d
 from ohlcv import read_base_timeframe_ohlcv
@@ -50,14 +49,13 @@ class MySizer(bt.Sizer):
         return size
 
 
-class BasePatternStrategy(bt.Strategy):
+class ExtendedStrategy(bt.Strategy):
     signal_df: pt.DataFrame[SignalDf.schema_data_frame_model]
-    active_orders: Dict[np.float64, bt.Order]
+    main_orders: Dict[np.float64, bt.Order]
+    stop_orders: Dict[np.float64, bt.Order]
+    profit_orders: Dict[np.float64, bt.Order]
     archived_orders: Dict[np.float64, bt.Order]
-    traced_active_orders: Dict[np.float64, bt.Order]
-    traced_archived_orders: Dict[np.float64, bt.Order]
     date_range_str: str
-    base_patterns: pt.DataFrame[MultiTimeframeBasePattern]
     initial_cash: float = None
 
     def candle(self, backward_index: int = 0):
@@ -86,10 +84,6 @@ class BasePatternStrategy(bt.Strategy):
     #         except Exception as e:
     #             raise e
 
-    def add_base_patterns(self):
-        self.base_patterns = read_multi_timeframe_base_patterns(
-            self.date_range_str)
-
     def set_date_range(self, date_range_str: str = None):
         if date_range_str is None:
             date_range_str = config.processing_date_range
@@ -99,22 +93,6 @@ class BasePatternStrategy(bt.Strategy):
     def __init__(self):
         self.signal_df = SignalDf.new()
         self.set_date_range()
-        self.add_base_patterns()
-
-    def set_sizer(self):
-        # only runs once on first data
-        if self.initial_cash is None:
-            self.initial_cash = self.broker.get_cash()
-            if self.initial_cash is None or not self.initial_cash > 0:
-                raise Exception(f"Cash expected to be positive but is {self.initial_cash}")
-            super(MySizer)
-
-    def update_orders(self):
-        """
-        check updated status of self.orders
-        :return:
-        """
-        raise Exception('Not implemented!')
 
     def notify_order(self, order: bt.Order):
         # todo: test
@@ -142,6 +120,12 @@ class BasePatternStrategy(bt.Strategy):
         else:
             raise Exception(f"Order:{order} Unexpected status {order.status}")
 
+    def ordered_signals(self, signal_df: SignalDf = None) -> SignalDf:
+        # todo: test
+        if signal_df is None:
+            signal_df = self.signal_df
+        return signal_df[signal_df['order_is_active'].notna() & signal_df['order_is_active']]
+
     def next(self):
         self.set_sizer()
         # self.update_bases() the base patterns are prepared before!
@@ -149,6 +133,128 @@ class BasePatternStrategy(bt.Strategy):
         # self.update_orders()
         self.update_ordered_signals()
         self.execute_active_signals()
+
+    def active_signals(self) -> SignalDf:
+        if 'end' not in self.signal_df.columns:
+            # self.signal_df['end'] = pd.Series(dtype='datetime64[ns, UTC]')
+            pass
+        result = self.signal_df[
+            (self.signal_df.index.get_level_values(level='date') <= self.candle().date) &
+            (
+                    ('end' not in self.signal_df.columns) |
+                    (self.signal_df['end'].isna()) |
+                    (self.signal_df['end'] > self.candle().date)) &
+            (self.signal_df['order_is_active'].isna() | ~self.signal_df['order_is_active'])
+            ]
+        return result
+
+    @classmethod
+    def add_order_info(cls, order: bt.Order, signal, signal_start, order_type: Literal['main', 'stop', 'profit']):
+        order.addinfo(signal=signal)
+        order.addinfo(signal_start=signal_start)
+        order.addinfo(custom_type=order_type)
+
+    def update_ordered_signals(self):
+        ordered_signals = self.ordered_signals()
+        for index, signal in ordered_signals.iterrows():
+            # todo: test
+            if SignalDf.stopped(signal, self.candle()):
+                log(f'Signal repeated according to Stop-Loss on {SignalDf.to_str(index, signal)} @ {self.candle()}')
+                repeat_signal = signal.copy()
+                repeat_signal['original_index'] = index
+                repeat_signal['order_is_active'] = False
+                repeat_signal['order_id'] = pd.NA
+                repeat_signal['led_to_order_at'] = pd.NA
+                self.signal_df.loc[self.candle().date] = repeat_signal
+                log_d(f"repeated Signal:{repeat_signal}@{self.candle()} ")
+            elif SignalDf.took_profit(signal, self.candle()):
+                log_d(f'Took profit on Signal:{SignalDf.repr(index, signal)}@{self.candle()}')
+            elif SignalDf.expired(signal, self.candle()):
+                log(f'Signal:{SignalDf.repr(index, signal)}@{self.candle()} Expired')
+
+    def execute_active_signals(self):
+        assert 'order_id' in self.signal_df.columns
+        active_signals = self.active_signals()
+        for start, signal in active_signals.iterrows():
+            # todo: test
+            bracket_executor, order_executor = self.executors(signal)
+            execution_type = self.execution_type(signal)
+            if pd.notna(signal['take_profit']):
+                main_order: bt.Order
+                main_order, stop_order, profit_order = bracket_executor(size=signal['base_asset_amount'],
+                                                                        exectype=execution_type,
+                                                                        limitprice=signal['take_profit'],
+                                                                        price=signal['limit_price'],
+                                                                        stopprice=signal['stop_loss'],
+                                                                        trigger_price=signal['trigger_price'])
+                order_id = np.float64(datetime.now(tz=pytz.UTC).timestamp())
+                self.add_order_info(main_order, signal, start, 'main')
+                self.add_order_info(stop_order, signal, start, 'stop')
+                self.add_order_info(profit_order, signal, start, 'profit')
+                self.main_orders.loc[order_id] = main_order
+                self.stop_orders.loc[order_id] = stop_order
+                self.profit_orders.loc[order_id] = profit_order
+                # order_executor(
+                #     size=base_asset_amount, exectype=execution_type, price=take_profit, parent=bracket_executor(
+                #         limitprice=take_profit, stopprice=stop_loss
+                #     )
+                # )
+                self.signal_df.loc[start, 'order_id'] = order_id
+                log_d(f"Signal:{signal} ordered "
+                      f"M:{main_order.__str__()} S:{stop_order.__str()} P:{profit_order.__str()}")
+            else:
+                raise Exception('Expected all signals have take_profit')
+                # order_id = order_executor(size=signal['base_asset_amount'], exectype=execution_type,
+                #                                price=signal['stop_loss'],
+                #                                limit_price=signal['limit_price'],
+                #                                trigger_price=signal['trigger_price'])
+                # self.signal_df.loc[start, 'order_id'] = order_id
+    def verify_triple_oder_status(self):
+        '''
+        check:
+         - length of self.main_orders and alef.stop_orders and self.profit_orders are equal
+         - if the self.main_orders.status is open the same index in both other lists
+         have the same status
+         - if the self.main_orders.status in closed (by any way) the same index in both other lists are closed
+         (canceled) also
+        :return:
+        '''
+        for index, order in self.main_orders:
+            if order.status in [bt.Order.Created, bt.Order., ]
+
+        not_implemeneted
+
+    def executors(self, signal):
+        if signal['side'] == 'buy':
+            order_executor = self.buy
+            bracket_executor = self.sell_bracket
+        elif signal['side'] == 'sell':
+            # todo: test
+            order_executor = self.sell
+            bracket_executor = self.buy_bracket
+        else:
+            raise Exception('Unknown side %s' % signal['side'])
+        return bracket_executor, order_executor
+
+
+class BasePatternStrategy(ExtendedStrategy):
+    base_patterns: pt.DataFrame[MultiTimeframeBasePattern]
+
+    def add_base_patterns(self):
+        self.base_patterns = read_multi_timeframe_base_patterns(
+            self.date_range_str)
+
+    def __init__(self):
+        self.add_base_patterns()
+        super()
+
+    def set_sizer(self):
+        # only runs once on first data
+        if self.initial_cash is None:
+            self.initial_cash = self.broker.get_cash()
+            if self.initial_cash is None or not self.initial_cash > 0:
+                raise Exception(f"Cash expected to be positive but is {self.initial_cash}")
+            super(MySizer)
 
     def overlapping_base_patterns(self, base_patterns: pt.DataFrame[MultiTimeframeBasePattern] = None) \
             -> pt.DataFrame[MultiTimeframeBasePattern]:
@@ -240,118 +346,6 @@ class BasePatternStrategy(bt.Strategy):
             if self.candle_overlaps_base(base_pattern):
                 self.add_signal(timeframe, start, base_pattern, band='below')
                 self.base_patterns.loc[(timeframe, start), 'below_band_signal_generated'] = self.candle().date
-
-    def active_signals(self) -> SignalDf:
-        if 'end' not in self.signal_df.columns:
-            # self.signal_df['end'] = pd.Series(dtype='datetime64[ns, UTC]')
-            pass
-        result = self.signal_df[
-            (self.signal_df.index.get_level_values(level='date') <= self.candle().date) &
-            (
-                    ('end' not in self.signal_df.columns) |
-                    (self.signal_df['end'].isna()) |
-                    (self.signal_df['end'] > self.candle().date)) &
-            (self.signal_df['order_is_active'].isna() | ~self.signal_df['order_is_active'])
-            ]
-        return result
-
-    def ordered_signals(self, signal_df: SignalDf = None) -> SignalDf:
-        # todo: test
-        if signal_df is None:
-            signal_df = self.signal_df
-        return signal_df[signal_df['order_is_active'].notna() & signal_df['order_is_active']]
-
-    def update_ordered_signals(self):
-        ordered_signals = self.ordered_signals()
-        for index, signal in ordered_signals.iterrows():
-            # todo: test
-            if SignalDf.stopped(signal, self.candle()):
-                log(f'Signal repeated according to Stop-Loss on {SignalDf.repr(index, signal)} @ {self.candle()}')
-                repeat_signal = signal.copy()
-                repeat_signal['original_index'] = index
-                repeat_signal['order_is_active'] = False
-                repeat_signal['order_id'] = pd.NA
-                repeat_signal['led_to_order_at'] = pd.NA
-                self.signal_df.loc[self.candle().date] = repeat_signal
-                log_d(f"repeated Signal:{repeat_signal}@{self.candle()} ")
-            elif SignalDf.took_profit(signal, self.candle()):
-                log_d(f'Took profit on Signal:{SignalDf.repr(index, signal)}@{self.candle()}')
-            elif SignalDf.expired(signal, self.candle()):
-                log(f'Signal:{SignalDf.repr(index, signal)}@{self.candle()} Expired')
-
-    @classmethod
-    def add_order_info(cls, order: bt.Order, signal, signal_start, type: Literal['main', 'stop', 'profit']):
-        order.addinfo(signal=signal)
-        order.addinfo(signal_start=signal_start)
-        order.addinfo(custom_type=type)
-
-    def execute_active_signals(self):
-        assert 'order_id' in self.signal_df.columns
-        active_signals = self.active_signals()
-        for start, signal in active_signals.iterrows():
-            # todo: test
-            # Placeholder for actual order placement logic
-            # Replace this with your order placement code
-            bracket_executor, order_executor = self.executors(signal)
-            # Placeholder for setting stop loss and take profit
-            execution_type = self.execution_type(signal)
-            if pd.notna(signal['take_profit']):
-                main_order: bt.Order
-                main_order, stop_order, profit_order = bracket_executor(size=signal['base_asset_amount'],
-                                                                        exectype=execution_type,
-                                                                        limitprice=signal['take_profit'],
-                                                                        price=signal['limit_price'],
-                                                                        stopprice=signal['stop_loss'],
-                                                                        trigger_price=signal['trigger_price'])
-                order_id = np.float64(datetime.now(tz=pytz.UTC).timestamp())
-                self.add_order_info(main_order, signal, start, 'main')
-                self.add_order_info(stop_order, signal, start, 'stop')
-                self.add_order_info(profit_order, signal, start, 'profit')
-                self.active_main_orders.loc[order_id] = main_order
-                self.active_stop_orders.loc[order_id] = stop_order
-                self.active_profit_orders.loc[order_id] = profit_order
-                # order_executor(
-                #     size=base_asset_amount, exectype=execution_type, price=take_profit, parent=bracket_executor(
-                #         limitprice=take_profit, stopprice=stop_loss
-                #     )
-                # )
-                self.signal_df.loc[start, 'order_id'] = order_id
-                log_d(f"Signal:{signal} ordered "
-                      f"M:{main_order.__str__()} S:{stop_order.__str()} P:{profit_order.__str()}")
-            else:
-                raise Exception('Expected all signals have take_profit')
-                # order_id = order_executor(size=signal['base_asset_amount'], exectype=execution_type,
-                #                                price=signal['stop_loss'],
-                #                                limit_price=signal['limit_price'],
-                #                                trigger_price=signal['trigger_price'])
-                # self.signal_df.loc[start, 'order_id'] = order_id
-
-    def executors(self, signal):
-        if signal['side'] == 'buy':
-            order_executor = self.buy
-            bracket_executor = self.sell_bracket
-        elif signal['side'] == 'sell':
-            # todo: test
-            order_executor = self.sell
-            bracket_executor = self.buy_bracket
-        else:
-            raise Exception('Unknown side %s' % signal['side'])
-        return bracket_executor, order_executor
-
-    @staticmethod
-    def execution_type(signal):
-        if pd.notna(signal['stop_loss']) and pd.notna(signal['limit_price']):
-            execution_type = ExtendedOrder.StopLimit
-        elif pd.notna(signal['stop_loss']):
-            # todo: test
-            execution_type = ExtendedOrder.Stop
-        elif pd.notna(signal['limit_price']):
-            # todo: test
-            execution_type = ExtendedOrder.Limit
-        else:
-            # todo: test
-            execution_type = ExtendedOrder.Market
-        return execution_type
 
 
 @staticmethod
