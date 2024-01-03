@@ -9,7 +9,6 @@ from BasePattern import read_multi_timeframe_base_patterns
 from Config import config
 from PanderaDFM.BasePattern import MultiTimeframeBasePattern
 from PanderaDFM.SignalDf import SignalDf
-from Strategy.ExtendedBroker import ExtendedBroker
 from Strategy.ExtendedOrder import OrderSide
 from Strategy.ExtendedStrategy import ExtendedStrategy
 from helper.helper import log_d
@@ -57,6 +56,8 @@ class BasePatternStrategy(ExtendedStrategy):
                     base_patterns[f'{band}_band_activated'] <= self.candle().date)) &
             (base_patterns[f'{band}_band_signal_generated'].isna())
             ]
+        if len(result) > 0:
+            pass
         return result
 
     def add_signal(self, base_pattern_timeframe: str, base_pattern_date: datetime,
@@ -88,8 +89,8 @@ class BasePatternStrategy(ExtendedStrategy):
             'date': [self.candle().date],
             'end': [effective_end],
             'side': [side],
-            'reference_multi_date': [base_pattern_date],
-            'reference_multi_timeframe': [base_pattern_timeframe],
+            'reference_date': [base_pattern_date],
+            'reference_timeframe': [base_pattern_timeframe],
             'base_asset_amount': [size],
             'limit_price': [limit_price],
             'stop_loss': [stop_loss],

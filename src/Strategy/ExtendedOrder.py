@@ -28,38 +28,36 @@ def order_name(cls, order: bt.Order):
 
 
 class ExtendedOrder(bt.order.Order):
-    bt.Order
-    trigger_satisfied: bool = False
-    limit_price: float = None
-    stop_loss_price: float = None
-    take_profit_price: float = None
-    trigger_price: float = None
+    # trigger_satisfied: bool = False
+    # limit_price: float = None
+    # stop_loss_price: float = None
+    # take_profit_price: float = None
 
-    def check_trigger(self):
-        # todo: test
-        assert self.trigger_price is not None
-        if self.isbuy():
-            return self.parent.candle().high >= self.trigger_price
-        elif self.issell():
-            return self.parent.candle().high <= self.trigger_price
-        return False
-
-    def execute(self, dt, size, price, closed, closedvalue, closedcomm, opened, openedvalue, openedcomm, margin, pnl,
-                psize, pprice):
-        # todo: test
-        # Check trigger condition before executing
-        if self.trigger_satisfied or self.check_trigger():
-            self.trigger_satisfied = True
-            # Perform the actual order execution
-            return super().execute(dt, size, price,
-                                   closed, closedvalue, closedcomm,
-                                   opened, openedvalue, openedcomm,
-                                   margin, pnl,
-                                   psize, pprice)
-        else:
-            # Hold the order if trigger condition is not satisfied
-            log_d("Trigger condition not satisfied yet. Order on hold.")
-            return None
+    # def check_trigger(self):
+    #     # todo: test
+    #     assert self.trigger_price is not None
+    #     if self.isbuy():
+    #         return self.parent.candle().high >= self.trigger_price
+    #     elif self.issell():
+    #         return self.parent.candle().high <= self.trigger_price
+    #     return False
+    #
+    # def execute(self, dt, size, price, closed, closedvalue, closedcomm, opened, openedvalue, openedcomm, margin, pnl,
+    #             psize, pprice):
+    #     # todo: test
+    #     # Check trigger condition before executing
+    #     if self.trigger_satisfied or self.check_trigger():
+    #         self.trigger_satisfied = True
+    #         # Perform the actual order execution
+    #         return super().execute(dt, size, price,
+    #                                closed, closedvalue, closedcomm,
+    #                                opened, openedvalue, openedcomm,
+    #                                margin, pnl,
+    #                                psize, pprice)
+    #     else:
+    #         # Hold the order if trigger condition is not satisfied
+    #         log_d("Trigger condition not satisfied yet. Order on hold.")
+    #         return None
 
     def is_open(self):
         # todo: test
@@ -78,9 +76,9 @@ class ExtendedOrder(bt.order.Order):
         return order.info['limit_price'], order.info['stop_loss'], order.info['take_profit'],
 
 
-class ExtendedBuyOrder(ExtendedOrder):
-    ordtype = bt.BuyOrder
-
-
-class ExtendedSellOrder(ExtendedOrder):
-    ordtype = bt.SellOrder
+# class ExtendedBuyOrder(ExtendedOrder):
+#     ordtype = bt.BuyOrder
+#
+#
+# class ExtendedSellOrder(ExtendedOrder):
+#     ordtype = bt.SellOrder

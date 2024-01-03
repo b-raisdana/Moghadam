@@ -1,4 +1,5 @@
 # from __future__ import annotations
+import types
 from datetime import datetime
 from typing import Annotated
 
@@ -59,6 +60,19 @@ class SignalDf(ExtendedDf):
     })
     _empty_obj = None
 
+    # @classmethod
+    # def new(cls, dictionary_of_data: dict = None) -> pt.DataFrame[SignalDFM]:
+    #     # todo: test
+    #     _new: pt.DataFrame[SignalDFM] = super().new(dictionary_of_data)
+    #     # todo: make it automatic
+    #     _new.is_buy = types.MethodType(cls.is_buy, _new)
+    #     return _new
+
+    # @staticmethod
+    # def is_buy(signals: pt.DataFrame[SignalDFM]):
+    #     # todo: test
+    #     return signals[signals['side'] == 'buy']
+
     @staticmethod
     def took_profit(signal: pt.Series[SignalDFM], tick: BaseTickStructure) -> bool:
         if signal['side'] == 'buy':
@@ -99,6 +113,19 @@ class SignalDf(ExtendedDf):
             execution_type = bt.Order.Market
         return execution_type
 
+    @staticmethod
+    def is_trigger_order(signal):
+        # todo: test
+        return pd.notna(signal.to_dict()[SignalDFM.trigger_price.__name__])
+    @staticmethod
+    def check_trigger(signal):
+        # todo: test
+        assert self.trigger_price is not None
+        if self.isbuy():
+            return self.parent.candle().high >= self.trigger_price
+        elif self.issell():
+            return self.parent.candle().high <= self.trigger_price
+        return False
     @classmethod
     def to_str(cls, signal: pt.Series[SignalDFM]):
         result = (f"Signal@{signal.index}-{signal['end']}:"

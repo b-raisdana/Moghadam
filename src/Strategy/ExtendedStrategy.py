@@ -153,6 +153,10 @@ class ExtendedStrategy(bt.Strategy):
     def __init__(self):
         self.signal_df = SignalDf.new()
         self.set_date_range()
+        self.bracket_executors = {
+            'buy': self.buy_bracket,
+            'sell': self.sell_bracket,
+        }
 
     def get_order_group(self, order: bt.Order) -> (bt.Order, bt.Order, bt.Order,):
         assert hasattr(order.info, 'order_id'), "Expected order_id being found in order.info"
@@ -209,7 +213,7 @@ class ExtendedStrategy(bt.Strategy):
             signal_df = self.signal_df
         return signal_df[signal_df['order_is_active'].notna() & signal_df['order_is_active']]
 
-    def active_signals(self) -> SignalDf:
+    def active_signals(self) -> pt.DataFrame[SignalDFM]:
         if 'end' not in self.signal_df.columns:
             # self.signal_df['end'] = pd.Series(dtype='datetime64[ns, UTC]')
             pass
@@ -241,33 +245,57 @@ class ExtendedStrategy(bt.Strategy):
             elif SignalDf.expired(signal, self.candle()):
                 log(f'Signal:{SignalDf.repr(index, signal)}@{self.candle()} Expired')
 
+    def executable_signals(self) -> pt.DataFrame[SignalDFM]:
+        active_signals = self.active_signals()  # .copy()
+        if len(active_signals) > 0:
+            pass
+        trigger_signal_indexes = active_signals[active_signals['trigger_price'].notna()].index
+        if len(trigger_signal_indexes) > 0:
+            pass
+        no_trigger_signal_indexes = active_signals.index.difference(trigger_signal_indexes)
+        if len(no_trigger_signal_indexes) > 0:
+            raise NotImplemented  # todo: test
+
+        buy_signal_indexes = active_signals[active_signals['side'] == 'buy'].index
+        if len(buy_signal_indexes) > 0:
+            pass
+        buy_trigger_signal_indexes = trigger_signal_indexes.intersection(buy_signal_indexes)
+        if len(buy_trigger_signal_indexes) > 0:
+            pass  # todo: test
+
+        sell_signal_indexes = active_signals.index.difference(buy_signal_indexes)
+        if len(sell_signal_indexes) > 0:
+            pass  # todo: test
+        sell_trigger_signal_indexes = trigger_signal_indexes.intersection(sell_signal_indexes)
+        if len(sell_trigger_signal_indexes) > 0:
+            pass  # todo: test
+
+        trigger_signal_indexes = buy_trigger_signal_indexes.union(sell_trigger_signal_indexes)
+        if len(trigger_signal_indexes) > 0:
+            pass  # todo: test
+        executable_signal_indexes = trigger_signal_indexes.union(no_trigger_signal_indexes)
+        if len(executable_signal_indexes) > 0:
+            pass  # todo: test
+        return active_signals.loc[executable_signal_indexes]
+
     def execute_active_signals(self):
-        assert 'order_id' in self.signal_df.columns
-        active_signals = self.active_signals()
-        for start, signal in active_signals.iterrows():
+        # todo: test
+        for start, signal in self.executable_signals().iterrows():
             # bracket_executor, order_executor = self.executors(signal)
             execution_type = SignalDf.execution_type(signal)
             if pd.notna(signal['take_profit']):
                 original_order: bt.Order
-                # todo: check_trigger does not inherit from ExtendedOrder and does not accept trigger_price=signal['trigger_price']
                 size = signal['base_asset_amount'] if pd.notna(signal['base_asset_amount']) else None
-                if signal['side'] == 'buy':
-                    kwargs = self.pre_bracket_order(limitprice=signal['take_profit'],
-                                                    price=signal['limit_price'],
-                                                    stopprice=signal['stop_loss'])
-                    original_order, stop_order, profit_order = self.buy_bracket(size=size,
-                                                                                exectype=execution_type,
-                                                                                limitprice=signal['take_profit'],
-                                                                                price=signal['limit_price'],
-                                                                                stopprice=signal['stop_loss'])
-                    self.post_bracket_order(original_order, stop_order, profit_order, **kwargs)
-                # todo: test
-
-                # order_executor(
-                #     size=base_asset_amount, exectype=execution_type, price=take_profit, parent=bracket_executor(
-                #         limitprice=take_profit, stopprice=stop_loss
-                #     )
-                # )
+                kwargs = self.pre_bracket_order(limitprice=signal['take_profit'],
+                                                price=signal['limit_price'],
+                                                stopprice=signal['stop_loss'])
+                original_order, stop_order, profit_order = \
+                    self.bracket_executors[signal['side']](size=size,
+                                                           exectype=execution_type,
+                                                           limitprice=signal['take_profit'],
+                                                           price=signal['limit_price'],
+                                                           stopprice=signal['stop_loss'])
+                self.post_bracket_order(original_order, stop_order, profit_order, **kwargs)
 
                 log_d(f"Signal:{signal} ordered "
                       f"M:{original_order.__str__()} S:{stop_order.__str__()} P:{profit_order.__str__()}")
@@ -297,16 +325,19 @@ class ExtendedStrategy(bt.Strategy):
                 assert self.stop_orders[index].is_open()
                 assert self.profit_orders[index].is_open()
 
-    # def executors(self, signal):
-    #     if signal['side'] == 'buy':
-    #         order_executor = self.buy
-    #         bracket_executor = self.buy_bracket
-    #     elif signal['side'] == 'sell':
-    #         # todo: test
-    #         raise NotImplemented
-    #         order_executor = self.sell
-    #         bracket_executor = self.sell_bracket
-    #         self.check_trigger()
-    #     else:
-    #         raise Exception('Unknown side %s' % signal['side'])
-    #     return bracket_executor, order_executor
+    def executors(self, signal):
+        return {
+            'buy': self.buy
+        }
+        if signal['side'] == 'buy':
+            order_executor = self.buy
+            bracket_executor = self.buy_bracket
+        elif signal['side'] == 'sell':
+            # todo: test
+            raise NotImplemented
+            order_executor = self.sell
+            bracket_executor = self.sell_bracket
+            self.check_trigger()
+        else:
+            raise Exception('Unknown side %s' % signal['side'])
+        return bracket_executor, order_executor
