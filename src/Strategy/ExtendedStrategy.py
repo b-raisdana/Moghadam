@@ -10,7 +10,7 @@ from pandera import typing as pt
 from Config import config
 from PanderaDFM.SignalDf import SignalDFM, SignalDf
 from Strategy.BaseTickStructure import BaseTickStructure
-from Strategy.ExtendedOrder import OrderBracketType, ExtendedOrder
+from Strategy.ExtendedOrder import OrderBracketType, ExtendedOrder, order_name
 from helper.helper import log, log_d
 
 
@@ -52,15 +52,26 @@ class ExtendedStrategy(bt.Strategy):
 
         return size, true_risked_money
 
-    def post_bracket_order(self, original_order, stop_order, profit_order, signal_start: datetime,
+    @staticmethod
+    def add_order_info(order: bt.Order, signal, signal_index, order_type: OrderBracketType, order_id):
+        order.addinfo(custom_order_id=order_id)
+        order.addinfo(signal=signal)
+        order.addinfo(signal_index=signal_index)
+        order.addinfo(custom_type=order_type.value)
+        return order
+
+    def post_bracket_order(self, original_order: bt.Order, stop_order: bt.Order, profit_order: bt.Order,
                            signal: pt.Series[SignalDFM]):
         custom_order_id = np.float64(datetime.now(tz=pytz.UTC).timestamp())
-        original_order.add_order_info(signal, signal_start, OrderBracketType.Original, custom_order_id)
-        stop_order.add_order_info(signal, signal_start, OrderBracketType.Stop, custom_order_id)
-        profit_order.add_order_info(signal, signal_start, OrderBracketType.Profit, custom_order_id)
+
+        original_order = self.add_order_info(original_order, signal, signal.index, OrderBracketType.Original, custom_order_id)
+        stop_order = self.add_order_info(stop_order, signal, signal.index, OrderBracketType.Stop, custom_order_id)
+        profit_order = self.add_order_info(profit_order, signal, signal.index, OrderBracketType.Profit, custom_order_id)
+
         self.original_orders[custom_order_id] = original_order
         self.stop_orders[custom_order_id] = stop_order
         self.profit_orders[custom_order_id] = profit_order
+
         return original_order, stop_order, profit_order
 
     # @staticmethod
@@ -73,13 +84,13 @@ class ExtendedStrategy(bt.Strategy):
 
     # def post_bracket_order(self, original_order, stop_order, profit_order, **kwargs):
     #     assert 'signal' in kwargs.keys(), "Expected to have signal"
-    #     assert 'signal_start' in kwargs.keys(), "Expected to have signal_start"
+    #     assert 'signal_index' in kwargs.keys(), "Expected to have signal_index"
     #     signal = kwargs['signal']
-    #     signal_start = kwargs['signal_start']
+    #     signal_index = kwargs['signal_index']
     #     custom_order_id = np.float64(datetime.now(tz=pytz.UTC).timestamp())
-    #     original_order.add_order_info(signal, signal_start, OrderBracketType.Original, custom_order_id)
-    #     stop_order.add_order_info(signal, signal_start, OrderBracketType.Stop, custom_order_id)
-    #     profit_order.add_order_info(signal, signal_start, OrderBracketType.Profit, custom_order_id)
+    #     original_order.add_order_info(signal, signal_index, OrderBracketType.Original, custom_order_id)
+    #     stop_order.add_order_info(signal, signal_index, OrderBracketType.Stop, custom_order_id)
+    #     profit_order.add_order_info(signal, signal_index, OrderBracketType.Profit, custom_order_id)
     #     self.original_orders[custom_order_id] = original_order
     #     self.stop_orders[custom_order_id] = stop_order
     #     self.profit_orders[custom_order_id] = profit_order
@@ -261,7 +272,7 @@ class ExtendedStrategy(bt.Strategy):
             pass
         buy_trigger_signal_indexes = trigger_signal_indexes.intersection(buy_signal_indexes)
         if len(buy_trigger_signal_indexes) > 0:
-            pass  # todo: test
+            pass
 
         sell_signal_indexes = active_signals.index.difference(buy_signal_indexes)
         if len(sell_signal_indexes) > 0:
@@ -272,10 +283,10 @@ class ExtendedStrategy(bt.Strategy):
 
         trigger_signal_indexes = buy_trigger_signal_indexes.union(sell_trigger_signal_indexes)
         if len(trigger_signal_indexes) > 0:
-            pass  # todo: test
+            pass
         executable_signal_indexes = trigger_signal_indexes.union(no_trigger_signal_indexes)
         if len(executable_signal_indexes) > 0:
-            pass  # todo: test
+            pass
         return active_signals.loc[executable_signal_indexes]
 
     def execute_active_signals(self):
@@ -286,19 +297,19 @@ class ExtendedStrategy(bt.Strategy):
             if pd.notna(signal['take_profit']):
                 original_order: bt.Order
                 size = signal['base_asset_amount'] if pd.notna(signal['base_asset_amount']) else None
-                kwargs = self.pre_bracket_order(limitprice=signal['take_profit'],
-                                                price=signal['limit_price'],
-                                                stopprice=signal['stop_loss'])
+                # kwargs = self.pre_bracket_order(limitprice=signal['take_profit'],
+                #                                 price=signal['limit_price'],
+                #                                 stopprice=signal['stop_loss'])
                 original_order, stop_order, profit_order = \
                     self.bracket_executors[signal['side']](size=size,
                                                            exectype=execution_type,
                                                            limitprice=signal['take_profit'],
                                                            price=signal['limit_price'],
                                                            stopprice=signal['stop_loss'])
-                self.post_bracket_order(original_order, stop_order, profit_order, **kwargs)
+                self.post_bracket_order(original_order, stop_order, profit_order, signal)
 
                 log_d(f"Signal:{signal} ordered "
-                      f"M:{original_order.__str__()} S:{stop_order.__str__()} P:{profit_order.__str__()}")
+                      f"M:{order_name(original_order)} S:{order_name(stop_order)} P:{order_name(profit_order)}")
             else:
                 raise Exception('Expected all signals have take_profit')
                 # order_id = order_executor(size=signal['base_asset_amount'], exectype=execution_type,

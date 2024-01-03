@@ -5,6 +5,7 @@ from backtrader import Order
 
 from helper.helper import log_d
 
+
 # switching to backrader
 class OrderSide(Enum):
     Buy = 'buy'
@@ -17,14 +18,33 @@ class OrderBracketType(Enum):
     Profit = 'profit'
 
 
-def order_name(cls, order: bt.Order):
+def order_name(order: bt.Order):
     # todo: test
     # TRX<13USDT@0.02
+    """
+    tojoin.append('CommInfo: {}'.format(self.comminfo))
+    tojoin.append('End of Session: {}'.format(self.dteos))
+    tojoin.append('Alive: {}'.format(self.alive()))
+
+    :param order:
+    :return:
+    """
+
     name = (f"Order"
             f"{('<' if order.isbuy() else '>')}"
-            f"{order.size}")
-    if order.pricelimit is not None:
-        name += f"@{order.pricelimit}"
+            f"T{order.ordtypename()}"
+            f"{order.size}"
+            # if order.params.pricelimit is not None:
+            f"@{order.price}"
+            # if order.plimit is not None:
+            f"PL{order.pricelimit}"
+            f"EX{order.getordername()}"
+            f"TR{order.trailamount}/{order.trailpercent}"
+            f"ST{order.getstatusname()}"
+            f"Ref{order.ref}"
+            f"{'A' if order.alive() else ''}"
+            )
+    return name
 
 
 class ExtendedOrder(bt.order.Order):
@@ -65,16 +85,15 @@ class ExtendedOrder(bt.order.Order):
             return True
         return False
 
-    def add_order_info(self, signal, signal_start, order_type: OrderBracketType, order_id):
+    def add_order_info(self, signal, signal_index, order_type: OrderBracketType, order_id):
         self.addinfo(custom_order_id=order_id)
         self.addinfo(signal=signal)
-        self.addinfo(signal_start=signal_start)
+        self.addinfo(signal_index=signal_index)
         self.addinfo(custom_type=order_type.value)
 
     @classmethod
     def get_order_prices(cls, order: bt.Order):
         return order.info['limit_price'], order.info['stop_loss'], order.info['take_profit'],
-
 
 # class ExtendedBuyOrder(ExtendedOrder):
 #     ordtype = bt.BuyOrder
