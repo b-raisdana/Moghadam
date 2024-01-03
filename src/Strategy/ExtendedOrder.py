@@ -1,64 +1,86 @@
+from enum import Enum
+
 import backtrader as bt
 from backtrader import Order
 
 from helper.helper import log_d
 
+# switching to backrader
+class OrderSide(Enum):
+    Buy = 'buy'
+    Sell = 'sell'
 
-class ExtendedOrder(bt.Order):
+
+class OrderBracketType(Enum):
+    Original = 'original_order'
+    Stop = 'stop_order'
+    Profit = 'profit'
+
+
+def order_name(cls, order: bt.Order):
+    # todo: test
+    # TRX<13USDT@0.02
+    name = (f"Order"
+            f"{('<' if order.isbuy() else '>')}"
+            f"{order.size}")
+    if order.pricelimit is not None:
+        name += f"@{order.pricelimit}"
+
+
+class ExtendedOrder(bt.order.Order):
+    bt.Order
     trigger_satisfied: bool = False
-
-    def __init__(self, parent, limit_price, stop_loss, take_profit, trigger_price, *args, **kwargs):
-        # todo: test
-        self.trigger_price = trigger_price
-        self.limit_price = limit_price
-        self.stop_loss = stop_loss
-        self.take_profit = take_profit
-        super().__init__(parent, *args, **kwargs)
+    limit_price: float = None
+    stop_loss_price: float = None
+    take_profit_price: float = None
+    trigger_price: float = None
 
     def check_trigger(self):
         # todo: test
+        assert self.trigger_price is not None
         if self.isbuy():
             return self.parent.candle().high >= self.trigger_price
         elif self.issell():
             return self.parent.candle().high <= self.trigger_price
         return False
 
-    # def check_trigger(self):
-    #     # Implement your trigger condition logic here
-    #     # Return True if the condition is satisfied, False otherwise
-    #     if self.isbuy():
-    #         self.trigger_satisfied |= (self.parent.data.close[0] >= self.trigger_price)
-    #     else:  # self.issell()
-    #         self.trigger_satisfied |= self.parent.data.close[0] <= self.trigger_price
-    #     return self.trigger_satisfied
-
-    def __init__(self, parent, trigger_price, *args, **kwargs):
-        # todo: test
-        self.trigger_price = trigger_price
-        super().__init__(parent, *args, **kwargs)
-
-    def execute(self):
+    def execute(self, dt, size, price, closed, closedvalue, closedcomm, opened, openedvalue, openedcomm, margin, pnl,
+                psize, pprice):
         # todo: test
         # Check trigger condition before executing
-        if self.check_trigger():
+        if self.trigger_satisfied or self.check_trigger():
+            self.trigger_satisfied = True
             # Perform the actual order execution
-            return super().execute()
+            return super().execute(dt, size, price,
+                                   closed, closedvalue, closedcomm,
+                                   opened, openedvalue, openedcomm,
+                                   margin, pnl,
+                                   psize, pprice)
         else:
             # Hold the order if trigger condition is not satisfied
-            log_d("Trigger condition not satisfied. Order on hold.")
+            log_d("Trigger condition not satisfied yet. Order on hold.")
             return None
 
-    @staticmethod
-    def is_open(order: bt.Order):
+    def is_open(self):
         # todo: test
-        if order.status in [bt.Order.Created, bt.Order.Accepted, bt.Order.Submitted, bt.Order.Partial]:
+        if self.status in [bt.Order.Created, bt.Order.Accepted, bt.Order.Submitted, bt.Order.Partial]:
             return True
         return False
 
+    def add_order_info(self, signal, signal_start, order_type: OrderBracketType, order_id):
+        self.addinfo(custom_order_id=order_id)
+        self.addinfo(signal=signal)
+        self.addinfo(signal_start=signal_start)
+        self.addinfo(custom_type=order_type.value)
+
+    @classmethod
+    def get_order_prices(cls, order: bt.Order):
+        return order.info['limit_price'], order.info['stop_loss'], order.info['take_profit'],
+
 
 class ExtendedBuyOrder(ExtendedOrder):
-    ordtype = Order.Buy
+    ordtype = bt.BuyOrder
 
 
 class ExtendedSellOrder(ExtendedOrder):
-    ordtype = Order.Sell
+    ordtype = bt.SellOrder

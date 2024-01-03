@@ -10,8 +10,8 @@ import pytz
 from pandas import Timestamp
 from pandera import typing as pt
 
-from PanderaDFM.BaseTickStructure import BaseTickStructure
 from PanderaDFM.ExtendedDf import ExtendedDf, BasePanderaDFM
+from Strategy.BaseTickStructure import BaseTickStructure
 
 
 class SignalDFM(BasePanderaDFM):
@@ -25,8 +25,8 @@ class SignalDFM(BasePanderaDFM):
     Limit Orders – regular orders having an amount in base currency (how much you want to buy or sell) and a price in quote currency (for which price you want to buy or sell).
     Market Orders – regular orders having an amount in base currency (how much you want to buy or sell)
     Market Buys – some exchanges require market buy orders with an amount in quote currency (how much you want to spend for buying)
-    Trigger Orders – an advanced type of order used to wait for a certain condition on a market and then react automatically: when a triggerPrice is reached, the trigger order gets triggered and then a regular limit price or market price order is placed, that eventually results in entering a position or exiting a position
-    Stop Loss Orders – almost the same as trigger orders, but used to close a position to stop further losses on that position: when the price reaches triggerPrice then the stop loss order is triggered that results in placing another regular limit or market order to close a position at a specific limit price or at market price (a position with a stop loss order attached to it).
+    Trigger Orders – an advanced type of order used to wait for a certain condition on a market and then react automatically: when a trigger_price is reached, the trigger order gets triggered and then a regular limit price or market price order is placed, that eventually results in entering a position or exiting a position
+    Stop Loss Orders – almost the same as trigger orders, but used to close a position to stop further losses on that position: when the price reaches trigger_price then the stop loss order is triggered that results in placing another regular limit or market order to close a position at a specific limit price or at market price (a position with a stop loss order attached to it).
     Take Profit Orders – a counterpart to stop loss orders, this type of order is used to close a position to take existing profits on that position: when the price reaches triggerPrice then the take profit order is triggered that results in placing another regular limit or market order to close a position at a specific limit price or at market price (a position with a take profit order attached to it).
     StopLoss And TakeProfit Orders Attached To A Position – advanced orders, consisting of three orders of types listed above: a regular limit or market order placed to enter a position with stop loss and/or take profit orders that will be placed upon opening that position and will be used to close that position later (when a stop loss is reached, it will close the position and will cancel its take profit counterpart, and vice versa, when a take profit is reached, it will close the position and will cancel its stop loss counterpart, these two counterparts are also known as "OCO orders – one cancels the other), apart from the amount (and price for the limit order) to open a position it will also require a triggerPrice for a stop loss order (with a limit price if it's a stop loss limit order) and/or a triggerPrice for a take profit order (with a limit price if it's a take profit limit order).
     """
@@ -58,23 +58,6 @@ class SignalDf(ExtendedDf):
         'side': ['buy'],
     })
     _empty_obj = None
-
-    @classmethod
-    def is_closed(self, signal: pt.Series[SignalDFM], tick: BaseTickStructure):
-        raise ("Not used before")
-        # if signal['side'] == 'buy':
-        #     if tick.high > signal['take_profit']:
-        #         return True
-        #     if tick.low < signal['stop_loss']:
-        #         return True
-        # elif signal['side'] == 'sell':
-        #     if tick.low < signal['take_profit']:
-        #         return True
-        #     if tick.high > signal['stop_loss']:
-        #         return True
-        # else:
-        #     raise Exception(f"Unexpected side({signal['side']}) in {signal} should be 'buy' or 'sell'.")
-        # return False
 
     @staticmethod
     def took_profit(signal: pt.Series[SignalDFM], tick: BaseTickStructure) -> bool:
