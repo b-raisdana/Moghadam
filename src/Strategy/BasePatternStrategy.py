@@ -106,7 +106,7 @@ class BasePatternStrategy(ExtendedStrategy):
     def candle_overlaps_base(self, base_pattern):
         return (
                 self.candle().high > base_pattern['internal_low'] and
-                self.candle().low < base_pattern['internal_high']) tt
+                self.candle().low < base_pattern['internal_high'])
 
     def extract_signals(self) -> None:
         upper_band_active_overlapping_base_patterns = self.overlapping_base_patterns(
