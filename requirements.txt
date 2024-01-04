@@ -1,17 +1,19 @@
 # conda install -c conda-forge python-kaleido
 kaleido
-pandas~=2.1.0
-plotly~=5.16.1
+pandas==2.1.4
+plotly==5.18.0
 pydantic
 numpy~=1.25.2
 psutil
-pytz
+pytz==2023.3.post1
 pandas_ta
 # conda install -c conda-forge ta-lib
 # TA-Lib~=0.4.19
 pytest~=7.4.2
-pandera
+pandera==0.18.0
 backtrader[plotting]
+mathplot
+
 ccxt~=4.0.86
 MetaTrader5
 # beautifulsoup4

@@ -1,3 +1,5 @@
+from enum import Enum
+
 import backtrader as bt
 from backtrader import Order
 
@@ -62,3 +64,18 @@ class ExtendedBuyOrder(ExtendedOrder):
 
 class ExtendedSellOrder(ExtendedOrder):
     ordtype = Order.Sell
+
+
+class OrderSide(Enum):
+    Buy = 'buy'
+    Sell = 'sell'
+
+
+def order_name(cls, order: bt.Order):
+    # todo: test
+    # TRX<13USDT@0.02
+    name = (f"Order"
+            f"{('<' if order.isbuy() else '>')}"
+            f"{order.size}")
+    if order.pricelimit is not None:
+        name += f"@{order.pricelimit}"
