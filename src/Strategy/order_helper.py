@@ -63,8 +63,13 @@ def order_prices(order: bt.Order):
 #     ordtype = bt.SellOrder
 
 
-
-def is_open(order):
+def order_is_open(order):
     if order.status in [bt.Order.Created, bt.Order.Accepted, bt.Order.Submitted, bt.Order.Partial]:  # todo: test
+        return True
+    return False
+
+
+def order_is_closed(order):
+    if order.status in [bt.Order.Canceled, bt.Order.Expired, bt.Order.Rejected]:  # todo: test
         return True
     return False

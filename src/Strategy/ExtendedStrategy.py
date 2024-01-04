@@ -10,7 +10,8 @@ from pandera import typing as pt
 from Config import config
 from PanderaDFM.SignalDf import SignalDFM, SignalDf
 from Strategy.BaseTickStructure import BaseTickStructure
-from Strategy.order_helper import OrderBracketType, order_name, OrderSide, add_order_info, order_prices, is_open
+from Strategy.order_helper import OrderBracketType, order_name, OrderSide, add_order_info, order_prices, order_is_open, \
+    order_is_closed
 from helper.helper import log_d
 
 
@@ -147,12 +148,12 @@ class ExtendedStrategy(bt.Strategy):
         assert len(self.original_orders) == len(self.stop_orders)
         assert len(self.original_orders) == len(self.profit_orders)
         for i in self.original_orders.keys():
-            if is_open(self.original_orders[i]):
-                assert is_open(self.stop_orders[i])
-                assert is_open(self.profit_orders[i])
-            else:
-                assert not is_open(self.stop_orders[i])
-                assert not is_open(self.profit_orders[i])
+            if order_is_open(self.original_orders[i]):
+                assert order_is_open(self.stop_orders[i])
+                assert order_is_open(self.profit_orders[i])
+            elif order_is_closed(self.original_orders[i]):
+                assert order_is_closed(self.stop_orders[i])
+                assert order_is_closed(self.profit_orders[i])
 
     def notify_order(self, order: bt.Order):
         if not (

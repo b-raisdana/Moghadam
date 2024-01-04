@@ -109,7 +109,7 @@ def base_from_sequence(_sequence_of_spinning: pt.DataFrame[OHLCVA], ohlcva: pt.D
     if config.base_pattern_index_shift_after_last_candle_in_the_sequence == 0:
         timeframe_base_patterns = _sequence_of_spinning[is_base].copy()
     else:
-        timeframe_base_patterns = _sequence_of_spinning[is_base].copy()\
+        timeframe_base_patterns = _sequence_of_spinning[is_base].copy() \
             .shift(config.base_pattern_index_shift_after_last_candle_in_the_sequence, freq=timeframe)
 
     timeframe_base_patterns = add_high_and_low(timeframe_base_patterns, ohlcva, number_of_base_spinning_candles)
@@ -288,16 +288,18 @@ def first_passed_candle(start: datetime, end, level: float, ohlcva: pt.DataFrame
                         direction: Literal['upper', 'below']) \
         -> Union[datetime, None]:
     if direction == 'upper':
-        high_low = 'high'
-
-        def compare(x, y):
-            return x < y
-
-    elif direction == 'below':
+        # todo: test verify direction (below ATR should activate upper band)
         high_low = 'low'
 
         def compare(x, y):
             return x > y
+
+    elif direction == 'below':
+        # todo: test verify direction (above ATR should activate upper band)
+        high_low = 'high'
+
+        def compare(x, y):
+            return x < y
 
     else:
         raise Exception(f"band should be 'upper' or 'below' but '{direction}' given!")
@@ -311,38 +313,31 @@ def first_passed_candle(start: datetime, end, level: float, ohlcva: pt.DataFrame
 def update_band_status(inactive_bases: pt.DataFrame[BasePattern], ohlcva: pt.DataFrame[OHLCVA],
                        direction: Literal['upper', 'below']) -> pt.DataFrame[BasePattern]:
     if direction == 'upper':
-        high_low = 'high'
-
-        def expand(x, y):
-            return x + y
-
-    elif direction == 'below':
+        # todo: test verify direction (below ATR should activate upper band)
         high_low = 'low'
 
         def expand(x, y):
             return x - y
+    elif direction == 'below':
+        # todo: test verify direction (above ATR should activate upper band)
+        high_low = 'high'
+
+        def expand(x, y):
+            return x + y
     else:
         raise Exception(f"direction should be 'upper' or 'below'. '{direction}' is not acceptable!")
+
     assert inactive_bases[f'internal_{high_low}'].notna().all()
     if f'{direction}_band_activated' in inactive_bases.columns:
         assert inactive_bases[f'{direction}_band_activated'].isna().all()
     else:
         inactive_bases[f'{direction}_band_activated'] = pd.Series(dtype='datetime64[ns, UTC]')
+
     for start, base in inactive_bases.iterrows():
         inactive_bases.loc[start, f'{direction}_band_activated'] = \
             first_passed_candle(start, base['ttl'], expand(base[f'internal_{high_low}'], base['ATR']), ohlcva,
                                 direction=direction)
     return inactive_bases
-
-
-def update_below_band_status(inactive_below_band_bases: pt.DataFrame[BasePattern], ohlcva: pt.DataFrame[OHLCVA]):
-    assert inactive_below_band_bases['internal_high'].notna().all()
-    if 'upper_band_activated' in inactive_below_band_bases.columns:
-        assert inactive_below_band_bases['below_band_activated'].isna().all()
-    for start, base in inactive_below_band_bases.iterrows():
-        inactive_below_band_bases.loc[start, 'upper_band_activated'] = \
-            first_passed_candle(start, base['ttl'], base['internal_low'] - base['ATR'], ohlcva, direction='below')
-    return inactive_below_band_bases
 
 
 def timeframe_effective_bases(_multi_timeframe_base_pattern, timeframe):

@@ -11,7 +11,7 @@ from PanderaDFM.BasePattern import MultiTimeframeBasePattern
 from PanderaDFM.SignalDf import SignalDf
 from Strategy.order_helper import OrderSide
 from Strategy.ExtendedStrategy import ExtendedStrategy
-from helper.helper import log_d
+from helper.helper import log_d, log_e
 from ohlcv import read_base_timeframe_ohlcv
 
 
@@ -24,6 +24,11 @@ class BasePatternStrategy(ExtendedStrategy):
     def __init__(self):
         self.add_base_patterns()
         super().__init__()
+
+    def notify_order(self, order: bt.Order):
+        # todo: if the order were stopped, reactivate signal
+        # todo: if the order took profit, end signal
+        log_e("Not Implemented!")
 
     def overlapping_base_patterns(self, base_patterns: pt.DataFrame[MultiTimeframeBasePattern] = None) \
             -> pt.DataFrame[MultiTimeframeBasePattern]:
