@@ -58,7 +58,7 @@ class ExtendedDf:
             _new = cls._set_index(_new)
             unused_keys = [key for key in dictionary_of_data.keys()
                            if key not in cls._sample_df.columns and key not in ['date', 'timeframe']]
-            if len(unused_keys)>0:
+            if len(unused_keys) > 0:
                 if strict:
                     raise Exception(f"Unused keys in the dictionary: {','.join(unused_keys)}")
             return _new
@@ -158,9 +158,7 @@ class ExtendedDf:
         return df
 
     @classmethod
-    def concat(cls, left: pt.DataFrame['BasePanderaDFM'], right: pt.DataFrame['BasePanderaDFM']) -> pt.DataFrame[
-        'BasePanderaDFM']:
-        # todo: test
-
+    def concat(cls, left: pt.DataFrame['BasePanderaDFM'], right: pt.DataFrame['BasePanderaDFM']) \
+            -> pt.DataFrame['BasePanderaDFM']:
         result: pt.DataFrame['BasePanderaDFM'] = concat(left, right)
         return result

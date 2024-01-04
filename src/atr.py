@@ -104,9 +104,11 @@ def core_generate_multi_timeframe_ohlcva(date_range_str: str = None, file_path: 
         file_path = config.path_of_data
     multi_timeframe_ohlcva = empty_df(MultiTimeframeOHLCVA)
     for _, timeframe in enumerate(config.timeframes):
+        if timeframe == '4h':
+            pass
         expanded_date_range = \
             expand_date_range(date_range_str,
-                              time_delta=((config.ATR_timeperiod + 1) * pd.to_timedelta(timeframe) *
+                              time_delta=((config.ATR_timeperiod + 2) * pd.to_timedelta(timeframe) *
                                           config.ATR_safe_start_expand_multipliers),
                               mode='start')
         expanded_date_multi_timeframe_ohlcv = read_multi_timeframe_ohlcv(expanded_date_range)

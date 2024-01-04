@@ -59,7 +59,7 @@ def test_timeframe_switching():
         _timeframe_peaks, _timeframe_valleys = zz_find_peaks_n_valleys(_timeframe_ohlcv_ticks)
 
         _mapped_peaks_from_base = base_peaks[base_peaks['timeframe'].isin(config.timeframes[i:])]
-        # todo: test set_index(['high', 'timeframe']
+        # todo: ttest set_index(['high', 'timeframe']
         comparable_timeframe_peaks = _timeframe_peaks[['high', 'timeframe']] \
             .set_index(['high', 'timeframe'])
         comparable_mapped_base_peaks = _mapped_peaks_from_base[['high', 'timeframe']] \
@@ -80,7 +80,7 @@ def test_timeframe_switching():
             raise e
 
         _mapped_valleys_from_base = base_valleys[base_valleys['timeframe'].isin(config.timeframes[i:])]
-        # todo: test set_index(['low', 'timeframe']
+        # todo: ttest set_index(['low', 'timeframe']
         comparable_timeframe_valleys = _timeframe_valleys[['low', 'timeframe']] \
             .set_index(['low', 'timeframe'])
         comparable_mapped_base_valleys = _mapped_valleys_from_base[['low', 'timeframe']] \

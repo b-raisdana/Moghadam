@@ -10,9 +10,10 @@ from PanderaDFM.BasePattern import BasePattern, MultiTimeframeBasePattern
 from PanderaDFM.OHLCVA import OHLCVA, MultiTimeframeOHLCVA
 from PanderaDFM.Pivot import MultiTimeframePivot
 from atr import read_multi_timeframe_ohlcva
-from helper.data_preparation import single_timeframe, concat, cast_and_validate, empty_df, read_file, anti_pattern_timeframe, \
+from helper.data_preparation import single_timeframe, concat, cast_and_validate, empty_df, read_file, \
+    anti_pattern_timeframe, \
     anti_trigger_timeframe, to_timeframe
-from helper.helper import date_range, date_range_to_string
+from helper.helper import date_range, date_range_to_string, measure_time
 
 
 def add_candle_size(ohlcva: pt.DataFrame[OHLCVA]) -> pt.DataFrame[OHLCVA]:
@@ -63,10 +64,6 @@ def sequence_of_spinning(ohlcva: pt.DataFrame[OHLCVA], timeframe: str, number_of
                          f"for the specified number of base spinning candles ({number_of_base_spinning_candles})")
     ohlcva = add_candle_size(ohlcva)
     loop_shift = config.base_pattern_index_shift_after_last_candle_in_the_sequence
-    # Check if each candle is spinning
-    # ignore (number_of_base_spinning_candles + loop_shift) first candles to make sure shifted times are exsisting.
-    # if timeframe == '15min':
-    #     pass
     spinning_candles = ohlcva.iloc[number_of_base_spinning_candles + loop_shift - 1:] \
         .loc[ohlcva['size'] == CandleSize.Spinning.name].copy()
     for i in range(loop_shift, number_of_base_spinning_candles + loop_shift):
@@ -109,7 +106,11 @@ def base_from_sequence(_sequence_of_spinning: pt.DataFrame[OHLCVA], ohlcva: pt.D
 
     # timeframe_base_patterns is the next index after enough (config.base_pattern_candle_min_backward_coverage)
     # sequential candles
-    timeframe_base_patterns = _sequence_of_spinning[is_base].copy().shift(1, freq=timeframe)
+    if config.base_pattern_index_shift_after_last_candle_in_the_sequence == 0:
+        timeframe_base_patterns = _sequence_of_spinning[is_base].copy()
+    else:
+        timeframe_base_patterns = _sequence_of_spinning[is_base].copy()\
+            .shift(config.base_pattern_index_shift_after_last_candle_in_the_sequence, freq=timeframe)
 
     timeframe_base_patterns = add_high_and_low(timeframe_base_patterns, ohlcva, number_of_base_spinning_candles)
 
@@ -164,6 +165,7 @@ def add_high_and_low(timeframe_base_patterns: pt.DataFrame['BasePattern'], ohlcv
     return timeframe_base_patterns
 
 
+@measure_time
 def timeframe_base_pattern(ohlcva: pt.DataFrame[OHLCVA],
                            a_pattern_ohlcva: pt.DataFrame[OHLCVA],
                            a_trigger_ohlcva: pt.DataFrame[OHLCVA],
@@ -172,8 +174,6 @@ def timeframe_base_pattern(ohlcva: pt.DataFrame[OHLCVA],
     if number_of_base_spinning_candles is None:
         number_of_base_spinning_candles = config.base_pattern_number_of_spinning_candles
 
-    # _sequence_of_spinning_indexes is the index of last candle in the sequence ## first candle after sequence.
-
     _sequence_of_spinning_indexes = sequence_of_spinning(ohlcva, timeframe, number_of_base_spinning_candles)
     _sequence_of_spinning = ohlcva.loc[_sequence_of_spinning_indexes].copy()
 
@@ -181,7 +181,9 @@ def timeframe_base_pattern(ohlcva: pt.DataFrame[OHLCVA],
                                                  timeframe)
     timeframe_base_patterns['ttl'] = \
         timeframe_base_patterns.index + pd.to_timedelta(timeframe) * config.base_pattern_ttl
-    timeframe_base_patterns['ATR'] = ohlcva.loc[timeframe_base_patterns.index, 'ATR']
+    if timeframe == '1h':
+        pass
+    timeframe_base_patterns['ATR'] = ohlcva.loc[timeframe_base_patterns.index, 'ATR'].tolist()
     a_pattern_times = to_timeframe(timeframe_base_patterns.index, anti_pattern_timeframe(timeframe))
     timeframe_base_patterns['a_pattern_ATR'] = a_pattern_ohlcva.loc[a_pattern_times, 'ATR'].tolist()
     a_trigger_times = to_timeframe(timeframe_base_patterns.index, anti_trigger_timeframe(timeframe))

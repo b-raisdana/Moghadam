@@ -1,9 +1,6 @@
 from enum import Enum
 
 import backtrader as bt
-from backtrader import Order
-
-from helper.helper import log_d
 
 
 # switching to backrader
@@ -19,7 +16,6 @@ class OrderBracketType(Enum):
 
 
 def order_name(order: bt.Order):
-    # todo: test
     # TRX<13USDT@0.02
     """
     tojoin.append('CommInfo: {}'.format(self.comminfo))
@@ -29,21 +25,21 @@ def order_name(order: bt.Order):
     :param order:
     :return:
     """
-
-    name = (f"Order"
-            f"{('<' if order.isbuy() else '>')}"
-            f"T{order.ordtypename()}"
-            f"{order.size}"
-            # if order.params.pricelimit is not None:
-            f"@{order.price}"
-            # if order.plimit is not None:
-            f"PL{order.pricelimit}"
-            f"EX{order.getordername()}"
-            f"TR{order.trailamount}/{order.trailpercent}"
-            f"ST{order.getstatusname()}"
-            f"Ref{order.ref}"
-            f"{'A' if order.alive() else ''}"
-            )
+    name = (
+        f"{order.ordtypename()}"
+        # f"Order"  
+        f"{('<' if order.isbuy() else '>')}"
+        f"{order.size:.4f}"
+        # if order.params.pricelimit is not None:
+        f"@{order.price:.2f}"
+        f"Ref{order.ref}"
+        f"{'Alive' if order.alive() else 'Dead'}/{order.getstatusname()}"
+        f"{order.ExecTypes[order.exectype]}"
+    )
+    if order.plimit is not None:
+        name += f"PL{order.pricelimit}"
+    if order.trailamount is not None:
+        name += f"TR{order.trailamount}/{order.trailpercent}"
     return name
 
 
@@ -54,7 +50,7 @@ class ExtendedOrder(bt.order.Order):
     # take_profit_price: float = None
 
     # def check_trigger(self):
-    #     # todo: test
+    #     # todoo: test
     #     assert self.trigger_price is not None
     #     if self.isbuy():
     #         return self.parent.candle().high >= self.trigger_price
@@ -64,7 +60,7 @@ class ExtendedOrder(bt.order.Order):
     #
     # def execute(self, dt, size, price, closed, closedvalue, closedcomm, opened, openedvalue, openedcomm, margin, pnl,
     #             psize, pprice):
-    #     # todo: test
+    #     # todoo: test
     #     # Check trigger condition before executing
     #     if self.trigger_satisfied or self.check_trigger():
     #         self.trigger_satisfied = True
@@ -80,8 +76,7 @@ class ExtendedOrder(bt.order.Order):
     #         return None
 
     def is_open(self):
-        # todo: test
-        if self.status in [bt.Order.Created, bt.Order.Accepted, bt.Order.Submitted, bt.Order.Partial]:
+        if self.status in [bt.Order.Created, bt.Order.Accepted, bt.Order.Submitted, bt.Order.Partial]:  # todo: test
             return True
         return False
 

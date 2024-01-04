@@ -12,7 +12,6 @@ from pandera import typing as pt
 
 @measure_time
 def plot_multi_timeframe_ohlcva(multi_timeframe_ohlcva, name: str = '', show: bool = True, save: bool = True) -> None:
-    # todo: test plot_multi_timeframe_ohlcva
     figures = []
     for _, timeframe in enumerate(config.timeframes):
         figures.append(plot_ohlcva(single_timeframe(multi_timeframe_ohlcva, timeframe), show=False, save=False,
@@ -23,7 +22,6 @@ def plot_multi_timeframe_ohlcva(multi_timeframe_ohlcva, name: str = '', show: bo
 
 @measure_time
 def plot_multi_timeframe_ohlcv(multi_timeframe_ohlcv, date_range_str, show: bool = True, save: bool = True):
-    # todo: test plot_multi_timeframe_ohlcv
     figures = []
     for _, timeframe in enumerate(config.timeframes):
         figures.append(plot_ohlcv(single_timeframe(multi_timeframe_ohlcv, timeframe), show=False, save=False,

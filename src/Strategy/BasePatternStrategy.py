@@ -96,6 +96,7 @@ class BasePatternStrategy(ExtendedStrategy):
             'stop_loss': [stop_loss],
             'take_profit': [take_profit],
             'trigger_price': [trigger_price],
+            'trigger_satisfied': [False],
             'order_is_active': [False],
         })
         self.signal_df = SignalDf.concat(self.signal_df, new_signal)
@@ -176,7 +177,7 @@ class BasePatternStrategy(ExtendedStrategy):
 #         if remaining_cash >= risk_amount:
 #             order: bt.Order = self.strategy.order.executed
 #             limit = order.price
-#             order_id = order.info['order_id']
+#             order_id = order.info['original_order_id']
 #             sl_order = self.strategy.stop_orders[order_id]
 #             sl = sl_order.price
 #             sl_size = abs(sl - limit)
