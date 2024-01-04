@@ -110,7 +110,11 @@ def read_file(date_range_str: str, data_frame_type: str, generator: Callable, ca
     if zero_size_allowed is None:
         zero_size_allowed = after_under_process_date(date_range_str)
     if df is None or not cast_and_validate(df, caster_model, return_bool=True, zero_size_allowed=zero_size_allowed):
-        generator(date_range_str)
+        try:
+            generator(date_range_str)
+        except Exception as e:
+            # recovers the missing raised exception
+            raise e
         df = read_with_timeframe(data_frame_type, date_range_str, file_path, n_rows, skip_rows)
         df = cast_and_validate(df, caster_model, zero_size_allowed=zero_size_allowed)
     else:
@@ -430,8 +434,11 @@ def multi_timeframe_times_tester(multi_timeframe_df: pt.DataFrame[MultiTimeframe
     result = True
     for timeframe in config.timeframes:
         _timeframe_df = single_timeframe(multi_timeframe_df, timeframe)
-        result = result & times_tester(_timeframe_df, date_range_str, timeframe, return_bool,
+        try:
+            result = result & times_tester(_timeframe_df, date_range_str, timeframe, return_bool,
                                        ignore_processing_date_range, processing_date_range)
+        except Exception as e:
+            raise e
     return result
 
 

@@ -10,8 +10,8 @@ import pytz
 from pandas import Timestamp
 from pandera import typing as pt
 
-from PanderaDFM.BaseTickStructure import BaseTickStructure
 from PanderaDFM.ExtendedDf import ExtendedDf, BasePanderaDFM
+from Strategy.BaseTickStructure import BaseTickStructure
 
 
 class SignalDFM(BasePanderaDFM):
@@ -25,8 +25,8 @@ class SignalDFM(BasePanderaDFM):
     Limit Orders – regular orders having an amount in base currency (how much you want to buy or sell) and a price in quote currency (for which price you want to buy or sell).
     Market Orders – regular orders having an amount in base currency (how much you want to buy or sell)
     Market Buys – some exchanges require market buy orders with an amount in quote currency (how much you want to spend for buying)
-    Trigger Orders – an advanced type of order used to wait for a certain condition on a market and then react automatically: when a triggerPrice is reached, the trigger order gets triggered and then a regular limit price or market price order is placed, that eventually results in entering a position or exiting a position
-    Stop Loss Orders – almost the same as trigger orders, but used to close a position to stop further losses on that position: when the price reaches triggerPrice then the stop loss order is triggered that results in placing another regular limit or market order to close a position at a specific limit price or at market price (a position with a stop loss order attached to it).
+    Trigger Orders – an advanced type of order used to wait for a certain condition on a market and then react automatically: when a trigger_price is reached, the trigger order gets triggered and then a regular limit price or market price order is placed, that eventually results in entering a position or exiting a position
+    Stop Loss Orders – almost the same as trigger orders, but used to close a position to stop further losses on that position: when the price reaches trigger_price then the stop loss order is triggered that results in placing another regular limit or market order to close a position at a specific limit price or at market price (a position with a stop loss order attached to it).
     Take Profit Orders – a counterpart to stop loss orders, this type of order is used to close a position to take existing profits on that position: when the price reaches triggerPrice then the take profit order is triggered that results in placing another regular limit or market order to close a position at a specific limit price or at market price (a position with a take profit order attached to it).
     StopLoss And TakeProfit Orders Attached To A Position – advanced orders, consisting of three orders of types listed above: a regular limit or market order placed to enter a position with stop loss and/or take profit orders that will be placed upon opening that position and will be used to close that position later (when a stop loss is reached, it will close the position and will cancel its take profit counterpart, and vice versa, when a take profit is reached, it will close the position and will cancel its stop loss counterpart, these two counterparts are also known as "OCO orders – one cancels the other), apart from the amount (and price for the limit order) to open a position it will also require a triggerPrice for a stop loss order (with a limit price if it's a stop loss limit order) and/or a triggerPrice for a take profit order (with a limit price if it's a take profit limit order).
     """
@@ -40,7 +40,10 @@ class SignalDFM(BasePanderaDFM):
     take_profit: pt.Series[float] = pandera.Field(nullable=True, default=None)
     # the condition direction is reverse of limit direction.
     trigger_price: pt.Series[float] = pandera.Field(nullable=True, default=None)
-    order_id: pt.Series[np.float64] = pandera.Field(nullable=True, default=None)
+    trigger_satisfied: pt.Series[bool] = pandera.Field(nullable=True, default=True)
+    original_order_id: pt.Series[np.float64] = pandera.Field(nullable=True, default=None)
+    stop_loss_order_id: pt.Series[np.float64] = pandera.Field(nullable=True, default=None)
+    take_profit_order_id: pt.Series[np.float64] = pandera.Field(nullable=True, default=None)
     led_to_order_at: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
     order_is_active: pt.Series[bool] = pandera.Field(nullable=True, default=None)  # , ignore_na=False
 
@@ -59,26 +62,26 @@ class SignalDf(ExtendedDf):
     })
     _empty_obj = None
 
+    # @classmethod
+    # def new(cls, dictionary_of_data: dict = None) -> pt.DataFrame[SignalDFM]:
+    #     # todoo: test
+    #     _new: pt.DataFrame[SignalDFM] = super().new(dictionary_of_data)
+    #     # todoo: make it automatic
+    #     _new.is_buy = types.MethodType(cls.is_buy, _new)
+    #     return _new
+
+    # @staticmethod
+    # def is_buy(signals: pt.DataFrame[SignalDFM]):
+    #     # todoo: test
+    #     return signals[signals['side'] == 'buy']
     @classmethod
-    def is_closed(self, signal: pt.Series[SignalDFM], tick: BaseTickStructure):
-        raise ("Not used before")
-        # if signal['side'] == 'buy':
-        #     if tick.high > signal['take_profit']:
-        #         return True
-        #     if tick.low < signal['stop_loss']:
-        #         return True
-        # elif signal['side'] == 'sell':
-        #     if tick.low < signal['take_profit']:
-        #         return True
-        #     if tick.high > signal['stop_loss']:
-        #         return True
-        # else:
-        #     raise Exception(f"Unexpected side({signal['side']}) in {signal} should be 'buy' or 'sell'.")
-        # return False
+    def new(cls, dictionary_of_data: dict = None, strict: bool = True) -> pt.DataFrame[SignalDFM]:
+        result: pt.DataFrame[SignalDFM] = super().new(dictionary_of_data, strict)
+        return result
 
     @staticmethod
     def took_profit(signal: pt.Series[SignalDFM], tick: BaseTickStructure) -> bool:
-        if signal['side'] == 'buy':
+        if signal['side'] == 'buy':  # todo: test
             if tick.high > signal['take_profit']:
                 return True
         elif signal['side'] == 'sell':
@@ -90,7 +93,7 @@ class SignalDf(ExtendedDf):
 
     @staticmethod
     def stopped(signal: pt.Series[SignalDFM], tick: BaseTickStructure) -> bool:
-        if signal['side'] == 'buy':
+        if signal['side'] == 'buy':  # todo: test
             if tick.low < signal['stop_loss']:
                 return True
         elif signal['side'] == 'sell':
@@ -104,22 +107,36 @@ class SignalDf(ExtendedDf):
     def execution_type(signal):
         signal_dict = signal.to_dict()
         if pd.notna(signal_dict['stop_loss']) and pd.notna(signal_dict['limit_price']):
+            # todo: this is not align with standard definition of StopLimit
             execution_type = bt.Order.StopLimit
         elif pd.notna(signal_dict['stop_loss']):
-            # todo: test
-            execution_type = bt.Order.Stop
+            execution_type = bt.Order.Stop  # todo: test
         elif pd.notna(signal_dict['limit_price']):
-            # todo: test
-            execution_type = bt.Order.Limit
+            execution_type = bt.Order.Limit  # todo: test
         else:
-            # todo: test
-            execution_type = bt.Order.Market
+            execution_type = bt.Order.Market  # todo: test
         return execution_type
 
+    @staticmethod
+    def is_trigger_order(signal):
+        return pd.notna(signal.to_dict()[SignalDFM.trigger_price.__name__])  # todo: test
+
+    # @staticmethod
+    # def check_trigger(signal):
+    #     assert self.trigger_price is not None # toddoo: test
+    #     if self.isbuy():
+    #         return self.parent.candle().high >= self.trigger_price
+    #     elif self.issell():
+    #         return self.parent.candle().high <= self.trigger_price
+    #     return False
+
     @classmethod
-    def to_str(cls, signal: pt.Series[SignalDFM]):
-        result = (f"Signal@{signal.index}-{signal['end']}:"
-                  f"{SignalDf.execution_type(signal)}"
-                  f"{signal['base_asset_amount']}@{signal['limit_price']}SL{signal['limit_price']}"
-                  f"TP{signal['take_profit']}TR{signal['trigger_price']}")
+    def to_str(cls, signal: pt.DataFrame[SignalDFM]):
+        index = signal.index[0]
+        values = signal.iloc[0].to_dict()
+        result = (f"Signal@{pd.to_datetime(index).strftime('%y-%m-%d.%H-%M')}"
+                  f"T{pd.to_datetime(values['end']).strftime('%d.%H-%M')}:" 
+                  f"{bt.Order.ExecTypes[SignalDf.execution_type(signal)]}"
+                  f"{values['base_asset_amount']:.4f}@{values['limit_price']:.2f}SL{values['stop_loss']:.2f}"
+                  f"TP{values['take_profit']:.2f}TR{values['trigger_price']:.2f}")
         return result

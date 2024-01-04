@@ -58,4 +58,4 @@ if __name__ == "__main__":
     # _base_patterns = read_multi_timeframe_base_patterns()
     # plot_multi_timeframe_base_pattern(ohlcva, _base_patterns)
     # exit(0)
-    BasePatternStrategy.test_strategy(cash=1000)
+    BasePatternStrategy.test_strategy(cash=100000)

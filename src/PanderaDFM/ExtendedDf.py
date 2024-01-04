@@ -46,7 +46,7 @@ class ExtendedDf:
             return data.set_index(['date'])
 
     @classmethod
-    def new(cls, dictionary_of_data: dict = None) -> pt.DataFrame['BasePanderaDFM']:
+    def new(cls, dictionary_of_data: dict = None, strict: bool = True) -> pt.DataFrame['BasePanderaDFM']:
         if cls._sample_df is None:
             raise Exception(f"{cls}._sample_obj should be defined before!")
         if dictionary_of_data is not None:
@@ -56,6 +56,11 @@ class ExtendedDf:
                 raise Exception(f"Required to receive a dict of lists but {non_list_keys} are passing non-list values!")
             _new = pt.DataFrame[cls.schema_data_frame_model](dictionary_of_data)
             _new = cls._set_index(_new)
+            unused_keys = [key for key in dictionary_of_data.keys()
+                           if key not in cls._sample_df.columns and key not in ['date', 'timeframe']]
+            if len(unused_keys) > 0:
+                if strict:
+                    raise Exception(f"Unused keys in the dictionary: {','.join(unused_keys)}")
             return _new
         if cls._empty_df is None:
             cls._empty_df = cls._sample_df.drop(cls._sample_df.index)
@@ -153,9 +158,7 @@ class ExtendedDf:
         return df
 
     @classmethod
-    def concat(cls, left: pt.DataFrame['BasePanderaDFM'], right: pt.DataFrame['BasePanderaDFM']) -> pt.DataFrame[
-        'BasePanderaDFM']:
-        # todo: test
-
+    def concat(cls, left: pt.DataFrame['BasePanderaDFM'], right: pt.DataFrame['BasePanderaDFM']) \
+            -> pt.DataFrame['BasePanderaDFM']:
         result: pt.DataFrame['BasePanderaDFM'] = concat(left, right)
         return result

@@ -1,81 +1,98 @@
 from enum import Enum
 
 import backtrader as bt
-from backtrader import Order
-
-from helper.helper import log_d
 
 
-class ExtendedOrder(bt.Order):
-    trigger_satisfied: bool = False
-
-    def __init__(self, parent, limit_price, stop_loss, take_profit, trigger_price, *args, **kwargs):
-        # todo: test
-        self.trigger_price = trigger_price
-        self.limit_price = limit_price
-        self.stop_loss = stop_loss
-        self.take_profit = take_profit
-        super().__init__(parent, *args, **kwargs)
-
-    def check_trigger(self):
-        # todo: test
-        if self.isbuy():
-            return self.parent.candle().high >= self.trigger_price
-        elif self.issell():
-            return self.parent.candle().high <= self.trigger_price
-        return False
-
-    # def check_trigger(self):
-    #     # Implement your trigger condition logic here
-    #     # Return True if the condition is satisfied, False otherwise
-    #     if self.isbuy():
-    #         self.trigger_satisfied |= (self.parent.data.close[0] >= self.trigger_price)
-    #     else:  # self.issell()
-    #         self.trigger_satisfied |= self.parent.data.close[0] <= self.trigger_price
-    #     return self.trigger_satisfied
-
-    def __init__(self, parent, trigger_price, *args, **kwargs):
-        # todo: test
-        self.trigger_price = trigger_price
-        super().__init__(parent, *args, **kwargs)
-
-    def execute(self):
-        # todo: test
-        # Check trigger condition before executing
-        if self.check_trigger():
-            # Perform the actual order execution
-            return super().execute()
-        else:
-            # Hold the order if trigger condition is not satisfied
-            log_d("Trigger condition not satisfied. Order on hold.")
-            return None
-
-    @staticmethod
-    def is_open(order: bt.Order):
-        # todo: test
-        if order.status in [bt.Order.Created, bt.Order.Accepted, bt.Order.Submitted, bt.Order.Partial]:
-            return True
-        return False
-
-
-class ExtendedBuyOrder(ExtendedOrder):
-    ordtype = Order.Buy
-
-
-class ExtendedSellOrder(ExtendedOrder):
-    ordtype = Order.Sell
-
-
+# switching to backrader
 class OrderSide(Enum):
     Buy = 'buy'
     Sell = 'sell'
 
 
-def order_name(cls, order: bt.Order):
-    # todo: test
+class OrderBracketType(Enum):
+    Original = 'original_order'
+    Stop = 'stop_order'
+    Profit = 'profit'
+
+
+def order_name(order: bt.Order):
     # TRX<13USDT@0.02
-    name = (f"Order"
-            f"{('<' if order.isbuy() else '>')}"
-            f"{order.size}")
-    if order.pricelimit is not None:
-        name += f"@{order.pricelimit}"
+    """
+    tojoin.append('CommInfo: {}'.format(self.comminfo))
+    tojoin.append('End of Session: {}'.format(self.dteos))
+    tojoin.append('Alive: {}'.format(self.alive()))
+
+    :param order:
+    :return:
+    """
+    name = (
+        f"{order.ordtypename()}"
+        # f"Order"  
+        f"{('<' if order.isbuy() else '>')}"
+        f"{order.size:.4f}"
+        # if order.params.pricelimit is not None:
+        f"@{order.price:.2f}"
+        f"Ref{order.ref}"
+        f"{'Alive' if order.alive() else 'Dead'}/{order.getstatusname()}"
+        f"{order.ExecTypes[order.exectype]}"
+    )
+    if order.plimit is not None:
+        name += f"PL{order.pricelimit}"
+    if order.trailamount is not None:
+        name += f"TR{order.trailamount}/{order.trailpercent}"
+    return name
+
+
+class ExtendedOrder(bt.order.Order):
+    # trigger_satisfied: bool = False
+    # limit_price: float = None
+    # stop_loss_price: float = None
+    # take_profit_price: float = None
+
+    # def check_trigger(self):
+    #     # todoo: test
+    #     assert self.trigger_price is not None
+    #     if self.isbuy():
+    #         return self.parent.candle().high >= self.trigger_price
+    #     elif self.issell():
+    #         return self.parent.candle().high <= self.trigger_price
+    #     return False
+    #
+    # def execute(self, dt, size, price, closed, closedvalue, closedcomm, opened, openedvalue, openedcomm, margin, pnl,
+    #             psize, pprice):
+    #     # todoo: test
+    #     # Check trigger condition before executing
+    #     if self.trigger_satisfied or self.check_trigger():
+    #         self.trigger_satisfied = True
+    #         # Perform the actual order execution
+    #         return super().execute(dt, size, price,
+    #                                closed, closedvalue, closedcomm,
+    #                                opened, openedvalue, openedcomm,
+    #                                margin, pnl,
+    #                                psize, pprice)
+    #     else:
+    #         # Hold the order if trigger condition is not satisfied
+    #         log_d("Trigger condition not satisfied yet. Order on hold.")
+    #         return None
+
+    def is_open(self):
+        if self.status in [bt.Order.Created, bt.Order.Accepted, bt.Order.Submitted, bt.Order.Partial]:  # todo: test
+            return True
+        return False
+
+    def add_order_info(self, signal, signal_index, order_type: OrderBracketType, order_id):
+        self.addinfo(custom_order_id=order_id)
+        self.addinfo(signal=signal)
+        self.addinfo(signal_index=signal_index)
+        self.addinfo(custom_type=order_type.value)
+
+    @classmethod
+    def get_order_prices(cls, order: bt.Order):
+        return order.info['limit_price'], order.info['stop_loss'], order.info['take_profit'],
+
+# class ExtendedBuyOrder(ExtendedOrder):
+#     ordtype = bt.BuyOrder
+#
+#
+# class ExtendedSellOrder(ExtendedOrder):
+#     ordtype = bt.SellOrder

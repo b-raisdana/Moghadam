@@ -71,8 +71,8 @@ class Config():
             '1min',  #: to_offset('1min'),
             '5min',  #: to_offset('5min'),
             '15min',  #: to_offset('15min'),
-            '1H',  #: to_offset('1H'),
-            '4H',  #: to_offset('4H'),
+            '1h',  #: to_offset('1H'),
+            '4h',  #: to_offset('4H'),
             '1D',  #: to_offset('1D'),
             '1W',  #: to_offset('1W')
         ]
@@ -108,10 +108,12 @@ class Config():
         self.base_pattern_index_shift_after_last_candle_in_the_sequence = 0
         self.base_pattern_order_limit_price_margin_percentage = 0.1
         self.base_pattern_order_limit_price_margin_percentage = 5
-
-        self.order_max_capital_risk_precentage = 0.1 # 10%
-        self.order_per_order_fixed_base_risk_percentage = 0.01 # 1%
         self.base_pattern_risk_reward_rate = 5 # 500%
+
+        self.initial_cash = 1000
+        self.risk_per_order_percent = 0.01 # 1%
+        self.order_max_capital_risk_percentage = 0.1 # 10%
+
 
         self.id = ""
 
