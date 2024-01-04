@@ -28,7 +28,7 @@ config.processing_date_range = date_range_to_string(days=2)
 raw_data = read_base_timeframe_ohlcv(config.processing_date_range)
 data = bt.feeds.PandasData(dataname=raw_data, datetime=None, open=0, close=1, high=2, low=3, volume=4,
                            openinterest=-1)
-
+cerebro.adddata(data)  # Add the data feed
 cerebro.addstrategy(SmaCross)  # Add the trading strategy
 cerebro.run()  # run it all
 cerebro.plot()  # and plot it with a single command

@@ -10,16 +10,16 @@ from pandera import typing as pt
 from Config import config
 from PanderaDFM.SignalDf import SignalDFM, SignalDf
 from Strategy.BaseTickStructure import BaseTickStructure
-from Strategy.ExtendedOrder import OrderBracketType, order_name, OrderSide
-from helper.helper import log, log_d
+from Strategy.order_helper import OrderBracketType, order_name, OrderSide, add_order_info, order_prices, is_open
+from helper.helper import log_d
 
 
 class ExtendedStrategy(bt.Strategy):
     signal_df: pt.DataFrame[SignalDFM]
-    original_orders: Dict[np.float64, bt.Order] = {}
-    stop_orders: Dict[np.float64, bt.Order] = {}
-    profit_orders: Dict[np.float64, bt.Order] = {}
-    archived_orders: Dict[np.float64, bt.Order] = {}
+    original_orders = {}
+    stop_orders = {}
+    profit_orders = {}
+    archived_orders = {}
     date_range_str: str = None
     true_risked_money = 0.0
 
@@ -52,24 +52,16 @@ class ExtendedStrategy(bt.Strategy):
 
         return size, true_risked_money
 
-    @staticmethod
-    def add_order_info(order: bt.Order, signal, signal_index, order_type: OrderBracketType, order_id):
-        order.addinfo(custom_order_id=order_id)
-        order.addinfo(signal=signal)
-        order.addinfo(signal_index=signal_index)
-        order.addinfo(custom_type=order_type.value)
-        return order
-
     def post_bracket_order(self, original_order: bt.Order, stop_loss_order: bt.Order, take_profit_order: bt.Order,
                            signal: pt.Series[SignalDFM], signal_index):
         custom_order_id = np.float64(datetime.now(tz=pytz.UTC).timestamp())
 
-        original_order = self.add_order_info(original_order, signal, signal.index, OrderBracketType.Original,
-                                             custom_order_id)
-        stop_loss_order = self.add_order_info(stop_loss_order, signal, signal.index, OrderBracketType.Stop,
-                                              custom_order_id)
-        take_profit_order = self.add_order_info(take_profit_order, signal, signal.index, OrderBracketType.Profit,
-                                                custom_order_id)
+        original_order = add_order_info(original_order, signal, signal.index, OrderBracketType.Original,
+                                        custom_order_id)
+        stop_loss_order = add_order_info(stop_loss_order, signal, signal.index, OrderBracketType.Stop,
+                                         custom_order_id)
+        take_profit_order = add_order_info(take_profit_order, signal, signal.index, OrderBracketType.Profit,
+                                           custom_order_id)
 
         self.original_orders[custom_order_id] = original_order
         self.stop_orders[custom_order_id] = stop_loss_order
@@ -82,59 +74,6 @@ class ExtendedStrategy(bt.Strategy):
         self.signal_df.loc[signal_index, 'order_is_active'] = True
 
         return original_order, stop_loss_order, take_profit_order
-
-    # @staticmethod
-    # def pre_bracket_order(price, stopprice, limitprice, **kwargs):
-    #     assert 'trigger_price' in kwargs.keys()
-    #     kwargs['limit_price'] = price
-    #     kwargs['stop_loss_price'] = stopprice
-    #     kwargs['take_profit_price'] = limitprice
-    #     return kwargs
-
-    # def post_bracket_order(self, original_order, stop_order, profit_order, **kwargs):
-    #     assert 'signal' in kwargs.keys(), "Expected to have signal"
-    #     assert 'signal_index' in kwargs.keys(), "Expected to have signal_index"
-    #     signal = kwargs['signal']
-    #     signal_index = kwargs['signal_index']
-    #     custom_order_id = np.float64(datetime.now(tz=pytz.UTC).timestamp())
-    #     original_order.add_order_info(signal, signal_index, OrderBracketType.Original, custom_order_id)
-    #     stop_order.add_order_info(signal, signal_index, OrderBracketType.Stop, custom_order_id)
-    #     profit_order.add_order_info(signal, signal_index, OrderBracketType.Profit, custom_order_id)
-    #     self.original_orders[custom_order_id] = original_order
-    #     self.stop_orders[custom_order_id] = stop_order
-    #     self.profit_orders[custom_order_id] = profit_order
-    #     return original_order, stop_order, profit_order
-
-    # def buy_bracket(self, price=None, stopprice=None, limitprice=None, **kwargs):
-    #     # todoo: test
-    #     # add stop_price and limit_price to kwargs to be added into the orders info and make it possible to reference in
-    #     # future
-    #     kwargs = self.pre_bracket_order(price, stopprice, limitprice, **kwargs)
-    #     original_order, stop_order, profit_order = super().buy_bracket(self, price=price, stopprice=stopprice,
-    #                                                                    limitprice=limitprice, **kwargs)
-    #     original_order, stop_order, profit_order = self.post_bracket_order(original_order, stop_order, profit_order,
-    #                                                                        **kwargs)
-    #     return [original_order, stop_order, profit_order]
-
-    # def sell_bracket(self, data=None, size=None, price=None, plimit=None,
-    #                  exectype=bt.Order.Limit, valid=None, tradeid=0,
-    #                  trailamount=None, trailpercent=None, oargs={},
-    #                  stopprice=None, stopexec=bt.Order.Stop, stopargs={},
-    #                  limitprice=None, limitexec=bt.Order.Limit, limitargs={},
-    #                  **kwargs):
-    #     raise NotImplementedError
-    #     # todoo: test
-    #     # add stop_price and limit_price to kwargs to be added into the orders info and make it possible to reference in
-    #     # future
-    #     kwargs = self.pre_bracket_order(price, stopprice, limitprice, **kwargs)
-    #     original_order, stop_order, profit_order = super().sell_bracket(self, data, size, price, plimit, exectype,
-    #                                                                     valid, tradeid, trailamount,
-    #                                                                     trailpercent, oargs, stopprice, stopexec,
-    #                                                                     stopargs, limitprice, limitexec,
-    #                                                                     limitargs, **kwargs)
-    #     original_order, stop_order, profit_order = self.post_bracket_order(original_order, stop_order, profit_order,
-    #                                                                        **kwargs)
-    #     return [original_order, stop_order, profit_order]
 
     def allocate_order_cash(self, limit_price: float, sl_price: float) -> float:
         # Allocate 1/100 of the initial cash
@@ -194,19 +133,47 @@ class ExtendedStrategy(bt.Strategy):
         self.execute_active_signals()
         super()
 
+    def verify_triple_oder_status(self):
+        '''
+        check:
+         - length of self.original_orders and alef.stop_orders and self.profit_orders are equal
+         - if the self.original_orders.status is open the same index in both other lists
+         have the same status
+         - if the self.original_orders.status in closed (by any way) the same index in both other lists are closed
+         (canceled) also
+        :return:
+        '''
+        # todo: test
+        assert len(self.original_orders) == len(self.stop_orders)
+        assert len(self.original_orders) == len(self.profit_orders)
+        for i in self.original_orders.keys():
+            if is_open(self.original_orders[i]):
+                assert is_open(self.stop_orders[i])
+                assert is_open(self.profit_orders[i])
+            else:
+                assert not is_open(self.stop_orders[i])
+                assert not is_open(self.profit_orders[i])
+
     def notify_order(self, order: bt.Order):
-        assert (
-                order_name(order) in self.signal_df['original_order_id'] or
-                order_name(order) in self.signal_df['stop_loss_order_id'] or
-                order_name(order) in self.signal_df['take_profit_order_id']
-        ), f"{order_name(order)} not found in tracked orders!" # todo: test
-        assert all(self.signal_df.loc[self.signal_df['original_order_id'] == order.__str__(), 'order_is_active']
-                   == True)
-        assert order.size > 0
-        assert order.size > 1 / 43000, "Order size less than 1 dollar"
+        if not (
+                order_name(order) in self.signal_df['original_order_id'].tolist() or
+                order_name(order) in self.signal_df['stop_loss_order_id'].tolist() or
+                order_name(order) in self.signal_df['take_profit_order_id'].tolist()
+        ):
+            raise Exception(f"{order_name(order)} not found in tracked orders!")
+        # assert all(self.signal_df.loc[self.signal_df['original_order_id'] == order.__str__(), 'order_is_active']
+        #            == True)
+        if order.isbuy():
+            size_positiver = 1
+        else:
+            size_positiver = -1
+        if not ((order.size * size_positiver) > 0):  # todo: test
+            raise
+        if not ((order.size * size_positiver) > 1 / 43000):  # , "Order size less than 1 dollar"
+            raise
         if order.status in [order.Completed, order.Partial, order.Expired, order.Canceled, order.Rejected]:
             if order.info['custom_type'] == OrderBracketType.Original.value:
-                limit_price, stop_loss, take_profit = self.get_order_prices(order)
+                limit_price, stop_loss, take_profit = order_prices(order)
                 self.free_order_cash(limit_price, stop_loss, order.size)
             else:
                 pass
@@ -252,16 +219,16 @@ class ExtendedStrategy(bt.Strategy):
         ordered_signals = self.ordered_signals()
         for index, signal in ordered_signals.iterrows():
             if SignalDf.stopped(signal, self.candle()):  # todo: test
-                log_d(f'Signal repeated according to Stop-Loss on {SignalDf.to_str(signal)} @ {self.candle()}')
+                log_d(f'Signal repeated according to Stop-Loss on {SignalDf.to_str(index, signal)} @ {self.candle()}')
                 repeat_signal = signal.copy()
                 repeat_signal['original_index'] = index
                 repeat_signal['order_is_active'] = False
                 repeat_signal['original_order_id'] = pd.NA
                 repeat_signal['led_to_order_at'] = pd.NA
                 self.signal_df.loc[self.candle().date] = repeat_signal
-                log_d(f"repeated Signal:{SignalDf.to_str(repeat_signal)}@{self.candle().date} ")
+                log_d(f"repeated Signal:{SignalDf.to_str(self.candle().date, repeat_signal)}@{self.candle().date} ")
             elif SignalDf.took_profit(signal, self.candle()):
-                log_d(f'Took profit on Signal:{SignalDf.to_str(signal)}@{self.candle().date}')
+                log_d(f'Took profit on Signal:{SignalDf.to_str(index, signal)}@{self.candle().date}')
             # elif SignalDf.expired(signal, self.candle()):
             #     log(f'Signal:{SignalDf.to_str(signal)}@{self.candle()} Expired')
 
@@ -323,8 +290,8 @@ class ExtendedStrategy(bt.Strategy):
                                                            stopprice=signal['stop_loss'])
                 self.post_bracket_order(original_order, stop_order, profit_order, signal, signal_index)
 
-                log_d(f"Signal:{SignalDf.to_str(signal)} Ordered: "
-                      f"M:{order_name(original_order)} S:{order_name(stop_order)} P:{order_name(profit_order)}")
+                log_d(f"Signal:{SignalDf.to_str(signal_index, signal)} Ordered: "
+                      f"O:{order_name(original_order)} S:{order_name(stop_order)} P:{order_name(profit_order)}")
             else:
                 raise Exception('Expected all signals have take_profit')
                 # order_id = order_executor(size=signal['base_asset_amount'], exectype=execution_type,
@@ -332,24 +299,6 @@ class ExtendedStrategy(bt.Strategy):
                 #                                limit_price=signal['limit_price'],
                 #                                trigger_price=signal['trigger_price'])
                 # self.signal_df.loc[signal_index, 'original_order_id'] = order_id
-
-    def verify_triple_oder_status(self):
-        '''
-        check:
-         - length of self.original_orders and alef.stop_orders and self.profit_orders are equal
-         - if the self.original_orders.status is open the same index in both other lists
-         have the same status
-         - if the self.original_orders.status in closed (by any way) the same index in both other lists are closed
-         (canceled) also
-        :return:
-        '''
-        # todo: test
-        assert len(self.original_orders) == len(self.stop_orders)
-        assert len(self.original_orders) == len(self.profit_orders)
-        for index, order in self.original_orders:
-            if order.is_open():
-                assert self.stop_orders[index].is_open()
-                assert self.profit_orders[index].is_open()
 
     # def executors(self, signal):
     #     return {

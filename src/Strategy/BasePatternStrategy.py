@@ -9,7 +9,7 @@ from BasePattern import read_multi_timeframe_base_patterns
 from Config import config
 from PanderaDFM.BasePattern import MultiTimeframeBasePattern
 from PanderaDFM.SignalDf import SignalDf
-from Strategy.ExtendedOrder import OrderSide
+from Strategy.order_helper import OrderSide
 from Strategy.ExtendedStrategy import ExtendedStrategy
 from helper.helper import log_d
 from ohlcv import read_base_timeframe_ohlcv
@@ -56,8 +56,6 @@ class BasePatternStrategy(ExtendedStrategy):
                     base_patterns[f'{band}_band_activated'] <= self.candle().date)) &
             (base_patterns[f'{band}_band_signal_generated'].isna())
             ]
-        if len(result) > 0:
-            pass
         return result
 
     def add_signal(self, base_pattern_timeframe: str, base_pattern_date: datetime,
@@ -100,7 +98,7 @@ class BasePatternStrategy(ExtendedStrategy):
             'order_is_active': [False],
         })
         self.signal_df = SignalDf.concat(self.signal_df, new_signal)
-        log_d(f"added Signal {SignalDf.to_str(new_signal)} @ {self.candle().date}")
+        log_d(f"added Signal {SignalDf.to_str(new_signal.index[0] ,new_signal.iloc[0])} @ {self.candle().date}")
         return self.signal_df
 
     def candle_overlaps_base(self, base_pattern):

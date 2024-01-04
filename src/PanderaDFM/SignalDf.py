@@ -41,9 +41,9 @@ class SignalDFM(BasePanderaDFM):
     # the condition direction is reverse of limit direction.
     trigger_price: pt.Series[float] = pandera.Field(nullable=True, default=None)
     trigger_satisfied: pt.Series[bool] = pandera.Field(nullable=True, default=True)
-    original_order_id: pt.Series[np.float64] = pandera.Field(nullable=True, default=None)
-    stop_loss_order_id: pt.Series[np.float64] = pandera.Field(nullable=True, default=None)
-    take_profit_order_id: pt.Series[np.float64] = pandera.Field(nullable=True, default=None)
+    original_order_id: pt.Series[str] = pandera.Field(nullable=True, default=None)
+    stop_loss_order_id: pt.Series[str] = pandera.Field(nullable=True, default=None)
+    take_profit_order_id: pt.Series[str] = pandera.Field(nullable=True, default=None)
     led_to_order_at: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
     order_is_active: pt.Series[bool] = pandera.Field(nullable=True, default=None)  # , ignore_na=False
 
@@ -131,12 +131,15 @@ class SignalDf(ExtendedDf):
     #     return False
 
     @classmethod
-    def to_str(cls, signal: pt.DataFrame[SignalDFM]):
-        index = signal.index[0]
-        values = signal.iloc[0].to_dict()
-        result = (f"Signal@{pd.to_datetime(index).strftime('%y-%m-%d.%H-%M')}"
-                  f"T{pd.to_datetime(values['end']).strftime('%d.%H-%M')}:" 
-                  f"{bt.Order.ExecTypes[SignalDf.execution_type(signal)]}"
-                  f"{values['base_asset_amount']:.4f}@{values['limit_price']:.2f}SL{values['stop_loss']:.2f}"
-                  f"TP{values['take_profit']:.2f}TR{values['trigger_price']:.2f}")
+    def to_str(cls, signal_index: datetime, signal: pt.Series[SignalDFM]):
+        try:
+            index = signal_index
+            values = signal.to_dict()
+            result = (f"Signal@{pd.to_datetime(index).strftime('%y-%m-%d.%H-%M')}"
+                      f"T{pd.to_datetime(values['end']).strftime('%d.%H-%M')}:" 
+                      f"{bt.Order.ExecTypes[SignalDf.execution_type(signal)]}"
+                      f"{values['base_asset_amount']:.4f}@{values['limit_price']:.2f}SL{values['stop_loss']:.2f}"
+                      f"TP{values['take_profit']:.2f}TR{values['trigger_price']:.2f}")
+        except Exception as e:
+            raise e
         return result
