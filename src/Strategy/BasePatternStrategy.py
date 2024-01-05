@@ -103,7 +103,7 @@ class BasePatternStrategy(ExtendedStrategy):
             'order_is_active': [False],
         })
         self.signal_df = SignalDf.concat(self.signal_df, new_signal)
-        log_d(f"added Signal {SignalDf.to_str(new_signal.index[0] ,new_signal.iloc[0])} @ {self.candle().date}")
+        log_d(f"added Signal {SignalDf.to_str(new_signal.index[0], new_signal.iloc[0])} @ {self.candle().date}")
         return self.signal_df
 
     def candle_overlaps_base(self, base_pattern):
@@ -141,8 +141,7 @@ class BasePatternStrategy(ExtendedStrategy):
         cerebro.broker.set_cash(cash)
         print('Starting Portfolio Value: %.2f' % cerebro.broker.getvalue())
         cerebro.run()
-        # todo: test
-        print('Final Portfolio Value: %.2f' % cerebro.broker.getvalue())
+        print('Final Portfolio Value: %.2f' % cerebro.broker.getvalue())  # todo: test
 
 # class MySizer(bt.Sizer):
 #     _initial_cash: float = None

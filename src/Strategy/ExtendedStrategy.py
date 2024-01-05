@@ -144,8 +144,7 @@ class ExtendedStrategy(bt.Strategy):
          (canceled) also
         :return:
         '''
-        # todo: test
-        assert len(self.original_orders) == len(self.stop_orders)
+        assert len(self.original_orders) == len(self.stop_orders) # todo: test
         assert len(self.original_orders) == len(self.profit_orders)
         for i in self.original_orders.keys():
             if order_is_open(self.original_orders[i]):
@@ -249,28 +248,21 @@ class ExtendedStrategy(bt.Strategy):
         self.update_signal_trigger_status(OrderSide.Buy)
         self.update_signal_trigger_status(OrderSide.Sell)
         active_signals = self.active_signals()  # .copy()
-        if len(active_signals) > 0:
-            pass
+        # if len(active_signals) > 0:        #     pass
         trigger_signal_indexes = active_signals[active_signals['trigger_satisfied']].index
-        if len(trigger_signal_indexes) > 0:
-            pass
-
+        # if len(trigger_signal_indexes) > 0:        #     pass
         buy_signal_indexes = active_signals[active_signals['side'] == 'buy'].index
-        if len(buy_signal_indexes) > 0:
-            pass
+        # if len(buy_signal_indexes) > 0:        #     pass
         buy_trigger_signal_indexes = trigger_signal_indexes.intersection(buy_signal_indexes)
-        if len(buy_trigger_signal_indexes) > 0:
-            pass
+        # if len(buy_trigger_signal_indexes) > 0:        #     pass
         sell_signal_indexes = active_signals.index.difference(buy_signal_indexes)
         if len(sell_signal_indexes) > 0:
             pass  # todo: test
         sell_trigger_signal_indexes = trigger_signal_indexes.intersection(sell_signal_indexes)
         if len(sell_trigger_signal_indexes) > 0:
             pass  # todo: test
-
         executable_signal_indexes = buy_trigger_signal_indexes.union(sell_trigger_signal_indexes)
-        if len(executable_signal_indexes) > 0:
-            pass
+        # if len(executable_signal_indexes) > 0:        #     pass
         return active_signals.loc[executable_signal_indexes]
 
     def execute_active_signals(self):
@@ -283,6 +275,7 @@ class ExtendedStrategy(bt.Strategy):
                 # kwargs = self.pre_bracket_order(limitprice=signal['take_profit'],
                 #                                 price=signal['limit_price'],
                 #                                 stopprice=signal['stop_loss'])
+                # todo: test why orders are not executing
                 original_order, stop_order, profit_order = \
                     self.bracket_executors[signal['side']](size=size,
                                                            exectype=execution_type,

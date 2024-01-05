@@ -105,7 +105,7 @@ class Config():
         self.base_pattern_ttl = 4 * 4 * 4 * 4
         self.base_pattern_number_of_spinning_candles = 2
         self.base_pattern_candle_min_backward_coverage = 0.8
-        self.base_pattern_index_shift_after_last_candle_in_the_sequence = 0
+        self.base_pattern_index_shift_after_last_candle_in_the_sequence = 1 # >1 means make sure the last candle is closed
         self.base_pattern_order_limit_price_margin_percentage = 0.1
         self.base_pattern_order_limit_price_margin_percentage = 5
         self.base_pattern_risk_reward_rate = 5 # 500%

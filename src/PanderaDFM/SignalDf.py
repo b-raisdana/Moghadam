@@ -46,6 +46,7 @@ class SignalDFM(BasePanderaDFM):
     take_profit_order_id: pt.Series[str] = pandera.Field(nullable=True, default=None)
     led_to_order_at: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
     order_is_active: pt.Series[bool] = pandera.Field(nullable=True, default=None)  # , ignore_na=False
+    updated: pt.Series[bool] = pandera.Field(nullable=True, default=True)  # , ignore_na=False
 
     @pandera.dataframe_check
     def end_after_start_check(cls, df, *args, **kwargs):

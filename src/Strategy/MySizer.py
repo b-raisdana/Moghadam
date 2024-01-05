@@ -15,8 +15,7 @@ class MySizer(bt.Sizer):
                 Returns:
                   - size: The order size to allocate.
                 """
-        # todo: test
-        assert self.initial_cash is not None and self.initial_cash > 0
+        assert self.initial_cash is not None and self.initial_cash > 0  # todo: test
         risk_amount = self.initial_cash * config.order_max_capital_risk_precentage
         remaining_cash = self.initial_cash - self.broker.getvalue()
 
