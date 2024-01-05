@@ -76,18 +76,21 @@ def log(message: str, severity: LogSeverity = LogSeverity.INFO, stack_trace: boo
         traceback.print_list(stack)
 
 
+log_d('Start')
+
+
 def measure_time(func):
     @functools.wraps(func)
     def _measure_time(*args, **kwargs):
         start_time = time.time()
         function_parameters = get_function_parameters(args, kwargs)
-        log(f"{func.__name__}({function_parameters}) started", stack_trace=False)
+        log_d(f"{func.__name__}({function_parameters}) started", stack_trace=False)
 
         try:
             result = func(*args, **kwargs)
         except OSError as e:
-            log(f"Current directory is {os.path.abspath(os.path.curdir)}", stack_trace=False)
-            log(f"Error in {func.__name__}({function_parameters}): {str(e)}", stack_trace=True)
+            log_e(f"Current directory is {os.path.abspath(os.path.curdir)}", stack_trace=False)
+            log_e(f"Error in {func.__name__}({function_parameters}): {str(e)}", stack_trace=True)
             raise e
         except Exception as e:
             log(f"Error in {func.__name__}({function_parameters}): {str(e)}", stack_trace=True)
@@ -129,16 +132,6 @@ pandera_to_pandas_type_map = {
     pandera.BOOL: bool,
     # Add more data types as needed
 }
-
-
-# def empty_df(model: Type[Pandera_DFM_Type]) -> pandas.DataFrame:
-#     _empty_df = pd.DataFrame(columns=list(model.to_schema().columns.keys()) +
-#                                       list(model.to_schema().index.columns.keys()))
-#     as_types = dict(model.to_schema().dtypes)
-#     _empty_df.astype(as_types)
-#     return model(pd.DataFrame(columns=list(model.to_schema().columns.keys()) +
-#                                       list(model.to_schema().index.columns.keys()))
-#                  .set_index(list(model.to_schema().index.columns.keys())))
 
 
 def date_range(date_range_str: str) -> Tuple[datetime, datetime]:

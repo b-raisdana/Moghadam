@@ -11,7 +11,7 @@ from PanderaDFM.BasePattern import MultiTimeframeBasePattern
 from PanderaDFM.SignalDf import SignalDf
 from Strategy.order_helper import OrderSide
 from Strategy.ExtendedStrategy import ExtendedStrategy
-from helper.helper import log_d, log_e
+from helper.helper import log_d, log_e, measure_time
 from ohlcv import read_base_timeframe_ohlcv
 
 
@@ -21,13 +21,15 @@ class BasePatternStrategy(ExtendedStrategy):
     def add_base_patterns(self):
         self.base_patterns = read_multi_timeframe_base_patterns(self.date_range_str)
 
+    @measure_time
     def __init__(self):
         self.add_base_patterns()
         super().__init__()
 
     def notify_order(self, order: bt.Order):
-        # todo: if the order were stopped, reactivate signal
-        # todo: if the order took profit, end signal
+        # todo: if the order were stopped, repeat the signal
+        # todo: if the order took profit, end signal and end band_pattern
+        # todo: if the signal end changed we have to update signal orders
         log_e("Not Implemented!")
 
     def overlapping_base_patterns(self, base_patterns: pt.DataFrame[MultiTimeframeBasePattern] = None) \
@@ -81,27 +83,32 @@ class BasePatternStrategy(ExtendedStrategy):
             stop_loss = base_pattern['internal_high']
             take_profit = base_pattern['internal_low'] - base_length * config.base_pattern_risk_reward_rate
             trigger_price = base_pattern['internal_low']
-        size, true_risked_money = self.my_sizer(limit_price=limit_price, sl_price=stop_loss)
-        # todo: reference_multi_date and reference_multi_timeframe never been used.
+        # size, true_risked_money = self.my_sizer(limit_price=limit_price, sl_price=stop_loss)
+        # todo: reference_date and reference_timeframe never been used.
         # todo: use .loc to generate and assign signal in one step.
         if pd.notna(base_pattern['end']):
             effective_end = base_pattern['end']
         else:
             effective_end = base_pattern['ttl']
-        new_signal = SignalDf.new({
-            'date': [self.candle().date],
-            'end': [effective_end],
-            'side': [side],
-            'reference_date': [base_pattern_date],
-            'reference_timeframe': [base_pattern_timeframe],
-            'base_asset_amount': [size],
-            'limit_price': [limit_price],
-            'stop_loss': [stop_loss],
-            'take_profit': [take_profit],
-            'trigger_price': [trigger_price],
-            'trigger_satisfied': [False],
-            'order_is_active': [False],
-        })
+        try:
+            # todo: optimize and simplify by removing signals and putting orders instead.
+            new_signal = SignalDf.new({
+                'date': [self.candle().date],
+                'original_index': [self.candle().date],
+                'end': [effective_end],
+                'side': [side],
+                'reference_date': [base_pattern_date],
+                'reference_timeframe': [base_pattern_timeframe],
+                # 'base_asset_amount': [size],
+                'limit_price': [limit_price],
+                'stop_loss': [stop_loss],
+                'take_profit': [take_profit],
+                'trigger_price': [trigger_price],
+                'trigger_satisfied': [False],
+                'order_is_active': [False],
+            })
+        except Exception as e:
+            raise e
         self.signal_df = SignalDf.concat(self.signal_df, new_signal)
         log_d(f"added Signal {SignalDf.to_str(new_signal.index[0], new_signal.iloc[0])} @ {self.candle().date}")
         return self.signal_df
@@ -111,6 +118,7 @@ class BasePatternStrategy(ExtendedStrategy):
                 self.candle().high > base_pattern['internal_low'] and
                 self.candle().low < base_pattern['internal_high'])
 
+    # @measure_time
     def extract_signals(self) -> None:
         upper_band_active_overlapping_base_patterns = self.overlapping_base_patterns(
             self.no_signal_active_base_patterns(band='upper', base_patterns=self.base_patterns))
@@ -142,56 +150,3 @@ class BasePatternStrategy(ExtendedStrategy):
         print('Starting Portfolio Value: %.2f' % cerebro.broker.getvalue())
         cerebro.run()
         print('Final Portfolio Value: %.2f' % cerebro.broker.getvalue())  # todo: test
-
-# class MySizer(bt.Sizer):
-#     _initial_cash: float = None
-#
-#     def initial_cash(self):
-#         if self._initial_cash is None:
-#             self._initial_cash = self.broker.get_cash()
-#         return self._initial_cash
-#
-#     def _getsizing(self, comminfo, cash, data, isbuy):
-#         """
-#                 sl_size = abs(Limit price - Stop Loss price)
-#                 limit = 1100
-#                 sl = 1000
-#                 sl_size = 100
-#                 initial_cash = 1000
-#                 risk_per_order_size = initial_cash * config.risk_per_order_percent = 10
-#                 size = risk_size_per_order / sl_size
-#
-#                 The margin was not implemented by Backtrader but for implementation this could be used:
-#                 margin = (size * limit) / risk_size_per_order
-#
-#                 Parameters:
-#                   - cash: The current cash available in the portfolio.
-#                   - risk_percent: The percentage of cash to risk per trade (default is 10%).
-#
-#                 Returns:
-#                   - size: The order size to allocate.
-#                 """
-#         # todoo: test
-#         risk_amount = self.initial_cash() * config.order_max_capital_risk_precentage
-#         remaining_cash = self.initial_cash() - self.broker.getvalue()
-#         remaining_cash = config.initial_cash - sum(self.true_risked_money)
-#
-#         if remaining_cash >= risk_amount:
-#             order: bt.Order = self.strategy.order.executed
-#             limit = order.price
-#             order_id = order.info['original_order_id']
-#             sl_order = self.strategy.stop_orders[order_id]
-#             sl = sl_order.price
-#             sl_size = abs(sl - limit)
-#             risk_per_order_size = config.initial_cash * config.risk_per_order_percent  # 10$
-#             size = risk_per_order_size / sl_size
-#             true_risked_money = (size * limit) * sl_size
-#             assert true_risked_money <= config.risk_per_order_percent
-#
-#             # # Allocate 1/100 of the initial cash
-#             # size = self._initial_cash * config.order_per_order_fixed_base_risk_percentage
-#         else:
-#             # If remaining cash is less than 10% of initial allocated cash, allocate zero
-#             size = 0
-#
-#         return size

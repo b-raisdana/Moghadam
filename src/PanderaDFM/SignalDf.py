@@ -17,9 +17,10 @@ from Strategy.BaseTickStructure import BaseTickStructure
 class SignalDFM(BasePanderaDFM):
     # from start of exact this candle the signal is valid
     date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(unique=True, title='date')
+    original_index: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
     # from start of exact this candle the signal is in-valid
-    reference_date: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
-    reference_timeframe: pt.Series[str] = pandera.Field(nullable=True)
+    reference_date: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]  # = pandera.Field(nullable=True)
+    reference_timeframe: pt.Series[str]  # = pandera.Field(nullable=True)
     end: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
     """
     Limit Orders – regular orders having an amount in base currency (how much you want to buy or sell) and a price in quote currency (for which price you want to buy or sell).
@@ -44,9 +45,11 @@ class SignalDFM(BasePanderaDFM):
     original_order_id: pt.Series[str] = pandera.Field(nullable=True, default=None)
     stop_loss_order_id: pt.Series[str] = pandera.Field(nullable=True, default=None)
     take_profit_order_id: pt.Series[str] = pandera.Field(nullable=True, default=None)
-    led_to_order_at: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
+    # 'end' do the same thing:
+    # led_to_order_at: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
     order_is_active: pt.Series[bool] = pandera.Field(nullable=True, default=None)  # , ignore_na=False
-    updated: pt.Series[bool] = pandera.Field(nullable=True, default=True)  # , ignore_na=False
+    # todo: if the signal end changed we have to update signal orders
+    updated: pt.Series[bool] = pandera.Field(nullable=True, default=True)
 
     @pandera.dataframe_check
     def end_after_start_check(cls, df, *args, **kwargs):
@@ -58,6 +61,11 @@ class SignalDf(ExtendedDf):
     schema_data_frame_model = SignalDFM
     _sample_df = pt.DataFrame[SignalDFM]({
         'date': [Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC))],
+        'original_index': [
+            Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC))],
+        'reference_date': [
+            Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC))],
+        'reference_timeframe': ['1min'],
         'end': [Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=2).replace(tzinfo=pytz.UTC))],
         'side': ['buy'],
     })
@@ -118,10 +126,6 @@ class SignalDf(ExtendedDf):
             execution_type = bt.Order.Market  # todo: test
         return execution_type
 
-    @staticmethod
-    def is_trigger_order(signal):
-        return pd.notna(signal.to_dict()[SignalDFM.trigger_price.__name__])  # todo: test
-
     # @staticmethod
     # def check_trigger(signal):
     #     assert self.trigger_price is not None # toddoo: test
@@ -137,7 +141,7 @@ class SignalDf(ExtendedDf):
             index = signal_index
             values = signal.to_dict()
             result = (f"Signal@{pd.to_datetime(index).strftime('%y-%m-%d.%H-%M')}"
-                      f"T{pd.to_datetime(values['end']).strftime('%d.%H-%M')}:" 
+                      f"T{pd.to_datetime(values['end']).strftime('%d.%H-%M')}:"
                       f"{bt.Order.ExecTypes[SignalDf.execution_type(signal)]}"
                       f"{values['base_asset_amount']:.4f}@{values['limit_price']:.2f}SL{values['stop_loss']:.2f}"
                       f"TP{values['take_profit']:.2f}TR{values['trigger_price']:.2f}")

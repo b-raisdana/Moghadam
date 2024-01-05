@@ -112,7 +112,7 @@ class Config():
 
         self.initial_cash = 1000
         self.risk_per_order_percent = 0.01 # 1%
-        self.order_max_capital_risk_percentage = 0.1 # 10%
+        self.capital_max_total_risk_percentage = 0.1 # 10%
 
 
         self.id = ""
