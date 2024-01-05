@@ -145,7 +145,7 @@ class ExtendedStrategy(bt.Strategy):
 
     def next_log(self):
         if self.next_runs % 100 == 0:
-            log_d(f"Ran {self.next_runs} Next()s")
+            log_d(f"Ran {self.next_runs} Next()s reached {self.candle().date}")
         self.next_runs += 1
 
     def next(self):
@@ -300,7 +300,8 @@ class ExtendedStrategy(bt.Strategy):
             # execution_type = SignalDf.execution_type(signal)
             if pd.notna(signal['take_profit']):
                 original_order: bt.Order
-                size = self.allocate_order_cash()  # signal['base_asset_amount'])  # todo: test
+                size = self.allocate_order_cash(signal['limit_price'],
+                                                signal['stop_loss'])  # signal['base_asset_amount'])  # todo: test
                 # kwargs = self.pre_bracket_order(limitprice=signal['take_profit'],
                 #                                 price=signal['limit_price'],
                 #                                 stopprice=signal['stop_loss'])
