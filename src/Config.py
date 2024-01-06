@@ -110,7 +110,7 @@ class Config():
         self.base_pattern_order_limit_price_margin_percentage = 5
         self.base_pattern_risk_reward_rate = 5 # 500%
 
-        self.initial_cash = 1000
+        self.initial_cash = 1000.0
         self.risk_per_order_percent = 0.01 # 1%
         self.capital_max_total_risk_percentage = 0.1 # 10%
 

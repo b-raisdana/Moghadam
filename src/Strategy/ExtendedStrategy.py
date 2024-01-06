@@ -1,4 +1,5 @@
 from datetime import datetime
+from time import strptime
 from typing import Optional, Tuple
 
 import backtrader as bt
@@ -10,7 +11,7 @@ from pandera import typing as pt
 from Config import config
 from PanderaDFM.SignalDf import SignalDFM, SignalDf
 from Strategy.BaseTickStructure import BaseTickStructure
-from Strategy.order_helper import OrderBracketType, order_name, OrderSide, add_order_info, order_prices, order_is_open, \
+from Strategy.order_helper import BracketOrderType, order_name, OrderSide, add_order_info, order_prices, order_is_open, \
     order_is_closed
 from helper.helper import log_d, measure_time
 
@@ -57,11 +58,11 @@ class ExtendedStrategy(bt.Strategy):
                            signal: pt.Series[SignalDFM], signal_index):
         custom_order_id = np.float64(datetime.now(tz=pytz.UTC).timestamp())
 
-        original_order = add_order_info(original_order, signal, signal.index, OrderBracketType.Original,
+        original_order = add_order_info(original_order, signal, signal.index, BracketOrderType.Original,
                                         custom_order_id)
-        stop_loss_order = add_order_info(stop_loss_order, signal, signal.index, OrderBracketType.Stop,
+        stop_loss_order = add_order_info(stop_loss_order, signal, signal.index, BracketOrderType.Stop,
                                          custom_order_id)
-        take_profit_order = add_order_info(take_profit_order, signal, signal.index, OrderBracketType.Profit,
+        take_profit_order = add_order_info(take_profit_order, signal, signal.index, BracketOrderType.Profit,
                                            custom_order_id)
 
         self.original_orders[custom_order_id] = original_order
@@ -78,22 +79,22 @@ class ExtendedStrategy(bt.Strategy):
         return original_order, stop_loss_order, take_profit_order
 
     def allocate_order_cash(self, limit_price: float, sl_price: float, size: float = None) -> float:
-        # Allocate 1/100 of the initial cash
-        max_allowed_total_capital_at_risk = config.initial_cash() * config.capital_max_total_risk_percentage  # todo: test
-        remained_riskable = max_allowed_total_capital_at_risk - self.true_risked_money
+        # Allocate 10% of the initial cash
+        max_allowed_total_capital_at_risk = config.initial_cash * config.capital_max_total_risk_percentage
+        remained_risk_able = max_allowed_total_capital_at_risk - self.true_risked_money
         if size is None:
             size, true_risked_money = self.my_sizer(limit_price, sl_price, size)
         else:
-            raise NotImplementedError
-            # true_risked_money = size * self.candle().close # todo: test
-        if true_risked_money < remained_riskable:
+            raise NotImplementedError  # true_risked_money = size * self.candle().close
+        if true_risked_money < remained_risk_able:
             self.true_risked_money += true_risked_money
             return size
-        elif remained_riskable > 0:
-            self.true_risked_money += remained_riskable
-            return remained_riskable / self.candle().close
+        elif remained_risk_able > 0:
+            self.true_risked_money += remained_risk_able
+            return remained_risk_able / self.candle().close
         else:
             return 0
+
 
         # remaining_cash = config.initial_cash - self.true_risked_money
         # if remaining_cash >= max_allowed_total_capital_at_risk:
@@ -148,7 +149,19 @@ class ExtendedStrategy(bt.Strategy):
             log_d(f"Ran {self.next_runs} Next()s reached {self.candle().date}")
         self.next_runs += 1
 
+    def movement_intersect(self, target_low: float, target_high: float):
+        movement_low = min(self.candle().low, self.candle(1).low)
+        movement_high = max(self.candle().high, self.candle(1).high)
+        intersect_high = min(movement_high, target_high)
+        intersect_low = max(movement_low, target_low)
+        if intersect_high > intersect_low:
+            return intersect_high - intersect_low
+        else:
+            return 0
+
     def next(self):
+        if self.candle().date == strptime("2024-01-03 02:36:00+00:00", "%Y-%m-%d %H:%M:%S%z"):
+            pass
         self.next_log()
         if len(self.original_orders) > 0:
             self.verify_triple_oder_status()
@@ -157,7 +170,6 @@ class ExtendedStrategy(bt.Strategy):
         # self.update_orders()
         self.update_ordered_signals()
         self.execute_active_signals()
-        super()
 
     def verify_triple_oder_status(self):
         '''
@@ -169,14 +181,14 @@ class ExtendedStrategy(bt.Strategy):
          (canceled) also
         :return:
         '''
-        assert len(self.original_orders) == len(self.stop_orders)  # todo: test
+        assert len(self.original_orders) == len(self.stop_orders)
         assert len(self.original_orders) == len(self.profit_orders)
         for i in self.original_orders.keys():
             if order_is_open(self.original_orders[i]):
                 assert order_is_open(self.stop_orders[i])
                 assert order_is_open(self.profit_orders[i])
             elif order_is_closed(self.original_orders[i]):
-                assert order_is_closed(self.stop_orders[i])
+                assert order_is_closed(self.stop_orders[i])  # todo: test
                 assert order_is_closed(self.profit_orders[i])
 
     def notify_order(self, order: bt.Order):
@@ -197,7 +209,7 @@ class ExtendedStrategy(bt.Strategy):
         if not ((order.size * size_positiver) > 1 / 43000):  # , "Order size less than 1 dollar"
             raise
         if order.status in [order.Completed, order.Partial, order.Expired, order.Canceled, order.Rejected]:
-            if order.info['custom_type'] == OrderBracketType.Original.value:
+            if order.info['custom_type'] == BracketOrderType.Original.value:
                 limit_price, stop_loss, take_profit = order_prices(order)
                 self.free_order_cash(limit_price, stop_loss, order.size)
             else:
@@ -244,22 +256,22 @@ class ExtendedStrategy(bt.Strategy):
             ]
         return result
 
-    def update_ordered_signals(self):
-        ordered_signals = self.ordered_signals()
-        for index, signal in ordered_signals.iterrows():
-            if SignalDf.stopped(signal, self.candle()):  # todo: test
-                log_d(f'Signal repeated according to Stop-Loss on {SignalDf.to_str(index, signal)} @ {self.candle()}')
-                repeat_signal = signal.copy()
-                repeat_signal['original_index'] = index
-                repeat_signal['order_is_active'] = False
-                repeat_signal['original_order_id'] = pd.NA
-                repeat_signal['end'] = pd.NA
-                self.signal_df.loc[self.candle().date] = repeat_signal
-                log_d(f"repeated Signal:{SignalDf.to_str(self.candle().date, repeat_signal)}@{self.candle().date} ")
-            elif SignalDf.took_profit(signal, self.candle()):
-                log_d(f'Took profit on Signal:{SignalDf.to_str(index, signal)}@{self.candle().date}')
-            # elif SignalDf.expired(signal, self.candle()):
-            #     log(f'Signal:{SignalDf.to_str(signal)}@{self.candle()} Expired')
+    # def update_ordered_signals(self):
+    #     ordered_signals = self.ordered_signals()
+    #     for index, signal in ordered_signals.iterrows():
+    #         if SignalDf.stopped(signal, self.candle()):  # todo: test
+    #             log_d(f'Signal repeated according to Stop-Loss on {SignalDf.to_str(index, signal)} @ {self.candle()}')
+    #             repeat_signal = signal.copy()
+    #             repeat_signal['original_index'] = index
+    #             repeat_signal['order_is_active'] = False
+    #             repeat_signal['original_order_id'] = pd.NA
+    #             repeat_signal['end'] = pd.NA
+    #             self.signal_df.loc[self.candle().date] = repeat_signal
+    #             log_d(f"repeated Signal:{SignalDf.to_str(self.candle().date, repeat_signal)}@{self.candle().date} ")
+    #         elif SignalDf.took_profit(signal, self.candle()):
+    #             log_d(f'Took profit on Signal:{SignalDf.to_str(index, signal)}@{self.candle().date}')
+    #         # elif SignalDf.expired(signal, self.candle()):
+    #         #     log(f'Signal:{SignalDf.to_str(signal)}@{self.candle()} Expired')
 
     # def update_signal_trigger_status(self, side: OrderSide):
     #     side_indexes = self.signal_df[self.signal_df['side'] == side.value].index
@@ -302,15 +314,16 @@ class ExtendedStrategy(bt.Strategy):
                 original_order: bt.Order
                 size = self.allocate_order_cash(signal['limit_price'],
                                                 signal['stop_loss'])  # signal['base_asset_amount'])  # todo: test
-                # kwargs = self.pre_bracket_order(limitprice=signal['take_profit'],
-                #                                 price=signal['limit_price'],
-                #                                 stopprice=signal['stop_loss'])
+
+
+
                 # todo: test why orders are not executing
                 if pd.notna(signal['limit_price']) and pd.notna(signal['stop_loss']):
                     if (
                             pd.isna(signal['trigger_price']) or
-                            ((signal['side'] == OrderSide.Buy) and (signal['trigger_price'] > self.candle().high))
-                                ((signal['side'] == OrderSide.Sell) and (signal['trigger_price'] < self.candle().low))
+                            ((signal['side'] == OrderSide.Buy.value) and (signal['trigger_price'] > self.candle().high))
+                            or
+                            ((signal['side'] == OrderSide.Sell.value) and (signal['trigger_price'] < self.candle().low))
                     ):
                         original_order, stop_order, profit_order = \
                             self.bracket_executors[signal['side']](size=size,
@@ -320,8 +333,8 @@ class ExtendedStrategy(bt.Strategy):
                                                                    stopprice=signal['stop_loss'],
                                                                    valid=signal['end'],
                                                                    )  # todo: test
-                    else:
-                        # the trigger_price is not satisfied
+                    else:  # the trigger_price is not satisfied
+
                         original_order, stop_order, profit_order = \
                             self.bracket_executors[signal['side']](size=size,
                                                                    exectype=bt.Order.StopLimit,
@@ -330,7 +343,7 @@ class ExtendedStrategy(bt.Strategy):
                                                                    limitprice=signal['take_profit'],
                                                                    stopprice=signal['stop_loss'],
                                                                    valid=signal['end'],
-                                                                   )  # todo: test
+                                                                   )
                 else:
                     raise NotImplementedError
                 self.post_bracket_order(original_order, stop_order, profit_order, signal, signal_index)

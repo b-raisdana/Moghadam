@@ -12,7 +12,7 @@ from PanderaDFM.Pivot import MultiTimeframePivot
 from atr import read_multi_timeframe_ohlcva
 from helper.data_preparation import single_timeframe, concat, cast_and_validate, empty_df, read_file, \
     anti_pattern_timeframe, \
-    anti_trigger_timeframe, to_timeframe
+    anti_trigger_timeframe, to_timeframe, trim_to_date_range
 from helper.helper import date_range, date_range_to_string, measure_time
 
 
@@ -266,6 +266,7 @@ def generate_multi_timeframe_base_patterns(date_range_str: str = None, file_path
     multi_timeframe_ohlcva = read_multi_timeframe_ohlcva(expanded_date_range_str)
     base_patterns = multi_timeframe_base_patterns(multi_timeframe_ohlcva,
                                                   timeframe_shortlist=timeframe_shortlist)
+    base_patterns = trim_to_date_range(date_range_str, base_patterns)
     base_patterns.sort_index(inplace=True, level='date')
     base_patterns.to_csv(os.path.join(file_path, f'multi_timeframe_base_pattern.{date_range_str}.zip'),
                          compression='zip')
@@ -330,7 +331,7 @@ def update_band_status(inactive_bases: pt.DataFrame[BasePattern], ohlcva: pt.Dat
         inactive_bases.loc[start, f'{direction}_band_activated'] = \
             first_passed_candle(start, base['ttl'], expand(base[f'internal_{high_low}'], base['ATR']), ohlcva,
                                 timeframe, direction)
-        return inactive_bases
+    return inactive_bases
 
 
 def timeframe_effective_bases(_multi_timeframe_base_pattern, timeframe):

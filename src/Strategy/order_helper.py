@@ -9,7 +9,7 @@ class OrderSide(Enum):
     Sell = 'sell'
 
 
-class OrderBracketType(Enum):
+class BracketOrderType(Enum):
     Original = 'original_order'
     Stop = 'stop_order'
     Profit = 'profit'
@@ -43,7 +43,7 @@ def order_name(order: bt.Order):
     return name
 
 
-def add_order_info(order: bt.Order, signal, signal_index, order_type: OrderBracketType, order_id):
+def add_order_info(order: bt.Order, signal, signal_index, order_type: BracketOrderType, order_id):
     order.addinfo(custom_order_id=order_id)
     order.addinfo(signal=signal)
     order.addinfo(signal_index=signal_index)

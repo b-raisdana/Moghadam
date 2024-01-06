@@ -1,4 +1,5 @@
 from datetime import datetime
+from time import strptime
 from typing import Literal
 
 import backtrader as bt
@@ -7,9 +8,9 @@ from pandera import typing as pt
 
 from BasePattern import read_multi_timeframe_base_patterns
 from Config import config
-from PanderaDFM.BasePattern import MultiTimeframeBasePattern
+from PanderaDFM.BasePattern import MultiTimeframeBasePattern, BasePattern
 from PanderaDFM.SignalDf import SignalDf
-from Strategy.order_helper import OrderSide
+from Strategy.order_helper import OrderSide, BracketOrderType
 from Strategy.ExtendedStrategy import ExtendedStrategy
 from helper.helper import log_d, log_e, measure_time
 from ohlcv import read_base_timeframe_ohlcv
@@ -27,10 +28,25 @@ class BasePatternStrategy(ExtendedStrategy):
         super().__init__()
 
     def notify_order(self, order: bt.Order):
-        # todo: if the order were stopped, repeat the signal
-        # todo: if the order took profit, end signal and end band_pattern
-        # todo: if the signal end changed we have to update signal orders
-        log_e("Not Implemented!")
+        if order.status == bt.Order.Completed:
+            if order.info['custom_type'] == BracketOrderType.Stop.value:
+                # todo: if the order were stopped, repeat the signal
+                # todo: assure closing of the original and profit orders
+                # a bracket order stopp-loss executed.
+                index = order.info['signal_index']
+                signal = self.signal_df.loc[index]
+                log_d(f'repeating Signal  according to Stop-Loss on {SignalDf.to_str(index, signal)} @ {self.candle()}')
+                repeat_signal = signal.copy()
+                repeat_signal['original_index'] = index
+                repeat_signal['order_is_active'] = False
+                repeat_signal['original_order_id'] = pd.NA
+                repeat_signal['end'] = pd.NA
+                self.signal_df.loc[self.candle().date] = repeat_signal
+                log_d(f"repeated Signal:{SignalDf.to_str(self.candle().date, repeat_signal)}@{self.candle().date} ")
+            if order.info['custom_type'] == BracketOrderType.Profit.value:
+                # todo: if the order took profit, end signal and end band_pattern
+                # todo: assure closing of the original and stop orders
+                log_d(f'Took profit on Signal:{SignalDf.to_str(index, signal)}@{self.candle().date}')
 
     def overlapping_base_patterns(self, base_patterns: pt.DataFrame[MultiTimeframeBasePattern] = None) \
             -> pt.DataFrame[MultiTimeframeBasePattern]:
@@ -113,17 +129,22 @@ class BasePatternStrategy(ExtendedStrategy):
         log_d(f"added Signal {SignalDf.to_str(new_signal.index[0], new_signal.iloc[0])} @ {self.candle().date}")
         return self.signal_df
 
-    def candle_overlaps_base(self, base_pattern):
-        return (
-                self.candle().high > base_pattern['internal_low'] and
-                self.candle().low < base_pattern['internal_high'])
+    def candle_overlaps_base(self, base_pattern: pt.Series[BasePattern]):
+        if self.candle().date == strptime("2024-01-03 02:36:00+00:00", "%Y-%m-%d %H:%M:%S%z"):
+            pass
+        if self.movement_intersect(base_pattern['internal_low'], base_pattern['internal_high'])>0:
+            return True
+        else:
+            return False
 
     # @measure_time
     def extract_signals(self) -> None:
-        upper_band_active_overlapping_base_patterns = self.overlapping_base_patterns(
+        if self.candle().date == strptime("2024-01-03 02:36:00+00:00", "%Y-%m-%d %H:%M:%S%z"):
+            pass
+        upper_overlapping_base_patterns = self.overlapping_base_patterns(
             self.no_signal_active_base_patterns(band='upper', base_patterns=self.base_patterns))
         base_pattern: pt.Series[MultiTimeframeBasePattern]
-        for (timeframe, start), base_pattern in upper_band_active_overlapping_base_patterns.iterrows():
+        for (timeframe, start), base_pattern in upper_overlapping_base_patterns.iterrows():
             if self.candle_overlaps_base(base_pattern):
                 self.add_signal(timeframe, start, base_pattern, band='upper')
                 self.base_patterns.loc[(timeframe, start), 'upper_band_signal_generated'] = self.candle().date
@@ -150,3 +171,7 @@ class BasePatternStrategy(ExtendedStrategy):
         print('Starting Portfolio Value: %.2f' % cerebro.broker.getvalue())
         cerebro.run()
         print('Final Portfolio Value: %.2f' % cerebro.broker.getvalue())  # todo: test
+    def next(self):
+        # todo: if the signal end changed we have to update signal orders.
+        # todo: check It only happens when order takes profit. In this case both of sell and
+        super().next()

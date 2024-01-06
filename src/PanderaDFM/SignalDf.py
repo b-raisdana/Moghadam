@@ -100,17 +100,17 @@ class SignalDf(ExtendedDf):
             raise Exception(f"Unexpected side({signal['side']}) in {signal} should be 'buy' or 'sell'.")
         return False
 
-    @staticmethod
-    def stopped(signal: pt.Series[SignalDFM], tick: BaseTickStructure) -> bool:
-        if signal['side'] == 'buy':  # todo: test
-            if tick.low < signal['stop_loss']:
-                return True
-        elif signal['side'] == 'sell':
-            if tick.high > signal['stop_loss']:
-                return True
-        else:
-            raise Exception(f"Unexpected side({signal['side']}) in {signal} should be 'buy' or 'sell'.")
-        return False
+    # @staticmethod
+    # def stopped(signal: pt.Series[SignalDFM], tick: BaseTickStructure) -> bool:
+    #     if signal['side'] == 'buy':  # todo: test
+    #         if tick.low < signal['stop_loss']:
+    #             return True
+    #     elif signal['side'] == 'sell':
+    #         if tick.high > signal['stop_loss']:
+    #             return True
+    #     else:
+    #         raise Exception(f"Unexpected side({signal['side']}) in {signal} should be 'buy' or 'sell'.")
+    #     return False
 
     @staticmethod
     def execution_type(signal):
