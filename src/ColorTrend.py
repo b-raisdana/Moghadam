@@ -10,9 +10,9 @@ def generate_multi_timeframe_color_trend_pivots():
     """
         trend pivots:
             find any sequence of same color candles
-            marge same color boundaries separated with a reverse color trend < 1 ATR
-                each one with movement >= 3 ATR
-                    follwed with a reverse color trend >= 1 ATR
+            marge same color boundaries separated with a reverse color trend < 1 atr
+                each one with movement >= 3 atr
+                    follwed with a reverse color trend >= 1 atr
     :return:
     """
     # todo: implement  generate_multi_timeframe_same_color_trend_pivots

@@ -8,7 +8,6 @@ from pandera import typing as pt, Timestamp
 from Config import config, CandleSize
 from PanderaDFM.BasePattern import BasePattern, MultiTimeframeBasePattern
 from PanderaDFM.OHLCVA import OHLCVA, MultiTimeframeOHLCVA
-from PanderaDFM.Pivot import MultiTimeframePivot
 from atr import read_multi_timeframe_ohlcva
 from helper.data_preparation import single_timeframe, concat, cast_and_validate, empty_df, read_file, \
     anti_pattern_timeframe, \
@@ -18,18 +17,18 @@ from helper.helper import date_range, date_range_to_string, measure_time
 
 def add_candle_size(ohlcva: pt.DataFrame[OHLCVA]) -> pt.DataFrame[OHLCVA]:
     """
-    if the candle       (high - low) <= 80% ATR         the candle is Spinning
-    if the candle 80% ATR < (high - low) <= 120% ATR    the candle is Standard
-    if the candle 120% ATR < (high - low) <= 250% ATR   the candle is Long
-    if the candle 250% ATR < (high - low)               the candle is Spike
-    if the candle (high - low) <= 80% ATR the candle is Spinning
-    if the candle (high - low) <= 80% ATR the candle is Spinning
+    if the candle       (high - low) <= 80% atr         the candle is Spinning
+    if the candle 80% atr < (high - low) <= 120% atr    the candle is Standard
+    if the candle 120% atr < (high - low) <= 250% atr   the candle is Long
+    if the candle 250% atr < (high - low)               the candle is Spike
+    if the candle (high - low) <= 80% atr the candle is Spinning
+    if the candle (high - low) <= 80% atr the candle is Spinning
     :param ohlcva:
     :return:
     """
-    assert ohlcva['ATR'].notna().all()
+    assert ohlcva['atr'].notna().all()
     ohlcva['length'] = ohlcva['high'] - ohlcva['low']
-    ohlcva['atr_ratio'] = ohlcva['length'] / ohlcva['ATR']
+    ohlcva['atr_ratio'] = ohlcva['length'] / ohlcva['atr']
     ohlcva['size'] = pd.Series(dtype=str)
     ohlcva.loc[(ohlcva['atr_ratio'] <= CandleSize.Spinning.value.max), 'size'] = CandleSize.Spinning.name
     ohlcva.loc[(CandleSize.Standard.value.min < ohlcva['atr_ratio'])
@@ -46,7 +45,7 @@ def sequence_of_spinning(ohlcva: pt.DataFrame[OHLCVA], timeframe: str, number_of
     Return the index of Spinning candles followed by N Spinning candles.
 
     Parameters:
-    - ohlcva: DataFrame with columns 'open', 'high', 'low', 'close', 'volume', and 'ATR'.
+    - ohlcva: DataFrame with columns 'open', 'high', 'low', 'close', 'volume', and 'atr'.
 
     Example usage:
     Assuming ohlcva is a DataFrame with columns 'open', 'high', 'low', 'close', and 'volume'
@@ -168,7 +167,9 @@ def add_high_and_low(timeframe_base_patterns: pt.DataFrame['BasePattern'], ohlcv
 @measure_time
 def timeframe_base_pattern(ohlcva: pt.DataFrame[OHLCVA], a_pattern_ohlcva: pt.DataFrame[OHLCVA],
                            a_trigger_ohlcva: pt.DataFrame[OHLCVA], timeframe: str,
-                           number_of_base_spinning_candles: int = None) -> pt.DataFrame[BasePattern]:
+                           base_timeframe_ohlcva: pt.DataFrame[OHLCVA],
+                           number_of_base_spinning_candles: int = None,
+                           ) -> pt.DataFrame[BasePattern]:
     if number_of_base_spinning_candles is None:
         number_of_base_spinning_candles = config.base_pattern_number_of_spinning_candles
 
@@ -179,16 +180,19 @@ def timeframe_base_pattern(ohlcva: pt.DataFrame[OHLCVA], a_pattern_ohlcva: pt.Da
                                                  timeframe)
     timeframe_base_patterns['ttl'] = \
         timeframe_base_patterns.index + pd.to_timedelta(timeframe) * config.base_pattern_ttl
-    if timeframe == '1h':
-        pass
-    timeframe_base_patterns['ATR'] = ohlcva.loc[timeframe_base_patterns.index, 'ATR'].tolist()
+    timeframe_base_patterns['atr'] = ohlcva.loc[timeframe_base_patterns.index, 'atr'].tolist()
     a_pattern_times = to_timeframe(timeframe_base_patterns.index, anti_pattern_timeframe(timeframe))
-    timeframe_base_patterns['a_pattern_ATR'] = a_pattern_ohlcva.loc[a_pattern_times, 'ATR'].tolist()
+    timeframe_base_patterns['a_pattern_atr'] = a_pattern_ohlcva.loc[a_pattern_times, 'atr'].tolist()
     a_trigger_times = to_timeframe(timeframe_base_patterns.index, anti_trigger_timeframe(timeframe))
-    timeframe_base_patterns['a_trigger_ATR'] = a_trigger_ohlcva.loc[a_trigger_times, 'ATR'].tolist()
-    update_band_status(timeframe_base_patterns, ohlcva, timeframe, direction='upper')
-    update_band_status(timeframe_base_patterns, ohlcva, timeframe, direction='below')
+    timeframe_base_patterns['a_trigger_atr'] = a_trigger_ohlcva.loc[a_trigger_times, 'atr'].tolist()
+    if timeframe == '15min':
+        pass
+    update_band_status(timeframe_base_patterns, base_timeframe_ohlcva, timeframe, direction='upper')
+    update_band_status(timeframe_base_patterns, base_timeframe_ohlcva, timeframe, direction='below')
     timeframe_base_patterns['end'] = pd.Series(dtype='datetime64[ns, UTC]')
+    timeframe_base_patterns['size'] = timeframe_base_patterns['internal_high'] - timeframe_base_patterns['internal_low']
+    timeframe_base_patterns['base_timeframe_atr'] = pd.Series(dtype=float)
+    timeframe_base_patterns['ignore_backtesting'] = pd.Series(dtype=bool)
     try:
         timeframe_base_patterns = cast_and_validate(timeframe_base_patterns, BasePattern, zero_size_allowed=True)
     except Exception as e:
@@ -228,8 +232,28 @@ def update_zero_trigger_candles(timeframe_base_patterns: pt.DataFrame['BasePatte
     return timeframe_base_patterns
 
 
+def verify_backtesting_ability_by_base_timeframe_atr(base_patterns: pt.DataFrame[MultiTimeframeBasePattern],
+                                                     expanded_multi_timeframe_ohlcva: pt.DataFrame[
+                                                         MultiTimeframeOHLCVA]):
+    base_timeframe_ohlcva = single_timeframe(expanded_multi_timeframe_ohlcva, config.timeframes[0])
+    """
+    The base patterns with size of less than
+    """
+    merged_df = pd.merge(base_patterns.reset_index(), base_timeframe_ohlcva, left_on='date', right_index=True,
+                         how='left', suffixes=("", "_y"))
+    merged_df = merged_df.set_index(['timeframe', 'date'])
+    base_patterns['base_timeframe_atr'] = merged_df['atr_y']
+    base_patterns['ignore_backtesting'] = (
+            base_patterns['size'] <
+            (
+                    base_patterns['base_timeframe_atr'] * config.base_pattern_small_to_trace_in_base_candles_atr_factor
+            )
+    )
+    return base_patterns
+
+
 def multi_timeframe_base_patterns(expanded_multi_timeframe_ohlcva: pt.DataFrame[MultiTimeframeOHLCVA],
-                                  timeframe_shortlist: List['str'] = None) -> pt.DataFrame[MultiTimeframePivot]:
+                                  timeframe_shortlist: List['str'] = None) -> pt.DataFrame[MultiTimeframeBasePattern]:
     if timeframe_shortlist is None:
         # the last 3 timeframes will not have an anti_trigger_timeframe!
         timeframe_shortlist = config.timeframes[:-2]
@@ -237,15 +261,20 @@ def multi_timeframe_base_patterns(expanded_multi_timeframe_ohlcva: pt.DataFrame[
         if any([t in timeframe_shortlist for t in config.timeframes[-2:]]):
             raise Exception(f"timeframes {timeframe_shortlist} should have Anti-Trigger time!")
     _multi_timeframe_base_patterns = empty_df(MultiTimeframeBasePattern)
+    base_timeframe_ohlcva = single_timeframe(expanded_multi_timeframe_ohlcva, config.timeframes[0])
     for timeframe in timeframe_shortlist:
         ohlcva = single_timeframe(expanded_multi_timeframe_ohlcva, timeframe)
         a_pattern_ohlcva = single_timeframe(expanded_multi_timeframe_ohlcva, anti_pattern_timeframe(timeframe))
         a_trigger_ohlcva = single_timeframe(expanded_multi_timeframe_ohlcva, anti_trigger_timeframe(timeframe))
-        _timeframe_bases = timeframe_base_pattern(ohlcva, a_pattern_ohlcva, a_trigger_ohlcva, timeframe)
+        _timeframe_bases = timeframe_base_pattern(ohlcva, a_pattern_ohlcva, a_trigger_ohlcva, timeframe,
+                                                  base_timeframe_ohlcva, )
         _timeframe_bases['timeframe'] = timeframe
-        _timeframe_bases.set_index('timeframe', append=True, inplace=True)
+        _timeframe_bases = _timeframe_bases.set_index('timeframe', append=True)
         _timeframe_bases = _timeframe_bases.swaplevel().sort_index(level='date')
         _multi_timeframe_base_patterns = concat(_multi_timeframe_base_patterns, _timeframe_bases)
+    _multi_timeframe_base_patterns = verify_backtesting_ability_by_base_timeframe_atr(_multi_timeframe_base_patterns,
+                                                                                      expanded_multi_timeframe_ohlcva)
+    assert _multi_timeframe_base_patterns['ignore_backtesting'].notna().all()
     _multi_timeframe_base_patterns = cast_and_validate(_multi_timeframe_base_patterns, MultiTimeframeBasePattern)
     return _multi_timeframe_base_patterns
 
@@ -267,7 +296,7 @@ def generate_multi_timeframe_base_patterns(date_range_str: str = None, file_path
     base_patterns = multi_timeframe_base_patterns(multi_timeframe_ohlcva,
                                                   timeframe_shortlist=timeframe_shortlist)
     base_patterns = trim_to_date_range(date_range_str, base_patterns)
-    base_patterns.sort_index(inplace=True, level='date')
+    base_patterns=base_patterns.sort_index(level='date')
     base_patterns.to_csv(os.path.join(file_path, f'multi_timeframe_base_pattern.{date_range_str}.zip'),
                          compression='zip')
 
@@ -283,16 +312,16 @@ def read_multi_timeframe_base_patterns(date_range_str: str = None) -> pt.DataFra
     return result
 
 
-def first_passed_candle(base_index: datetime, end, level: float, ohlcva: pt.DataFrame[OHLCVA], timeframe,
+def first_passed_candle(base_index: datetime, end, level: float, base_timeframe_ohlcva: pt.DataFrame[OHLCVA], timeframe,
                         direction: Literal['upper', 'below']) \
         -> Union[datetime, None]:
     if direction == 'upper':
-        high_low = 'low'  # below ATR should activate upper band
+        high_low = 'low'  # below atr should activate upper band
 
         def compare(x, y):
             return x > y
     elif direction == 'below':
-        high_low = 'high'  # above ATR should activate bellow band
+        high_low = 'high'  # above atr should activate bellow band
 
         def compare(x, y):
             return x < y
@@ -300,21 +329,22 @@ def first_passed_candle(base_index: datetime, end, level: float, ohlcva: pt.Data
         raise Exception(f"band should be 'upper' or 'below' but '{direction}' given!")
     start = base_index + pd.to_timedelta(
         timeframe) * config.base_pattern_index_shift_after_last_candle_in_the_sequence
-    passing_candles = ohlcva.sort_index(level='date').loc[start:end].loc[compare(level, ohlcva[high_low])]
+    passing_candles = base_timeframe_ohlcva.sort_index(level='date').loc[start:end].loc[
+        compare(level, base_timeframe_ohlcva[high_low])]
     if len(passing_candles) > 0:
         return passing_candles.index[0]
     return None
 
 
-def update_band_status(inactive_bases: pt.DataFrame[BasePattern], ohlcva: pt.DataFrame[OHLCVA], timeframe,
-                       direction: Literal['upper', 'below']) -> pt.DataFrame[BasePattern]:
+def update_band_status(inactive_bases: pt.DataFrame[BasePattern], base_timeframe_ohlcva: pt.DataFrame[OHLCVA],
+                       timeframe, direction: Literal['upper', 'below']) -> pt.DataFrame[BasePattern]:
     if direction == 'upper':
-        high_low = 'low'  # below ATR should activate upper band
+        high_low = 'low'  # below atr should activate upper band
 
         def expand(x, y):
             return x - y
     elif direction == 'below':
-        high_low = 'high'  # above ATR should activate upper band
+        high_low = 'high'  # above atr should activate upper band
 
         def expand(x, y):
             return x + y
@@ -329,8 +359,8 @@ def update_band_status(inactive_bases: pt.DataFrame[BasePattern], ohlcva: pt.Dat
 
     for start, base in inactive_bases.iterrows():
         inactive_bases.loc[start, f'{direction}_band_activated'] = \
-            first_passed_candle(start, base['ttl'], expand(base[f'internal_{high_low}'], base['ATR']), ohlcva,
-                                timeframe, direction)
+            first_passed_candle(start, base['ttl'], expand(base[f'internal_{high_low}'], base['atr']),
+                                base_timeframe_ohlcva, timeframe, direction)
     return inactive_bases
 
 

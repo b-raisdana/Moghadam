@@ -1,6 +1,9 @@
+from datetime import datetime
 from enum import Enum
+from typing import Union
 
 import backtrader as bt
+from pandas import Timestamp
 
 
 # switching to backrader
@@ -43,7 +46,7 @@ def order_name(order: bt.Order):
     return name
 
 
-def add_order_info(order: bt.Order, signal, signal_index, order_type: BracketOrderType, order_id):
+def add_order_info(order: bt.Order, signal, signal_index: Union[datetime, Timestamp], order_type: BracketOrderType, order_id):
     order.addinfo(custom_order_id=order_id)
     order.addinfo(signal=signal)
     order.addinfo(signal_index=signal_index)
@@ -64,8 +67,8 @@ def order_prices(order: bt.Order):
 
 
 def order_is_open(order):
-    return order.status in [bt.Order.Created, bt.Order.Accepted, bt.Order.Submitted, bt.Order.Partial]  # todo: test
+    return order.status in [bt.Order.Created, bt.Order.Accepted, bt.Order.Submitted, bt.Order.Partial]
 
 
 def order_is_closed(order):
-    return order.status in [bt.Order.Canceled, bt.Order.Expired, bt.Order.Rejected]  # todo: test
+    return order.status in [bt.Order.Canceled, bt.Order.Expired, bt.Order.Rejected]

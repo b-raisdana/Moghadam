@@ -6,7 +6,7 @@ from PanderaDFM.MultiTimeframe import MultiTimeframe
 
 
 class OHLCVA(OHLCV):
-    ATR: pt.Series[float] = pandera.Field(nullable=True)
+    atr: pt.Series[float] = pandera.Field(nullable=True)
 
 
 class MultiTimeframeOHLCVA(OHLCVA, MultiTimeframe):

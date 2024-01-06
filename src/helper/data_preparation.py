@@ -2,7 +2,7 @@ import re
 import string
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Callable, Union, List, Type, Any
+from typing import Callable, Union, List, Type, Any, Dict
 from zipfile import BadZipFile
 
 import numpy as np
@@ -286,7 +286,7 @@ def read_with_timeframe(data_frame_type: str, date_range_str: str, file_path: st
             df.index = df.index.tz_localize('UTC')
 
     if 'multi_timeframe' in data_frame_type:
-        df.set_index('timeframe', append=True, inplace=True)
+        df = df.set_index('timeframe', append=True, )
         df = df.swaplevel()
 
     return df
@@ -342,6 +342,7 @@ def to_timeframe(time: Union[DatetimeIndex, datetime, Timestamp], timeframe: str
             else:  # isinstance(dt, Timestamp)
                 rounded_dt = pd.Timestamp(rounded_timestamp * 10 ** 9, tz=dt.tzinfo)
         return rounded_dt
+
     # Calculate the timedelta for the specified timeframe
     timeframe_timedelta = pd.to_timedelta(timeframe)
     seconds_in_timeframe = timeframe_timedelta.total_seconds()
@@ -436,7 +437,7 @@ def multi_timeframe_times_tester(multi_timeframe_df: pt.DataFrame[MultiTimeframe
         _timeframe_df = single_timeframe(multi_timeframe_df, timeframe)
         try:
             result = result & times_tester(_timeframe_df, date_range_str, timeframe, return_bool,
-                                       ignore_processing_date_range, processing_date_range)
+                                           ignore_processing_date_range, processing_date_range)
         except Exception as e:
             raise e
     return result
@@ -489,9 +490,13 @@ def cast_and_validate(data, model_class: Type[Pandera_DFM_Type], return_bool: bo
             log("Not tested", severity=LogSeverity.ERROR)
             raise Exception(f"Expected to be unique but found duplicates:{data.index[data.index.duplicated()]}")
     try:
-        data = apply_as_type(data, model_class, return_bool)
+        data = apply_as_type(data, model_class)
     except KeyError as e:
-        raise e
+        if return_bool:
+            log_d(e)
+            return False
+        else:
+            raise e
     if return_bool:
         try:
             model_class.validate(data, lazy=True)
@@ -501,7 +506,10 @@ def cast_and_validate(data, model_class: Type[Pandera_DFM_Type], return_bool: bo
         except Exception as e:
             raise e
     else:
-        model_class.validate(data, lazy=True, )
+        try:
+            model_class.validate(data, lazy=True, )
+        except Exception as e:
+            raise e
     if return_bool:
         return True
     try:
@@ -516,15 +524,13 @@ def cast_and_validate(data, model_class: Type[Pandera_DFM_Type], return_bool: bo
     return data
 
 
-def apply_as_type(data, model_class, return_bool: bool = False) -> pd.DataFrame:
+def apply_as_type(data, model_class) -> pd.DataFrame:
     as_types = {}
     _all_annotations = all_annotations(model_class)
     for attr_name, attr_type in _all_annotations.items():
-        if attr_name not in data.dtypes.keys():
-            if return_bool:
-                return False
-            else:
-                raise KeyError(f"'{attr_name}' in {model_class.__name__} but not in data:{data.dtypes}")
+        if (attr_name not in data.dtypes.keys()
+                and (hasattr(data.index, 'names') and attr_name not in data.index.names)):
+            raise KeyError(f"'{attr_name}' in {model_class.__name__} but not in data:{data.dtypes}")
         try:
             if 'timestamp' in str(attr_type).lower() and 'timestamp' not in str(data.dtypes.loc[attr_name]).lower():
                 as_types[attr_name] = 'datetime64[ns, UTC]'
@@ -552,6 +558,109 @@ def apply_as_type(data, model_class, return_bool: bool = False) -> pd.DataFrame:
         except Exception as e:
             raise e
     return data
+
+
+def cast_and_validate2(data, model_class: Type[Pandera_DFM_Type], return_bool: bool = False,
+                       zero_size_allowed: bool = False, unique_index: bool = False) -> Any:
+    if len(data) == 0:
+        if not zero_size_allowed:
+            raise Exception('Zero size data!')
+        else:
+            if return_bool:
+                return True
+            else:
+                return empty_df(model_class)
+    if unique_index:
+        if not data.index.is_unique:
+            log("Not tested", severity=LogSeverity.ERROR)
+            raise Exception(f"Expected to be unique but found duplicates:{data.index[data.index.duplicated()]}")
+    try:
+        column_annotations = column_dtypes(data, model_class)
+        data = apply_as_type2(data, model_class, column_annotations)
+    except KeyError as e:
+        if return_bool:
+            log_d(e)
+            return False
+        else:
+            raise e
+    if return_bool:
+        try:
+            model_class.validate(data, lazy=True)
+        except pandera.errors.SchemaErrors as exc:
+            log(str(exc.schema_errors), LogSeverity.WARNING, stack_trace=False)
+            return False
+        except Exception as e:
+            raise e
+    else:
+        try:
+            model_class.validate(data, lazy=True, )
+        except Exception as e:
+            raise e
+    if return_bool:
+        return True
+    # try:
+    #     columns_to_keep: list[str] = [column for column in model_class.__fields__.keys() if
+    #                                   column not in ['timeframe', 'date']]
+    # except Exception as e:
+    #     raise e
+    try:
+        data = data[column_annotations.keys()]
+    except Exception as e:
+        raise e
+    return data
+
+
+def apply_as_type2(data, model_class, _column_dtypes) -> pd.DataFrame:
+    as_types = {}
+    for attr_name, attr_type in _column_dtypes.items():
+        if (attr_name not in data.dtypes.keys()
+                and (hasattr(data.index, 'names') and attr_name not in data.index.names)):
+            raise KeyError(f"'{attr_name}' in {model_class.__name__} but not in data:{data.dtypes}")
+        try:
+            if 'timestamp' in str(attr_type).lower() and 'timestamp' not in str(data.dtypes.loc[attr_name]).lower():
+                as_types[attr_name] = 'datetime64[ns, UTC]'
+            if 'datetimetzdtype' in str(attr_type).lower():
+
+                if 'datetimetzdtype' not in str(data.dtypes.loc[attr_name]).lower():
+                    as_types[attr_name] = 'datetime64[ns, UTC]'
+                elif 'timedelta' in str(attr_type).lower() and 'timedelta' not in str(
+                        data.dtypes.loc[attr_name]).lower():
+                    as_types[attr_name] = 'timedelta64[s]'
+                    # as_types[attr_name] = pandera.typing.Timedelta
+            elif 'pandera.typing.pandas.Series' in str(attr_type):
+                astype = str(attr_type).replace('pandera.typing.pandas.Series[', '').replace(']', '')
+                trans_table = str.maketrans('', '', string.digits)
+                astype = astype.translate(trans_table)
+                if (astype != 'str' and
+                        attr_name in data.columns and astype not in str(data.dtypes.loc[attr_name]).lower()):
+                    as_types[attr_name] = astype
+        except Exception as e:
+            raise e
+    if len(as_types) > 0:
+        # log(as_types)
+        try:
+            data = data.astype(as_types)
+        except Exception as e:
+            raise e
+    return data
+
+
+def column_dtypes(data, model_class) -> Dict[str, DataType]:
+    _all_annotations = all_annotations(model_class)
+    data_index_names = index_names(data)
+    column_annotations = {k: a for k, a in _all_annotations.items() if k not in data_index_names}
+    return column_annotations
+
+
+def index_names(data):
+    _index_names = []
+    if hasattr(data.index, 'names'):
+        _index_names += data.index.names
+    elif hasattr(data.index, 'name'):
+        if data.index.name is None or data.index.name == "":
+            raise Exception('Set name of index as title!')
+        _index_names = [data.index.name]
+    return _index_names
 
 
 def trigger_timeframe(timeframe):
@@ -707,7 +816,7 @@ def empty_df(model_class: Type[Pandera_DFM_Type]) -> pd.DataFrame:
     _empty_df = _empty_df.astype(as_types)
     if len(index_fields(model_class).keys()) == 0:
         pass
-    _empty_df.set_index(list(index_fields(model_class).keys()), inplace=True)
+    _empty_df = _empty_df.set_index(list(index_fields(model_class).keys()))
     _empty_df = model_class(_empty_df)
     return _empty_df
 
@@ -762,7 +871,7 @@ def shift_over(needles: Axes, reference: Axes, side: str, start=None, end=None) 
     else:
         raise Exception('side should be either "forward" or "backward".')
     df = pd.DataFrame(index=forward.append(backward).unique())
-    df.sort_index(inplace=True)
+    df = df.sort_index()
     if side == 'forward':
         df.loc[forward, 'forward'] = forward
         df['forward'] = df['forward'].ffill().shift(1)

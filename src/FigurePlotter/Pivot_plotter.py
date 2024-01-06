@@ -29,7 +29,7 @@ def plot_multi_timeframe_pivots(multi_timeframe_pivots: pt.DataFrame[MultiTimefr
                                        low=ohlcv['low'],
                                        close=ohlcv['close'], name=f'ohlcv{timeframe}'))
 
-    multi_timeframe_pivots.sort_index(level='date', inplace=True)
+    multi_timeframe_pivots = multi_timeframe_pivots.sort_index(level='date')
     for (pivot_timeframe, pivot_start), pivot_info in multi_timeframe_pivots.iterrows():
         pivot_name = Pivot.name(pivot_start, pivot_timeframe, pivot_info)
         pivot_description = Pivot.description(pivot_start, pivot_timeframe, pivot_info)

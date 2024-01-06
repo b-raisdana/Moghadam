@@ -10,8 +10,6 @@ from enum import Enum
 import numpy as np
 import pandas as pd
 
-from helper.helper import log
-
 
 # class CandleSize(Enum):
 #     Spinning = (0.0, 0.80)
@@ -99,21 +97,21 @@ class Config():
 
         self.load_data_to_meta_trader = False
 
-        self.ATR_timeperiod = 14
-        self.ATR_safe_start_expand_multipliers = 1
+        self.atr_timeperiod = 14
+        self.atr_safe_start_expand_multipliers = 1
 
         self.base_pattern_ttl = 4 * 4 * 4 * 4
         self.base_pattern_number_of_spinning_candles = 2
         self.base_pattern_candle_min_backward_coverage = 0.8
-        self.base_pattern_index_shift_after_last_candle_in_the_sequence = 1 # >1 means make sure the last candle is closed
+        self.base_pattern_index_shift_after_last_candle_in_the_sequence = 1  # >1 means make sure the last candle is closed
         self.base_pattern_order_limit_price_margin_percentage = 0.1
-        self.base_pattern_order_limit_price_margin_percentage = 5
-        self.base_pattern_risk_reward_rate = 5 # 500%
-
+        self.base_pattern_order_limit_price_margin_percentage = 0.05  # 5%
+        self.base_pattern_risk_reward_rate = 5  # 500%
+        # base patterns with size of less than n * atr (of base time frame) are not enough big to be back tested.
+        self.base_pattern_small_to_trace_in_base_candles_atr_factor = 3
         self.initial_cash = 1000.0
-        self.risk_per_order_percent = 0.01 # 1%
-        self.capital_max_total_risk_percentage = 0.1 # 10%
-
+        self.risk_per_order_percent = 0.01  # 1%
+        self.capital_max_total_risk_percentage = 0.1  # 10%
 
         self.id = ""
 

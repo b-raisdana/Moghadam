@@ -31,7 +31,7 @@ def plot_multi_timeframe_peaks_n_valleys(multi_timeframe_peaks_n_valleys: pt.Dat
 
 
 @measure_time
-def plot_peaks_n_valleys(ohlcva: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close', 'ATR']),
+def plot_peaks_n_valleys(ohlcva: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close', 'atr']),
                          peaks: pd = pd.DataFrame(columns=['high', 'timeframe']),
                          valleys: pd = pd.DataFrame(columns=['low', 'timeframe']),
                          name: str = '', show: bool = True, save: bool = True) -> plgo.Figure:
@@ -39,7 +39,7 @@ def plot_peaks_n_valleys(ohlcva: pd = pd.DataFrame(columns=['open', 'high', 'low
         Plot candlesticks with highlighted peaks and valleys.
 
         Parameters:
-            ohlcva (pd.DataFrame): DataFrame containing OHLC data plus ATR.
+            ohlcva (pd.DataFrame): DataFrame containing OHLC data plus atr.
             peaks (pd.DataFrame): DataFrame containing peaks data.
             valleys (pd.DataFrame): DataFrame containing valleys data.
             name (str): The name of the plot.

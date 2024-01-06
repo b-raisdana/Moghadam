@@ -55,7 +55,7 @@ from helper.helper import log
 #             low_time: pt.Series[Timestamp]
 #             movement: pt.Series[float]
 #             strength: pt.Series[float]
-#             ATR: pt.Series[float]
+#             atr: pt.Series[float]
 #             duration: pt.Series[timedelta]
 #             """
 #             same_kind_overlaps.loc[start] = trend
@@ -71,7 +71,7 @@ from helper.helper import log
 #             movement = internal_high - internal_low
 #             duration = end_of_merged - start_of_merged
 #             strength = movement / (duration / to_timedelta(timeframe))
-#             atr = sum(trends_to_merge['ATR'] / trends_to_merge['duration'])
+#             atr = sum(trends_to_merge['atr'] / trends_to_merge['duration'])
 #             merged_trend = pd.Series({
 #                 'end': end_of_merged,
 #                 'bull_bear_side': bull_bear_side_of_merged,
@@ -82,7 +82,7 @@ from helper.helper import log
 #                 'low_time': low_time,
 #                 'movement': movement,
 #                 'strength': strength,
-#                 'ATR': atr,
+#                 'atr': atr,
 #                 'duration': duration,
 #             })
 #             trends.loc[start_of_merged] = merged_trend

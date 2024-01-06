@@ -1,6 +1,6 @@
 #
 # def active_tops(multi_timeframe_peaks_n_valleys: pt.DataFrame[PeaksValleys]):
-#     _levels = pd.DataFrame(columns=['end', 'hits', 'ATR', 'breakout', 'margin', 'width'], index=['timeframe', 'date'])
+#     _levels = pd.DataFrame(columns=['end', 'hits', 'atr', 'breakout', 'margin', 'width'], index=['timeframe', 'date'])
 #     for timeframe in config.timeframes[2::-1]:
 #         timeframe_tops = major_peaks_n_valleys(multi_timeframe_peaks_n_valleys, timeframe)
 #         overlapping_peaks_n_valleys = []

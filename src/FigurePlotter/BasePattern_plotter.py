@@ -1,5 +1,6 @@
 from typing import List, Union
 
+import pandas as pd
 from pandera import typing as pt
 from plotly import graph_objects as plgo
 
@@ -19,6 +20,7 @@ MAX_NUMBER_OF_PLOT_SCATTERS = 5000
 def plot_single_timeframe_base_pattern(single_timeframe_ohlcva: pt.DataFrame[OHLCV],
                                        timeframe_base_patterns: pt.DataFrame[BasePattern],
                                        base_ohlcv: Union[pt.DataFrame[OHLCV] | None],
+                                       timeframe: str,
                                        name: str = '', show: bool = True,
                                        html_path: str = '', save: bool = True) -> plgo.Figure:
     if len(single_timeframe_ohlcva) == 0:
@@ -26,16 +28,20 @@ def plot_single_timeframe_base_pattern(single_timeframe_ohlcva: pt.DataFrame[OHL
     fig: plgo.Figure = plot_ohlcva(single_timeframe_ohlcva, base_ohlcv=base_ohlcv, name=name, show=False, save=False)
     # remained_number_of_scatters = MAX_NUMBER_OF_PLOT_SCATTERS
     timeframe_base_patterns['effective_end'] = timeframe_base_patterns[['end', 'ttl']].min(axis=1, skipna=True)
-    ohlcva_end = single_timeframe_ohlcva.index[-1]
+    ohlcva_end = single_timeframe_ohlcva.index[-1] + pd.to_timedelta(timeframe)
     timeframe_base_patterns.loc[timeframe_base_patterns['effective_end'] > ohlcva_end, 'effective_end'] = ohlcva_end
     assert timeframe_base_patterns['effective_end'].notna().all()
-    for (timeframe, _start), base_pattern in timeframe_base_patterns.iterrows():
-        xs = [_start, base_pattern['effective_end'], base_pattern['effective_end'], _start]
+    for (timeframe, index_date), base_pattern in timeframe_base_patterns.iterrows():
+        start = index_date + \
+                pd.to_timedelta(timeframe) * config.base_pattern_index_shift_after_last_candle_in_the_sequence
+        # mid_level = (base_pattern['internal_high'] + base_pattern['internal_low']) / 2
+        xs = [start, base_pattern['effective_end'], base_pattern['effective_end'],
+              start]
         ys = [base_pattern['internal_low'], base_pattern['internal_low'], \
               base_pattern['internal_high'], base_pattern['internal_high']]
         fill_color = 'blue'
-        name = MultiTimeframeBasePattern.name_repr(_start, timeframe, base_pattern)
-        text = MultiTimeframeBasePattern.full_repr(_start, timeframe, base_pattern)
+        name = MultiTimeframeBasePattern.name_repr(index_date, timeframe, base_pattern)
+        text = MultiTimeframeBasePattern.full_repr(index_date, timeframe, base_pattern)
         fig.add_scatter(x=xs, y=ys, fill="toself",  # fillcolor=fill_color,
                         fillpattern=dict(fgopacity=0.5),
                         name=name,
@@ -46,26 +52,26 @@ def plot_single_timeframe_base_pattern(single_timeframe_ohlcva: pt.DataFrame[OHL
                         hoverinfo='text'
                         )
         if base_pattern['below_band_activated'] is not None:
-            # add a vertical line equal to ATR of BasePattern at the time price chart goes 1 ATR under below edge.
-            xs = [base_pattern['below_band_activated'], base_pattern['below_band_activated']]
-            ys = [base_pattern['internal_low'], base_pattern['internal_low'] - base_pattern['ATR']]
+            # add a vertical line equal to atr of BasePattern at the time price chart goes 1 atr under below edge.
+            xs = [start, base_pattern['below_band_activated']]
+            ys = [base_pattern['internal_low'], base_pattern['internal_high'] + base_pattern['atr']]
             fig.add_scatter(x=xs, y=ys,
                             name=name,
                             text=text,
-                            line=dict(color=fill_color, width=1),
+                            line=dict(color='yellow', width=1),
                             mode='lines',  # +text',
                             showlegend=False,
                             legendgroup=name,
                             hovertemplate="%{text}",
                             )
-        if base_pattern['below_band_activated'] is not None:
-            # add a vertical line equal to ATR of BasePattern at the time price chart goes 1 ATR above upper edge.
-            xs = [base_pattern['upper_band_activated'], base_pattern['upper_band_activated']]
-            ys = [base_pattern['internal_high'], base_pattern['internal_high'] + base_pattern['ATR']]
+        if base_pattern['upper_band_activated'] is not None:
+            # add a vertical line equal to atr of BasePattern at the time price chart goes 1 atr above upper edge.
+            xs = [start, base_pattern['upper_band_activated']]
+            ys = [base_pattern['internal_high'], base_pattern['internal_low'] - base_pattern['atr']]
             fig.add_scatter(x=xs, y=ys,
                             name=name,
                             text=text,
-                            line=dict(color=fill_color, width=1),
+                            line=dict(color='yellow', width=1),
                             mode='lines',  # +text',
                             showlegend=False,
                             legendgroup=name,
@@ -94,13 +100,13 @@ def plot_multi_timeframe_base_pattern(multi_timeframe_ohlcva: pt.DataFrame[Multi
             _figure = plot_single_timeframe_base_pattern(
                 single_timeframe(multi_timeframe_ohlcva, timeframe),
                 timeframe_effective_bases(_multi_timeframe_base_pattern, timeframe).copy(),
-                base_ohlcv=base_ohlcv,
+                base_ohlcv=base_ohlcv, timeframe=timeframe,
                 show=False, save=False, name=f'{timeframe} boundaries')
         else:
             _figure = plot_single_timeframe_base_pattern(
                 single_timeframe(multi_timeframe_ohlcva, timeframe),
                 timeframe_effective_bases(_multi_timeframe_base_pattern, timeframe).copy(),
-                base_ohlcv=None,
+                base_ohlcv=None, timeframe=timeframe,
                 show=False, save=False, name=f'{timeframe} boundaries')
         figures.append(_figure)
     plot_multiple_figures(figures, name=f'multi_timeframe_base_pattern.'

@@ -8,7 +8,8 @@ import pandera
 from pandera import typing as pt
 
 from Config import config
-from helper.data_preparation import concat, read_with_timeframe, after_under_process_date, datarange_is_not_cachable
+from helper.data_preparation import concat, read_with_timeframe, after_under_process_date, datarange_is_not_cachable, \
+    index_names, column_dtypes
 from helper.helper import log_d
 
 
@@ -20,11 +21,11 @@ class BasePanderaDFM(pandera.DataFrameModel):
         # , got object
         coerce = True
 
-    @classmethod
-    def empty(cls):
-        if cls._sample_obj is None:
-            raise Exception("_sample_obj should be set manually before.")
-        return cls._sample_obj.drop(cls._sample_obj.index)
+    # @classmethod
+    # def empty(cls):
+    #     if cls._sample_obj is None:
+    #         raise Exception("_sample_obj should be set manually before.")
+    #     return cls._sample_obj.drop(cls._sample_obj.index)
 
 
 class ExtendedDf:
@@ -33,7 +34,7 @@ class ExtendedDf:
     _empty_df: pd.DataFrame = None
 
     @classmethod
-    def _set_index(cls, data: pt.DataFrame['BasePanderaDFM']) -> pt.DataFrame['BasePanderaDFM']:
+    def _set_index(cls, data: pt.DataFrame['BasePanderaDFM'], index_names) -> pt.DataFrame['BasePanderaDFM']:
         if 'date' not in data.columns:
             raise Exception(f"Expected to find 'date' in data")
         if hasattr(data.index, 'names') and 'timeframe' in data.index.names:
@@ -49,29 +50,44 @@ class ExtendedDf:
     def new(cls, dictionary_of_data: dict = None, strict: bool = True) -> pt.DataFrame['BasePanderaDFM']:
         if cls._sample_df is None:
             raise Exception(f"{cls}._sample_obj should be defined before!")
+        if cls._empty_df is None:
+            cls._empty_df = cls._sample_df.drop(cls._sample_df.index)
         if dictionary_of_data is not None:
             # to prevent ValueError: If using all scalar values, you must pass an index
-            non_list_keys = [key for key, value in dictionary_of_data.items() if not isinstance(value, list)]
-            if len(non_list_keys) > 0:
-                raise Exception(f"Required to receive a dict of lists but {non_list_keys} are passing non-list values!")
-            _new = pt.DataFrame[cls.schema_data_frame_model](dictionary_of_data)
-            _new = cls._set_index(_new)
-            unused_keys = [key for key in dictionary_of_data.keys()
-                           if key not in cls._sample_df.columns and key not in ['date', 'timeframe']]
+
+            # non_list_keys = [key for key, value in dictionary_of_data.items() if not isinstance(value, list)]
+            # if len(non_list_keys) > 0:
+            #     raise Exception(f"Required to receive a dict of lists but {non_list_keys} are passing non-list values!")
+
+            # _new = pd.DataFrame(dictionary_of_data)# pt.DataFrame[cls.schema_data_frame_model](dictionary_of_data)
+            _new = cls._empty_df.copy()
+            _index_names = index_names(cls._sample_df)
+            index_tuple = tuple([dictionary_of_data[k] for k in dictionary_of_data.keys() if k in _index_names])
+            _column_dtypes = column_dtypes(cls._sample_df, cls.schema_data_frame_model)
+            unused_keys = []
+            for key in dictionary_of_data.keys():
+                if key in _column_dtypes.keys():
+                    _new.loc[index_tuple, key] = dictionary_of_data[key]
+                elif key not in _index_names:
+                    unused_keys += [key]
+            # _new = cls._set_index(_new, _index_names)
+            # unused_keys = [key for key in dictionary_of_data.keys()
+            #                if key not in cls._sample_df.columns and key not in ['date', 'timeframe']]
             if len(unused_keys) > 0:
                 if strict:
                     raise Exception(f"Unused keys in the dictionary: {','.join(unused_keys)}")
             return _new
-        if cls._empty_df is None:
-            cls._empty_df = cls._sample_df.drop(cls._sample_df.index)
-            cls._empty_df = cls._set_index(cls._empty_df)
+            # _index_names = index_names(cls._sample_df)
+            # try:
+            #     cls._empty_df = cls._set_index(cls._empty_df, _index_names)
+            # except Exception as e:
+            #     raise e
         _new = cls._empty_df.copy()
         return _new
 
     @classmethod
-    def cast_and_validate(cls: Type['ExtendedDf'], df: Union['ExtendedDf', pd.DataFrame],
-                          inplace: bool = True, return_bool: bool = False, zero_size_allowed: bool = False,
-                          ) -> Union[pt.DataFrame['BasePanderaDFM'], bool]:
+    def cast_and_validate(cls: Type['ExtendedDf'], df: Union['ExtendedDf', pd.DataFrame], return_bool: bool = False,
+                          zero_size_allowed: bool = False, ) -> Union[pt.DataFrame['BasePanderaDFM'], bool]:
         if not zero_size_allowed:
             if len(df) == 0:
                 raise Exception('Zero size data not allowed in parameters!')
@@ -85,11 +101,7 @@ class ExtendedDf:
                 raise e
         if return_bool:
             return True
-        if inplace:
-            df.__dict__ = result.__dict__
-            return df
-        else:
-            return result
+        return result
 
     @classmethod
     def read_file(cls, date_range_str: str, data_frame_type: str, generator: Callable,

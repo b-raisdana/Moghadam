@@ -22,8 +22,8 @@ def pivots_level_n_margins(pivot_peaks_or_valleys: pd.DataFrame,
         timeframe_pivots (pd.DataFrame): DataFrame to store the processed pivot data.
         timeframe (str): The desired timeframe for mapping pivot times.
         candle_body_source (pd.DataFrame): DataFrame containing candle body data with 'open' and 'close' columns.
-        internal_atr_source (pd.DataFrame): DataFrame containing ATR (Average True Range) data with 'ATR' column.
-        breakout_atr_source (pd.DataFrame): DataFrame containing ATR (Average True Range) data with 'ATR' column.
+        internal_atr_source (pd.DataFrame): DataFrame containing atr (Average True Range) data with 'atr' column.
+        breakout_atr_source (pd.DataFrame): DataFrame containing atr (Average True Range) data with 'atr' column.
 
     Returns:
         pd.DataFrame: Updated DataFrame with calculated pivot levels and margins.
@@ -61,8 +61,8 @@ def peaks_or_valleys_pivots_level_n_margins(timeframe_pivot_peaks_or_valleys: pd
         timeframe_pivots (pd.DataFrame): DataFrame to store processed pivot data.
         timeframe (str): A string specifying the desired timeframe for mapping pivot times.
         candle_body_source (pd.DataFrame): DataFrame containing 'open', 'high', 'low', 'close' columns for specific timeframes.
-        internal_margin_atr (pd.DataFrame): DataFrame containing ATR (Average True Range) data with 'ATR' column.
-        breakout_margin_atr (pd.DataFrame): DataFrame containing ATR (Average True Range) data with 'ATR' column.
+        internal_margin_atr (pd.DataFrame): DataFrame containing atr (Average True Range) data with 'atr' column.
+        breakout_margin_atr (pd.DataFrame): DataFrame containing atr (Average True Range) data with 'atr' column.
 
     Returns:
         pd.DataFrame: Updated single_timeframe_pivots DataFrame with the processed pivot data.
@@ -106,8 +106,8 @@ def pivot_margins(pivots: pd.DataFrame, _type: TopTYPE, pivot_peaks_or_valleys: 
         pivot_peaks_or_valleys (pd.DataFrame): DataFrame containing peak or valley information.
         candle_body_source (pd.DataFrame): DataFrame containing candle body data with 'open' and 'close' columns.
         timeframe (str): Timeframe used for mapping pivot times.
-        internal_margin_atr (pd.DataFrame): DataFrame containing ATR (Average True Range) data with 'ATR' column.
-        breakout_margin_atr (pd.DataFrame): DataFrame containing ATR (Average True Range) data with 'ATR' column.
+        internal_margin_atr (pd.DataFrame): DataFrame containing atr (Average True Range) data with 'atr' column.
+        breakout_margin_atr (pd.DataFrame): DataFrame containing atr (Average True Range) data with 'atr' column.
 
     Returns:
         pd.DataFrame: Updated DataFrame with calculated margins.
@@ -137,16 +137,16 @@ def pivot_margins(pivots: pd.DataFrame, _type: TopTYPE, pivot_peaks_or_valleys: 
                                               pivot_times_mapped_to_timeframe, ['open', 'close']]
                                           .apply(choose_body_operator, axis='columns').tolist())
 
-    internal_margin = internal_margin_atr.loc[pivot_times_mapped_to_timeframe, 'ATR'].tolist()
-    breakout_margin = breakout_margin_atr.loc[pivot_times_mapped_to_timeframe, 'ATR'].tolist()
+    internal_margin = internal_margin_atr.loc[pivot_times_mapped_to_timeframe, 'atr'].tolist()
+    breakout_margin = breakout_margin_atr.loc[pivot_times_mapped_to_timeframe, 'atr'].tolist()
 
     if _type.value == TopTYPE.PEAK.value:
-        focused_pivots['ATR_margin'] = [level - atr for level, atr in
+        focused_pivots['atr_margin'] = [level - atr for level, atr in
                                         zip(focused_pivots['level'].tolist(), internal_margin)]
     else:
-        focused_pivots['ATR_margin'] = focused_pivots['level'].add(internal_margin).tolist()
+        focused_pivots['atr_margin'] = focused_pivots['level'].add(internal_margin).tolist()
 
-    focused_pivots['internal_margin'] = focused_pivots[['nearest_body', 'ATR_margin']].apply(
+    focused_pivots['internal_margin'] = focused_pivots[['nearest_body', 'atr_margin']].apply(
         internal_func, axis='columns').tolist()
 
     if _type.value == TopTYPE.PEAK.value:

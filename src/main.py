@@ -8,7 +8,7 @@ from helper.helper import date_range_to_string
 # from data_preparation import d_types
 
 if __name__ == "__main__":
-    config.processing_date_range = date_range_to_string(days=2)
+    config.processing_date_range = date_range_to_string(days=4)
     #
     #     file_path: str = config.path_of_data
     #     today_morning = today_morning()
@@ -58,6 +58,7 @@ if __name__ == "__main__":
 
     # generate_multi_timeframe_base_patterns()
     # _base_patterns = read_multi_timeframe_base_patterns()
+    # _base_patterns = _base_patterns[~_base_patterns['ignore_backtesting']]
     # plot_multi_timeframe_base_pattern(ohlcva, _base_patterns)
     # exit(0)
     BasePatternStrategy.test_strategy(cash=100000)

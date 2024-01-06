@@ -4,13 +4,13 @@ import pandas as pd
 from pandera import typing as pt
 
 from Config import config
-from helper.data_preparation import single_timeframe, anti_trigger_timeframe, cast_and_validate, \
-    read_file, after_under_process_date, empty_df, concat
 from MetaTrader import MT
 from PanderaDFM.Pivot import MultiTimeframePivot
 from PeakValley import read_multi_timeframe_peaks_n_valleys
 from PivotsHelper import pivots_level_n_margins, level_ttl
 from atr import read_multi_timeframe_ohlcva
+from helper.data_preparation import single_timeframe, anti_trigger_timeframe, cast_and_validate, \
+    read_file, after_under_process_date, empty_df, concat
 from helper.helper import measure_time
 
 
@@ -58,36 +58,13 @@ def tops_pivots(date_range_str) -> pt.DataFrame[MultiTimeframePivot]:
         _pivots['archived_at'] = None
         if len(_pivots) > 0:
             _pivots['timeframe'] = timeframe
-            _pivots.set_index('timeframe', append=True, inplace=True)
+            _pivots = _pivots.set_index('timeframe', append=True)
             _pivots = _pivots.swaplevel()
             multi_timeframe_pivots = concat(multi_timeframe_pivots, _pivots)
-    multi_timeframe_pivots.sort_index(level='date', inplace=True)
+    multi_timeframe_pivots = multi_timeframe_pivots.sort_index(level='date')
     multi_timeframe_pivots = cast_and_validate(multi_timeframe_pivots, MultiTimeframePivot,
                                                zero_size_allowed=after_under_process_date(date_range_str))
     return multi_timeframe_pivots
-    # _multi_timeframe_peaks_n_valleys = read_multi_timeframe_peaks_n_valleys(date_range_str)
-    # _multi_timeframe_ohlcva = read_multi_timeframe_ohlcva(date_range_str)
-    # multi_timeframe_pivots = pd.DataFrame()
-    # for timeframe in config.structure_timeframes[::-1][2:]:
-    #     _pivots = single_timeframe(_multi_timeframe_peaks_n_valleys, anti_trigger_timeframe(timeframe))
-    #     timeframe_ohlcva = single_timeframe(_multi_timeframe_ohlcva, timeframe)
-    #     trigger_timeframe_ohlcva = single_timeframe(_multi_timeframe_ohlcva, trigger_timeframe(timeframe))
-    #     _pivots = pivots_level_n_margins(_pivots, _pivots, timeframe, timeframe_ohlcva, trigger_timeframe_ohlcva)
-    #     _pivots['activation_time'] = _pivots.index
-    #     _pivots['ttl'] = _pivots.index + level_ttl(timeframe)
-    #     _pivots['hit'] = 0  # update_hits(multi_timeframe_pivots)
-    #     _pivots['is_overlap_of'] = None
-    #     _pivots['deactivated_at'] = None
-    #     _pivots['archived_at'] = None
-    #
-    #     if len(_pivots) > 0:
-    #         # _pivots = cast_and_validate(_pivots, Pivot)
-    #         _pivots['timeframe'] = anti_pattern_timeframe(timeframe)
-    #         _pivots.set_index('timeframe', append=True, inplace=True)
-    #         _pivots = _pivots.swaplevel()
-    #         multi_timeframe_pivots = pd.concat([multi_timeframe_pivots, _pivots])
-    # multi_timeframe_pivots = cast_and_validate(multi_timeframe_pivots, MultiTimeframePivot)
-    # return multi_timeframe_pivots
 
 
 def read_multi_timeframe_top_pivots(date_range_str: str = None):
@@ -106,7 +83,7 @@ def generate_multi_timeframe_top_pivots(date_range_str: str = None, file_path: s
         file_path = config.path_of_data
     _tops_pivots = tops_pivots(date_range_str)
     # plot_multi_timeframe_pivots(_tops_pivots, name='multi_timeframe_top_pivots')
-    _tops_pivots.sort_index(inplace=True, level='date')
+    _tops_pivots=_tops_pivots.sort_index(level='date')
     _tops_pivots.to_csv(
         os.path.join(file_path, f'multi_timeframe_top_pivots.{date_range_str}.zip'),
         compression='zip')

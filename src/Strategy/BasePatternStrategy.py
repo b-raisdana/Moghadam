@@ -10,43 +10,65 @@ from BasePattern import read_multi_timeframe_base_patterns
 from Config import config
 from PanderaDFM.BasePattern import MultiTimeframeBasePattern, BasePattern
 from PanderaDFM.SignalDf import SignalDf
-from Strategy.order_helper import OrderSide, BracketOrderType
 from Strategy.ExtendedStrategy import ExtendedStrategy
-from helper.helper import log_d, log_e, measure_time
+from Strategy.order_helper import OrderSide, BracketOrderType
+from helper.helper import log_d, measure_time
 from ohlcv import read_base_timeframe_ohlcv
 
 
 class BasePatternStrategy(ExtendedStrategy):
     base_patterns: pt.DataFrame[MultiTimeframeBasePattern]
 
-    def add_base_patterns(self):
-        self.base_patterns = read_multi_timeframe_base_patterns(self.date_range_str)
+    def add_signal_source_data(self):
+        base_patterns = read_multi_timeframe_base_patterns(self.date_range_str)
+        self.base_patterns = base_patterns[~base_patterns['ignore_backtesting']]
 
     @measure_time
     def __init__(self):
-        self.add_base_patterns()
+        self.add_signal_source_data()
         super().__init__()
 
+    @measure_time
     def notify_order(self, order: bt.Order):
-        if order.status == bt.Order.Completed:
-            if order.info['custom_type'] == BracketOrderType.Stop.value:
-                # todo: if the order were stopped, repeat the signal
-                # todo: assure closing of the original and profit orders
-                # a bracket order stopp-loss executed.
-                index = order.info['signal_index']
-                signal = self.signal_df.loc[index]
-                log_d(f'repeating Signal  according to Stop-Loss on {SignalDf.to_str(index, signal)} @ {self.candle()}')
-                repeat_signal = signal.copy()
-                repeat_signal['original_index'] = index
-                repeat_signal['order_is_active'] = False
-                repeat_signal['original_order_id'] = pd.NA
-                repeat_signal['end'] = pd.NA
-                self.signal_df.loc[self.candle().date] = repeat_signal
-                log_d(f"repeated Signal:{SignalDf.to_str(self.candle().date, repeat_signal)}@{self.candle().date} ")
-            if order.info['custom_type'] == BracketOrderType.Profit.value:
-                # todo: if the order took profit, end signal and end band_pattern
-                # todo: assure closing of the original and stop orders
-                log_d(f'Took profit on Signal:{SignalDf.to_str(index, signal)}@{self.candle().date}')
+        try:
+            if order.status == bt.Order.Completed:
+                if order.info['custom_type'] == BracketOrderType.Stop.value:
+                    # a bracket stop-loss order executed.
+
+                    # assure closing of the original and profit orders
+                    original_order, stop_order, profit_order = self.get_order_group(order)
+                    if (not original_order.status == bt.Order.Completed or
+                            not profit_order.status == bt.Order.Canceled):
+                        raise NotImplementedError
+                    # repeat the signal
+                    index = order.info['signal_index']
+                    signal = self.signal_df.loc[index]
+                    log_d(
+                        f'repeating Signal  according to Stop-Loss on {SignalDf.to_str(index, signal)} @ {self.candle()}')
+                    repeat_signal = signal.copy()
+                    repeat_signal['original_index'] = index
+                    repeat_signal['order_is_active'] = False
+                    repeat_signal['original_order_id'] = pd.NA
+                    # repeat_signal['end'] = pd.NA
+                    self.signal_df.loc[self.candle().date] = repeat_signal
+                    if not self.signal_df.index.is_unique:
+                        pass
+                    log_d(f"repeated Signal:{SignalDf.to_str(self.candle().date, repeat_signal)}@{self.candle().date} ")
+                elif order.info['custom_type'] == BracketOrderType.Profit.value:  # todo: test
+                    # a bracket take-profit order executed.
+
+                    # assure closing of the original and stop orders
+                    original_order, stop_order, profit_order = self.get_order_group(order)
+                    if (not original_order.status == bt.Order.Completed or
+                            not stop_order.status == bt.Order.Canceled):
+                        raise NotImplementedError
+                    index = order.info['signal_index']
+                    signal = self.signal_df.loc[index]
+                    log_d(f'Took profit on Signal:{SignalDf.to_str(index, signal)}@{self.candle().date}')  # todo: test
+        except Exception as e:
+            raise e
+        # if order.ref == 3:
+        #     pass
 
     def overlapping_base_patterns(self, base_patterns: pt.DataFrame[MultiTimeframeBasePattern] = None) \
             -> pt.DataFrame[MultiTimeframeBasePattern]:
@@ -88,14 +110,14 @@ class BasePatternStrategy(ExtendedStrategy):
         if band == 'upper':
             side = OrderSide.Buy.value
             limit_price = (base_pattern['internal_high'] +
-                           base_pattern['ATR'] * config.base_pattern_order_limit_price_margin_percentage)
+                           base_pattern['atr'] * config.base_pattern_order_limit_price_margin_percentage)
             stop_loss = base_pattern['internal_low']
             take_profit = base_pattern['internal_high'] + base_length * config.base_pattern_risk_reward_rate
             trigger_price = base_pattern['internal_high']
         else:  # band == 'below':
             side = OrderSide.Sell.value
             limit_price = (base_pattern['internal_low'] -
-                           base_pattern['ATR'] * config.base_pattern_order_limit_price_margin_percentage)
+                           base_pattern['atr'] * config.base_pattern_order_limit_price_margin_percentage)
             stop_loss = base_pattern['internal_high']
             take_profit = base_pattern['internal_low'] - base_length * config.base_pattern_risk_reward_rate
             trigger_price = base_pattern['internal_low']
@@ -106,6 +128,8 @@ class BasePatternStrategy(ExtendedStrategy):
             effective_end = base_pattern['end']
         else:
             effective_end = base_pattern['ttl']
+        if pd.isna(effective_end):
+            pass
         try:
             # todo: optimize and simplify by removing signals and putting orders instead.
             new_signal = SignalDf.new({
@@ -132,7 +156,7 @@ class BasePatternStrategy(ExtendedStrategy):
     def candle_overlaps_base(self, base_pattern: pt.Series[BasePattern]):
         if self.candle().date == strptime("2024-01-03 02:36:00+00:00", "%Y-%m-%d %H:%M:%S%z"):
             pass
-        if self.movement_intersect(base_pattern['internal_low'], base_pattern['internal_high'])>0:
+        if self.movement_intersect(base_pattern['internal_low'], base_pattern['internal_high']) > 0:
             return True
         else:
             return False
@@ -169,9 +193,20 @@ class BasePatternStrategy(ExtendedStrategy):
         cerebro.adddata(data)
         cerebro.broker.set_cash(cash)
         print('Starting Portfolio Value: %.2f' % cerebro.broker.getvalue())
-        cerebro.run()
+        try:
+            cerebro.run()
+        except Exception as e:
+            raise e
         print('Final Portfolio Value: %.2f' % cerebro.broker.getvalue())  # todo: test
+
     def next(self):
         # todo: if the signal end changed we have to update signal orders.
         # todo: check It only happens when order takes profit. In this case both of sell and
-        super().next()
+        if self.candle().date == strptime("2024-01-04 12:01:00+00:00", "%Y-%m-%d %H:%M:%S%z"):
+            pass
+        if self.candle().date == strptime("2024-01-04 12:02:00+00:00", "%Y-%m-%d %H:%M:%S%z"):
+            pass
+        try:
+            super().next()
+        except Exception as e:
+            raise e

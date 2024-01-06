@@ -43,19 +43,19 @@ def RMA(values: pd.DataFrame, length):
 
 @measure_time
 def insert_atr(timeframe_ohlcv: pt.DataFrame[OHLCV], mode: str = 'pandas_ta', apply_rma: bool = True) -> pd.DataFrame:
-    if len(timeframe_ohlcv) <= config.ATR_timeperiod:
-        timeframe_ohlcv['ATR'] = pd.NA
+    if len(timeframe_ohlcv) <= config.atr_timeperiod:
+        timeframe_ohlcv['atr'] = pd.NA
     else:
         if mode == 'pandas_ta':
-            timeframe_ohlcv['ATR'] = timeframe_ohlcv.ta.atr(timeperiod=config.ATR_timeperiod,
+            timeframe_ohlcv['atr'] = timeframe_ohlcv.ta.atr(timeperiod=config.atr_timeperiod,
                                                             # high='high',
                                                             # low='low',
                                                             # close='close',
                                                             # mamode='ema',
                                                             )
         elif mode == 'ta_lib':
-            timeframe_ohlcv['ATR'] = tal.ATR(high=timeframe_ohlcv['high'].values, low=timeframe_ohlcv['low'].values,
-                                             close=timeframe_ohlcv['close'].values, timeperiod=config.ATR_timeperiod)
+            timeframe_ohlcv['atr'] = tal.atr(high=timeframe_ohlcv['high'].values, low=timeframe_ohlcv['low'].values,
+                                             close=timeframe_ohlcv['close'].values, timeperiod=config.atr_timeperiod)
         else:
             raise Exception(f"Unsupported mode:{mode}")
     return timeframe_ohlcv
@@ -79,7 +79,7 @@ def generate_multi_timeframe_ohlcva(date_range_str: str = None, file_path: str =
 
     # Concatenate the daily data
     df = pd.concat(daily_dataframes)
-    df.sort_index(inplace=True, level='date')
+    df = df.sort_index(level='date')
     df = trim_to_date_range(date_range_str, df)
     # assert not df.index.duplicated().any()
     assert multi_timeframe_times_tester(df, date_range_str)
@@ -108,18 +108,18 @@ def core_generate_multi_timeframe_ohlcva(date_range_str: str = None, file_path: 
             pass
         expanded_date_range = \
             expand_date_range(date_range_str,
-                              time_delta=((config.ATR_timeperiod + 2) * pd.to_timedelta(timeframe) *
-                                          config.ATR_safe_start_expand_multipliers),
+                              time_delta=((config.atr_timeperiod + 2) * pd.to_timedelta(timeframe) *
+                                          config.atr_safe_start_expand_multipliers),
                               mode='start')
         expanded_date_multi_timeframe_ohlcv = read_multi_timeframe_ohlcv(expanded_date_range)
         timeframe_ohlcv = single_timeframe(expanded_date_multi_timeframe_ohlcv, timeframe)
         timeframe_ohlcva = insert_atr(timeframe_ohlcv)
-        timeframe_ohlcva.dropna(subset=['ATR'], inplace=True)
+        timeframe_ohlcva = timeframe_ohlcva.dropna(subset=['atr'], )
         timeframe_ohlcva['timeframe'] = timeframe
-        timeframe_ohlcva.set_index('timeframe', append=True, inplace=True)
+        timeframe_ohlcva = timeframe_ohlcva.set_index('timeframe', append=True)
         timeframe_ohlcva = timeframe_ohlcva.swaplevel()
         multi_timeframe_ohlcva = concat(multi_timeframe_ohlcva, timeframe_ohlcva)
-    multi_timeframe_ohlcva.sort_index(level='date', inplace=True)
+    multi_timeframe_ohlcva = multi_timeframe_ohlcva.sort_index(level='date')
     multi_timeframe_ohlcva = trim_to_date_range(date_range_str, multi_timeframe_ohlcva)
     assert multi_timeframe_times_tester(multi_timeframe_ohlcva, date_range_str)
     # plot_multi_timeframe_ohlcva(multi_timeframe_ohlcva)

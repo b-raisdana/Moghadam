@@ -13,4 +13,4 @@ class SummaryOHLCV(pandera.DataFrameModel):
 
 
 class SummaryOHLCA(SummaryOHLCV):
-    ATR: pt.Series[float]
+    atr: pt.Series[float]

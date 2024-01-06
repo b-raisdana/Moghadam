@@ -52,13 +52,12 @@ def calculate_distance(ohlcv: pt.DataFrame[OHLCV], peaks_or_valleys: pt.DataFram
     tops_with_known_crossing_bar = empty_df(PeakValley)
     number_of_crossed_tops = 1
     while number_of_crossed_tops > 0:
-        ohlcv.drop(columns=['right_top_time', 'right_top_value', 'left_top_time', 'left_top_value',
+        ohlcv = ohlcv.drop(columns=['right_top_time', 'right_top_value', 'left_top_time', 'left_top_value',
                             'right_crossing', 'left_crossing',
                             'right_crossing_time', 'right_crossing_value',
                             'left_crossing_time', 'left_crossing_value',
-                            'valid_crossing'],
-                   inplace=True, errors='ignore')
-        tops_to_compare.drop(columns=[direction + '_distance'], inplace=True, errors='ignore')
+                            'valid_crossing'], errors='ignore')
+        tops_to_compare = tops_to_compare.drop(columns=[direction + '_distance'], errors='ignore')
 
         top_indexes = tops_to_compare.index
         if direction == 'right':
@@ -74,11 +73,11 @@ def calculate_distance(ohlcv: pt.DataFrame[OHLCV], peaks_or_valleys: pt.DataFram
         ohlcv.loc[adjacent_ohlcv_index_of_tops, reverse + '_top_value'] = \
             tops_to_compare.loc[top_indexes, compare_column].tolist()
         if direction == 'right':
-            ohlcv['left_top_time'].ffill(inplace=True)
-            ohlcv['left_top_value'].ffill(inplace=True)
+            ohlcv=ohlcv['left_top_time'].ffill()
+            ohlcv=ohlcv['left_top_value'].ffill()
         else:  # direction == 'left'
-            ohlcv['right_top_time'].bfill(inplace=True)
-            ohlcv['right_top_value'].bfill(inplace=True)
+            ohlcv=ohlcv['right_top_time'].bfill()
+            ohlcv=ohlcv['right_top_value'].bfill()
         # if high/low of OHLCV is higher/lower than peak/valley high/low it is crossing the peak/valley
         ohlcv[f'{direction}_crossing'] = more_significant(ohlcv[compare_column], ohlcv[reverse + '_top_value'])
         crossing_ohlcv = ohlcv[ohlcv[f'{direction}_crossing'] == True].index
@@ -96,11 +95,11 @@ def calculate_distance(ohlcv: pt.DataFrame[OHLCV], peaks_or_valleys: pt.DataFram
         if direction.lower() == 'left':
             pass
         if direction == 'right':
-            ohlcv[f'{direction}_crossing_time'].bfill(inplace=True)
-            ohlcv[f'{direction}_crossing_value'].bfill(inplace=True)
+            ohlcv=ohlcv[f'{direction}_crossing_time'].bfill()
+            ohlcv=ohlcv[f'{direction}_crossing_value'].bfill()
         else:  # direction == 'left'
-            ohlcv[f'{direction}_crossing_time'].ffill(inplace=True)
-            ohlcv[f'{direction}_crossing_value'].ffill(inplace=True)
+            ohlcv=ohlcv[f'{direction}_crossing_time'].ffill()
+            ohlcv=ohlcv[f'{direction}_crossing_value'].ffill()
         ohlcv['masked_ohlcv'] = les_significant(ohlcv[compare_column], ohlcv[f'{direction}_crossing_value'])
         masked_ohlcv = ohlcv[ohlcv['masked_ohlcv'] == True].index
         crossed_tops = masked_ohlcv.intersection(top_indexes)
@@ -115,8 +114,7 @@ def calculate_distance(ohlcv: pt.DataFrame[OHLCV], peaks_or_valleys: pt.DataFram
                     tops_with_known_crossing_bar, tops_to_compare.loc[crossed_tops])
             if tops_with_known_crossing_bar.index.duplicated(keep=False).any():
                 raise Exception('Should be unique')
-            tops_to_compare.drop(crossed_tops,
-                                 inplace=True)  # = tops_to_compare[tops_to_compare[direction + '_distance'].isna()]
+            tops_to_compare = tops_to_compare.drop(crossed_tops)
     tops_with_known_crossing_bar = concat(tops_with_known_crossing_bar, tops_to_compare).sort_index()
     assert not tops_with_known_crossing_bar.index.duplicated(keep=False).any()
     assert len(tops_with_known_crossing_bar) == len(peaks_or_valleys)
@@ -296,7 +294,7 @@ def multi_timeframe_peaks_n_valleys(expanded_date_range: str) -> pt.DataFrame[Mu
 
     _peaks_n_valleys = top_timeframe(_peaks_n_valleys)
 
-    _peaks_n_valleys.set_index('timeframe', append=True, inplace=True)
+    _peaks_n_valleys = _peaks_n_valleys.set_index('timeframe', append=True, )
     _peaks_n_valleys = _peaks_n_valleys.swaplevel()
     _peaks_n_valleys = _peaks_n_valleys.sort_index(level='date')
 
@@ -320,7 +318,7 @@ def generate_multi_timeframe_peaks_n_valleys(date_range_str, file_path: str = No
         (start < _peaks_n_valleys.index.get_level_values(level='date')) &
         (_peaks_n_valleys.index.get_level_values(level='date') < end)].copy()
     # plot_multi_timeframe_peaks_n_valleys(_peaks_n_valleys, date_range_str)
-    _peaks_n_valleys.sort_index(inplace=True, level='date')
+    _peaks_n_valleys = _peaks_n_valleys.sort_index( level='date')
     _peaks_n_valleys = trim_to_date_range(date_range_str, _peaks_n_valleys, ignore_duplicate_index=True)
     _peaks_n_valleys = \
         _peaks_n_valleys[['open', 'high', 'low', 'close', 'volume', 'peak_or_valley', 'strength', 'permanent_strength']]
@@ -407,7 +405,6 @@ def insert_previous_n_next_top(top_type, peaks_n_valleys: pt.DataFrame[PeakValle
     # Cleaning any duplicate columns
     for col in ohlcv.columns:
         if col.endswith('_x') or col.endswith('_y'):
-            # ohlcv.drop(col, axis=1, inplace=True)
             raise Exception(f'Duplicate merge on same column:{col}')
 
     return ohlcv

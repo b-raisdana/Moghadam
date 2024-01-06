@@ -66,7 +66,7 @@ def update_passed_levels(timeframe_active_pivots: pt.DataFrame[Pivot],
     passed_pivots = timeframe_active_pivots[timeframe_active_pivots['passing_time'].notna()].index
     timeframe_inactive_pivots: pt.DataFrame[Pivot] = (
         concat(timeframe_inactive_pivots, timeframe_active_pivots.loc[passed_pivots]))
-    timeframe_active_pivots.drop(labels=passed_pivots, inplace=True)
+    timeframe_active_pivots = timeframe_active_pivots.drop(labels=passed_pivots)
     return timeframe_active_pivots, timeframe_inactive_pivots
 
 
@@ -174,13 +174,13 @@ def generate_multi_timeframe_pivot_levels(date_range_str: str = None):
     definition of pivot:
         highest high of every Bullish and lowest low of every Bearish trend. for Trends
             conditions:
-                >= 3 ATR
-                >= 1 ATR reverse movement after the most significant top
+                >= 3 atr
+                >= 1 atr reverse movement after the most significant top
             index = highest high for Bullish and lowest low for Bearish
             highest high is not the last peak of Bullish and lowest low is not the last Valley raise a warning log:
                 timeframe, trend start time (index), time of last top
                 time and high of highest high in Bullish and time and low of lowest low in Bearish,
-        same color trends >= 3 ATR + reverse same color trend >= 1 ATR
+        same color trends >= 3 atr + reverse same color trend >= 1 atr
             condition:
 
     pivot information:

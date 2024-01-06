@@ -79,14 +79,14 @@ def plot_ohlcv(ohlcv: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']
 def plot_ohlcva(ohlcva: pd.DataFrame, save: bool = True, show: bool = True, name: str = '',
                 base_ohlcv: pt.DataFrame[OHLCV] = None) -> plgo.Figure:
     """
-    Plot OHLC data with an additional ATR (Average True Range) boundary.
+    Plot OHLC data with an additional atr (Average True Range) boundary.
 
-    The function plots OHLC data as a candlestick chart and adds an ATR boundary to the plot.
+    The function plots OHLC data as a candlestick chart and adds an atr boundary to the plot.
     The boundary's middle is calculated as the average of the candle's open and close,
-    and the width of the boundary is equal to the ATR value for each data point.
+    and the width of the boundary is equal to the atr value for each data point.
 
     Parameters:
-        ohlcva (pd.DataFrame): A DataFrame containing OHLC data along with the 'ATR' column representing the ATR values.
+        ohlcva (pd.DataFrame): A DataFrame containing OHLC data along with the 'atr' column representing the atr values.
         save (bool): If True, the plot is saved as an HTML file.
         show (bool): If True, the plot is displayed in the browser.
 
@@ -94,7 +94,7 @@ def plot_ohlcva(ohlcva: pd.DataFrame, save: bool = True, show: bool = True, name
         None
 
     Example:
-        # Assuming you have the 'ohlcva' DataFrame with the required columns (open, high, low, close, ATR)
+        # Assuming you have the 'ohlcva' DataFrame with the required columns (open, high, low, close, atr)
         date_range_str = "17-10-06.00-00T17-10-06"
         plot_ohlcva(ohlcva, date_range_str)
         :param save:
@@ -111,21 +111,21 @@ def plot_ohlcva(ohlcva: pd.DataFrame, save: bool = True, show: bool = True, name
     # Create a figure using the plot_ohlcv function
     sub_fig = plot_ohlcv(ohlcva[['open', 'high', 'low', 'close']], base_ohlcv, show=False, save=False, name=name)
 
-    # Add the ATR boundaries
+    # Add the atr boundaries
     sub_fig = add_atr_scatter(sub_fig, ohlcva.index, midpoints=midpoints,
-                              widths=CandleSize.Spinning.value.max * ohlcva['ATR'],
+                              widths=CandleSize.Spinning.value.max * ohlcva['atr'],
                               name='Standard')
     sub_fig = add_atr_scatter(sub_fig, ohlcva.index, midpoints=midpoints,
-                              widths=CandleSize.Standard.value.max * ohlcva['ATR'],
+                              widths=CandleSize.Standard.value.max * ohlcva['atr'],
                               name='Long')
     sub_fig = add_atr_scatter(sub_fig, ohlcva.index, midpoints=midpoints,
-                              widths=CandleSize.Long.value.max * ohlcva['ATR'],
+                              widths=CandleSize.Long.value.max * ohlcva['atr'],
                               name='Spike')
 
     sub_fig.add_scatter(x=ohlcva.index, y=midpoints,
                         mode='none',
                         showlegend=False,
-                        text=[f'ATR: {atr:0.1f}' for atr in ohlcva['ATR']],
+                        text=[f'atr: {atr:0.1f}' for atr in ohlcva['atr']],
                         hoverinfo='text')
 
     sub_fig.update_layout(hovermode='x unified')
@@ -135,8 +135,8 @@ def plot_ohlcva(ohlcva: pd.DataFrame, save: bool = True, show: bool = True, name
 
     master_fig.add_trace(go.Scatter(
         x=ohlcva.index,
-        y=ohlcva['ATR'],
-        name='ATR',
+        y=ohlcva['atr'],
+        name='atr',
         mode='lines',  # Use line mode
         line=dict(color='black')), row=2, col=1)
 
@@ -148,7 +148,7 @@ def plot_ohlcva(ohlcva: pd.DataFrame, save: bool = True, show: bool = True, name
         ),
         xaxis2=dict(
             fixedrange=False,  # Allows zooming on the x-axis
-            rangeslider=dict(visible=True)  # Show range slider for the second subplot (ATR chart)
+            rangeslider=dict(visible=True)  # Show range slider for the second subplot (atr chart)
         ),
         yaxis=dict(
             fixedrange=False  # Allows zooming on the y-axis for the first subplot
@@ -158,7 +158,7 @@ def plot_ohlcva(ohlcva: pd.DataFrame, save: bool = True, show: bool = True, name
         ),
         height=800, width=1200, title_text=name)
     master_fig.update_yaxes(title_text="Price", row=1, col=1)
-    master_fig.update_yaxes(title_text="ATR", row=2, col=1)
+    master_fig.update_yaxes(title_text="atr", row=2, col=1)
 
     # Show the figure or write it to an HTML file
     if save:
@@ -171,7 +171,7 @@ def plot_ohlcva(ohlcva: pd.DataFrame, save: bool = True, show: bool = True, name
 
 
 def add_atr_scatter(fig: plgo.Figure, xs: pd.Series, midpoints: pd.Series, widths: pd.Series,
-                    transparency: float = 0.2, name: str = 'ATR') -> plgo.Figure:
+                    transparency: float = 0.2, name: str = 'atr') -> plgo.Figure:
     xs = xs.tolist()
     half_widths = widths.fillna(value=0).div(2)
     upper_band: pd.Series = midpoints + half_widths
