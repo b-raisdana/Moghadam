@@ -1,5 +1,4 @@
 from datetime import datetime
-from time import strptime
 from typing import Literal
 
 import backtrader as bt
@@ -50,7 +49,13 @@ class BasePatternStrategy(ExtendedStrategy):
                     repeat_signal['order_is_active'] = False
                     repeat_signal['original_order_id'] = pd.NA
                     # repeat_signal['end'] = pd.NA
-                    self.signal_df.loc[self.candle().date] = repeat_signal
+                    if str(self.signal_df.index.names) != str(['date', 'reference_date', 'reference_timeframe', 'side']):
+                        raise AssertionError(
+                            f"Order of signal_df indexes "
+                            f"expected to be {str(['date', 'reference_date', 'reference_timeframe', 'side'])} "
+                            f"but is {str(self.signal_df.index.names)}")
+                    new_index = (self.candle().date, index[1], index[2], index[3])
+                    self.signal_df.loc[new_index] = repeat_signal
                     if not self.signal_df.index.is_unique:
                         pass
                     log_d(f"repeated Signal:{SignalDf.to_str(self.candle().date, repeat_signal)}@{self.candle().date} ")
@@ -108,19 +113,33 @@ class BasePatternStrategy(ExtendedStrategy):
                    band: Literal['upper', 'below']) -> pt.DataFrame[SignalDf.schema_data_frame_model]:
         base_length = base_pattern['internal_high'] - base_pattern['internal_low']
         if band == 'upper':
+            high_low = 'high'
+            reverse_high_low = 'low'
             side = OrderSide.Buy.value
-            limit_price = (base_pattern['internal_high'] +
-                           base_pattern['atr'] * config.base_pattern_order_limit_price_margin_percentage)
-            stop_loss = base_pattern['internal_low']
-            take_profit = base_pattern['internal_high'] + base_length * config.base_pattern_risk_reward_rate
-            trigger_price = base_pattern['internal_high']
+
+            def opr(x, y):
+                return x + y
         else:  # band == 'below':
+            high_low = 'low'
+            reverse_high_low = 'high'
             side = OrderSide.Sell.value
-            limit_price = (base_pattern['internal_low'] -
-                           base_pattern['atr'] * config.base_pattern_order_limit_price_margin_percentage)
-            stop_loss = base_pattern['internal_high']
-            take_profit = base_pattern['internal_low'] - base_length * config.base_pattern_risk_reward_rate
-            trigger_price = base_pattern['internal_low']
+
+            def opr(x, y):
+                return x - y
+
+        limit_price = opr(base_pattern[f'internal_{high_low}'],
+                          base_pattern['atr'] * config.base_pattern_order_limit_price_margin_percentage)
+        stop_loss = base_pattern[f'internal_{reverse_high_low}']
+        take_profit = opr(base_pattern[f'internal_{high_low}'], base_length * config.base_pattern_risk_reward_rate)
+        trigger_price = base_pattern[f'internal_{high_low}']
+        # else:  # band == 'below':
+        #     side = OrderSide.Sell.value
+        #     limit_price = (base_pattern['internal_low'] -
+        #                    base_pattern['atr'] * config.base_pattern_order_limit_price_margin_percentage)
+        #     stop_loss = base_pattern['internal_high']
+        #     take_profit = base_pattern['internal_low'] - base_length * config.base_pattern_risk_reward_rate
+        #     trigger_price = base_pattern['internal_low']
+
         # size, true_risked_money = self.my_sizer(limit_price=limit_price, sl_price=stop_loss)
         # todo: reference_date and reference_timeframe never been used.
         # todo: use .loc to generate and assign signal in one step.
@@ -132,7 +151,9 @@ class BasePatternStrategy(ExtendedStrategy):
             pass
         try:
             # todo: optimize and simplify by removing signals and putting orders instead.
-            new_signal = SignalDf.new({ # todo: debug from here
+            if len(self.signal_df) == 2:
+                pass
+            new_signal = SignalDf.new({  # todo: debug from here
                 'date': self.candle().date,
                 'original_index': self.candle().date,
                 'end': effective_end,
@@ -149,13 +170,13 @@ class BasePatternStrategy(ExtendedStrategy):
             })
         except Exception as e:
             raise e
+        if len(new_signal.index[0]) != 4:
+            pass
         self.signal_df = SignalDf.concat(self.signal_df, new_signal)
         log_d(f"added Signal {SignalDf.to_str(new_signal.index[0], new_signal.iloc[0])} @ {self.candle().date}")
         return self.signal_df
 
     def candle_overlaps_base(self, base_pattern: pt.Series[BasePattern]):
-        if self.candle().date == strptime("2024-01-03 02:36:00+00:00", "%Y-%m-%d %H:%M:%S%z"):
-            pass
         if self.movement_intersect(base_pattern['internal_low'], base_pattern['internal_high']) > 0:
             return True
         else:
@@ -163,8 +184,6 @@ class BasePatternStrategy(ExtendedStrategy):
 
     # @measure_time
     def extract_signals(self) -> None:
-        if self.candle().date == strptime("2024-01-03 02:36:00+00:00", "%Y-%m-%d %H:%M:%S%z"):
-            pass
         upper_overlapping_base_patterns = self.overlapping_base_patterns(
             self.no_signal_active_base_patterns(band='upper', base_patterns=self.base_patterns))
         base_pattern: pt.Series[MultiTimeframeBasePattern]
@@ -202,10 +221,6 @@ class BasePatternStrategy(ExtendedStrategy):
     def next(self):
         # todo: if the signal end changed we have to update signal orders.
         # todo: check It only happens when order takes profit. In this case both of sell and
-        if self.candle().date == strptime("2024-01-04 12:01:00+00:00", "%Y-%m-%d %H:%M:%S%z"):
-            pass
-        if self.candle().date == strptime("2024-01-04 12:02:00+00:00", "%Y-%m-%d %H:%M:%S%z"):
-            pass
         try:
             super().next()
         except Exception as e:

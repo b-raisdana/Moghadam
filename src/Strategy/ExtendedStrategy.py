@@ -1,5 +1,4 @@
 from datetime import datetime
-from time import strptime
 from typing import Optional, Tuple
 
 import backtrader as bt
@@ -24,6 +23,13 @@ class ExtendedStrategy(bt.Strategy):
     archived_orders = {}
     date_range_str: str = None
     true_risked_money = 0.0
+    group_order_counter = None
+
+    def group_order_id(self):
+        if self.group_order_counter is None:
+            self.group_order_counter = 0
+        self.group_order_counter += 1
+        return self.group_order_counter
 
     def add_signal_source_data(self):
         raise NotImplementedError
@@ -57,29 +63,31 @@ class ExtendedStrategy(bt.Strategy):
 
         return size, true_risked_money
 
-    def post_bracket_order(self, original_order: bt.Order, stop_loss_order: bt.Order, take_profit_order: bt.Order,
-                           signal: pt.Series[SignalDFM], signal_index):
-        custom_order_id = np.float64(datetime.now(tz=pytz.UTC).timestamp())
+    def post_bracket_order(self, original_order: bt.Order, sl_order: bt.Order, tp_order: bt.Order,
+                           signal: pt.Series[SignalDFM], signal_index: pd.MultiIndex):
+        group_order_id = self.group_order_id()
+        if (
+                group_order_id in self.original_orders.keys() or
+                group_order_id in self.stop_orders.keys() or
+                group_order_id in self.profit_orders.keys()
+        ):
+            raise AssertionError(f"group_order_id is not unique!")
+        original_order = add_order_info(original_order, signal, signal_index, BracketOrderType.Original, group_order_id)
+        sl_order = add_order_info(sl_order, signal, signal_index, BracketOrderType.Stop, group_order_id)
+        tp_order = add_order_info(tp_order, signal, signal_index, BracketOrderType.Profit, group_order_id)
 
-        original_order = add_order_info(original_order, signal, signal_index, BracketOrderType.Original,
-                                        custom_order_id)
-        stop_loss_order = add_order_info(stop_loss_order, signal, signal_index, BracketOrderType.Stop,
-                                         custom_order_id)
-        take_profit_order = add_order_info(take_profit_order, signal, signal_index, BracketOrderType.Profit,
-                                           custom_order_id)
-
-        self.original_orders[custom_order_id] = original_order
-        self.stop_orders[custom_order_id] = stop_loss_order
-        self.profit_orders[custom_order_id] = take_profit_order
+        self.original_orders[group_order_id] = original_order
+        self.stop_orders[group_order_id] = sl_order
+        self.profit_orders[group_order_id] = tp_order
 
         self.signal_df.loc[signal_index, 'original_order_id'] = order_name(original_order)
-        self.signal_df.loc[signal_index, 'stop_loss_order_id'] = order_name(stop_loss_order)
-        self.signal_df.loc[signal_index, 'take_profit_order_id'] = order_name(take_profit_order)
+        self.signal_df.loc[signal_index, 'stop_loss_order_id'] = order_name(sl_order)
+        self.signal_df.loc[signal_index, 'take_profit_order_id'] = order_name(tp_order)
         self.signal_df.loc[signal_index, 'end'] = self.candle().date
         # self.signal_df.loc[signal_index, 'led_to_order_at'] = self.candle().date
         self.signal_df.loc[signal_index, 'order_is_active'] = True
 
-        return original_order, stop_loss_order, take_profit_order
+        return original_order, sl_order, tp_order
 
     def allocate_order_cash(self, limit_price: float, sl_price: float, size: float = None) -> float:
         # Allocate 10% of the initial cash
@@ -144,6 +152,9 @@ class ExtendedStrategy(bt.Strategy):
             original_order = self.original_orders[order_id]
             stop_order = self.stop_orders[order_id]
             profit_order = self.profit_orders[order_id]
+            if order not in [original_order, stop_order, profit_order]:
+                raise AssertionError(f"The order: should be one of group members "
+                                     f"O:{original_order} S:{stop_order} P:{profit_order}")
         except Exception as e:
             raise e
         return original_order, stop_order, profit_order
@@ -164,12 +175,6 @@ class ExtendedStrategy(bt.Strategy):
             return 0
 
     def next(self):
-        # if self.candle().date == strptime("2024-01-04 12:01:00+00:00", "%Y-%m-%d %H:%M:%S%z"):
-        #     pass
-        # if self.candle().date == strptime("2024-01-04 12:02:00+00:00", "%Y-%m-%d %H:%M:%S%z"):
-        #     pass
-        if not self.signal_df.index.is_unique:
-            pass
         self.next_log()
         if len(self.original_orders) > 0:
             try:
@@ -184,9 +189,13 @@ class ExtendedStrategy(bt.Strategy):
         # self.update_orders()
         # self.update_ordered_signals()
         try:
+            if self.candle().date == pd.Timestamp("2024-01-03 09:02:00+00:00"):
+                pass
             self.execute_active_signals()
         except Exception as e:
             raise e
+        if len(self.signal_df) == 3:
+            pass
 
     def verify_triple_oder_status(self):
         '''
@@ -330,44 +339,63 @@ class ExtendedStrategy(bt.Strategy):
         # # if len(executable_signal_indexes) > 0:        #     pass
         # return active_signals.loc[executable_signal_indexes]
 
+    def idx_in_indexes(self, df: pd.DataFrame, ):
+        if not hasattr(df.index, 'names'):
+            raise AssertionError("df must have MultiIndex.")
+
     # @measure_time
     def execute_active_signals(self):
-        for signal_index, signal in self.executable_signals().iterrows():
-            # bracket_executor, order_executor = self.executors(signal)
-            # execution_type = SignalDf.execution_type(signal)
-            if pd.notna(signal['take_profit']):
+        _executable_signals = self.executable_signals()
+        # for signal_index, signal in self.executable_signals().iterrows():
+        for idx in range(len(_executable_signals)):
+            signal = _executable_signals.iloc[idx]
+            signal_side = _executable_signals.index.get_level_values(level='side')[idx]
+            signal_index = _executable_signals.index[idx]
+            if pd.notna(_executable_signals.iloc[idx]['take_profit']):
                 original_order: bt.Order
-                size = self.allocate_order_cash(signal['limit_price'],
-                                                signal['stop_loss'])  # signal['base_asset_amount'])
+                try:
+                    size = self.allocate_order_cash(_executable_signals.iloc[idx]['limit_price'],
+                                                    signal['stop_loss'])  # signal['base_asset_amount'])
+                except Exception as e:
+                    raise e
                 # todo: test why orders are not executing
                 if pd.notna(signal['limit_price']) and pd.notna(signal['stop_loss']):
                     if (
                             pd.isna(signal['trigger_price']) or
-                            ((signal['side'] == OrderSide.Buy.value) and (self.candle().high > signal['trigger_price']))
+                            ((signal_side == OrderSide.Buy.value) and (self.candle().high > signal['trigger_price']))
                             or
-                            ((signal['side'] == OrderSide.Sell.value) and (self.candle().low < signal['trigger_price']))
+                            ((signal_side == OrderSide.Sell.value) and (self.candle().low < signal['trigger_price']))
                     ):
-                        original_order, stop_order, profit_order = \
-                            self.bracket_executors[signal['side']](size=size,
-                                                                   exectype=bt.Order.Limit,
-                                                                   limitprice=signal['take_profit'],
-                                                                   price=signal['limit_price'],
-                                                                   stopprice=signal['stop_loss'],
-                                                                   valid=signal['end'],
-                                                                   )  # todo: test
+                        try:
+                            original_order, stop_order, profit_order = \
+                                self.bracket_executors[signal_side](size=size,
+                                                                    exectype=bt.Order.Limit,
+                                                                    limitprice=signal['take_profit'],
+                                                                    price=signal['limit_price'],
+                                                                    stopprice=signal['stop_loss'],
+                                                                    valid=signal['end'],
+                                                                    )
+                        except Exception as e:
+                            raise e
                     else:  # the trigger_price is not satisfied
-                        original_order, stop_order, profit_order = \
-                            self.bracket_executors[signal['side']](size=size,
-                                                                   exectype=bt.Order.StopLimit,
-                                                                   price=signal['trigger_price'],
-                                                                   pprice=signal['limit_price'],
-                                                                   limitprice=signal['take_profit'],
-                                                                   stopprice=signal['stop_loss'],
-                                                                   valid=signal['end'],
-                                                                   )
+                        try:
+                            original_order, stop_order, profit_order = \
+                                self.bracket_executors[signal_side](size=size,
+                                                                    exectype=bt.Order.StopLimit,
+                                                                    price=signal['trigger_price'],
+                                                                    pprice=signal['limit_price'],
+                                                                    limitprice=signal['take_profit'],
+                                                                    stopprice=signal['stop_loss'],
+                                                                    valid=signal['end'],
+                                                                    )
+                        except Exception as e:
+                            raise e
                 else:
                     raise NotImplementedError
-                self.post_bracket_order(original_order, stop_order, profit_order, signal, signal_index)
+                try:
+                    self.post_bracket_order(original_order, stop_order, profit_order, signal, signal_index)
+                except Exception as e:
+                    raise e
                 log_d(f"Signal:{SignalDf.to_str(signal_index, signal)} Ordered: "
                       f"O:{order_name(original_order)} S:{order_name(stop_order)} P:{order_name(profit_order)}")
             else:

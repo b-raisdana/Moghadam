@@ -113,10 +113,10 @@ class SignalDf(ExtendedDf):
     @classmethod
     def to_str(cls, signal_index: datetime, signal: pt.Series[SignalDFM]):
         try:
-            index = signal_index
+            # index = signal_index
             values = signal.to_dict()
             # effective_end = min( values['end'] if pd.notna(values['end']) else np.inf,  values['ttl'])
-            result = (f"Signal@{pd.to_datetime(index).strftime('%y-%m-%d.%H-%M')}"
+            result = (f"Signal@{signal_index}"
                       f"T{pd.to_datetime(values['end']).strftime('%d.%H-%M')}:"
                       f"{bt.Order.ExecTypes[SignalDf.execution_type(signal)]}"
                       f"{values['base_asset_amount']:.4f}@{values['limit_price']:.2f}SL{values['stop_loss']:.2f}"
@@ -128,27 +128,48 @@ class SignalDf(ExtendedDf):
 
 _sample_df = pd.DataFrame({
     'date': [Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC))],
-    'original_index': [
-        Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC))],
-    'reference_date': [
-        Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC))],
+    'original_index': \
+        [Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC))],
+    'reference_date': \
+        [Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC))],
     'reference_timeframe': ['1min'],
+
     'end': [Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=2).replace(tzinfo=pytz.UTC))],
     'side': ['buy'],
-})
+    # 'base_asset_amount': 0.0,
+    # 'limit_price': 0.0,
+    # 'stop_loss': 0.0,
+    # 'take_profit': 0.0,
+    # 'trigger_price': 0.0,
+    # 'trigger_satisfied': True,
+    #
+    # 'original_order_id': 'Test',
+    # 'stop_loss_order_id': 'Test',
+    # 'take_profit_order_id': 'Test',
+    #
+    # 'order_is_active': True
+})#.astype({
+#     'trigger_satisfied': bool,
+#     'order_is_active': bool,
+# })
 
 SignalDf._sample_df = _sample_df.set_index(['date', 'reference_date', 'reference_timeframe', 'side'])
 
 # a = SignalDf.new(
 #     {
-#         'date': Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC)),
-#         'original_index':
-#             Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC)),
-#         'reference_date':
-#             Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC)),
-#         'reference_timeframe': '1min',
-#         'end': Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=2).replace(tzinfo=pytz.UTC)),
+#         'date': datetime(2024, 1, 3, 9, 2, tzinfo=pytz.UTC),
+#         'original_index': datetime(2024, 1, 3, 9, 2, tzinfo=pytz.UTC),
+#         'reference_date': Timestamp('2024-01-03 04:15:00+0000', tz='UTC'),
+#         'reference_timeframe': '15min',
+#
+#         'end': Timestamp('2024-01-05 20:15:00+0000', tz='UTC'),
 #         'side': 'buy',
+#         'limit_price': 45267.72387181237,
+#         'stop_loss': 45206.5,
+#         'take_profit': 45537.09999999999,
+#         'trigger_price': 45261.6,
+#         'trigger_satisfied': bool(False),
+#         'order_is_active': bool(False)
 #     }
 # )
 # pass

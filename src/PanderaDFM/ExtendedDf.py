@@ -61,19 +61,31 @@ class ExtendedDf:
                     raise NotImplementedError("List values as dictionary_of_data values!")
                 _new = cls._empty_df.copy()
                 _index_names = cls.index_names()
-                index_tuple = tuple([dictionary_of_data[k] for k in dictionary_of_data.keys() if k in _index_names])
-                _column_dtypes = cls.column_dtypes()
+                try:
+                    index_tuple = tuple([dictionary_of_data[k] for k in _index_names])
+                except KeyError:
+                    raise Exception(f"Indexes {_index_names} should have value in the dictionary_of_data: {dictionary_of_data}")
+                except Exception as e:
+                    raise e
+                # try:
+                #     _column_dtypes = cls.column_dtypes()
+                # except Exception as e:
+                #     raise e
                 unused_keys = []
                 for key in dictionary_of_data.keys():
-                    if key in _column_dtypes.keys():
+                    if key in cls.schema_data_frame_model.to_schema().columns.keys(): #  _column_dtypes.keys():
+                        # _class = _column_dtypes[key].__args__[0]
+                        # if _class == bool:
+                        #     t = _class(dictionary_of_data[key])
                         _new.loc[index_tuple, key] = dictionary_of_data[key]
+                        # as_type = {key: _column_dtypes}
+                        # _new.astype(as_type)
                     elif key not in _index_names:
                         unused_keys += [key]
                 if len(unused_keys) > 0:
                     if strict:
                         raise Exception(f"Unused keys in the dictionary: {','.join(unused_keys)}")
-                pass
-                _new = cls.schema_data_frame_model.to_schema().validate(_new)
+                _new = cls.schema_data_frame_model.to_schema().validate(_new, lazy=True)
             except Exception as e:
                 raise e
             return _new

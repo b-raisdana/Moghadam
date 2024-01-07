@@ -1,10 +1,8 @@
-from datetime import datetime
 from enum import Enum
-from typing import Tuple
 
-from pandera import typing as pt
 import backtrader as bt
-from pandas import Timestamp
+import pandas as pd
+from pandera import typing as pt
 
 from PanderaDFM.SignalDf import SignalDFM
 
@@ -48,13 +46,16 @@ def order_name(order: bt.Order):
         name += f"TR{order.trailamount}/{order.trailpercent}"
     return name
 
+
 """
 date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]  # = pandera.Field(title='date')
 reference_date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
 reference_timeframe: pt.Index[str]
 side
 """
-def add_order_info(order: bt.Order, signal: pt.Series[SignalDFM], signal_index: Tuple[Timestamp,Timestamp,str,str],
+
+
+def add_order_info(order: bt.Order, signal: pt.Series[SignalDFM], signal_index: pd.MultiIndex,
                    order_type: BracketOrderType, order_id):
     order.addinfo(custom_order_id=order_id)
     order.addinfo(signal=signal)
