@@ -9,7 +9,7 @@ import pytz
 from pandas import Timestamp
 from pandera import typing as pt
 
-from PanderaDFM.ExtendedDf import ExtendedDf, BasePanderaDFM
+from PanderaDFM.ExtendedDf import ExtendedDf
 
 
 class SignalDFM(pandera.DataFrameModel):
@@ -57,7 +57,10 @@ class SignalDf(ExtendedDf):
 
     @classmethod
     def new(cls, dictionary_of_data: dict = None, strict: bool = True) -> pt.DataFrame[SignalDFM]:
-        result: pt.DataFrame[SignalDFM] = super().new(dictionary_of_data, strict)
+        try:
+            result: pt.DataFrame[SignalDFM] = super().new(dictionary_of_data, strict)
+        except Exception as e:
+            raise e
         return result
 
     # @staticmethod
@@ -136,15 +139,16 @@ _sample_df = pd.DataFrame({
 
 SignalDf._sample_df = _sample_df.set_index(['date', 'reference_date', 'reference_timeframe', 'side'])
 
-a = SignalDf.new(
-{
-    'date': Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC)),
-    'original_index':
-        Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC)),
-    'reference_date':
-        Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC)),
-    'reference_timeframe': '1min',
-    'end': Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=2).replace(tzinfo=pytz.UTC)),
-    'side': 'buy',
-}
-)
+# a = SignalDf.new(
+#     {
+#         'date': Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC)),
+#         'original_index':
+#             Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC)),
+#         'reference_date':
+#             Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC)),
+#         'reference_timeframe': '1min',
+#         'end': Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=2).replace(tzinfo=pytz.UTC)),
+#         'side': 'buy',
+#     }
+# )
+# pass

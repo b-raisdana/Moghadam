@@ -133,19 +133,19 @@ class BasePatternStrategy(ExtendedStrategy):
         try:
             # todo: optimize and simplify by removing signals and putting orders instead.
             new_signal = SignalDf.new({
-                'date': [self.candle().date],
-                'original_index': [self.candle().date],
-                'end': [effective_end],
-                'side': [side],
-                'reference_date': [base_pattern_date],
-                'reference_timeframe': [base_pattern_timeframe],
+                'date': self.candle().date,
+                'original_index': self.candle().date,
+                'end': effective_end,
+                'side': side,
+                'reference_date': base_pattern_date,
+                'reference_timeframe': base_pattern_timeframe,
                 # 'base_asset_amount': [size],
-                'limit_price': [limit_price],
-                'stop_loss': [stop_loss],
-                'take_profit': [take_profit],
-                'trigger_price': [trigger_price],
-                'trigger_satisfied': [False],
-                'order_is_active': [False],
+                'limit_price': limit_price,
+                'stop_loss': stop_loss,
+                'take_profit': take_profit,
+                'trigger_price': trigger_price,
+                'trigger_satisfied': False,
+                'order_is_active': False,
             })
         except Exception as e:
             raise e
