@@ -217,6 +217,7 @@ class BasePatternStrategy(ExtendedStrategy):
         except Exception as e:
             raise e
         print('Final Portfolio Value: %.2f' % cerebro.broker.getvalue())  # todo: test
+        cerebro.plot()
 
     def next(self):
         # todo: if the signal end changed we have to update signal orders.
