@@ -356,6 +356,8 @@ class ExtendedStrategy(bt.Strategy):
                 try:
                     size = self.allocate_order_cash(_executable_signals.iloc[idx]['limit_price'],
                                                     signal['stop_loss'])  # signal['base_asset_amount'])
+                    if size == 0:
+                        continue
                 except Exception as e:
                     raise e
                 # todo: test why orders are not executing
