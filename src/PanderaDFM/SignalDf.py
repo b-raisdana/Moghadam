@@ -55,13 +55,13 @@ class SignalDf(ExtendedDf):
     _sample_df = None
     _empty_obj = None
 
-    @classmethod
-    def new(cls, dictionary_of_data: dict = None, strict: bool = True) -> pt.DataFrame[SignalDFM]:
-        try:
-            result: pt.DataFrame[SignalDFM] = super().new(dictionary_of_data, strict)
-        except Exception as e:
-            raise e
-        return result
+    # @classmethod
+    # def new(cls, dictionary_of_data: dict = None, strict: bool = True) -> pt.DataFrame[SignalDFM]:
+    #     try:
+    #         result: pt.DataFrame[SignalDFM] = super().new(dictionary_of_data, strict)
+    #     except Exception as e:
+    #         raise e
+    #     return result
 
     # @staticmethod
     # def took_profit(signal: pt.Series[SignalDFM], tick: BaseTickStructure) -> bool:

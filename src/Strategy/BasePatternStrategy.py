@@ -132,12 +132,12 @@ class BasePatternStrategy(ExtendedStrategy):
             pass
         try:
             # todo: optimize and simplify by removing signals and putting orders instead.
-            new_signal = SignalDf.new({
+            new_signal = SignalDf.new({ # todo: debug from here
                 'date': self.candle().date,
                 'original_index': self.candle().date,
                 'end': effective_end,
                 'side': side,
-                'reference_date': base_pattern_date,
+                'reference_date': pd.to_datetime(base_pattern_date),
                 'reference_timeframe': base_pattern_timeframe,
                 # 'base_asset_amount': [size],
                 'limit_price': limit_price,

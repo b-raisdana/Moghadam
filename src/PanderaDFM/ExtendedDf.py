@@ -72,6 +72,7 @@ class ExtendedDf:
                 if len(unused_keys) > 0:
                     if strict:
                         raise Exception(f"Unused keys in the dictionary: {','.join(unused_keys)}")
+                pass
                 _new = cls.schema_data_frame_model.to_schema().validate(_new)
             except Exception as e:
                 raise e
