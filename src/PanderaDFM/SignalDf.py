@@ -12,9 +12,7 @@ from pandera import typing as pt
 from PanderaDFM.ExtendedDf import ExtendedDf, BasePanderaDFM
 
 
-# pandera.config.set_schema_completeness_validator("pandas")
-
-class SignalDFM(BasePanderaDFM):
+class SignalDFM(pandera.DataFrameModel):
     # from start of exact this candle the signal is valid
     date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]  # = pandera.Field(title='date')
     reference_date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
@@ -39,6 +37,13 @@ class SignalDFM(BasePanderaDFM):
     # todo: if the signal end changed we have to update signal orders
     updated: pt.Series[bool] = pandera.Field(nullable=True, default=True)
 
+    class Config:
+        # to resolve pandera.errors.SchemaError: column ['XXXX'] not in dataframe
+        add_missing_columns = True
+        # to resolve pandera.errors.SchemaError: expected series ['XXXX'/None] to have type datetime64[ns, UTC]
+        # , got object
+        coerce = True
+
     # @pandera.dataframe_check
     # def end_after_start_check(cls, df, *args, **kwargs):
     #     # Custom check to ensure 'end' is after 'date'
@@ -47,31 +52,9 @@ class SignalDFM(BasePanderaDFM):
 
 class SignalDf(ExtendedDf):
     schema_data_frame_model = SignalDFM
-    # _sample_df = pt.DataFrame[SignalDFM]({
-    #     'date': [Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC))],
-    #     'original_index': [
-    #         Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC))],
-    #     'reference_date': [
-    #         Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC))],
-    #     'reference_timeframe': ['1min'],
-    #     'end': [Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=2).replace(tzinfo=pytz.UTC))],
-    #     'side': ['buy'],
-    # })
     _sample_df = None
     _empty_obj = None
 
-    # @classmethod
-    # def new(cls, dictionary_of_data: dict = None) -> pt.DataFrame[SignalDFM]:
-    #     # todoo: test
-    #     _new: pt.DataFrame[SignalDFM] = super().new(dictionary_of_data)
-    #     # todoo: make it automatic
-    #     _new.is_buy = types.MethodType(cls.is_buy, _new)
-    #     return _new
-
-    # @staticmethod
-    # def is_buy(signals: pt.DataFrame[SignalDFM]):
-    #     # todoo: test
-    #     return signals[signals['side'] == 'buy']
     @classmethod
     def new(cls, dictionary_of_data: dict = None, strict: bool = True) -> pt.DataFrame[SignalDFM]:
         result: pt.DataFrame[SignalDFM] = super().new(dictionary_of_data, strict)
@@ -151,20 +134,17 @@ _sample_df = pd.DataFrame({
     'side': ['buy'],
 })
 
-SignalDf._sample_df = _sample_df.set_index(
-    ['date', 'reference_date', 'reference_timeframe', 'side'])  # , 'reference_date', 'reference_timeframe', 'side'])
+SignalDf._sample_df = _sample_df.set_index(['date', 'reference_date', 'reference_timeframe', 'side'])
 
-a = SignalDf.new()
-b = SignalDf.new(
-    {
-        'date': Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC)),
-        'original_index':
-            Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC)),
-        'reference_date':
-            Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC)),
-        'reference_timeframe': '1min',
-        'end': Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=2).replace(tzinfo=pytz.UTC)),
-        'side': 'buy',
-    }
+a = SignalDf.new(
+{
+    'date': Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC)),
+    'original_index':
+        Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC)),
+    'reference_date':
+        Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC)),
+    'reference_timeframe': '1min',
+    'end': Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=2).replace(tzinfo=pytz.UTC)),
+    'side': 'buy',
+}
 )
-pass

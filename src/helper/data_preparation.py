@@ -649,6 +649,7 @@ def column_dtypes(data, model_class) -> Dict[str, DataType]:
     _all_annotations = all_annotations(model_class)
     data_index_names = index_names(data)
     column_annotations = {k: a for k, a in _all_annotations.items() if k not in data_index_names}
+    d_type: str
     return column_annotations
 
 

@@ -194,7 +194,7 @@ def core_generate_ohlcv(date_range_str: str = None, file_path: str = None):
     df = pd.DataFrame(raw_ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
     df['date'] = pd.to_datetime(df['timestamp'], unit='ms', utc=True)
     df = df.set_index('date')
-    df = ddf.drop(columns=['timestamp'])
+    df = df.drop(columns=['timestamp'])
     cast_and_validate(df, OHLCV, zero_size_allowed=after_under_process_date(date_range_str))
     assert times_tester(df, date_range_str, timeframe=config.timeframes[0])
     df.to_csv(os.path.join(file_path, f'ohlcv.{date_range_str}.zip'), compression='zip')

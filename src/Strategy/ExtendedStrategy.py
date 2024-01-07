@@ -265,17 +265,20 @@ class ExtendedStrategy(bt.Strategy):
         return all signals which the self.candle()date is between signal start (signal.index) and signal end.
         :return:
         """
-        if 'end' not in self.signal_df.columns:
-            # self.signal_df['end'] = pd.Series(dtype='datetime64[ns, UTC]')
-            pass
-        result = self.signal_df[
-            (self.signal_df.index.get_level_values(level='date') <= self.candle().date) &
-            (
-                # ('end' not in self.signal_df.columns) |
-                    (self.signal_df['end'].isna()) |
-                    (self.signal_df['end'] > self.candle().date)) &
-            (self.signal_df['order_is_active'].isna() | ~self.signal_df['order_is_active'])
-            ]
+        try:
+            if 'end' not in self.signal_df.columns:
+                # self.signal_df['end'] = pd.Series(dtype='datetime64[ns, UTC]')
+                pass
+            result = self.signal_df[
+                (self.signal_df.index.get_level_values(level='date') <= self.candle().date) &
+                (
+                    # ('end' not in self.signal_df.columns) |
+                        (self.signal_df['end'].isna()) |
+                        (self.signal_df['end'] > self.candle().date)) &
+                (self.signal_df['order_is_active'].isna() | ~self.signal_df['order_is_active'])
+                ]
+        except Exception as e:
+            raise e
         return result
 
     # def update_ordered_signals(self):
