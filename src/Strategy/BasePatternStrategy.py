@@ -25,9 +25,12 @@ class BasePatternStrategy(ExtendedStrategy):
     @measure_time
     def __init__(self):
         self.add_signal_source_data()
+        if self.date_range_str is None:
+            raise AssertionError("expected the self.date_range_str be not None!")
+        self.orders_files = open(f'BasePatternStrategy.{config.id}.{self.date_range_str}.csv', 'w')
         super().__init__()
 
-    @measure_time
+    # @measure_time
     def notify_order(self, order: bt.Order):
         try:
             if order.status == bt.Order.Completed:
@@ -49,7 +52,8 @@ class BasePatternStrategy(ExtendedStrategy):
                     repeat_signal['order_is_active'] = False
                     repeat_signal['original_order_id'] = pd.NA
                     # repeat_signal['end'] = pd.NA
-                    if str(self.signal_df.index.names) != str(['date', 'reference_date', 'reference_timeframe', 'side']):
+                    if str(self.signal_df.index.names) != str(
+                            ['date', 'reference_date', 'reference_timeframe', 'side']):
                         raise AssertionError(
                             f"Order of signal_df indexes "
                             f"expected to be {str(['date', 'reference_date', 'reference_timeframe', 'side'])} "
@@ -151,8 +155,7 @@ class BasePatternStrategy(ExtendedStrategy):
             pass
         try:
             # todo: optimize and simplify by removing signals and putting orders instead.
-            if len(self.signal_df) == 2:
-                pass
+
             new_signal = SignalDf.new({  # todo: debug from here
                 'date': self.candle().date,
                 'original_index': self.candle().date,
@@ -198,31 +201,55 @@ class BasePatternStrategy(ExtendedStrategy):
                 self.add_signal(timeframe, start, base_pattern, band='below')
                 self.base_patterns.loc[(timeframe, start), 'below_band_signal_generated'] = self.candle().date
 
-    @staticmethod
-    def test_strategy(cash: float, date_range_str: str = None):
-        if date_range_str is None:
-            date_range_str = config.processing_date_range
-        cerebro = bt.Cerebro()
-        cerebro.addstrategy(BasePatternStrategy)
-        # cerebro.broker = ExtendedBroker()
-        # cerebro.addsizer(MySizer)
-        raw_data = read_base_timeframe_ohlcv(date_range_str)
-        data = bt.feeds.PandasData(dataname=raw_data, datetime=None, open=0, close=1, high=2, low=3, volume=4,
-                                   openinterest=-1)
-        cerebro.adddata(data)
-        cerebro.broker.set_cash(cash)
-        print('Starting Portfolio Value: %.2f' % cerebro.broker.getvalue())
-        try:
-            cerebro.run()
-        except Exception as e:
-            raise e
-        print('Final Portfolio Value: %.2f' % cerebro.broker.getvalue())  # todo: test
-        cerebro.plot()
+def test_strategy(cash: float, date_range_str: str = None):
+    if date_range_str is None:
+        date_range_str = config.processing_date_range
+    cerebro = bt.Cerebro()
+    cerebro.addstrategy(BasePatternStrategy)
+    # cerebro.broker = ExtendedBroker()
+    # cerebro.addsizer(MySizer)
+    raw_data = read_base_timeframe_ohlcv(date_range_str)
+    data = bt.feeds.PandasData(dataname=raw_data, datetime=None, open=0, close=1, high=2, low=3, volume=4,
+                               openinterest=-1)
+    cerebro.adddata(data)
+    # cerebro.addwriter(bt.WriterFile, csv=True)
 
-    def next(self):
-        # todo: if the signal end changed we have to update signal orders.
-        # todo: check It only happens when order takes profit. In this case both of sell and
-        try:
-            super().next()
-        except Exception as e:
-            raise e
+    cerebro.broker.set_cash(cash)
+    cerebro.broker.set_fundmode(True, 0.02)  # 0.02 BTC ~= 1000 USD
+
+    cerebro.addanalyzer(bt.analyzers.TimeReturn, fund=True)
+    cerebro.addobserver(bt.observers.FundValue)
+    cerebro.addobserver(bt.observers.FundShares)
+    cerebro.addobserver(bt.observers.TimeReturn)
+
+    cerebro.addanalyzer(bt.analyzers.DrawDown, fund=True)
+    cerebro.addobserver(bt.observers.DrawDown)
+
+    cerebro.addobserver(bt.observers.Broker)
+
+    cerebro.addobserver(bt.observers.Benchmark)
+
+    print('Starting Portfolio Value: %.2f' % cerebro.broker.getvalue())
+    try:
+        result = cerebro.run()
+    except Exception as e:
+        raise e
+    orders = {}
+    for k, v in result[0].original_orders.items():
+        orders[k] = v
+    for k, v in result[0].stop_orders.items():
+        orders[k] = v
+    for k, v in result[0].profit_orders.items():
+        orders[k] = v
+    # t_order = orders[1]
+    # df = pd.DataFrame(orders.values())
+    print('Final Portfolio Value: %.2f' % cerebro.broker.getvalue())  # todo: test
+    plots = cerebro.plot(style='candle', dpi=900, savefig='plot.png')
+    pass
+    a = 1
+    try:
+        plots[0][0].set_size_inches(19200, 10800)
+        plots[0][0].savefig(fname=f'c:\\BasePatternStrategy.{config.id}.{date_range_str}.pdf', format='pdf')
+        # width=19200, height=10800, style='candle', savefig=f'c:\\BasePatternStrategy.{config.id}.{date_range_str}.pdf'
+    except Exception as e:
+        raise e

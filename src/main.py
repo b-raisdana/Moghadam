@@ -1,14 +1,14 @@
 from BasePattern import read_multi_timeframe_base_patterns
 from Config import config
 from FigurePlotter.BasePattern_plotter import plot_multi_timeframe_base_pattern
-from Strategy.BasePatternStrategy import BasePatternStrategy
+from Strategy.BasePatternStrategy import test_strategy
 from atr import read_multi_timeframe_ohlcva
 from helper.helper import date_range_to_string
 
 # from data_preparation import d_types
 
 if __name__ == "__main__":
-    config.processing_date_range = date_range_to_string(days=4)
+    config.processing_date_range = date_range_to_string(days=2)
     #
     #     file_path: str = config.path_of_data
     #     today_morning = today_morning()
@@ -61,4 +61,4 @@ if __name__ == "__main__":
     # _base_patterns = _base_patterns[~_base_patterns['ignore_backtesting']]
     # plot_multi_timeframe_base_pattern(ohlcva, _base_patterns)
     # exit(0)
-    BasePatternStrategy.test_strategy(cash=100000)
+    test_strategy(cash=100000)
