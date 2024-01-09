@@ -179,8 +179,8 @@ class ExtendedStrategy(bt.Strategy):
         return original_order, stop_order, profit_order
 
     def next_log(self):
-        if self.next_runs % 100 == 0:
-            log_d(f"Ran {self.next_runs} Next()s reached {self.candle().date}")
+        # if self.next_runs % 100 == 0:
+        log_d(f"Ran {self.next_runs} Next()s reached {self.candle().date}")
         self.next_runs += 1
 
     def movement_intersect(self, target_low: float, target_high: float):
@@ -358,6 +358,8 @@ class ExtendedStrategy(bt.Strategy):
                 self.signal_df['original_order_id'] == order_name(order), 'order_is_active'] = False
             self.signal_df.loc[self.signal_df['original_order_id'] == order_name(order), 'original_order_id'] = pd.NA
             log_d(f"Order:{order_name(order)} Completed")
+            if order.ref == 7:
+                pass  # todo: test crashes after here.
         elif order.status in [order.Partial]:
             log_d(f"Order:{order_name(order)} Partially executed")  # todo: test
         elif order.status in [order.Expired]:
