@@ -36,7 +36,7 @@ class ExtendedDf:
             raise Exception(f"Expected to find 'date' in data")
         if hasattr(data.index, 'names') and 'timeframe' in data.index.names:
             if 'timeframe' not in data.columns:
-                raise Exception(
+                raise AttributeError(
                     f"'timeframe' is in the indexes of {cls.__name__}.{cls.schema_data_frame_model.__name__} "
                     f"so it is required!")
             return data.set_index(['timeframe', 'date'])
@@ -196,7 +196,7 @@ class ExtendedDf:
         elif hasattr(schema.index, 'name'):
             log_w("Never been tested")
             if schema.index.name is None or schema.index.name == "":
-                raise Exception('Set name of index as title!')
+                raise AttributeError('Set name of index as title!')
             _index_names = [schema.index.name]
         cls._index_names = _index_names
         return cls._index_names

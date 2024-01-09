@@ -90,16 +90,20 @@ class SignalDf(ExtendedDf):
     @staticmethod
     def execution_type(signal):
         signal_dict = signal.to_dict()
-        if pd.notna(signal_dict['stop_loss']) and pd.notna(signal_dict['limit_price']):
+        if pd.notna(signal_dict['trigger_price']) and pd.notna(signal_dict['limit_price']):
             # todo: this is not align with standard definition of StopLimit
-            execution_type = bt.Order.StopLimit
+            execution_type = "StopLimit"  # bt.Order.StopLimit
         elif pd.notna(signal_dict['stop_loss']):
-            execution_type = bt.Order.Stop  # todo: test
+            execution_type = "Stop"  # bt.Order.Stop  # todo: test
         elif pd.notna(signal_dict['limit_price']):
-            execution_type = bt.Order.Limit  # todo: test
+            execution_type = "Limit"  # bt.Order.Limit  # todo: test
+        elif (pd.isna(signal_dict['trigger_price']) and pd.isna(signal_dict['stop_loss'])
+              and pd.isna(signal_dict['limit_price'])):
+            execution_type = "Market"  # bt.Order.Market  # todo: test
         else:
-            execution_type = bt.Order.Market  # todo: test
+            execution_type = "Custom"
         return execution_type
+
 
     # @staticmethod
     # def check_trigger(signal):
@@ -118,7 +122,7 @@ class SignalDf(ExtendedDf):
             # effective_end = min( values['end'] if pd.notna(values['end']) else np.inf,  values['ttl'])
             result = (f"Signal@{signal_index}"
                       f"T{pd.to_datetime(values['end']).strftime('%d.%H-%M')}:"
-                      f"{bt.Order.ExecTypes[SignalDf.execution_type(signal)]}"
+                      f"{SignalDf.execution_type(signal)}"
                       f"{values['base_asset_amount']:.4f}@{values['limit_price']:.2f}SL{values['stop_loss']:.2f}"
                       f"TP{values['take_profit']:.2f}TR{values['trigger_price']:.2f}")
         except Exception as e:
@@ -148,7 +152,7 @@ _sample_df = pd.DataFrame({
     # 'take_profit_order_id': 'Test',
     #
     # 'order_is_active': True
-})#.astype({
+})  # .astype({
 #     'trigger_satisfied': bool,
 #     'order_is_active': bool,
 # })

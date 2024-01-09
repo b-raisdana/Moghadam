@@ -815,8 +815,8 @@ def empty_df(model_class: Type[Pandera_DFM_Type]) -> pd.DataFrame:
         as_types[_name] = _type.type.name
 
     _empty_df = _empty_df.astype(as_types)
-    if len(index_fields(model_class).keys()) == 0:
-        pass
+    # if len(index_fields(model_class).keys()) == 0:
+    #     pass
     _empty_df = _empty_df.set_index(list(index_fields(model_class).keys()))
     _empty_df = model_class(_empty_df)
     return _empty_df
@@ -908,7 +908,7 @@ def concat(left: pd.DataFrame, right: pd.DataFrame):
                     left[column] = pd.Series(dtype=d_type)
     else:
         if not right.empty and not right.isna().all().all():
-            left = right
+            left = right.copy()
         else:
             left = pd.DataFrame()
     return left

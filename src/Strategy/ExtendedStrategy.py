@@ -10,19 +10,40 @@ from PanderaDFM.SignalDf import SignalDFM, SignalDf
 from Strategy.BaseTickStructure import BaseTickStructure
 from Strategy.order_helper import BracketOrderType, order_name, OrderSide, add_order_info, order_prices, order_is_open, \
     order_is_closed
+from helper.data_preparation import concat
 from helper.helper import log_d, measure_time
 
 
 class ExtendedStrategy(bt.Strategy):
-    signal_df: pt.DataFrame[SignalDFM]
+    signal_df: pt.DataFrame[SignalDFM] = None
+    orders_df: pd.DataFrame = None
+    vault_df: pd.DataFrame = None
+
     original_orders = {}
     stop_orders = {}
     profit_orders = {}
     archived_orders = {}
     date_range_str: str = None
-    true_risked_money = 0.0
+    # true_risked_money = 0.0
     group_order_counter = None
-    orders_files = None
+    broker_initial_cash = None
+
+    @measure_time
+    def __init__(self):
+        self.signal_df = SignalDf.new()
+        self.orders_df = pd.DataFrame()
+        self.vault_df = pd.DataFrame()
+
+        self.set_date_range()
+        self.bracket_executors = {
+            'buy': self.buy_bracket,
+            'sell': self.sell_bracket,
+        }
+        self.next_runs = 0
+
+    # orders_files = None
+    def start(self):
+        self.broker_initial_cash = self.broker.get_cash()
 
     def group_order_id(self):
         if self.group_order_counter is None:
@@ -88,19 +109,23 @@ class ExtendedStrategy(bt.Strategy):
 
         return original_order, sl_order, tp_order
 
+    def spent_money(self) -> float:
+        assert self.broker_initial_cash is not None, "Do not run before start()"
+        return self.broker_initial_cash - self.broker.get_cash()
+
     def allocate_order_cash(self, limit_price: float, sl_price: float, size: float = None) -> float:
         # Allocate 10% of the initial cash
         max_allowed_total_capital_at_risk = config.initial_cash * config.capital_max_total_risk_percentage
-        remained_risk_able = max_allowed_total_capital_at_risk - self.true_risked_money
+        remained_risk_able = max_allowed_total_capital_at_risk - self.spent_money()  # self.true_risked_money
         if size is None:
             size, true_risked_money = self.risk_size_sizer(limit_price, sl_price, size)
         else:
             raise NotImplementedError  # true_risked_money = size * self.candle().close
         if true_risked_money < remained_risk_able:
-            self.true_risked_money += true_risked_money
+            # self.true_risked_money += true_risked_money
             return size
         elif remained_risk_able > 0:
-            self.true_risked_money += remained_risk_able
+            # self.true_risked_money += remained_risk_able
             return remained_risk_able / self.candle().close
         else:
             return 0
@@ -115,9 +140,14 @@ class ExtendedStrategy(bt.Strategy):
         #     return 0
 
     def free_order_cash(self, limit_price: float, sl_price: float, size: float):
-        _, true_risked_money = self.risk_size_sizer(limit_price, sl_price, size)  # todo: test
-        self.true_risked_money -= true_risked_money
-        assert self.true_risked_money > 0
+        # should be handled bby bachtrader!
+        # todo: check bracket order cash is not handled.
+        # todo: check sell order cash handling
+        # todo: never reached!
+        # _, true_risked_money = self.risk_size_sizer(limit_price, sl_price, size)  # toddo: test
+        # self.true_risked_money -= true_risked_money
+        # assert self.true_risked_money > 0, "self.true_risked_money <= 0"
+        pass
 
     def candle(self, backward_index: int = 0) -> BaseTickStructure:
         return BaseTickStructure(
@@ -134,16 +164,6 @@ class ExtendedStrategy(bt.Strategy):
             date_range_str = config.processing_date_range
         self.date_range_str = date_range_str
         # self.start_datime, self.end = date_range(date_range_str)
-
-    @measure_time
-    def __init__(self):
-        self.signal_df = SignalDf.new()
-        self.set_date_range()
-        self.bracket_executors = {
-            'buy': self.buy_bracket,
-            'sell': self.sell_bracket,
-        }
-        self.next_runs = 0
 
     def get_order_group(self, order: bt.Order) -> (bt.Order, bt.Order, bt.Order,):
         try:
@@ -175,26 +195,11 @@ class ExtendedStrategy(bt.Strategy):
 
     def next(self):
         self.next_log()
+
         if len(self.original_orders) > 0:
-            try:
-                self.verify_triple_oder_status()
-            except Exception as e:
-                raise e
-        # self.update_bases() the base patterns are prepared before!
-        try:
-            self.extract_signals()
-        except Exception as e:
-            raise e
-        # self.update_orders()
-        # self.update_ordered_signals()
-        try:
-            if self.candle().date == pd.Timestamp("2024-01-03 09:02:00+00:00"):
-                pass
-            self.execute_active_signals()
-        except Exception as e:
-            raise e
-        if len(self.signal_df) == 3:
-            pass
+            self.verify_triple_oder_status()
+        self.extract_signals()
+        self.execute_active_signals()
 
     def verify_triple_oder_status(self):
         '''
@@ -206,70 +211,163 @@ class ExtendedStrategy(bt.Strategy):
          (canceled) also
         :return:
         '''
-        assert len(self.original_orders) == len(self.stop_orders)
-        assert len(self.original_orders) == len(self.profit_orders)
+        assert len(self.original_orders) == len(self.stop_orders), "len(self.original_orders) != len(self.stop_orders)"
+        assert len(self.original_orders) == len(self.profit_orders), \
+            "len(self.original_orders) != len(self.profit_orders)"
         for i in self.original_orders.keys():
             if order_is_open(self.original_orders[i]):
                 if not order_is_open(self.stop_orders[i]) or not order_is_open(self.profit_orders[i]):
                     pass
-                assert order_is_open(self.stop_orders[i])
-                assert order_is_open(self.profit_orders[i])
+                if not order_is_open(self.stop_orders[i]): AssertionError("!order_is_open(self.stop_orders[i])")
+                if not order_is_open(self.profit_orders[i]): AssertionError("!order_is_open(self.profit_orders[i])")
             elif order_is_closed(self.original_orders[i]):
                 log_d("Not working: AssertionError")
-                # if not order_is_closed(self.stop_orders[i]) or not order_is_closed(self.profit_orders[i]):
-                #     pass
-                # assert order_is_closed(self.stop_orders[i])
-                # assert order_is_closed(self.profit_orders[i]) # todo: test AssertionError
-
-    def log_order(self, order: bt.Order):
-        NotImplementedError
+                if not order_is_closed(self.stop_orders[i]) or not order_is_closed(self.profit_orders[i]):
+                    pass
+                if not order_is_closed(self.stop_orders[i]): AssertionError("!order_is_closed(self.stop_orders[i])")
+                if not order_is_closed(self.profit_orders[i]):
+                    AssertionError("!order_is_closed(self.profit_orders[i])")  # todo: test AssertionError
 
     def stop(self):
         # Close the log file when the strategy is done running
-        self.orders_file.close()
+        # self.orders_file.close()
+        if self.vault_df is not None:  # todo: test
+            self.vault_df.to_csv(f"{self.__class__.__name__}.vault.{config.id}.{self.date_range_str}.csv")
+        if self.orders_df is not None:
+            self.orders_df.to_csv(f"{self.__class__.__name__}.orders.{config.id}.{self.date_range_str}.csv")
+        if self.signal_df is not None:
+            self.signal_df.to_csv(f"{self.__class__.__name__}.signals.{config.id}.{self.date_range_str}.csv")
+        if self.original_orders is not None:
+            df = pd.DataFrame()
+            for key, order in self.original_orders:
+                df.loc[key] = pd.DataFrame({self.dict_of(order)})
+            df.to_csv(
+                f"{self.__class__.__name__}.original_orders.{config.id}.{self.date_range_str}.csv")
+        if self.stop_orders is not None:
+            df = pd.DataFrame(self.stop_orders)
+            df.to_csv(f"{self.__class__.__name__}.stop_orders.{config.id}.{self.date_range_str}.csv")
+        if self.profit_orders is not None:
+            df = pd.DataFrame(self.profit_orders)
+            df.to_csv(f"{self.__class__.__name__}.profit_orders.{config.id}.{self.date_range_str}.csv")
+
+    @staticmethod
+    def dict_of_order(order: bt.Order):
+        t_dict = {
+            # 'ref': order.ref,
+            'side': order.ordtypename(),
+
+            'size': order.size,
+
+            'price': order.params.price,
+            'plimit': order.plimit,
+            'price_limit': order.params.pricelimit,
+
+            'exectype': order.ExecTypes[order.exectype],
+            'status': order.Status[order.status],
+
+            'valid': order.params.valid,
+            'type': order.ordtypename(),
+            # 'info': str(order.info),
+
+            'triggered': order.triggered,
+            'tradeid': order.params.tradeid,
+            'trailamount': order.params.trailamount,
+            'trailpercent': order.params.trailpercent,
+            'transmit': order.params.transmit,
+            'histnotify': order.params.histnotify,
+            'oco': order.params.oco,
+            'parent': order.params.parent,
+            'simulated': order.params.simulated,
+            'plen': order.plen,
+
+        }
+        # dict = {k: v for k, v in _object.__dict__.items() if not k.startswith('_')}
+        return t_dict
+
+    @staticmethod
+    def dict_of_list(input_dict):
+        result = {k: [v] for k, v in input_dict.items()}
+        return result
+
+    def log_order(self, order: bt.Order):
+        t_dict = self.dict_of_list(self.dict_of_order(order))  # todo: test
+        self.orders_df = concat(self.orders_df, pd.DataFrame(t_dict, index=[order.ref]))
+        # pd.DataFrame({**_dict}, index=order.ref)
+        self.orders_df.to_csv(f"{self.__class__.__name__}.orders.{config.id}.{self.date_range_str}.csv")
+
+    def log_vault(self):
+        _dict = {
+            'cash': self.broker.get_cash(),
+            'fund_shares': self.broker.get_fundshares(),
+            'fund_value': self.broker.get_fundvalue(),
+        }
+        if len(self.getdatanames()) > 1:
+            raise NotImplementedError
+        self.broker: bt.BackBroker
+        # for index in len(self.datas):
+        #     asset = list_of_assets[index]
+        asset = self.getdatanames()[0]
+        _dict[f"{asset}_value"] = self.broker.get_value()  # todo: test
+        position = self.broker.getposition(self.datas[0])
+        _dict[f"{asset}_position_size"] = position.size
+        _dict[f"{asset}_position_price"] = position.price
+        _dict[f"{asset}_position_adjbase"] = position.adjbase
+        _dict[f"{asset}_position_price_orig"] = position.price_orig
+        _dict[f"{asset}_position_upclosed"] = position.upclosed
+        _dict[f"{asset}_position_updt"] = position.updt
+        _dict[f"{asset}_position_upopened"] = position.upopened
+        # self.broker_history_dfloc[len(self.vault_df)] = pd.DataFrame(dict)
+        # self.vault_df.to_csv(f"{self.__class__.__name__}.vault.{config.id}.{self.date_range_str}.csv")
+        _dict = self.dict_of_list(_dict)
+        self.vault_df = concat(self.vault_df,
+                               pd.DataFrame(_dict,
+                                            index=[self.candle().date]))  # pd.DataFrame({**_dict}, index=order.ref)
+        self.vault_df.to_csv(f"{self.__class__.__name__}.vault.{config.id}.{self.date_range_str}.csv")
+
     # @measure_time
     def notify_order(self, order: bt.Order):
         self.log_order(order)
+        self.log_vault()
         if not (
                 order_name(order) in self.signal_df['original_order_id'].tolist() or
                 order_name(order) in self.signal_df['stop_loss_order_id'].tolist() or
                 order_name(order) in self.signal_df['take_profit_order_id'].tolist()
         ):
-            raise Exception(f"{order_name(order)} not found in tracked orders!")
-        # assert all(self.signal_df.loc[self.signal_df['original_order_id'] == order.__str__(), 'order_is_active']
-        #            == True)
+            raise AssertionError(f"{order_name(order)} not found in tracked orders!")
         if order.isbuy():
             size_positiver = 1
         else:
             size_positiver = -1
-        if not ((order.size * size_positiver) > 0):  # todo: test
-            raise
+        if not ((order.size * size_positiver) > 0):
+            raise AssertionError("not ((order.size * size_positiver) > 0)")
         if not ((order.size * size_positiver) > 1 / 43000):  # , "Order size less than 1 dollar"
-            raise
-        if order.status in [order.Completed, order.Partial, order.Expired, order.Canceled, order.Rejected]:
-            if order.info['custom_type'] == BracketOrderType.Original.value:
-                limit_price, stop_loss, take_profit = order_prices(order)
-                self.free_order_cash(limit_price, stop_loss, order.size)
-            else:
-                pass
+            raise AssertionError("not ((order.size * size_positiver) > 1 / 43000)")
+        # if order.status in [order.Completed, order.Partial, order.Expired, order.Canceled, order.Rejected]:
+        #     # cash freeing expected to be handled by backtrader!
+        #     # if order.info['custom_type'] == BracketOrderType.Original.value:
+        #     #     limit_price, stop_loss, take_profit = order_prices(order)  # toddo: test
+        #     #     # self.free_order_cash(limit_price, stop_loss, order.size)
+        #     # else:
+        #     #     pass
         if order.status in [order.Submitted, order.Accepted]:
             # Order has been submitted or accepted
-            log_d(f"Order:{order_name(order)} submission confirmed")
+            log_d(f"Order:{order_name(order)} Submitted")
         elif order.status in [order.Completed]:
             # Order has been completed (executed)
-            self.signal_df.loc[self.signal_df['original_order_id'] == order.__str__(), 'order_is_active'] = False
-            self.signal_df.loc[self.signal_df['original_order_id'] == order.__str__(), 'original_order_id'] = pd.NA
+            self.signal_df.loc[
+                self.signal_df['original_order_id'] == order_name(order), 'order_is_active'] = False
+            self.signal_df.loc[self.signal_df['original_order_id'] == order_name(order), 'original_order_id'] = pd.NA
             log_d(f"Order:{order_name(order)} Completed")
         elif order.status in [order.Partial]:
-            log_d(f"Order:{order_name(order)} Partially executed")
+            log_d(f"Order:{order_name(order)} Partially executed")  # todo: test
         elif order.status in [order.Expired]:
-            raise Exception(f"Order:{order_name(order)} Expired")
+            log_d(f"Order:{order_name(order)} Expired")
         elif order.status in [order.Canceled]:
-            raise Exception(f"Order:{order_name(order)} Canceled")
+            log_d(f"Order:{order_name(order)} Canceled")
         elif order.status in [order.Rejected]:
-            raise Exception(f"Order:{order_name(order)} Rejected")
+            raise Exception(f"Order:{order_name(order)} Rejected")  # todo: test
         else:
-            raise Exception(f"Order:{order_name(order)} Unexpected status {order.status}")
+            raise Exception(f"Order:{order_name(order)} Unexpected status {order.status}")  # todo: test
 
     def ordered_signals(self, signal_df: SignalDf = None) -> pt.DataFrame[SignalDFM]:
         if signal_df is None:
@@ -367,7 +465,6 @@ class ExtendedStrategy(bt.Strategy):
                         continue
                 except Exception as e:
                     raise e
-                # todo: test why orders are not executing
                 if pd.notna(signal['limit_price']) and pd.notna(signal['stop_loss']):
                     if (
                             pd.isna(signal['trigger_price']) or
@@ -375,36 +472,27 @@ class ExtendedStrategy(bt.Strategy):
                             or
                             ((signal_side == OrderSide.Sell.value) and (self.candle().low < signal['trigger_price']))
                     ):
-                        try:
-                            original_order, stop_order, profit_order = \
-                                self.bracket_executors[signal_side](size=size,
-                                                                    exectype=bt.Order.Limit,
-                                                                    limitprice=signal['take_profit'],
-                                                                    price=signal['limit_price'],
-                                                                    stopprice=signal['stop_loss'],
-                                                                    valid=signal['end'],
-                                                                    )
-                        except Exception as e:
-                            raise e
+                        original_order, stop_order, profit_order = \
+                            self.bracket_executors[signal_side](size=size,
+                                                                exectype=bt.Order.Limit,
+                                                                limitprice=signal['take_profit'],
+                                                                price=signal['limit_price'],
+                                                                stopprice=signal['stop_loss'],
+                                                                valid=signal['end'],
+                                                                )
                     else:  # the trigger_price is not satisfied
-                        try:
-                            original_order, stop_order, profit_order = \
-                                self.bracket_executors[signal_side](size=size,
-                                                                    exectype=bt.Order.StopLimit,
-                                                                    price=signal['trigger_price'],
-                                                                    pprice=signal['limit_price'],
-                                                                    limitprice=signal['take_profit'],
-                                                                    stopprice=signal['stop_loss'],
-                                                                    valid=signal['end'],
-                                                                    )
-                        except Exception as e:
-                            raise e
+                        original_order, stop_order, profit_order = \
+                            self.bracket_executors[signal_side](size=size,
+                                                                exectype=bt.Order.StopLimit,
+                                                                price=signal['trigger_price'],
+                                                                pprice=signal['limit_price'],
+                                                                limitprice=signal['take_profit'],
+                                                                stopprice=signal['stop_loss'],
+                                                                valid=signal['end'],
+                                                                )
                 else:
                     raise NotImplementedError
-                try:
-                    self.post_bracket_order(original_order, stop_order, profit_order, signal, signal_index)
-                except Exception as e:
-                    raise e
+                self.post_bracket_order(original_order, stop_order, profit_order, signal, signal_index)
                 log_d(f"Signal:{SignalDf.to_str(signal_index, signal)} Ordered: "
                       f"O:{order_name(original_order)} S:{order_name(stop_order)} P:{order_name(profit_order)}")
             else:
