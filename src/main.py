@@ -35,7 +35,7 @@ if __name__ == "__main__":
     # plot_multi_timeframe_ohlcv(_ohlcv, config.processing_date_range, show=True)
     # exit()
     # generate_multi_timeframe_ohlcva()
-    ohlcva = read_multi_timeframe_ohlcva()
+    # ohlcva = read_multi_timeframe_ohlcva()
     # plot_multi_timeframe_ohlcva(ohlcva, show=False)
 
     # _peaks_and_valleys = multi_timeframe_peaks_n_valleys(config.processing_date_range)
