@@ -36,27 +36,27 @@ if __name__ == "__main__":
     # exit()
     # generate_multi_timeframe_ohlcva()
     # ohlcva = read_multi_timeframe_ohlcva()
-    # plot_multi_timeframe_ohlcva(ohlcva, show=False)
-
-    # _peaks_and_valleys = multi_timeframe_peaks_n_valleys(config.processing_date_range)
-    # generate_multi_timeframe_peaks_n_valleys(config.processing_date_range)  # config.processing_date_range)
-    # _peaks_and_valleys = read_multi_timeframe_peaks_n_valleys()
-    # plot_multi_timeframe_peaks_n_valleys(_peaks_and_valleys, config.processing_date_range)
-    # generate_multi_timeframe_candle_trend(config.processing_date_range)
-    # generate_multi_timeframe_bull_bear_side_trends()
-    # bull_bear_side = read_multi_timeframe_bull_bear_side_trends()
+    # # plot_multi_timeframe_ohlcva(ohlcva, show=False)
+    #
+    # # _peaks_and_valleys = multi_timeframe_peaks_n_valleys(config.processing_date_range)
+    # # generate_multi_timeframe_peaks_n_valleys(config.processing_date_range)  # config.processing_date_range)
+    # # _peaks_and_valleys = read_multi_timeframe_peaks_n_valleys()
+    # # plot_multi_timeframe_peaks_n_valleys(_peaks_and_valleys, config.processing_date_range)
+    # # generate_multi_timeframe_candle_trend(config.processing_date_range)
+    # # generate_multi_timeframe_bull_bear_side_trends()
     # # bull_bear_side = read_multi_timeframe_bull_bear_side_trends()
-    # plot_multi_timeframe_bull_bear_side_trends(ohlcva, _peaks_and_valleys, bull_bear_side,
-    #                                            timeframe_shortlist=['4H', '1D', '1W'])
-    # # pivots = read_pivots(config.processing_date_range)
-
-    # exit()
-
-    # generate_multi_timeframe_bull_bear_side_pivots()
-    # _bull_bear_side_pivots = read_multi_timeframe_bull_bear_side_pivots()
-    # plot_multi_timeframe_pivots(_bull_bear_side_pivots)
-
-    # generate_multi_timeframe_base_patterns()
+    # # # bull_bear_side = read_multi_timeframe_bull_bear_side_trends()
+    # # plot_multi_timeframe_bull_bear_side_trends(ohlcva, _peaks_and_valleys, bull_bear_side,
+    # #                                            timeframe_shortlist=['4H', '1D', '1W'])
+    # # # pivots = read_pivots(config.processing_date_range)
+    #
+    # # exit()
+    #
+    # # generate_multi_timeframe_bull_bear_side_pivots()
+    # # _bull_bear_side_pivots = read_multi_timeframe_bull_bear_side_pivots()
+    # # plot_multi_timeframe_pivots(_bull_bear_side_pivots)
+    #
+    # # generate_multi_timeframe_base_patterns()
     # _base_patterns = read_multi_timeframe_base_patterns()
     # _base_patterns = _base_patterns[~_base_patterns['ignore_backtesting']]
     # plot_multi_timeframe_base_pattern(ohlcva, _base_patterns)

@@ -49,8 +49,8 @@ def order_name(order: bt.Order):
 
 """
 date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]  # = pandera.Field(title='date')
-reference_date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
-reference_timeframe: pt.Index[str]
+ref_date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
+ref_timeframe: pt.Index[str]
 side
 """
 

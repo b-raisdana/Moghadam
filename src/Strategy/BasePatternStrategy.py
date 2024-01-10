@@ -52,10 +52,10 @@ class BasePatternStrategy(ExtendedStrategy):
                 repeat_signal['original_order_id'] = pd.NA
                 # repeat_signal['end'] = pd.NA
                 if str(self.signal_df.index.names) != str(
-                        ['date', 'reference_date', 'reference_timeframe', 'side']):
+                        ['date', 'ref_date', 'ref_timeframe', 'side']):
                     raise AssertionError(
                         f"Order of signal_df indexes "
-                        f"expected to be {str(['date', 'reference_date', 'reference_timeframe', 'side'])} "
+                        f"expected to be {str(['date', 'ref_date', 'ref_timeframe', 'side'])} "
                         f"but is {str(self.signal_df.index.names)}")
                 new_index = (self.candle().date, index[1], index[2], index[3])
                 self.signal_df.loc[new_index] = repeat_signal
@@ -141,7 +141,7 @@ class BasePatternStrategy(ExtendedStrategy):
         #     trigger_price = base_pattern['internal_low']
 
         # size, true_risked_money = self.my_sizer(limit_price=limit_price, sl_price=stop_loss)
-        # todo: reference_date and reference_timeframe never been used.
+        # todo: ref_date and ref_timeframe never been used.
         # todo: use .loc to generate and assign signal in one step.
         if pd.notna(base_pattern['end']):
             effective_end = base_pattern['end']
@@ -156,8 +156,8 @@ class BasePatternStrategy(ExtendedStrategy):
             'original_index': self.candle().date,
             'end': effective_end,
             'side': side,
-            'reference_date': pd.to_datetime(base_pattern_date),
-            'reference_timeframe': base_pattern_timeframe,
+            'ref_date': pd.to_datetime(base_pattern_date),
+            'ref_timeframe': base_pattern_timeframe,
             # 'base_asset_amount': [size],
             'limit_price': limit_price,
             'stop_loss': stop_loss,

@@ -226,8 +226,8 @@ class ExtendedStrategy(bt.Strategy):
                     AssertionError("!order_is_open(self.profit_orders[i])")
             elif order_is_closed(self.original_orders[i]):
                 log_w("Not working: AssertionError", stack_trace=True)
-                if not order_is_closed(self.stop_orders[i]) or not order_is_closed(self.profit_orders[i]):
-                    pass
+                # if not order_is_closed(self.stop_orders[i]) or not order_is_closed(self.profit_orders[i]):
+                #     pass
                 if not order_is_closed(self.stop_orders[i]):
                     AssertionError("!order_is_closed(self.stop_orders[i])")
                 if not order_is_closed(self.profit_orders[i]):
@@ -321,9 +321,13 @@ class ExtendedStrategy(bt.Strategy):
         for key, value in order.__dict__.items():
             if not key.startswith("_") and not type(value) == bt.OrderData:
                 if key == 'dt':
-                    t['executed_date'] = bt.num2date(value) if value is not None else None
+                    t['date'] = bt.num2date(value) if value is not None else None
+                elif key == 'dteos':
+                    t['date_eos'] = bt.num2date(value) if value is not None else None
+                elif key == 'valid':
+                    t[key] = bt.num2date(value)
                 else:
-                    t[f"executed_{key}"] = str(value)
+                    t[key] = str(value)
         for key, value in order.created.__dict__.items():
             if not key.startswith("_"):
                 if key == 'dt':
@@ -336,7 +340,30 @@ class ExtendedStrategy(bt.Strategy):
                     t['executed_date'] = bt.num2date(value) if value is not None else None
                 else:
                     t[f"executed_{key}"] = str(value)
-        # dict = {k: v for k, v in _object.__dict__.items() if not k.startswith('_')}
+        for key, value in order.info.items():
+            if not key.startswith("_"):
+                if key == 'signal':
+                    t['signal'] = SignalDf.to_str(t['signal_index'], value)
+                else:
+                    t[f"info_{key}"] = str(value)
+        if order.comminfo is not None:
+            t['comminfo'] = str(order.comminfo.params.__dict__)
+        if len(order.executed.exbits) > 0:
+            t['comminfo'] = ",".join(
+                [f"[{','.join([f'{k}:{v}' for k, v in row.__dict__.items()])}]" for row in order.executed.exbits])
+        hidden_keys = [k for k in t.keys() if
+                       k in ['p', 'params', 'broker', 'created_exbits', 'created_comm', 'created_margin', 'created_pnl',
+                             'created_psize', 'created_pprice', 'executed_pclose', 'position', 'created_p1',
+                             'created_p2', 'created_remsize', 'created_trailamount', 'created_trailpercent',
+                             'created_value', 'executed_p1', 'executed_p2', 'executed_pricelimit',
+                             'executed_trailamount', 'executed_trailpercent',
+                             'executed_comm', 'executed_margin', 'comminfo', 'executed_exbits'
+                             ]]
+        hidden_values = ""
+        for k in hidden_keys:
+            v = t.pop(k)
+            hidden_values += f"{k}:{v},"
+        t['hidden'] = hidden_values
         return t
 
     @staticmethod
@@ -348,7 +375,8 @@ class ExtendedStrategy(bt.Strategy):
         if index is None:
             index = order.ref
         t_dict = self.dict_of_list(self.dict_of_order(order))
-        self.orders_df = concat(self.orders_df, pd.DataFrame(t_dict, index=[index]))
+        self.orders_df = concat(self.orders_df, pd.DataFrame(t_dict, index=[self.candle().date]))
+        self.orders_df.index.name = 'date'
         self.orders_df.to_csv(os.path.join(config.path_of_data,
                                            f"{self.__class__.__name__}.orders.{config.id}.{self.date_range_str}.csv"))
 
@@ -379,6 +407,7 @@ class ExtendedStrategy(bt.Strategy):
         self.vault_df = concat(self.vault_df,
                                pd.DataFrame(_dict,
                                             index=[self.candle().date]))  # pd.DataFrame({**_dict}, index=order.ref)
+        self.vault_df.index.name = 'date'
         self.vault_df.to_csv(os.path.join(config.path_of_data,
                                           f"{self.__class__.__name__}.vault.{config.id}.{self.date_range_str}.csv"))
 

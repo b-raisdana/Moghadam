@@ -50,13 +50,13 @@ from PanderaDFM.SignalDf import SignalDFM
 #     'base_timeframe_atr': [np.NAN],
 #     'ignore_backtesting': [np.NAN],
 # })
-# _sample_df = _sample_df.set_index(['timeframe', 'date'])  # , 'reference_date', 'reference_timeframe', 'side'])
+# _sample_df = _sample_df.set_index(['timeframe', 'date'])  # , 'ref_date', 'ref_timeframe', 'side'])
 # # helper.data_preparation.cast_and_validate(_sample_df, MultiTimeframeBasePattern)
 
 # class SignalDFM(BasePanderaDFM):
 #     # date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
-#     # reference_date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
-#     # reference_timeframe: pt.Index[str]
+#     # ref_date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
+#     # ref_timeframe: pt.Index[str]
 #     # side: pt.Index[str]
 #     #
 #     # original_index: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
@@ -70,9 +70,9 @@ from PanderaDFM.SignalDf import SignalDFM
 #
 #     # from start of exact this candle the signal is valid
 #     date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]  # = pandera.Field(title='date')
-#     reference_date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(
-#         title='reference_date')  # = pandera.Field(nullable=True)
-#     reference_timeframe: pt.Index[str]  # = pandera.Field(title='reference_timeframe') # = pandera.Field(nullable=True)
+#     ref_date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(
+#         title='ref_date')  # = pandera.Field(nullable=True)
+#     ref_timeframe: pt.Index[str]  # = pandera.Field(title='ref_timeframe') # = pandera.Field(nullable=True)
 #     side: pt.Index[str]  # = pandera.Field(default='side')  # sell or buy
 #
 #     original_index: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
@@ -96,9 +96,9 @@ from PanderaDFM.SignalDf import SignalDFM
 
 _sample_df = pt.DataFrame({
     'date': [Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC))],
-    'reference_date': [
+    'ref_date': [
         Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC))],
-    'reference_timeframe': ['1min'],
+    'ref_timeframe': ['1min'],
     'side': ['buy'],
 
     'original_index': [
@@ -107,7 +107,7 @@ _sample_df = pt.DataFrame({
     'base_asset_amount': [np.NAN],
 })
 _sample_df = _sample_df.set_index(
-    ['date', 'reference_date', 'reference_timeframe', 'side'])  # , 'reference_date', 'reference_timeframe', 'side'])
+    ['date', 'ref_date', 'ref_timeframe', 'side'])  # , 'ref_date', 'ref_timeframe', 'side'])
 _sample_df = helper.data_preparation.cast_and_validate2(_sample_df, SignalDFM)
 SignalDFM.to_schema().validate(_sample_df)
 pass
