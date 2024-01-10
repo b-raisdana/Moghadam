@@ -28,8 +28,7 @@ class BasePatternStrategy(ExtendedStrategy):
         super().__init__()
         if self.date_range_str is None:
             raise AssertionError("expected the self.date_range_str be not None!")
-        self.orders_files = open(f'BasePatternStrategy.{config.id}.{self.date_range_str}.csv', 'w')
-
+        # self.orders_files = open(f'BasePatternStrategy.{config.id}.{self.date_range_str}.csv', 'w')
 
     # @measure_time
     def notify_order(self, order: bt.Order):
@@ -73,7 +72,7 @@ class BasePatternStrategy(ExtendedStrategy):
                     raise NotImplementedError
                 index = order.info['signal_index']
                 signal = self.signal_df.loc[index]
-                log_d(f'Took profit on Signal:{SignalDf.to_str(index, signal)}@{self.candle().date}')  # todo: test
+                log_d(f'Took profit on Signal:{SignalDf.to_str(index, signal)}@{self.candle().date}')
         super().notify_order(order)
 
     def overlapping_base_patterns(self, base_patterns: pt.DataFrame[MultiTimeframeBasePattern] = None) \
@@ -149,7 +148,7 @@ class BasePatternStrategy(ExtendedStrategy):
         else:
             effective_end = base_pattern['ttl']
         if pd.isna(effective_end):
-            pass
+            raise AssertionError("pd.isna(effective_end)")
         # todo: optimize and simplify by removing signals and putting orders instead.
 
         new_signal = SignalDf.new({  # todo: debug from here
@@ -182,16 +181,24 @@ class BasePatternStrategy(ExtendedStrategy):
         upper_overlapping_base_patterns = self.overlapping_base_patterns(
             self.no_signal_active_base_patterns(band='upper', base_patterns=self.base_patterns))
         base_pattern: pt.Series[MultiTimeframeBasePattern]
-        for (timeframe, start), base_pattern in upper_overlapping_base_patterns.iterrows():
-            if self.candle_overlaps_base(base_pattern):
-                self.add_signal(timeframe, start, base_pattern, band='upper')
-                self.base_patterns.loc[(timeframe, start), 'upper_band_signal_generated'] = self.candle().date
+        if len(upper_overlapping_base_patterns) > 0:
+            for (timeframe, start), base_pattern in upper_overlapping_base_patterns.iterrows():
+                if self.candle_overlaps_base(base_pattern):
+                    self.add_signal(timeframe, start, base_pattern, band='upper')
+                    if pd.notna(self.base_patterns.loc[(timeframe, start), 'upper_band_signal_generated']):
+                        raise AssertionError("pd.notna(self.base_patterns.loc[(timeframe, start), 'upper_band_signa...")
+                    self.base_patterns.loc[(timeframe, start), 'upper_band_signal_generated'] = self.candle().date
         below_overlapping_base_patterns = self.overlapping_base_patterns(
             self.no_signal_active_base_patterns(band='below', base_patterns=self.base_patterns))
-        for (timeframe, start), base_pattern in below_overlapping_base_patterns.iterrows():
-            if self.candle_overlaps_base(base_pattern):
-                self.add_signal(timeframe, start, base_pattern, band='below')
-                self.base_patterns.loc[(timeframe, start), 'below_band_signal_generated'] = self.candle().date # todo: test crashes here
+        if len(below_overlapping_base_patterns) > 0:
+            for (timeframe, start), base_pattern in below_overlapping_base_patterns.iterrows():
+                if self.candle_overlaps_base(base_pattern):
+                    self.add_signal(timeframe, start, base_pattern, band='below')
+                    if pd.notna(self.base_patterns.loc[(timeframe, start), 'below_band_signal_generated']):
+                        raise AssertionError("pd.notna(self.base_patterns.loc[(timeframe, start), 'below_band_signa...")
+                    self.base_patterns.loc[(
+                        timeframe,
+                        start), 'below_band_signal_generated'] = self.candle().date  # todo: test crashes here
 
 
 def test_strategy(cash: float, date_range_str: str = None):
@@ -237,7 +244,7 @@ def test_strategy(cash: float, date_range_str: str = None):
     # # t_order = orders[1]
     # # df = pd.DataFrame(orders.values())
     # print('Final Portfolio Value: %.2f' % cerebro.broker.getvalue())  # todoo: test
-    plots = cerebro.plot(style='candle', dpi=900, savefig='plot.png')
+    plots = cerebro.plot(style='candle', dpi=900, savefig='plot.pdf')
     # pass
     # a = 1
     # try:

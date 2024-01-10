@@ -82,7 +82,7 @@ def generate_multi_timeframe_ohlcva(date_range_str: str = None, file_path: str =
     df = df.sort_index(level='date')
     df = trim_to_date_range(date_range_str, df)
     # assert not df.index.duplicated().any()
-    assert multi_timeframe_times_tester(df, date_range_str)
+    multi_timeframe_times_tester(df, date_range_str)
     df.to_csv(os.path.join(file_path, f'multi_timeframe_ohlcva.{date_range_str}.zip'),
               compression='zip')
 

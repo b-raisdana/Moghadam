@@ -78,8 +78,8 @@ class ExtendedStrategy(bt.Strategy):
 
         true_risked_money = size * sl_size
 
-        assert true_risked_money <= config.initial_cash * config.risk_per_order_percent, \
-            "True risked money exceeds configured risk percentage"
+        if not true_risked_money <= config.initial_cash * config.risk_per_order_percent:
+            raise AssertionError("True risked money exceeds configured risk percentage")
 
         return size, true_risked_money
 
@@ -110,7 +110,8 @@ class ExtendedStrategy(bt.Strategy):
         return original_order, sl_order, tp_order
 
     def spent_money(self) -> float:
-        assert self.broker_initial_cash is not None, "Do not run before start()"
+        if self.broker_initial_cash is None:
+            raise ProcessLookupError("Do not run before start()")
         return self.broker_initial_cash - self.broker.get_cash()
 
     def allocate_order_cash(self, limit_price: float, sl_price: float, size: float = None) -> float:
@@ -179,8 +180,8 @@ class ExtendedStrategy(bt.Strategy):
         return original_order, stop_order, profit_order
 
     def next_log(self):
-        # if self.next_runs % 100 == 0:
-        log_d(f"Ran {self.next_runs} Next()s reached {self.candle().date}")
+        if self.next_runs % 100 == 0:
+            log_d(f"Ran {self.next_runs} Next()s reached {self.candle().date}")
         self.next_runs += 1
 
     def movement_intersect(self, target_low: float, target_high: float):
@@ -195,7 +196,6 @@ class ExtendedStrategy(bt.Strategy):
 
     def next(self):
         self.next_log()
-
         if len(self.original_orders) > 0:
             self.verify_triple_oder_status()
         self.extract_signals()
@@ -211,20 +211,22 @@ class ExtendedStrategy(bt.Strategy):
          (canceled) also
         :return:
         '''
-        assert len(self.original_orders) == len(self.stop_orders), "len(self.original_orders) != len(self.stop_orders)"
-        assert len(self.original_orders) == len(self.profit_orders), \
-            "len(self.original_orders) != len(self.profit_orders)"
+        if len(self.original_orders) != len(self.stop_orders):
+            raise AssertionError("len(self.original_orders) != len(self.stop_orders)")
+        if len(self.original_orders) != len(self.profit_orders):
+            raise AssertionError("len(self.original_orders) != len(self.profit_orders)")
         for i in self.original_orders.keys():
             if order_is_open(self.original_orders[i]):
-                if not order_is_open(self.stop_orders[i]) or not order_is_open(self.profit_orders[i]):
-                    pass
-                if not order_is_open(self.stop_orders[i]): AssertionError("!order_is_open(self.stop_orders[i])")
-                if not order_is_open(self.profit_orders[i]): AssertionError("!order_is_open(self.profit_orders[i])")
+                if not order_is_open(self.stop_orders[i]):
+                    AssertionError("!order_is_open(self.stop_orders[i])")
+                if not order_is_open(self.profit_orders[i]):
+                    AssertionError("!order_is_open(self.profit_orders[i])")
             elif order_is_closed(self.original_orders[i]):
                 log_d("Not working: AssertionError")
                 if not order_is_closed(self.stop_orders[i]) or not order_is_closed(self.profit_orders[i]):
                     pass
-                if not order_is_closed(self.stop_orders[i]): AssertionError("!order_is_closed(self.stop_orders[i])")
+                if not order_is_closed(self.stop_orders[i]):
+                    AssertionError("!order_is_closed(self.stop_orders[i])")
                 if not order_is_closed(self.profit_orders[i]):
                     AssertionError("!order_is_closed(self.profit_orders[i])")  # todo: test AssertionError
 
@@ -238,17 +240,30 @@ class ExtendedStrategy(bt.Strategy):
         if self.signal_df is not None:
             self.signal_df.to_csv(f"{self.__class__.__name__}.signals.{config.id}.{self.date_range_str}.csv")
         if self.original_orders is not None:
-            df = pd.DataFrame()
-            for key, order in self.original_orders:
-                df.loc[key] = pd.DataFrame({self.dict_of(order)})
-            df.to_csv(
-                f"{self.__class__.__name__}.original_orders.{config.id}.{self.date_range_str}.csv")
+            for index in self.original_orders.keys():
+                t = self.dict_of_list(self.dict_of_order(self.original_orders[index]))
+                df = concat(self.orders_df, pd.DataFrame(t, index=[index]))
+            df.to_csv(f"{self.__class__.__name__}.original_orders.{config.id}.{self.date_range_str}.csv")
         if self.stop_orders is not None:
-            df = pd.DataFrame(self.stop_orders)
+            for index in self.stop_orders.keys():
+                t = self.dict_of_list(self.dict_of_order(self.stop_orders[index]))
+                df = concat(self.orders_df, pd.DataFrame(t, index=[index]))
             df.to_csv(f"{self.__class__.__name__}.stop_orders.{config.id}.{self.date_range_str}.csv")
         if self.profit_orders is not None:
-            df = pd.DataFrame(self.profit_orders)
+            for index in self.profit_orders.keys():
+                t = self.dict_of_list(self.dict_of_order(self.profit_orders[index]))
+                df = concat(self.orders_df, pd.DataFrame(t, index=[index]))
             df.to_csv(f"{self.__class__.__name__}.profit_orders.{config.id}.{self.date_range_str}.csv")
+        #     for key, order in self.original_orders:
+        #         df.loc[key] = pd.DataFrame({self.dict_of_order(order)})
+        #     df.to_csv(
+        #         f"{self.__class__.__name__}.original_orders.{config.id}.{self.date_range_str}.csv")
+        # if self.stop_orders is not None:
+        #     df = pd.DataFrame(self.stop_orders)
+        #     df.to_csv(f"{self.__class__.__name__}.stop_orders.{config.id}.{self.date_range_str}.csv")
+        # if self.profit_orders is not None:
+        #     df = pd.DataFrame(self.profit_orders)
+        #     df.to_csv(f"{self.__class__.__name__}.profit_orders.{config.id}.{self.date_range_str}.csv")
 
     @staticmethod
     def dict_of_order(order: bt.Order):
@@ -289,9 +304,11 @@ class ExtendedStrategy(bt.Strategy):
         result = {k: [v] for k, v in input_dict.items()}
         return result
 
-    def log_order(self, order: bt.Order):
-        t_dict = self.dict_of_list(self.dict_of_order(order))  # todo: test
-        self.orders_df = concat(self.orders_df, pd.DataFrame(t_dict, index=[order.ref]))
+    def log_order(self, order: bt.Order, index = None):
+        if index is None:
+            index = order.ref
+        t_dict = self.dict_of_list(self.dict_of_order(order))
+        self.orders_df = concat(self.orders_df, pd.DataFrame(t_dict, index=[index]))
         # pd.DataFrame({**_dict}, index=order.ref)
         self.orders_df.to_csv(f"{self.__class__.__name__}.orders.{config.id}.{self.date_range_str}.csv")
 
@@ -307,7 +324,7 @@ class ExtendedStrategy(bt.Strategy):
         # for index in len(self.datas):
         #     asset = list_of_assets[index]
         asset = self.getdatanames()[0]
-        _dict[f"{asset}_value"] = self.broker.get_value()  # todo: test
+        _dict[f"{asset}_value"] = self.broker.get_value()
         position = self.broker.getposition(self.datas[0])
         _dict[f"{asset}_position_size"] = position.size
         _dict[f"{asset}_position_price"] = position.price
@@ -329,9 +346,9 @@ class ExtendedStrategy(bt.Strategy):
         self.log_order(order)
         self.log_vault()
         if not (
-                order_name(order) in self.signal_df['original_order_id'].tolist() or
-                order_name(order) in self.signal_df['stop_loss_order_id'].tolist() or
-                order_name(order) in self.signal_df['take_profit_order_id'].tolist()
+                order_name(order) in self.signal_df['original_order_id'].dropna().tolist() or
+                order_name(order) in self.signal_df['stop_loss_order_id'].dropna().tolist() or
+                order_name(order) in self.signal_df['take_profit_order_id'].dropna().tolist()
         ):
             raise AssertionError(f"{order_name(order)} not found in tracked orders!")
         if order.isbuy():
@@ -358,8 +375,8 @@ class ExtendedStrategy(bt.Strategy):
                 self.signal_df['original_order_id'] == order_name(order), 'order_is_active'] = False
             self.signal_df.loc[self.signal_df['original_order_id'] == order_name(order), 'original_order_id'] = pd.NA
             log_d(f"Order:{order_name(order)} Completed")
-            if order.ref == 7:
-                pass  # todo: test crashes after here.
+            # if order.ref == 7:
+            #     pass  # toddo: test crashes after here.
         elif order.status in [order.Partial]:
             log_d(f"Order:{order_name(order)} Partially executed")  # todo: test
         elif order.status in [order.Expired]:

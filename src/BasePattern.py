@@ -26,7 +26,8 @@ def add_candle_size(ohlcva: pt.DataFrame[OHLCVA]) -> pt.DataFrame[OHLCVA]:
     :param ohlcva:
     :return:
     """
-    assert ohlcva['atr'].notna().all()
+    if not ohlcva['atr'].notna().all():
+        raise AssertionError("not ohlcva['atr'].notna().all()")
     ohlcva['length'] = ohlcva['high'] - ohlcva['low']
     ohlcva['atr_ratio'] = ohlcva['length'] / ohlcva['atr']
     ohlcva['size'] = pd.Series(dtype=str)

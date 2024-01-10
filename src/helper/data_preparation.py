@@ -411,7 +411,7 @@ def times_tester(df: pd.DataFrame, date_range_str: str, timeframe: str, return_b
             log(message)
             return False
         else:
-            raise Exception(message)
+            raise AssertionError(message)
     else:
         if exact_match:
             excess_times = actual_times - expected_times
@@ -424,7 +424,7 @@ def times_tester(df: pd.DataFrame, date_range_str: str, timeframe: str, return_b
                     log(message)
                     return False
                 else:
-                    raise Exception(message)
+                    raise AssertionError(message)
         else:
             return True
 
@@ -723,7 +723,8 @@ def trim_to_date_range(date_range_str: str, df: pd.DataFrame, ignore_duplicate_i
         ]
     duplicate_indices = df.index[df.index.duplicated()].unique()
     if not ignore_duplicate_index:
-        assert len(duplicate_indices) == 0
+        if len(duplicate_indices) != 0:
+            raise AssertionError("len(duplicate_indices) != 0")
     # else:
     #     if len(duplicate_indices) > 0:
     #         log(f"Found duplicate indices:" + str(duplicate_indices))
