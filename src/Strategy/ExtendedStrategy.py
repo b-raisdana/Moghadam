@@ -1,3 +1,4 @@
+import os
 from typing import Optional, Tuple
 
 import backtrader as bt
@@ -165,6 +166,7 @@ class ExtendedStrategy(bt.Strategy):
         if date_range_str is None:
             date_range_str = config.processing_date_range
         self.date_range_str = date_range_str
+        log_d(f"date_range_str: {self.date_range_str}")
         # self.start_datime, self.end = date_range(date_range_str)
 
     def get_order_group(self, order: bt.Order) -> (bt.Order, bt.Order, bt.Order,):
@@ -180,7 +182,7 @@ class ExtendedStrategy(bt.Strategy):
             raise e
         return original_order, stop_order, profit_order
 
-    def next_log(self, force = False):
+    def next_log(self, force=False):
         if force or self.next_runs % 100 == 0:
             log_d(f"Ran {self.next_runs} Next()s reached {self.candle().date}")
         self.next_runs += 1
@@ -235,29 +237,35 @@ class ExtendedStrategy(bt.Strategy):
         self.next_log(force=True)
         log_d("Stopping!")
         if self.vault_df is not None:  # todo: test
-            self.vault_df.to_csv(f"{self.__class__.__name__}.vault.{config.id}.{self.date_range_str}.csv")
+            self.vault_df.to_csv(os.path.join(config.path_of_data,
+                                              f"{self.__class__.__name__}.vault.{config.id}.{self.date_range_str}.csv"))
         if self.orders_df is not None:
-            self.orders_df.to_csv(f"{self.__class__.__name__}.orders.{config.id}.{self.date_range_str}.csv")
+            self.orders_df.to_csv(os.path.join(config.path_of_data,
+                                               f"{self.__class__.__name__}.orders.{config.id}.{self.date_range_str}.csv"))
         if self.signal_df is not None:
-            self.signal_df.to_csv(f"{self.__class__.__name__}.signals.{config.id}.{self.date_range_str}.csv")
+            self.signal_df.to_csv(os.path.join(config.path_of_data,
+                                               f"{self.__class__.__name__}.signals.{config.id}.{self.date_range_str}.csv"))
         if self.original_orders is not None:
             for index in self.original_orders.keys():
                 t = self.dict_of_list(self.dict_of_order(self.original_orders[index]))
                 df = concat(self.orders_df, pd.DataFrame(t, index=[index]))
             df.index.name = 'ref_id'
-            df.to_csv(f"{self.__class__.__name__}.original_orders.{config.id}.{self.date_range_str}.csv")
+            df.to_csv(os.path.join(config.path_of_data,
+                                   f"{self.__class__.__name__}.original_orders.{config.id}.{self.date_range_str}.csv"))
         if self.stop_orders is not None:
             for index in self.stop_orders.keys():
                 t = self.dict_of_list(self.dict_of_order(self.stop_orders[index]))
                 df = concat(self.orders_df, pd.DataFrame(t, index=[index]))
             df.index.name = 'ref_id'
-            df.to_csv(f"{self.__class__.__name__}.stop_orders.{config.id}.{self.date_range_str}.csv")
+            df.to_csv(os.path.join(config.path_of_data,
+                                   f"{self.__class__.__name__}.stop_orders.{config.id}.{self.date_range_str}.csv"))
         if self.profit_orders is not None:
             for index in self.profit_orders.keys():
                 t = self.dict_of_list(self.dict_of_order(self.profit_orders[index]))
                 df = concat(self.orders_df, pd.DataFrame(t, index=[index]))
             df.index.name = 'ref_id'
-            df.to_csv(f"{self.__class__.__name__}.profit_orders.{config.id}.{self.date_range_str}.csv")
+            df.to_csv(os.path.join(config.path_of_data,
+                                   f"{self.__class__.__name__}.profit_orders.{config.id}.{self.date_range_str}.csv"))
 
     @staticmethod
     def dict_of_order(order: bt.Order):
@@ -310,19 +318,19 @@ class ExtendedStrategy(bt.Strategy):
         #     'plen': order.plen,
         #
         # }
-        for key, value in  order.__dict__.items():
+        for key, value in order.__dict__.items():
             if not key.startswith("_") and not type(value) == bt.OrderData:
                 if key == 'dt':
                     t['executed_date'] = bt.num2date(value) if value is not None else None
                 else:
                     t[f"executed_{key}"] = str(value)
-        for key, value in  order.created.__dict__.items():
+        for key, value in order.created.__dict__.items():
             if not key.startswith("_"):
                 if key == 'dt':
                     t['created_date'] = bt.num2date(value) if value is not None else None
                 else:
                     t[f"created_{key}"] = str(value)
-        for key, value in  order.executed.__dict__.items():
+        for key, value in order.executed.__dict__.items():
             if not key.startswith("_"):
                 if key == 'dt':
                     t['executed_date'] = bt.num2date(value) if value is not None else None
@@ -341,8 +349,8 @@ class ExtendedStrategy(bt.Strategy):
             index = order.ref
         t_dict = self.dict_of_list(self.dict_of_order(order))
         self.orders_df = concat(self.orders_df, pd.DataFrame(t_dict, index=[index]))
-        # pd.DataFrame({**_dict}, index=order.ref)
-        self.orders_df.to_csv(f"{self.__class__.__name__}.orders.{config.id}.{self.date_range_str}.csv")
+        self.orders_df.to_csv(os.path.join(config.path_of_data,
+                                           f"{self.__class__.__name__}.orders.{config.id}.{self.date_range_str}.csv"))
 
     def log_vault(self):
         _dict = {
@@ -371,7 +379,8 @@ class ExtendedStrategy(bt.Strategy):
         self.vault_df = concat(self.vault_df,
                                pd.DataFrame(_dict,
                                             index=[self.candle().date]))  # pd.DataFrame({**_dict}, index=order.ref)
-        self.vault_df.to_csv(f"{self.__class__.__name__}.vault.{config.id}.{self.date_range_str}.csv")
+        self.vault_df.to_csv(os.path.join(config.path_of_data,
+                                          f"{self.__class__.__name__}.vault.{config.id}.{self.date_range_str}.csv"))
 
     # @measure_time
     def notify_order(self, order: bt.Order):

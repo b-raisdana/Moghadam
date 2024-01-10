@@ -76,7 +76,7 @@ def log(message: str, severity: LogSeverity = LogSeverity.INFO, stack_trace: boo
         traceback.print_list(stack)
 
 
-log_d('Start')
+log_d('...Starting')
 
 
 def measure_time(func):
