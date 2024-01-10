@@ -8,7 +8,7 @@ from pandera import typing as pt
 from Config import config
 from PanderaDFM.SignalDf import SignalDFM, SignalDf
 from Strategy.BaseTickStructure import BaseTickStructure
-from Strategy.order_helper import BracketOrderType, order_name, OrderSide, add_order_info, order_prices, order_is_open, \
+from Strategy.order_helper import BracketOrderType, order_name, OrderSide, add_order_info, order_is_open, \
     order_is_closed
 from helper.data_preparation import concat
 from helper.helper import log_d, measure_time
@@ -179,8 +179,8 @@ class ExtendedStrategy(bt.Strategy):
             raise e
         return original_order, stop_order, profit_order
 
-    def next_log(self):
-        if self.next_runs % 100 == 0:
+    def next_log(self, force = False):
+        if force or self.next_runs % 100 == 0:
             log_d(f"Ran {self.next_runs} Next()s reached {self.candle().date}")
         self.next_runs += 1
 
@@ -231,8 +231,8 @@ class ExtendedStrategy(bt.Strategy):
                     AssertionError("!order_is_closed(self.profit_orders[i])")  # todo: test AssertionError
 
     def stop(self):
-        # Close the log file when the strategy is done running
-        # self.orders_file.close()
+        self.next_log(force=True)
+        log_d("Stopping!")
         if self.vault_df is not None:  # todo: test
             self.vault_df.to_csv(f"{self.__class__.__name__}.vault.{config.id}.{self.date_range_str}.csv")
         if self.orders_df is not None:
@@ -243,68 +243,99 @@ class ExtendedStrategy(bt.Strategy):
             for index in self.original_orders.keys():
                 t = self.dict_of_list(self.dict_of_order(self.original_orders[index]))
                 df = concat(self.orders_df, pd.DataFrame(t, index=[index]))
+            df.index.name = 'ref_id'
             df.to_csv(f"{self.__class__.__name__}.original_orders.{config.id}.{self.date_range_str}.csv")
         if self.stop_orders is not None:
             for index in self.stop_orders.keys():
                 t = self.dict_of_list(self.dict_of_order(self.stop_orders[index]))
                 df = concat(self.orders_df, pd.DataFrame(t, index=[index]))
+            df.index.name = 'ref_id'
             df.to_csv(f"{self.__class__.__name__}.stop_orders.{config.id}.{self.date_range_str}.csv")
         if self.profit_orders is not None:
             for index in self.profit_orders.keys():
                 t = self.dict_of_list(self.dict_of_order(self.profit_orders[index]))
                 df = concat(self.orders_df, pd.DataFrame(t, index=[index]))
+            df.index.name = 'ref_id'
             df.to_csv(f"{self.__class__.__name__}.profit_orders.{config.id}.{self.date_range_str}.csv")
-        #     for key, order in self.original_orders:
-        #         df.loc[key] = pd.DataFrame({self.dict_of_order(order)})
-        #     df.to_csv(
-        #         f"{self.__class__.__name__}.original_orders.{config.id}.{self.date_range_str}.csv")
-        # if self.stop_orders is not None:
-        #     df = pd.DataFrame(self.stop_orders)
-        #     df.to_csv(f"{self.__class__.__name__}.stop_orders.{config.id}.{self.date_range_str}.csv")
-        # if self.profit_orders is not None:
-        #     df = pd.DataFrame(self.profit_orders)
-        #     df.to_csv(f"{self.__class__.__name__}.profit_orders.{config.id}.{self.date_range_str}.csv")
 
     @staticmethod
     def dict_of_order(order: bt.Order):
-        t_dict = {
-            # 'ref': order.ref,
-            'side': order.ordtypename(),
-
-            'size': order.size,
-
-            'price': order.params.price,
-            'plimit': order.plimit,
-            'price_limit': order.params.pricelimit,
-
-            'exectype': order.ExecTypes[order.exectype],
-            'status': order.Status[order.status],
-
-            'valid': order.params.valid,
-            'type': order.ordtypename(),
-            # 'info': str(order.info),
-
-            'triggered': order.triggered,
-            'tradeid': order.params.tradeid,
-            'trailamount': order.params.trailamount,
-            'trailpercent': order.params.trailpercent,
-            'transmit': order.params.transmit,
-            'histnotify': order.params.histnotify,
-            'oco': order.params.oco,
-            'parent': order.params.parent,
-            'simulated': order.params.simulated,
-            'plen': order.plen,
-
-        }
+        t = {}
+        # t = {
+        #     'reff': order.ref,
+        #     'side': order.ordtypename(),
+        #
+        #     'size': order.size,
+        #
+        #     'price': order.params.price,
+        #     'plimit': order.plimit,
+        #     'price_limit': order.params.pricelimit,
+        #
+        #     'exectype': order.ExecTypes[order.exectype],
+        #     'status': order.Status[order.status],
+        #
+        #     'valid': order.params.valid,
+        #     'type': order.ordtypename(),
+        #     # 'info': str(order.info),
+        #     'created_date': bt.num2date(order.created.dt),
+        #     'created_size': order.created.size,
+        #     'created_value': order.created.value,
+        #     'created_price': order.created.price,
+        #     'created_comm': order.created.comm,
+        #     'created_exbits': order.created.exbits,
+        #     'created_margin': order.created.margin,
+        #     'created_pclose': order.created.pclose,
+        #     'created_plimit': order.created.plimit,
+        #     'created_pnl': order.created.pnl,
+        #     'created_pprice': order.created.pprice,
+        #     'created_pricelimit': order.created.pricelimit,
+        #     'created_psize': order.created.psize,
+        #     'created_remsize': order.created.remsize,
+        #     'created_trailamount': order.created.trailamount,
+        #     'created_trailpercent': order.created.trailpercent,
+        #     'created_p1': order.created.p1,
+        #     'created_p2': order.created.p2,
+        #
+        #
+        #     'triggered': order.triggered,
+        #     'tradeid': order.params.tradeid,
+        #     'trailamount': order.params.trailamount,
+        #     'trailpercent': order.params.trailpercent,
+        #     'transmit': order.params.transmit,
+        #     'histnotify': order.params.histnotify,
+        #     'oco': order.params.oco,
+        #     'parent': order.params.parent,
+        #     'simulated': order.params.simulated,
+        #     'plen': order.plen,
+        #
+        # }
+        for key, value in  order.__dict__.items():
+            if not key.startswith("_") and not type(value) == bt.OrderData:
+                if key == 'dt':
+                    t['executed_date'] = bt.num2date(value) if value is not None else None
+                else:
+                    t[f"executed_{key}"] = str(value)
+        for key, value in  order.created.__dict__.items():
+            if not key.startswith("_"):
+                if key == 'dt':
+                    t['created_date'] = bt.num2date(value) if value is not None else None
+                else:
+                    t[f"created_{key}"] = str(value)
+        for key, value in  order.executed.__dict__.items():
+            if not key.startswith("_"):
+                if key == 'dt':
+                    t['executed_date'] = bt.num2date(value) if value is not None else None
+                else:
+                    t[f"executed_{key}"] = str(value)
         # dict = {k: v for k, v in _object.__dict__.items() if not k.startswith('_')}
-        return t_dict
+        return t
 
     @staticmethod
     def dict_of_list(input_dict):
         result = {k: [v] for k, v in input_dict.items()}
         return result
 
-    def log_order(self, order: bt.Order, index = None):
+    def log_order(self, order: bt.Order, index=None):
         if index is None:
             index = order.ref
         t_dict = self.dict_of_list(self.dict_of_order(order))
