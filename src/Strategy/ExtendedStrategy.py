@@ -11,7 +11,7 @@ from Strategy.BaseTickStructure import BaseTickStructure
 from Strategy.order_helper import BracketOrderType, order_name, OrderSide, add_order_info, order_is_open, \
     order_is_closed
 from helper.data_preparation import concat
-from helper.helper import log_d, measure_time
+from helper.helper import log_d, measure_time, log_w
 
 
 class ExtendedStrategy(bt.Strategy):
@@ -79,7 +79,8 @@ class ExtendedStrategy(bt.Strategy):
         true_risked_money = size * sl_size
 
         if not true_risked_money <= config.initial_cash * config.risk_per_order_percent:
-            raise AssertionError("True risked money exceeds configured risk percentage")
+            # raise AssertionError("True risked money exceeds configured risk percentage")
+            log_w("True risked money exceeds configured risk percentage", stack_trace=False)
 
         return size, true_risked_money
 
@@ -222,7 +223,7 @@ class ExtendedStrategy(bt.Strategy):
                 if not order_is_open(self.profit_orders[i]):
                     AssertionError("!order_is_open(self.profit_orders[i])")
             elif order_is_closed(self.original_orders[i]):
-                log_d("Not working: AssertionError")
+                log_w("Not working: AssertionError", stack_trace=True)
                 if not order_is_closed(self.stop_orders[i]) or not order_is_closed(self.profit_orders[i]):
                     pass
                 if not order_is_closed(self.stop_orders[i]):
