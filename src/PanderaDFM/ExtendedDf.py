@@ -48,46 +48,35 @@ class ExtendedDf:
         if cls._sample_df is None:
             raise AssertionError(f"{cls}._sample_obj should be defined before!")
         if cls._empty_df is None:
-            try:
-                _empty = cls._sample_df.drop(cls._sample_df.index)
-                cls._empty_df = cls.schema_data_frame_model.to_schema().validate(_empty)
-            except Exception as e:
-                raise e
+            _empty = cls._sample_df.drop(cls._sample_df.index)
+            cls._empty_df = cls.schema_data_frame_model.to_schema().validate(_empty)
+
         if dictionary_of_data is not None:
+            if not isinstance(dictionary_of_data, dict):
+                raise ValueError(f"dictionary_of_data should be dict but {type(dictionary_of_data)} given.")
+            if any([isinstance(v, list) for k, v in dictionary_of_data.items()]):
+                raise NotImplementedError("List values as dictionary_of_data values!")
+            _new = cls._empty_df.copy()
+            _index_names = cls.index_names()
             try:
-                if not isinstance(dictionary_of_data, dict):
-                    raise ValueError(f"dictionary_of_data should be dict but {type(dictionary_of_data)} given.")
-                if any([isinstance(v, list) for k, v in dictionary_of_data.items()]):
-                    raise NotImplementedError("List values as dictionary_of_data values!")
-                _new = cls._empty_df.copy()
-                _index_names = cls.index_names()
-                try:
-                    index_tuple = tuple([dictionary_of_data[k] for k in _index_names])
-                except KeyError:
-                    raise Exception(f"Indexes {_index_names} should have value in the dictionary_of_data: {dictionary_of_data}")
-                except Exception as e:
-                    raise e
-                # try:
-                #     _column_dtypes = cls.column_dtypes()
-                # except Exception as e:
-                #     raise e
-                unused_keys = []
-                for key in dictionary_of_data.keys():
-                    if key in cls.schema_data_frame_model.to_schema().columns.keys(): #  _column_dtypes.keys():
-                        # _class = _column_dtypes[key].__args__[0]
-                        # if _class == bool:
-                        #     t = _class(dictionary_of_data[key])
-                        _new.loc[index_tuple, key] = dictionary_of_data[key]
-                        # as_type = {key: _column_dtypes}
-                        # _new.astype(as_type)
-                    elif key not in _index_names:
-                        unused_keys += [key]
-                if len(unused_keys) > 0:
-                    if strict:
-                        raise Exception(f"Unused keys in the dictionary: {','.join(unused_keys)}")
-                _new = cls.schema_data_frame_model.to_schema().validate(_new, lazy=True)
-            except Exception as e:
-                raise e
+                index_tuple = tuple([dictionary_of_data[k] for k in _index_names])
+            except KeyError:
+                raise Exception(f"Indexes {_index_names} should have value in the dictionary_of_data: {dictionary_of_data}")
+            unused_keys = []
+            for key in dictionary_of_data.keys():
+                if key in cls.schema_data_frame_model.to_schema().columns.keys(): #  _column_dtypes.keys():
+                    # _class = _column_dtypes[key].__args__[0]
+                    # if _class == bool:
+                    #     t = _class(dictionary_of_data[key])
+                    _new.loc[index_tuple, key] = dictionary_of_data[key]
+                    # as_type = {key: _column_dtypes}
+                    # _new.astype(as_type)
+                elif key not in _index_names:
+                    unused_keys += [key]
+            if len(unused_keys) > 0:
+                if strict:
+                    raise Exception(f"Unused keys in the dictionary: {','.join(unused_keys)}")
+            _new = cls.schema_data_frame_model.to_schema().validate(_new, lazy=True)
             return _new
         _new = cls._empty_df.copy()
         return _new
@@ -161,9 +150,6 @@ class ExtendedDf:
             df = read_with_timeframe(data_frame_type, date_range_str, file_path, n_rows, skip_rows)
         except FileNotFoundError as e:
             pass
-        except Exception as e:
-            raise e
-
         if zero_size_allowed is None:
             zero_size_allowed = after_under_process_date(date_range_str)
         if df is None or not cls.cast_and_validate(df, return_bool=True, zero_size_allowed=zero_size_allowed):
@@ -205,21 +191,18 @@ class ExtendedDf:
     def column_dtypes(cls) -> Dict[str, DataType]:
         if cls._column_dtypes is not None:
             return cls._column_dtypes
-        try:
-            _all_annotations = all_annotations(cls.schema_data_frame_model)
-            data_index_names = cls.index_names()
-            column_annotations = {k: a for k, a in _all_annotations.items() if k not in data_index_names}
-            cls.column_d_type_assertion(column_annotations)
-            # given:
-            # _all_annotations['end'] =
-            # pandera.typing.pandas.Series[typing.Annotated[pandas.core.dtypes.dtypes.DatetimeTZDtype, 'ns', 'UTC']]
-            # then:
-            # _all_annotations['end'].__args__[0] =
-            # typing.Annotated[pandas.core.dtypes.dtypes.DatetimeTZDtype, 'ns', 'UTC']
-            column_annotations = {k: a.__args__[0] for k, a in _all_annotations.items() if k not in data_index_names}
-            cls._column_dtypes = column_annotations
-        except Exception as e:
-            raise e
+        _all_annotations = all_annotations(cls.schema_data_frame_model)
+        data_index_names = cls.index_names()
+        column_annotations = {k: a for k, a in _all_annotations.items() if k not in data_index_names}
+        cls.column_d_type_assertion(column_annotations)
+        # given:
+        # _all_annotations['end'] =
+        # pandera.typing.pandas.Series[typing.Annotated[pandas.core.dtypes.dtypes.DatetimeTZDtype, 'ns', 'UTC']]
+        # then:
+        # _all_annotations['end'].__args__[0] =
+        # typing.Annotated[pandas.core.dtypes.dtypes.DatetimeTZDtype, 'ns', 'UTC']
+        column_annotations = {k: a.__args__[0] for k, a in _all_annotations.items() if k not in data_index_names}
+        cls._column_dtypes = column_annotations
         return cls._column_dtypes
 
     @classmethod

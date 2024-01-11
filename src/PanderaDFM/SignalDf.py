@@ -1,6 +1,6 @@
 # from __future__ import annotations
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Tuple
 
 import backtrader as bt
 import pandas as pd
@@ -10,13 +10,15 @@ from pandas import Timestamp
 from pandera import typing as pt
 
 from PanderaDFM.ExtendedDf import ExtendedDf
+from Strategy.order_helper import OrderSide
+from helper.helper import log_w
 
 
 class SignalDFM(pandera.DataFrameModel):
     # from start of exact this candle the signal is valid
     date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]  # = pandera.Field(title='date')
-    reference_date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
-    reference_timeframe: pt.Index[str]
+    ref_date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
+    ref_timeframe: pt.Index[str]
     side: pt.Index[str]
 
     original_index: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
@@ -29,13 +31,13 @@ class SignalDFM(pandera.DataFrameModel):
     take_profit: pt.Series[float] = pandera.Field(nullable=True, default=None)
     # the condition direction is reverse of limit direction.
     trigger_price: pt.Series[float] = pandera.Field(nullable=True, default=None)
-    trigger_satisfied: pt.Series[bool] = pandera.Field(nullable=True, default=True)
+    # trigger_satisfied: pt.Series[bool] = pandera.Field(nullable=True, default=True)
     original_order_id: pt.Series[str] = pandera.Field(nullable=True, default=None)
     stop_loss_order_id: pt.Series[str] = pandera.Field(nullable=True, default=None)
     take_profit_order_id: pt.Series[str] = pandera.Field(nullable=True, default=None)
     order_is_active: pt.Series[bool] = pandera.Field(nullable=True, default=None)  # , ignore_na=False
     # todo: if the signal end changed we have to update signal orders
-    updated: pt.Series[bool] = pandera.Field(nullable=True, default=True)
+    # updated: pt.Series[bool] = pandera.Field(nullable=True, default=True)
 
     class Config:
         # to resolve pandera.errors.SchemaError: column ['XXXX'] not in dataframe
@@ -55,78 +57,38 @@ class SignalDf(ExtendedDf):
     _sample_df = None
     _empty_obj = None
 
-    # @classmethod
-    # def new(cls, dictionary_of_data: dict = None, strict: bool = True) -> pt.DataFrame[SignalDFM]:
-    #     try:
-    #         result: pt.DataFrame[SignalDFM] = super().new(dictionary_of_data, strict)
-    #     except Exception as e:
-    #         raise e
-    #     return result
-
-    # @staticmethod
-    # def took_profit(signal: pt.Series[SignalDFM], tick: BaseTickStructure) -> bool:
-    #     if signal['side'] == 'buy':  # toddo: test
-    #         if tick.high > signal['take_profit']:
-    #             return True
-    #     elif signal['side'] == 'sell':
-    #         if tick.low < signal['take_profit']:
-    #             return True
-    #     else:
-    #         raise Exception(f"Unexpected side({signal['side']}) in {signal} should be 'buy' or 'sell'.")
-    #     return False
-
-    # @staticmethod
-    # def stopped(signal: pt.Series[SignalDFM], tick: BaseTickStructure) -> bool:
-    #     if signal['side'] == 'buy':  # toddo: test
-    #         if tick.low < signal['stop_loss']:
-    #             return True
-    #     elif signal['side'] == 'sell':
-    #         if tick.high > signal['stop_loss']:
-    #             return True
-    #     else:
-    #         raise Exception(f"Unexpected side({signal['side']}) in {signal} should be 'buy' or 'sell'.")
-    #     return False
-
     @staticmethod
     def execution_type(signal):
         signal_dict = signal.to_dict()
         if pd.notna(signal_dict['trigger_price']) and pd.notna(signal_dict['limit_price']):
-            # todo: this is not align with standard definition of StopLimit
             execution_type = "StopLimit"  # bt.Order.StopLimit
         elif pd.notna(signal_dict['stop_loss']):
-            execution_type = "Stop"  # bt.Order.Stop  # todo: test
+            execution_type = "Stop"
+            log_w("Not tested")
         elif pd.notna(signal_dict['limit_price']):
-            execution_type = "Limit"  # bt.Order.Limit  # todo: test
+            execution_type = "Limit"
+            log_w("Not tested")
         elif (pd.isna(signal_dict['trigger_price']) and pd.isna(signal_dict['stop_loss'])
               and pd.isna(signal_dict['limit_price'])):
-            execution_type = "Market"  # bt.Order.Market  # todo: test
+            execution_type = "Market"
+            log_w("Not tested")
         else:
             execution_type = "Custom"
         return execution_type
 
-
-    # @staticmethod
-    # def check_trigger(signal):
-    #     assert self.trigger_price is not None # toddoo: test
-    #     if self.isbuy():
-    #         return self.parent.candle().high >= self.trigger_price
-    #     elif self.issell():
-    #         return self.parent.candle().high <= self.trigger_price
-    #     return False
-
     @classmethod
-    def to_str(cls, signal_index: datetime, signal: pt.Series[SignalDFM]):
-        try:
-            # index = signal_index
-            values = signal.to_dict()
-            # effective_end = min( values['end'] if pd.notna(values['end']) else np.inf,  values['ttl'])
-            result = (f"Signal@{signal_index}"
-                      f"T{pd.to_datetime(values['end']).strftime('%d.%H-%M')}:"
-                      f"{SignalDf.execution_type(signal)}"
-                      f"{values['base_asset_amount']:.4f}@{values['limit_price']:.2f}SL{values['stop_loss']:.2f}"
-                      f"TP{values['take_profit']:.2f}TR{values['trigger_price']:.2f}")
-        except Exception as e:
-            raise e
+    def to_str(cls, signal_index: Tuple[Timestamp, Timestamp, str, str], signal: pt.Series[SignalDFM]):
+        values = signal.to_dict()
+        index_dict = dict(zip(SignalDFM.to_schema().index.names, list(signal_index)))
+        side_indicator = f"{('Buy' if index_dict['side']==OrderSide.Buy.value else 'Sell')}"
+        result = (f"Signal{index_dict['date'].strftime('%m-%d.%H-%M')}{side_indicator}"
+                  f"@{index_dict['ref_date'].strftime('%m-%d.%H-%M')}/{index_dict['ref_timeframe']}"
+                  f"End{pd.to_datetime(values['end']).strftime('%m/%d.%H:%M')}"
+                  f"{SignalDf.execution_type(signal)}"
+                  f"{values['base_asset_amount']:.4f}@{values['limit_price']:.2f}SL{values['stop_loss']:.2f}"
+                  f"TP{values['take_profit']:.2f}TR{values['trigger_price']:.2f}"
+                  # f"Ref{ref_timeframe}/{ref_date}"
+                  )
         return result
 
 
@@ -134,46 +96,12 @@ _sample_df = pd.DataFrame({
     'date': [Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC))],
     'original_index': \
         [Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC))],
-    'reference_date': \
+    'ref_date': \
         [Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC))],
-    'reference_timeframe': ['1min'],
+    'ref_timeframe': ['1min'],
 
     'end': [Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=2).replace(tzinfo=pytz.UTC))],
     'side': ['buy'],
-    # 'base_asset_amount': 0.0,
-    # 'limit_price': 0.0,
-    # 'stop_loss': 0.0,
-    # 'take_profit': 0.0,
-    # 'trigger_price': 0.0,
-    # 'trigger_satisfied': True,
-    #
-    # 'original_order_id': 'Test',
-    # 'stop_loss_order_id': 'Test',
-    # 'take_profit_order_id': 'Test',
-    #
-    # 'order_is_active': True
-})  # .astype({
-#     'trigger_satisfied': bool,
-#     'order_is_active': bool,
-# })
 
-SignalDf._sample_df = _sample_df.set_index(['date', 'reference_date', 'reference_timeframe', 'side'])
-
-# a = SignalDf.new(
-#     {
-#         'date': datetime(2024, 1, 3, 9, 2, tzinfo=pytz.UTC),
-#         'original_index': datetime(2024, 1, 3, 9, 2, tzinfo=pytz.UTC),
-#         'reference_date': Timestamp('2024-01-03 04:15:00+0000', tz='UTC'),
-#         'reference_timeframe': '15min',
-#
-#         'end': Timestamp('2024-01-05 20:15:00+0000', tz='UTC'),
-#         'side': 'buy',
-#         'limit_price': 45267.72387181237,
-#         'stop_loss': 45206.5,
-#         'take_profit': 45537.09999999999,
-#         'trigger_price': 45261.6,
-#         'trigger_satisfied': bool(False),
-#         'order_is_active': bool(False)
-#     }
-# )
-# pass
+})
+SignalDf._sample_df = _sample_df.set_index(['date', 'ref_date', 'ref_timeframe', 'side'])

@@ -104,17 +104,10 @@ def read_file(date_range_str: str, data_frame_type: str, generator: Callable, ca
         df = read_with_timeframe(data_frame_type, date_range_str, file_path, n_rows, skip_rows)
     except FileNotFoundError as e:
         pass
-    except Exception as e:
-        raise e
-
     if zero_size_allowed is None:
         zero_size_allowed = after_under_process_date(date_range_str)
     if df is None or not cast_and_validate(df, caster_model, return_bool=True, zero_size_allowed=zero_size_allowed):
-        try:
-            generator(date_range_str)
-        except Exception as e:
-            # recovers the missing raised exception
-            raise e
+        generator(date_range_str)
         df = read_with_timeframe(data_frame_type, date_range_str, file_path, n_rows, skip_rows)
         df = cast_and_validate(df, caster_model, zero_size_allowed=zero_size_allowed)
     else:
@@ -435,11 +428,8 @@ def multi_timeframe_times_tester(multi_timeframe_df: pt.DataFrame[MultiTimeframe
     result = True
     for timeframe in config.timeframes:
         _timeframe_df = single_timeframe(multi_timeframe_df, timeframe)
-        try:
-            result = result & times_tester(_timeframe_df, date_range_str, timeframe, return_bool,
-                                           ignore_processing_date_range, processing_date_range)
-        except Exception as e:
-            raise e
+        result = result & times_tester(_timeframe_df, date_range_str, timeframe, return_bool,
+                                       ignore_processing_date_range, processing_date_range)
     return result
 
 
@@ -503,24 +493,13 @@ def cast_and_validate(data, model_class: Type[Pandera_DFM_Type], return_bool: bo
         except pandera.errors.SchemaErrors as exc:
             log(str(exc.schema_errors), LogSeverity.WARNING, stack_trace=False)
             return False
-        except Exception as e:
-            raise e
     else:
-        try:
-            model_class.validate(data, lazy=True, )
-        except Exception as e:
-            raise e
+        model_class.validate(data, lazy=True, )
     if return_bool:
         return True
-    try:
-        columns_to_keep: list[str] = [column for column in model_class.__fields__.keys() if
-                                      column not in ['timeframe', 'date']]
-    except Exception as e:
-        raise e
-    try:
-        data = data[columns_to_keep]
-    except Exception as e:
-        raise e
+    columns_to_keep: list[str] = [column for column in model_class.__fields__.keys() if
+                                  column not in ['timeframe', 'date']]
+    data = data[columns_to_keep]
     return data
 
 
@@ -531,32 +510,25 @@ def apply_as_type(data, model_class) -> pd.DataFrame:
         if (attr_name not in data.dtypes.keys()
                 and (hasattr(data.index, 'names') and attr_name not in data.index.names)):
             raise KeyError(f"'{attr_name}' in {model_class.__name__} but not in data:{data.dtypes}")
-        try:
-            if 'timestamp' in str(attr_type).lower() and 'timestamp' not in str(data.dtypes.loc[attr_name]).lower():
-                as_types[attr_name] = 'datetime64[ns, UTC]'
-            if 'datetimetzdtype' in str(attr_type).lower():
+        if 'timestamp' in str(attr_type).lower() and 'timestamp' not in str(data.dtypes.loc[attr_name]).lower():
+            as_types[attr_name] = 'datetime64[ns, UTC]'
+        if 'datetimetzdtype' in str(attr_type).lower():
 
-                if 'datetimetzdtype' not in str(data.dtypes.loc[attr_name]).lower():
-                    as_types[attr_name] = 'datetime64[ns, UTC]'
-                elif 'timedelta' in str(attr_type).lower() and 'timedelta' not in str(
-                        data.dtypes.loc[attr_name]).lower():
-                    as_types[attr_name] = 'timedelta64[s]'
-                    # as_types[attr_name] = pandera.typing.Timedelta
-            elif 'pandera.typing.pandas.Series' in str(attr_type):
-                astype = str(attr_type).replace('pandera.typing.pandas.Series[', '').replace(']', '')
-                trans_table = str.maketrans('', '', string.digits)
-                astype = astype.translate(trans_table)
-                if (astype != 'str' and
-                        attr_name in data.columns and astype not in str(data.dtypes.loc[attr_name]).lower()):
-                    as_types[attr_name] = astype
-        except Exception as e:
-            raise e
+            if 'datetimetzdtype' not in str(data.dtypes.loc[attr_name]).lower():
+                as_types[attr_name] = 'datetime64[ns, UTC]'
+            elif 'timedelta' in str(attr_type).lower() and 'timedelta' not in str(
+                    data.dtypes.loc[attr_name]).lower():
+                as_types[attr_name] = 'timedelta64[s]'
+                # as_types[attr_name] = pandera.typing.Timedelta
+        elif 'pandera.typing.pandas.Series' in str(attr_type):
+            astype = str(attr_type).replace('pandera.typing.pandas.Series[', '').replace(']', '')
+            trans_table = str.maketrans('', '', string.digits)
+            astype = astype.translate(trans_table)
+            if (astype != 'str' and
+                    attr_name in data.columns and astype not in str(data.dtypes.loc[attr_name]).lower()):
+                as_types[attr_name] = astype
     if len(as_types) > 0:
-        # log(as_types)
-        try:
-            data = data.astype(as_types)
-        except Exception as e:
-            raise e
+        data = data.astype(as_types)
     return data
 
 
@@ -589,24 +561,11 @@ def cast_and_validate2(data, model_class: Type[Pandera_DFM_Type], return_bool: b
         except pandera.errors.SchemaErrors as exc:
             log(str(exc.schema_errors), LogSeverity.WARNING, stack_trace=False)
             return False
-        except Exception as e:
-            raise e
     else:
-        try:
-            model_class.validate(data, lazy=True, )
-        except Exception as e:
-            raise e
+        model_class.validate(data, lazy=True, )
     if return_bool:
         return True
-    # try:
-    #     columns_to_keep: list[str] = [column for column in model_class.__fields__.keys() if
-    #                                   column not in ['timeframe', 'date']]
-    # except Exception as e:
-    #     raise e
-    try:
-        data = data[column_annotations.keys()]
-    except Exception as e:
-        raise e
+    data = data[column_annotations.keys()]
     return data
 
 
@@ -616,32 +575,25 @@ def apply_as_type2(data, model_class, _column_dtypes) -> pd.DataFrame:
         if (attr_name not in data.dtypes.keys()
                 and (hasattr(data.index, 'names') and attr_name not in data.index.names)):
             raise KeyError(f"'{attr_name}' in {model_class.__name__} but not in data:{data.dtypes}")
-        try:
-            if 'timestamp' in str(attr_type).lower() and 'timestamp' not in str(data.dtypes.loc[attr_name]).lower():
-                as_types[attr_name] = 'datetime64[ns, UTC]'
-            if 'datetimetzdtype' in str(attr_type).lower():
+        if 'timestamp' in str(attr_type).lower() and 'timestamp' not in str(data.dtypes.loc[attr_name]).lower():
+            as_types[attr_name] = 'datetime64[ns, UTC]'
+        if 'datetimetzdtype' in str(attr_type).lower():
 
-                if 'datetimetzdtype' not in str(data.dtypes.loc[attr_name]).lower():
-                    as_types[attr_name] = 'datetime64[ns, UTC]'
-                elif 'timedelta' in str(attr_type).lower() and 'timedelta' not in str(
-                        data.dtypes.loc[attr_name]).lower():
-                    as_types[attr_name] = 'timedelta64[s]'
-                    # as_types[attr_name] = pandera.typing.Timedelta
-            elif 'pandera.typing.pandas.Series' in str(attr_type):
-                astype = str(attr_type).replace('pandera.typing.pandas.Series[', '').replace(']', '')
-                trans_table = str.maketrans('', '', string.digits)
-                astype = astype.translate(trans_table)
-                if (astype != 'str' and
-                        attr_name in data.columns and astype not in str(data.dtypes.loc[attr_name]).lower()):
-                    as_types[attr_name] = astype
-        except Exception as e:
-            raise e
+            if 'datetimetzdtype' not in str(data.dtypes.loc[attr_name]).lower():
+                as_types[attr_name] = 'datetime64[ns, UTC]'
+            elif 'timedelta' in str(attr_type).lower() and 'timedelta' not in str(
+                    data.dtypes.loc[attr_name]).lower():
+                as_types[attr_name] = 'timedelta64[s]'
+                # as_types[attr_name] = pandera.typing.Timedelta
+        elif 'pandera.typing.pandas.Series' in str(attr_type):
+            astype = str(attr_type).replace('pandera.typing.pandas.Series[', '').replace(']', '')
+            trans_table = str.maketrans('', '', string.digits)
+            astype = astype.translate(trans_table)
+            if (astype != 'str' and
+                    attr_name in data.columns and astype not in str(data.dtypes.loc[attr_name]).lower()):
+                as_types[attr_name] = astype
     if len(as_types) > 0:
-        # log(as_types)
-        try:
-            data = data.astype(as_types)
-        except Exception as e:
-            raise e
+        data = data.astype(as_types)
     return data
 
 

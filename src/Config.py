@@ -122,9 +122,6 @@ class MyEncoder(json.JSONEncoder):
             return o.__dict__
         except AttributeError:
             return str(o)
-        except Exception as e:
-            exception_info = sys.exc_info()
-            raise e
 
 
 myEncoder = MyEncoder()

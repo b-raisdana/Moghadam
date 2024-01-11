@@ -40,28 +40,32 @@ class BasePatternStrategy(ExtendedStrategy):
                 original_order, stop_order, profit_order = self.get_order_group(order)
                 if (not original_order.status == bt.Order.Completed or
                         not profit_order.status == bt.Order.Canceled):
-                    raise NotImplementedError
+                    raise AssertionError("(not original_order.status == bt.Order.Completed or "
+                                         "not profit_order.status == bt.Order.Canceled)")
                 # repeat the signal
-                index = order.info['signal_index']
-                signal = self.signal_df.loc[index]
+                original_signal_index = order.info['signal_index']
+                signal = self.signal_df.loc[original_signal_index]
                 log_d(
-                    f'repeating Signal  according to Stop-Loss on {SignalDf.to_str(index, signal)} @ {self.candle()}')
+                    f'repeating Signal  according to Stop-Loss on {SignalDf.to_str(original_signal_index, signal)} @ {self.candle()}')
                 repeat_signal = signal.copy()
-                repeat_signal['original_index'] = index
+                repeat_signal['original_index'] = original_signal_index
                 repeat_signal['order_is_active'] = False
                 repeat_signal['original_order_id'] = pd.NA
+                repeat_signal['stop_loss_order_id'] = pd.NA
+                repeat_signal['take_profit_order_id'] = pd.NA
+                self.signal_df.loc[original_signal_index, 'end'] = self.candle().date
                 # repeat_signal['end'] = pd.NA
                 if str(self.signal_df.index.names) != str(
-                        ['date', 'reference_date', 'reference_timeframe', 'side']):
+                        ['date', 'ref_date', 'ref_timeframe', 'side']):
                     raise AssertionError(
                         f"Order of signal_df indexes "
-                        f"expected to be {str(['date', 'reference_date', 'reference_timeframe', 'side'])} "
+                        f"expected to be {str(['date', 'ref_date', 'ref_timeframe', 'side'])} "
                         f"but is {str(self.signal_df.index.names)}")
-                new_index = (self.candle().date, index[1], index[2], index[3])
+                new_index = (self.candle().date, original_signal_index[1], original_signal_index[2], original_signal_index[3])
                 self.signal_df.loc[new_index] = repeat_signal
                 if not self.signal_df.index.is_unique:
                     pass
-                log_d(f"repeated Signal:{SignalDf.to_str(self.candle().date, repeat_signal)}@{self.candle().date} ")
+                log_d(f"repeated Signal:{SignalDf.to_str(new_index, repeat_signal)}@{self.candle().date} ")
             elif order.info['custom_type'] == BracketOrderType.Profit.value:
                 # a bracket take-profit order executed.
 
@@ -70,9 +74,9 @@ class BasePatternStrategy(ExtendedStrategy):
                 if (not original_order.status == bt.Order.Completed or
                         not stop_order.status == bt.Order.Canceled):
                     raise NotImplementedError
-                index = order.info['signal_index']
-                signal = self.signal_df.loc[index]
-                log_d(f'Took profit on Signal:{SignalDf.to_str(index, signal)}@{self.candle().date}')
+                original_signal_index = order.info['signal_index']
+                signal = self.signal_df.loc[original_signal_index]
+                log_d(f'Took profit on Signal:{SignalDf.to_str(original_signal_index, signal)}@{self.candle().date}')
         super().notify_order(order)
 
     def overlapping_base_patterns(self, base_patterns: pt.DataFrame[MultiTimeframeBasePattern] = None) \
@@ -82,15 +86,13 @@ class BasePatternStrategy(ExtendedStrategy):
         if len(base_patterns[['end', 'ttl']].min(axis='columns', skipna=True)) != len(base_patterns):
             pass
         effective_end = base_patterns[['end', 'ttl']].min(axis='columns', skipna=True)
-        try:
-            hit_base_patterns = base_patterns[
-                (base_patterns.index.get_level_values(level='date') < self.candle().date) &
-                (effective_end > self.candle().date) &
-                (base_patterns['internal_high'] > self.candle().low) &
-                (base_patterns['internal_low'] < self.candle().high)
-                ]
-        except Exception as e:
-            raise e
+        hit_base_patterns = base_patterns[
+            (base_patterns.index.get_level_values(level='date') < self.candle().date)
+            & (effective_end > self.candle().date)
+            # does not need to wait for value overlap. triggered (stopLimit) order does the job.
+            # & (base_patterns['internal_high'] > self.candle().low)
+            # & (base_patterns['internal_low'] < self.candle().high)
+            ]
         return hit_base_patterns
 
     def no_signal_active_base_patterns(self, band: Literal['upper', 'below'],
@@ -100,7 +102,11 @@ class BasePatternStrategy(ExtendedStrategy):
             base_patterns = self.base_patterns
         if f'{band}_band_signal_generated' not in base_patterns.columns:
             base_patterns[f'{band}_band_signal_generated'] = pd.NA
-
+        # result = base_patterns[
+        #     (base_patterns[f'{band}_band_activated'].notna() & (
+        #             base_patterns[f'{band}_band_activated'] <= self.candle().date)) &
+        #     (base_patterns[f'{band}_band_signal_generated'].isna())
+        #     ]
         result = base_patterns[
             (base_patterns[f'{band}_band_activated'].notna() & (
                     base_patterns[f'{band}_band_activated'] <= self.candle().date)) &
@@ -141,7 +147,7 @@ class BasePatternStrategy(ExtendedStrategy):
         #     trigger_price = base_pattern['internal_low']
 
         # size, true_risked_money = self.my_sizer(limit_price=limit_price, sl_price=stop_loss)
-        # todo: reference_date and reference_timeframe never been used.
+        # todo: ref_date and ref_timeframe never been used.
         # todo: use .loc to generate and assign signal in one step.
         if pd.notna(base_pattern['end']):
             effective_end = base_pattern['end']
@@ -156,14 +162,14 @@ class BasePatternStrategy(ExtendedStrategy):
             'original_index': self.candle().date,
             'end': effective_end,
             'side': side,
-            'reference_date': pd.to_datetime(base_pattern_date),
-            'reference_timeframe': base_pattern_timeframe,
+            'ref_date': pd.to_datetime(base_pattern_date),
+            'ref_timeframe': base_pattern_timeframe,
             # 'base_asset_amount': [size],
             'limit_price': limit_price,
             'stop_loss': stop_loss,
             'take_profit': take_profit,
             'trigger_price': trigger_price,
-            'trigger_satisfied': False,
+            # 'trigger_satisfied': False,
             'order_is_active': False,
         })
         self.signal_df = SignalDf.concat(self.signal_df, new_signal)
@@ -183,22 +189,22 @@ class BasePatternStrategy(ExtendedStrategy):
         base_pattern: pt.Series[MultiTimeframeBasePattern]
         if len(upper_overlapping_base_patterns) > 0:
             for (timeframe, start), base_pattern in upper_overlapping_base_patterns.iterrows():
-                if self.candle_overlaps_base(base_pattern):
-                    self.add_signal(timeframe, start, base_pattern, band='upper')
-                    if pd.notna(self.base_patterns.loc[(timeframe, start), 'upper_band_signal_generated']):
-                        raise AssertionError("pd.notna(self.base_patterns.loc[(timeframe, start), 'upper_band_signa...")
-                    self.base_patterns.loc[(timeframe, start), 'upper_band_signal_generated'] = self.candle().date
+                # if self.candle_overlaps_base(base_pattern):
+                self.add_signal(timeframe, start, base_pattern, band='upper')
+                if pd.notna(self.base_patterns.loc[(timeframe, start), 'upper_band_signal_generated']):
+                    raise AssertionError("pd.notna(self.base_patterns.loc[(timeframe, start), 'upper_band_signa...")
+                self.base_patterns.loc[(timeframe, start), 'upper_band_signal_generated'] = self.candle().date
         below_overlapping_base_patterns = self.overlapping_base_patterns(
             self.no_signal_active_base_patterns(band='below', base_patterns=self.base_patterns))
         if len(below_overlapping_base_patterns) > 0:
             for (timeframe, start), base_pattern in below_overlapping_base_patterns.iterrows():
-                if self.candle_overlaps_base(base_pattern):
-                    self.add_signal(timeframe, start, base_pattern, band='below')
-                    if pd.notna(self.base_patterns.loc[(timeframe, start), 'below_band_signal_generated']):
-                        raise AssertionError("pd.notna(self.base_patterns.loc[(timeframe, start), 'below_band_signa...")
-                    self.base_patterns.loc[(
-                        timeframe,
-                        start), 'below_band_signal_generated'] = self.candle().date  # todo: test crashes here
+                # if self.candle_overlaps_base(base_pattern):
+                self.add_signal(timeframe, start, base_pattern, band='below')
+                if pd.notna(self.base_patterns.loc[(timeframe, start), 'below_band_signal_generated']):
+                    raise AssertionError("pd.notna(self.base_patterns.loc[(timeframe, start), 'below_band_signa...")
+                self.base_patterns.loc[(
+                    timeframe,
+                    start), 'below_band_signal_generated'] = self.candle().date  # todo: test crashes here
 
 
 def test_strategy(cash: float, date_range_str: str = None):
@@ -216,40 +222,7 @@ def test_strategy(cash: float, date_range_str: str = None):
 
     cerebro.broker.set_cash(cash)
     cerebro.broker.set_fundmode(True, 0.02)  # 0.02 BTC ~= 1000 USD
-    #
-    # cerebro.addanalyzer(bt.analyzers.TimeReturn, fund=True)
-    # cerebro.addobserver(bt.observers.FundValue)
-    # cerebro.addobserver(bt.observers.FundShares)
-    # cerebro.addobserver(bt.observers.TimeReturn)
-    #
-    # cerebro.addanalyzer(bt.analyzers.DrawDown, fund=True)
-    # cerebro.addobserver(bt.observers.DrawDown)
-    #
-    # cerebro.addobserver(bt.observers.Broker)
-    #
-    # cerebro.addobserver(bt.observers.Benchmark)
 
     print('Starting Portfolio Value: %.2f' % cerebro.broker.getvalue())
-    try:
-        result = cerebro.run()
-    except Exception as e:
-        raise e
-    # orders = {}
-    # for k, v in result[0].original_orders.items():
-    #     orders[k] = v
-    # for k, v in result[0].stop_orders.items():
-    #     orders[k] = v
-    # for k, v in result[0].profit_orders.items():
-    #     orders[k] = v
-    # # t_order = orders[1]
-    # # df = pd.DataFrame(orders.values())
-    # print('Final Portfolio Value: %.2f' % cerebro.broker.getvalue())  # todoo: test
-    plots = cerebro.plot(style='candle', dpi=900, savefig='plot.pdf')
-    # pass
-    # a = 1
-    # try:
-    #     plots[0][0].set_size_inches(19200, 10800)
-    #     plots[0][0].savefig(fname=f'c:\\BasePatternStrategy.{config.id}.{date_range_str}.pdf', format='pdf')
-    #     # width=19200, height=10800, style='candle', savefig=f'c:\\BasePatternStrategy.{config.id}.{date_range_str}.pdf'
-    # except Exception as e:
-    #     raise e
+    cerebro.run()
+    cerebro.plot(style='candle', dpi=900, savefig='plot.pdf')

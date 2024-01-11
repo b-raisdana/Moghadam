@@ -12,7 +12,7 @@ from PanderaDFM.BullBearSide import BullBearSide, bull_bear_side_repr
 from PanderaDFM.OHLCV import OHLCV
 from PeakValley import peaks_only, valleys_only, major_peaks_n_valleys
 from helper.data_preparation import single_timeframe
-from helper.helper import measure_time, log
+from helper.helper import measure_time, log, log_w
 from pandera import typing as pt
 
 MAX_NUMBER_OF_PLOT_SCATTERS = 5000
@@ -105,6 +105,7 @@ def peaks_valleys_in_range(peaks_n_valleys: pd.DataFrame, start: pd.Timestamp, e
 
 
 def add_canal_lines(_boundaries, single_timeframe_peaks_n_valleys):
+    log_w("Not tested")
     if _boundaries is None:  # todo: test add_canal_lines
         return _boundaries
     for i, _boundary in _boundaries.iterrows():

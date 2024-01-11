@@ -194,10 +194,7 @@ def timeframe_base_pattern(ohlcva: pt.DataFrame[OHLCVA], a_pattern_ohlcva: pt.Da
     timeframe_base_patterns['size'] = timeframe_base_patterns['internal_high'] - timeframe_base_patterns['internal_low']
     timeframe_base_patterns['base_timeframe_atr'] = pd.Series(dtype=float)
     timeframe_base_patterns['ignore_backtesting'] = pd.Series(dtype=bool)
-    try:
-        timeframe_base_patterns = cast_and_validate(timeframe_base_patterns, BasePattern, zero_size_allowed=True)
-    except Exception as e:
-        raise e
+    timeframe_base_patterns = cast_and_validate(timeframe_base_patterns, BasePattern, zero_size_allowed=True)
     return timeframe_base_patterns
 
 
@@ -370,8 +367,6 @@ def timeframe_effective_bases(_multi_timeframe_base_pattern, timeframe):
         index = config.timeframes.index(timeframe)
     except ValueError:
         raise Exception(f'timeframe:{timeframe} should be in [{config.timeframes}]!')
-    except Exception as e:
-        raise e
     if index < (len(config.timeframes) - 1):
         result = _multi_timeframe_base_pattern.loc[
             _multi_timeframe_base_pattern.index.get_level_values('timeframe') \

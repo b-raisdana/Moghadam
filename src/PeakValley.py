@@ -53,10 +53,10 @@ def calculate_distance(ohlcv: pt.DataFrame[OHLCV], peaks_or_valleys: pt.DataFram
     number_of_crossed_tops = 1
     while number_of_crossed_tops > 0:
         ohlcv = ohlcv.drop(columns=['right_top_time', 'right_top_value', 'left_top_time', 'left_top_value',
-                            'right_crossing', 'left_crossing',
-                            'right_crossing_time', 'right_crossing_value',
-                            'left_crossing_time', 'left_crossing_value',
-                            'valid_crossing'], errors='ignore')
+                                    'right_crossing', 'left_crossing',
+                                    'right_crossing_time', 'right_crossing_value',
+                                    'left_crossing_time', 'left_crossing_value',
+                                    'valid_crossing'], errors='ignore')
         tops_to_compare = tops_to_compare.drop(columns=[direction + '_distance'], errors='ignore')
 
         top_indexes = tops_to_compare.index
@@ -67,17 +67,22 @@ def calculate_distance(ohlcv: pt.DataFrame[OHLCV], peaks_or_valleys: pt.DataFram
             adjacent_ohlcv_index_of_tops = \
                 shift_over(needles=top_indexes, reference=ohlcv.index, side='forward')
         assert len(adjacent_ohlcv_index_of_tops) == len(top_indexes)
+        # if len(adjacent_ohlcv_index_of_tops) == 0:
+        #     pass
         ohlcv.loc[adjacent_ohlcv_index_of_tops, f'{reverse}_top_time'] = top_indexes
 
         # add the high/low of previous peak/valley to OHLCV df
         ohlcv.loc[adjacent_ohlcv_index_of_tops, reverse + '_top_value'] = \
             tops_to_compare.loc[top_indexes, compare_column].tolist()
+        if 'left_top_value' not in ohlcv.columns:
+            nop = 1
+            pass
         if direction == 'right':
-            ohlcv=ohlcv['left_top_time'].ffill()
-            ohlcv=ohlcv['left_top_value'].ffill()
+            ohlcv['left_top_time'].ffill(inplace=True)
+            ohlcv['left_top_value'].ffill(inplace=True)
         else:  # direction == 'left'
-            ohlcv=ohlcv['right_top_time'].bfill()
-            ohlcv=ohlcv['right_top_value'].bfill()
+            ohlcv['right_top_time'].bfill(inplace=True)
+            ohlcv['right_top_value'].bfill(inplace=True)
         # if high/low of OHLCV is higher/lower than peak/valley high/low it is crossing the peak/valley
         ohlcv[f'{direction}_crossing'] = more_significant(ohlcv[compare_column], ohlcv[reverse + '_top_value'])
         crossing_ohlcv = ohlcv[ohlcv[f'{direction}_crossing'] == True].index
@@ -95,11 +100,11 @@ def calculate_distance(ohlcv: pt.DataFrame[OHLCV], peaks_or_valleys: pt.DataFram
         if direction.lower() == 'left':
             pass
         if direction == 'right':
-            ohlcv=ohlcv[f'{direction}_crossing_time'].bfill()
-            ohlcv=ohlcv[f'{direction}_crossing_value'].bfill()
+            ohlcv[f'{direction}_crossing_time'].bfill(inplace=True)
+            ohlcv[f'{direction}_crossing_value'].bfill(inplace=True)
         else:  # direction == 'left'
-            ohlcv=ohlcv[f'{direction}_crossing_time'].ffill()
-            ohlcv=ohlcv[f'{direction}_crossing_value'].ffill()
+            ohlcv[f'{direction}_crossing_time'].ffill(inplace=True)
+            ohlcv[f'{direction}_crossing_value'].ffill(inplace=True)
         ohlcv['masked_ohlcv'] = les_significant(ohlcv[compare_column], ohlcv[f'{direction}_crossing_value'])
         masked_ohlcv = ohlcv[ohlcv['masked_ohlcv'] == True].index
         crossed_tops = masked_ohlcv.intersection(top_indexes)
@@ -262,8 +267,6 @@ def higher_or_eq_timeframe_peaks_n_valleys(peaks_n_valleys: pd.DataFrame, timefr
         index = config.timeframes.index(timeframe)
     except ValueError:
         raise Exception(f'timeframe:{timeframe} should be in [{config.timeframes}]!')
-    except Exception as e:
-        raise e
     # result = peaks_n_valleys.loc[peaks_n_valleys.index.isin(config.timeframes[index:], level='timeframe')]
     result = peaks_n_valleys.loc[peaks_n_valleys.index.get_level_values('timeframe').isin(config.timeframes[index:])]
     return result
@@ -304,7 +307,7 @@ def multi_timeframe_peaks_n_valleys(expanded_date_range: str) -> pt.DataFrame[Mu
     return _peaks_n_valleys
 
 
-@measure_time
+# @measure_time
 def generate_multi_timeframe_peaks_n_valleys(date_range_str, file_path: str = None):
     if file_path is None:
         file_path = config.path_of_data
@@ -318,7 +321,7 @@ def generate_multi_timeframe_peaks_n_valleys(date_range_str, file_path: str = No
         (start < _peaks_n_valleys.index.get_level_values(level='date')) &
         (_peaks_n_valleys.index.get_level_values(level='date') < end)].copy()
     # plot_multi_timeframe_peaks_n_valleys(_peaks_n_valleys, date_range_str)
-    _peaks_n_valleys = _peaks_n_valleys.sort_index( level='date')
+    _peaks_n_valleys = _peaks_n_valleys.sort_index(level='date')
     _peaks_n_valleys = trim_to_date_range(date_range_str, _peaks_n_valleys, ignore_duplicate_index=True)
     _peaks_n_valleys = \
         _peaks_n_valleys[['open', 'high', 'low', 'close', 'volume', 'peak_or_valley', 'strength', 'permanent_strength']]
@@ -327,7 +330,7 @@ def generate_multi_timeframe_peaks_n_valleys(date_range_str, file_path: str = No
     MT.extract_to_data_path(os.path.join(file_path, f'multi_timeframe_peaks_n_valleys.{date_range_str}.zip'))
 
 
-@measure_time
+# @measure_time
 def calculate_strength_of_peaks_n_valleys(time_ohlcv: pt.DataFrame[OHLCV],
                                           time_peaks_n_valleys: pt.DataFrame[PeakValley]) \
         -> pt.DataFrame[PeakValley]:
@@ -373,6 +376,7 @@ def old_insert_previous_n_next_top(top_type: TopTYPE, peaks_n_valleys, ohlcv):
         ohlcv.loc[is_next_for_indexes, f'next_top_index'] = tops.index.get_level_values('date')[i]
         ohlcv.loc[is_next_for_indexes, f'next_top_value'] = tops.iloc[i][high_or_low]
     return ohlcv
+
 
 @measure_time
 def insert_previous_n_next_top(top_type, peaks_n_valleys: pt.DataFrame[PeakValley], ohlcv: pt.DataFrame[OHLCV]) \

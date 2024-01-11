@@ -40,8 +40,8 @@ def plot_single_timeframe_base_pattern(single_timeframe_ohlcva: pt.DataFrame[OHL
         ys = [base_pattern['internal_low'], base_pattern['internal_low'], \
               base_pattern['internal_high'], base_pattern['internal_high']]
         fill_color = 'blue'
-        name = MultiTimeframeBasePattern.name_repr(index_date, timeframe, base_pattern)
-        text = MultiTimeframeBasePattern.full_repr(index_date, timeframe, base_pattern)
+        name = MultiTimeframeBasePattern.str(index_date, timeframe, base_pattern)
+        text = MultiTimeframeBasePattern.repr(index_date, timeframe, base_pattern)
         fig.add_scatter(x=xs, y=ys, fill="toself",  # fillcolor=fill_color,
                         fillpattern=dict(fgopacity=0.5),
                         name=name,
@@ -77,7 +77,22 @@ def plot_single_timeframe_base_pattern(single_timeframe_ohlcva: pt.DataFrame[OHL
                             legendgroup=name,
                             hovertemplate="%{text}",
                             )
-
+    fig.update_layout({
+        'width': 1800,  # Set the width of the plot
+        'height': 900,
+        'legend': {
+            'font': {
+                'size': 8
+            }
+        }
+    })
+    # go.Layout(
+    #     legend=dict(
+    #         font=dict(
+    #             size=16  # Set the font size for the legend text
+    #         )
+    #     )
+    # )
     if save or html_path != '':
         file_name = f'single_timeframe_base_pattern.{file_id(single_timeframe_ohlcva, name)}'
         save_figure(fig, file_name, html_path)

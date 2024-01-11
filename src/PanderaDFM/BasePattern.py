@@ -30,12 +30,12 @@ class BasePattern(pandera.DataFrameModel):
 class MultiTimeframeBasePattern(BasePattern, MultiTimeframe):
 
     @classmethod
-    def full_repr(cls, _start: datetime, timeframe: str, pattern):
+    def repr(cls, _start: datetime, timeframe: str, pattern):
         effective_end = '/'.join([
             pattern["end"].strftime("%H:%M") if pd.notna(pattern["end"]) else "",
             pattern["ttl"].strftime("%H:%M") if pd.notna(pattern["ttl"]) else ""
         ])
-        text = f'BASE/{timeframe}' \
+        text = f'BASE{timeframe}/' \
                f'{_start.strftime("%H:%M")}-{effective_end} ' \
                f'{pattern["internal_low"]}-{pattern["internal_high"]}' \
                f'={pattern["internal_high"] - pattern["internal_low"]:.1f}' \
@@ -47,11 +47,11 @@ class MultiTimeframeBasePattern(BasePattern, MultiTimeframe):
         return text
 
     @classmethod
-    def name_repr(cls, _start: datetime, timeframe: str, pattern):
+    def str(cls, _start: datetime, timeframe: str, pattern):
         effective_end = '/'.join([
             pattern["end"].strftime("%H:%M") if pd.notna(pattern["end"]) else "",
             pattern["ttl"].strftime("%H:%M") if pd.notna(pattern["ttl"]) else ""
         ])
-        text = f'BASE{timeframe}' \
+        text = f'BASE{timeframe}/' \
                f'{_start.strftime("%H:%M")}-{effective_end} '
         return text

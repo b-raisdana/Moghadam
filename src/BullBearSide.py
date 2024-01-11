@@ -69,8 +69,8 @@ def single_timeframe_candles_trend(ohlcv: pt.DataFrame[OHLCV], timeframe_peaks_n
             bearish_candles,  # todo: the lower valley should be after lower peak
             'bull_bear_side'] = TREND.BEARISH.value
     candle_trend.loc[candle_trend['bull_bear_side'].notna(), 'is_final'] = True
-    candle_trend = candle_trend['bull_bear_side'].ffill()
-    candle_trend = candle_trend['bull_bear_side'].bfill()
+    candle_trend['bull_bear_side'].ffill(inplace=True)
+    candle_trend['bull_bear_side'].bfill(inplace=True)
     if candle_trend['is_final'].isna().any():
         pass
     return candle_trend
@@ -742,15 +742,17 @@ def add_trend_extremum(_boundaries, single_timeframe_peak_n_valley: pt.DataFrame
     # _boundaries = _boundaries[:-1]
 
     ohlcv.loc[_boundaries.index, 'bbs_index'] = _boundaries.index.tolist()
-    ohlcv = ohlcv['bbs_index'].ffill()
-    ohlcv = ohlcv['bbs_index'].bfill()
+    ohlcv['bbs_index'].ffill(inplace=True)
+    ohlcv['bbs_index'].bfill(inplace=True)
     grouped_ohlcv = ohlcv.groupby(by='bbs_index').agg({'low': 'min', 'high': 'max', })
     _boundaries[['internal_low', 'internal_high']] = grouped_ohlcv[['low', 'high']]
 
     ohlcv = ohlcv.merge(_boundaries[['internal_high', 'internal_low']], how='left', left_index=True, right_index=True)
     ohlcv = ohlcv.rename(columns={'internal_high': 'bbs_high', 'internal_low': 'bbs_low'})
-    ohlcv[['bbs_high', 'bbs_low']] = ohlcv[['bbs_high', 'bbs_low']].ffill()
-    ohlcv[['bbs_high', 'bbs_low']] = ohlcv[['bbs_high', 'bbs_low']].bfill()
+    # ohlcv[['bbs_high', 'bbs_low']] = ohlcv[['bbs_high', 'bbs_low']].ffill()
+    # ohlcv[['bbs_high', 'bbs_low']] = ohlcv[['bbs_high', 'bbs_low']].bfill()
+    ohlcv[['bbs_high', 'bbs_low']].ffill(inplace=True)
+    ohlcv[['bbs_high', 'bbs_low']].bfill(inplace=True)
     ohlcv['is_bbs_high'] = ohlcv['high'] == ohlcv['bbs_high']
     ohlcv['is_bbs_low'] = ohlcv['low'] == ohlcv['bbs_low']
     ohlcv.loc[ohlcv['is_bbs_high'], 'high_time'] = ohlcv[ohlcv['is_bbs_high']].index
@@ -794,8 +796,8 @@ def most_two_significant_tops(start, end, single_timeframe_peaks_n_valleys, tops
 
 def trends_atr(timeframe_boundaries: pt.DataFrame[BullBearSide], ohlcva: pt.DataFrame[OHLCVA]):
     ohlcva.loc[timeframe_boundaries.index, 'bbs_index'] = timeframe_boundaries.index.tolist()
-    ohlcva = ohlcva['bbs_index'].ffill()
-    ohlcva = ohlcva['bbs_index'].bfill()
+    ohlcva['bbs_index'].ffill(inplace=True)
+    ohlcva['bbs_index'].bfill(inplace=True)
     _boundaries_atrs = ohlcva.groupby(by='bbs_index').agg({'atr': 'mean'})['atr']
     assert _boundaries_atrs.notna().all()
     return _boundaries_atrs
