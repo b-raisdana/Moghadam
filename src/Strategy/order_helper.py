@@ -19,7 +19,7 @@ def order_name(order: bt.Order):
     name = (
         f"{order.ordtypename()}"
         # f"Order"  
-        f"{('Buy' if order.isbuy() else 'Sell')}"
+        # f"{('Buy' if order.isbuy() else 'Sell')}"
         f"{order.size:.4f}"
         # if order.params.pricelimit is not None:
         f"@{order.price:.2f}"

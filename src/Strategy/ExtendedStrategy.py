@@ -35,7 +35,7 @@ class ExtendedStrategy(bt.Strategy):
     broker_initial_cash = None
 
     def get_order_groups(self):
-        result = {}
+        result = {} # todo: test
         for index in range(self.order_group_counter):
             result[index] = (self.original_orders[index], self.stop_orders[index], self.profit_orders[index],)
         return result
