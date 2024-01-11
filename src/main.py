@@ -14,7 +14,6 @@ from ohlcv import read_multi_timeframe_ohlcv
 # from data_preparation import d_types
 
 if __name__ == "__main__":
-
     config.processing_date_range = date_range_to_string(days=4)
     #
     #     file_path: str = config.path_of_data
