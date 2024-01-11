@@ -7,11 +7,13 @@ import pytz
 from pandera import typing as pt
 
 from Config import config
+from Model.Order import OrderSide, BracketOrderType
+from PanderaDFM.OHLCVA import MultiTimeframeOHLCVA
 from PanderaDFM.SignalDf import SignalDFM, SignalDf
 from Strategy.BaseTickStructure import BaseTickStructure
-from Strategy.order_helper import BracketOrderType, order_name, OrderSide, add_order_info, order_is_open, \
-    order_is_closed
-from helper.data_preparation import concat
+from Strategy.order_helper import order_name, add_order_info, order_is_open, \
+    order_is_closed, dict_of_order
+from helper.data_preparation import concat, dict_of_list
 from helper.helper import log_d, measure_time, log_w
 
 
@@ -20,6 +22,8 @@ class ExtendedStrategy(bt.Strategy):
     orders_df: pd.DataFrame = None
     vault_df: pd.DataFrame = None
 
+    multi_timeframe_ohlcva: pt.DataFrame[MultiTimeframeOHLCVA] = None
+
     original_orders = {}
     stop_orders = {}
     profit_orders = {}
@@ -27,8 +31,14 @@ class ExtendedStrategy(bt.Strategy):
     date_range_str: str = None
     true_risked_money = 0.0
     order_group_counter = None
-    order_groups = {}
+    order_groups_info = {}
     broker_initial_cash = None
+
+    def get_order_groups(self):
+        result = {}
+        for index in range(self.order_group_counter):
+            result[index] = (self.original_orders[index], self.stop_orders[index], self.profit_orders[index],)
+        return result
 
     @measure_time
     def __init__(self):
@@ -48,7 +58,7 @@ class ExtendedStrategy(bt.Strategy):
         self.broker_initial_cash = self.broker.get_cash()
 
     def order_group_id(self):
-        return len(self.order_groups)
+        return len(self.order_groups_info)
         if self.order_group_counter is None:
             self.order_group_counter = 0
         self.order_group_counter += 1
@@ -96,7 +106,7 @@ class ExtendedStrategy(bt.Strategy):
 
         order_group_id = self.order_group_id()
         # order_group_risk = abs((original_order.created.price - sl_order.created.price) * original_order.size)
-        self.order_groups[order_group_id] = {
+        self.order_groups_info[order_group_id] = {
             # 'true_risk': order_group_risk,
             'price': original_order.created.price,
             # 'stop_loss': sl_order.created.price,
@@ -264,86 +274,30 @@ class ExtendedStrategy(bt.Strategy):
                                                f"{self.__class__.__name__}.signals.{config.id}.{self.date_range_str}.csv"))
         if self.original_orders is not None:
             for index in self.original_orders.keys():
-                t = self.dict_of_list(self.dict_of_order(self.original_orders[index]))
+                t = dict_of_list(dict_of_order(self.original_orders[index]))
                 df = concat(self.orders_df, pd.DataFrame(t, index=[index]))
             df.index.name = 'ref_id'
             df.to_csv(os.path.join(config.path_of_data,
                                    f"{self.__class__.__name__}.original_orders.{config.id}.{self.date_range_str}.csv"))
         if self.stop_orders is not None:
             for index in self.stop_orders.keys():
-                t = self.dict_of_list(self.dict_of_order(self.stop_orders[index]))
+                t = dict_of_list(dict_of_order(self.stop_orders[index]))
                 df = concat(self.orders_df, pd.DataFrame(t, index=[index]))
             df.index.name = 'ref_id'
             df.to_csv(os.path.join(config.path_of_data,
                                    f"{self.__class__.__name__}.stop_orders.{config.id}.{self.date_range_str}.csv"))
         if self.profit_orders is not None:
             for index in self.profit_orders.keys():
-                t = self.dict_of_list(self.dict_of_order(self.profit_orders[index]))
+                t = dict_of_list(dict_of_order(self.profit_orders[index]))
                 df = concat(self.orders_df, pd.DataFrame(t, index=[index]))
             df.index.name = 'ref_id'
             df.to_csv(os.path.join(config.path_of_data,
                                    f"{self.__class__.__name__}.profit_orders.{config.id}.{self.date_range_str}.csv"))
 
-    @staticmethod
-    def dict_of_order(order: bt.Order):
-        t = {}
-        for key, value in order.__dict__.items():
-            if not key.startswith("_") and not type(value) == bt.OrderData:
-                if key == 'dt':
-                    t['date'] = bt.num2date(value) if value is not None else None
-                elif key == 'dteos':
-                    t['date_eos'] = bt.num2date(value) if value is not None else None
-                elif key == 'valid':
-                    t[key] = bt.num2date(value)
-                else:
-                    t[key] = str(value)
-        for key, value in order.created.__dict__.items():
-            if not key.startswith("_"):
-                if key == 'dt':
-                    t['created_date'] = bt.num2date(value) if value is not None else None
-                else:
-                    t[f"created_{key}"] = str(value)
-        for key, value in order.executed.__dict__.items():
-            if not key.startswith("_"):
-                if key == 'dt':
-                    t['executed_date'] = bt.num2date(value) if value is not None else None
-                else:
-                    t[f"executed_{key}"] = str(value)
-        for key, value in order.info.items():
-            if not key.startswith("_"):
-                if key == 'signal':
-                    t['signal'] = SignalDf.to_str(order.info['signal_index'], value)
-                else:
-                    t[f"info_{key}"] = str(value)
-        if order.comminfo is not None:
-            t['comminfo'] = str(order.comminfo.params.__dict__)
-        if len(order.executed.exbits) > 0:
-            t['comminfo'] = ",".join(
-                [f"[{','.join([f'{k}:{v}' for k, v in row.__dict__.items()])}]" for row in order.executed.exbits])
-        hidden_keys = [k for k in t.keys() if
-                       k in ['p', 'params', 'broker', 'created_exbits', 'created_comm', 'created_margin', 'created_pnl',
-                             'created_psize', 'created_pprice', 'executed_pclose', 'position', 'created_p1',
-                             'created_p2', 'created_remsize', 'created_trailamount', 'created_trailpercent',
-                             'created_value', 'executed_p1', 'executed_p2', 'executed_pricelimit',
-                             'executed_trailamount', 'executed_trailpercent', 'info',
-                             'executed_comm', 'executed_margin', 'comminfo', 'executed_exbits', 'info_signal_index',
-                             ]]
-        hidden_values = []
-        for k in hidden_keys:
-            v = t.pop(k)
-            hidden_values += [f"{k}:{v}"]
-        t['hidden'] = ",\r\n".join(hidden_values)
-        return t
-
-    @staticmethod
-    def dict_of_list(input_dict):
-        result = {k: [v] for k, v in input_dict.items()}
-        return result
-
     def log_order(self, order: bt.Order, index=None):
         if index is None:
             index = order.ref
-        t_dict = self.dict_of_list(self.dict_of_order(order))
+        t_dict = dict_of_list(dict_of_order(order))
         self.orders_df = concat(self.orders_df, pd.DataFrame(t_dict, index=[self.candle().date]))
         self.orders_df.index.name = 'date'
         self.orders_df.to_csv(os.path.join(config.path_of_data,
@@ -372,7 +326,7 @@ class ExtendedStrategy(bt.Strategy):
         _dict[f"{asset}_position_upopened"] = position.upopened
         # self.broker_history_dfloc[len(self.vault_df)] = pd.DataFrame(dict)
         # self.vault_df.to_csv(f"{self.__class__.__name__}.vault.{config.id}.{self.date_range_str}.csv")
-        _dict = self.dict_of_list(_dict)
+        _dict = dict_of_list(_dict)
         self.vault_df = concat(self.vault_df,
                                pd.DataFrame(_dict,
                                             index=[self.candle().date]))  # pd.DataFrame({**_dict}, index=order.ref)
@@ -428,7 +382,7 @@ class ExtendedStrategy(bt.Strategy):
                 # the stop-loss order canceled (took profit) or completed (stop loss)
                 # risked money is reflected in the cash
                 order_group_id = order.info['order_group_id']
-                price = self.order_groups[order_group_id]['price']
+                price = self.order_groups_info[order_group_id]['price']
                 stop_loss_price = order.created.price
                 true_risked_money = abs((price - stop_loss_price) * order.created.size)
                 self.true_risked_money -= true_risked_money

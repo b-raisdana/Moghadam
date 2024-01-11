@@ -37,8 +37,8 @@ def date_range_of_data(data: pd.DataFrame) -> str:
         date_range = range_of_data(data)
         print(date_range)  # Output: 'yy-mm-dd.HH-MMTyy-mm-dd.HH-MM'
     """
-    return f'{data.index.get_level_values("date")[0].strftime("%y-%m-%d.%H-%M")}T' \
-           f'{data.index.get_level_values("date")[-1].strftime("%y-%m-%d.%H-%M")}'
+    return f'{data.index.get_level_values("date").min().strftime("%y-%m-%d.%H-%M")}T' \
+           f'{data.index.get_level_values("date").max().strftime("%y-%m-%d.%H-%M")}'
 
 
 # @cache
@@ -421,6 +421,10 @@ def times_tester(df: pd.DataFrame, date_range_str: str, timeframe: str, return_b
         else:
             return True
 
+
+def dict_of_list(input_dict):
+    result = {k: [v] for k, v in input_dict.items()}
+    return result
 
 def multi_timeframe_times_tester(multi_timeframe_df: pt.DataFrame[MultiTimeframe], date_range_str: str,
                                  return_bool: bool = False, ignore_processing_date_range: bool = True,

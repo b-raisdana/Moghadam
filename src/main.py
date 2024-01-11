@@ -36,7 +36,7 @@ if __name__ == "__main__":
 
     # _ohlcv = read_multi_timeframe_ohlcv(config.processing_date_range)
     # plot_multi_timeframe_ohlcv(_ohlcv, config.processing_date_range, show=True)
-    # ohlcva = read_multi_timeframe_ohlcva()
+    ohlcva = read_multi_timeframe_ohlcva()
     # plot_multi_timeframe_ohlcva(ohlcva, show=False)
     # _peaks_and_valleys = read_multi_timeframe_peaks_n_valleys()
     # plot_multi_timeframe_peaks_n_valleys(_peaks_and_valleys, config.processing_date_range)
@@ -52,6 +52,6 @@ if __name__ == "__main__":
     # generate_multi_timeframe_base_patterns()
     # _base_patterns = read_multi_timeframe_base_patterns()
     # _base_patterns = _base_patterns[~_base_patterns['ignore_backtesting']]
-    # plot_multi_timeframe_base_pattern(ohlcva, _base_patterns)
+    # plot_multi_timeframe_base_pattern(_base_patterns, ohlcva)
     # exit(0)
     test_strategy(cash=100000)

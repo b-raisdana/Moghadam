@@ -1,14 +1,16 @@
 import pandas as pd
 import plotly.graph_objects as go
+from pandera import typing as pt
 from plotly import graph_objects as plgo
 from plotly.subplots import make_subplots
 
 from Config import config, CandleSize
-from PanderaDFM.OHLCV import OHLCV
-from helper.data_preparation import single_timeframe
 from FigurePlotter.plotter import plot_multiple_figures, file_id, DEBUG, save_figure
+from PanderaDFM.OHLCV import OHLCV
+from PanderaDFM.OHLCVA import MultiTimeframeOHLCVA
+from helper.data_preparation import single_timeframe
 from helper.helper import log, measure_time
-from pandera import typing as pt
+
 
 @measure_time
 def plot_multi_timeframe_ohlcva(multi_timeframe_ohlcva, name: str = '', show: bool = True, save: bool = True) -> None:
@@ -67,6 +69,15 @@ def plot_ohlcv(ohlcv: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']
             close=base_ohlcv['close']
             , name=config.timeframes[0]
         )
+    fig.update_layout({
+        'width': 1800,  # Set the width of the plot
+        'height': 900,
+        'legend': {
+            'font': {
+                'size': 8
+            }
+        }
+    })
     if show: fig.show()
     if save:
         file_name = f'ohlcv.{file_id(ohlcv, name)}'
@@ -171,21 +182,48 @@ def plot_ohlcva(ohlcva: pd.DataFrame, save: bool = True, show: bool = True, name
 
 
 def add_atr_scatter(fig: plgo.Figure, xs: pd.Series, midpoints: pd.Series, widths: pd.Series,
-                    transparency: float = 0.2, name: str = 'atr') -> plgo.Figure:
+                    transparency: float = 0.2, name: str = 'atr', legendgroup: str = None) -> plgo.Figure:
     xs = xs.tolist()
     half_widths = widths.fillna(value=0).div(2)
     upper_band: pd.Series = midpoints + half_widths
     lower_band: pd.Series = midpoints - half_widths
 
-    return fig.add_trace(
-        plgo.Scatter(
-            x=xs + xs[::-1],
-            y=upper_band.tolist() + lower_band.tolist()[::-1],
-            mode='lines',
-            # hovertext=widths,
-            line=dict(color='gray', dash='solid', width=0.2),
-            fill='toself',
-            fillcolor=f'rgba(128, 128, 128, {transparency})',  # 50% transparent gray color
-            name=name
-        )
+    return fig.add_scatter(
+        x=xs + xs[::-1],
+        y=upper_band.tolist() + lower_band.tolist()[::-1],
+        mode='lines',
+        # hovertext=widths,
+        line=dict(color='gray', dash='solid', width=0.2),
+        fill='toself',
+        fillcolor=f'rgba(128, 128, 128, {transparency})',  # 50% transparent gray color
+        name=name, legendgroup=legendgroup
     )
+
+
+def plot_merged_timeframe_ohlcva(multi_timeframe_ohlcva: pt.DataFrame[MultiTimeframeOHLCVA]):
+    fig = plgo.Figure()
+    fig.update_layout({
+        'width': 1800,  # Set the width of the plot
+        'height': 900,
+        'legend': {
+            'font': {
+                'size': 8
+            }
+        }
+    })
+    multi_timeframe_ohlcva_timeframes = multi_timeframe_ohlcva.index.get_level_values('timeframe').unique()
+    timeframe_list = [timeframe for timeframe in config.timeframes if timeframe in multi_timeframe_ohlcva_timeframes]
+    for timeframe in timeframe_list:
+        ohlcva = single_timeframe(multi_timeframe_ohlcva, timeframe)
+        fig.add_candlestick(x=ohlcva.index.values,
+                            open=ohlcva['open'], high=ohlcva['high'], low=ohlcva['low'],
+                            close=ohlcva['close']
+                            , name=timeframe, legendgroup=timeframe
+                            ).update_yaxes(fixedrange=False)
+        # Add the atr boundaries
+        midpoints = (ohlcva['high'] + ohlcva['low']) / 2
+        fig = add_atr_scatter(fig, ohlcva.index, midpoints=midpoints,
+                              widths=CandleSize.Spinning.value.max * ohlcva['atr'],
+                              name='Standard', legendgroup=timeframe)
+    fig = fig.update_layout(hovermode='x unified')
+    return fig

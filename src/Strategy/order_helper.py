@@ -1,21 +1,9 @@
-from enum import Enum
-
 import backtrader as bt
 import pandas as pd
 from pandera import typing as pt
 
-
-
-# switching to backrader
-class OrderSide(Enum):
-    Buy = 'buy'
-    Sell = 'sell'
-
-
-class BracketOrderType(Enum):
-    Original = 'original_order'
-    Stop = 'stop_order'
-    Profit = 'profit'
+from Model.Order import BracketOrderType
+from PanderaDFM.SignalDf import SignalDf, SignalDFM
 
 
 def order_name(order: bt.Order):
@@ -46,12 +34,62 @@ def order_name(order: bt.Order):
     return name
 
 
-"""
-date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]  # = pandera.Field(title='date')
-ref_date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
-ref_timeframe: pt.Index[str]
-side
-"""
+def dict_of_order(order: bt.Order):
+    t = {}
+    for key, value in order.__dict__.items():
+        if not key.startswith("_") and not type(value) == bt.OrderData:
+            if key == 'dt':
+                t['date'] = bt.num2date(value) if value is not None else None
+            elif key == 'dteos':
+                t['date_eos'] = bt.num2date(value) if value is not None else None
+            elif key == 'valid':
+                t[key] = bt.num2date(value)
+            elif key == 'status':
+                t[key] = order.getstatusname()
+            else:
+                t[key] = str(value)
+    for key, value in order.created.__dict__.items():
+        if not key.startswith("_"):
+            if key == 'dt':
+                t['created_date'] = bt.num2date(value) if value is not None else None
+            else:
+                t[f"created_{key}"] = str(value)
+    for key, value in order.executed.__dict__.items():
+        if not key.startswith("_"):
+            if key == 'dt':
+                t['executed_date'] = bt.num2date(value) if value is not None else None
+            else:
+                t[f"executed_{key}"] = str(value)
+    for key, value in order.info.items():
+        if not key.startswith("_"):
+            if key == 'signal':
+                value: pt.Series[SignalDFM]
+                signal_index = order.info['signal_index']
+                t['signal'] = SignalDf.to_str(order.info['signal_index'], value)
+                t['reference_date'] = signal_index[1]
+                t['reference_timeframe'] = signal_index[2]
+            else:
+                t[f"info_{key}"] = str(value)
+    if order.comminfo is not None:
+        t['comminfo'] = str(order.comminfo.params.__dict__)
+    if len(order.executed.exbits) > 0:
+        t['comminfo'] = ",".join(
+            [f"[{','.join([f'{k}:{v}' for k, v in row.__dict__.items()])}]" for row in order.executed.exbits])
+
+    hidden_keys = [k for k in t.keys() if
+                   k in ['p', 'params', 'broker', 'created_exbits', 'created_comm', 'created_margin', 'created_pnl',
+                         'created_psize', 'created_pprice', 'executed_pclose', 'position', 'created_p1',
+                         'created_p2', 'created_remsize', 'created_trailamount', 'created_trailpercent',
+                         'created_value', 'executed_p1', 'executed_p2', 'executed_pricelimit',
+                         'executed_trailamount', 'executed_trailpercent', 'info',
+                         'executed_comm', 'executed_margin', 'comminfo', 'executed_exbits', 'info_signal_index',
+                         ]]
+    hidden_values = []
+    for k in hidden_keys:
+        v = t.pop(k)
+        hidden_values += [f"{k}:{v}"]
+    t['hidden'] = ",\r\n".join(hidden_values)
+    return t
 
 
 def add_order_info(order: bt.Order, signal: pd.Series, signal_index: pd.MultiIndex,

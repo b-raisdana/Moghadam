@@ -7,10 +7,12 @@ from pandera import typing as pt
 
 from BasePattern import read_multi_timeframe_base_patterns
 from Config import config
+from FigurePlotter.BasePattern_plotter import plot_multi_timeframe_base_pattern
 from PanderaDFM.BasePattern import MultiTimeframeBasePattern, BasePattern
 from PanderaDFM.SignalDf import SignalDf
 from Strategy.ExtendedStrategy import ExtendedStrategy
-from Strategy.order_helper import OrderSide, BracketOrderType
+from Model.Order import OrderSide, BracketOrderType
+from atr import read_multi_timeframe_ohlcva
 from helper.helper import log_d, measure_time
 from ohlcv import read_base_timeframe_ohlcv
 
@@ -205,6 +207,12 @@ class BasePatternStrategy(ExtendedStrategy):
                 self.base_patterns.loc[(
                     timeframe,
                     start), 'below_band_signal_generated'] = self.candle().date  # todo: test crashes here
+
+    def stop(self):
+        _multi_timeframe_ohlcva = read_multi_timeframe_ohlcva(self.date_range_str)
+        order_groups = self.get_order_groups()
+        plot_multi_timeframe_base_pattern(self.base_patterns, _multi_timeframe_ohlcva, order_groups)
+        super().stop()
 
 
 def test_strategy(cash: float, date_range_str: str = None):

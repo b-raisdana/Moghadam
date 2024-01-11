@@ -10,7 +10,7 @@ from pandas import Timestamp
 from pandera import typing as pt
 
 from PanderaDFM.ExtendedDf import ExtendedDf
-from Strategy.order_helper import OrderSide
+from Model.Order import OrderSide
 from helper.helper import log_w
 
 
