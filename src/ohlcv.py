@@ -140,33 +140,35 @@ def generate_multi_timeframe_ohlcv(date_range_str: str = None, file_path: str = 
 
 
 # @measure_time
-def core_read_ohlcv(date_range_str: str = None) -> pt.DataFrame[OHLCV]:
+def core_read_ohlcv(date_range_str: str = None, base_timeframe=None) -> pt.DataFrame[OHLCV]:
     if date_range_str is None:
         date_range_str = config.processing_date_range
-    result = read_file(date_range_str, 'ohlcv', core_generate_ohlcv, OHLCV)
+    result = read_file(date_range_str, f'ohlcv_{base_timeframe}', core_generate_ohlcv, OHLCV,
+                       generator_params={'base_timeframe': base_timeframe})
     return result
 
 
-def read_daily_ohlcv(day: datetime) -> pt.DataFrame[OHLCV]:
+def read_daily_ohlcv(day: datetime, base_timeframe=None) -> pt.DataFrame[OHLCV]:
     # Format the date_range_str for the given day
     start_str = day.strftime('%y-%m-%d.00-00')
     end_str = day.strftime('%y-%m-%d.23-59')
     day_date_range_str = f'{start_str}T{end_str}'
 
     # Fetch the data for the given day using the old function
-    return core_read_ohlcv(day_date_range_str)
+    return core_read_ohlcv(day_date_range_str, base_timeframe=base_timeframe)
 
 
-def read_base_timeframe_ohlcv(date_range_str: str) \
+def read_base_timeframe_ohlcv(date_range_str: str, base_timeframe=None) \
         -> pt.DataFrame[OHLCV]:
     if date_range_str is None:
         date_range_str = config.processing_date_range
-    result = read_file(date_range_str, 'ohlcv', generate_base_timeframe_ohlcv, OHLCV)
+    result = read_file(date_range_str, f'ohlcv_{base_timeframe}', generate_base_timeframe_ohlcv, OHLCV,
+                       generator_params={'base_timeframe': base_timeframe})
     return result
 
 
 @measure_time
-def generate_base_timeframe_ohlcv(date_range_str: str = None, file_path: str = None) -> None:
+def generate_base_timeframe_ohlcv(date_range_str: str = None, file_path: str = None, base_timeframe=None) -> None:
     if file_path is None:
         file_path = config.path_of_data
     start, end = date_range(date_range_str)
@@ -175,22 +177,22 @@ def generate_base_timeframe_ohlcv(date_range_str: str = None, file_path: str = N
     daily_dataframes = []
     while current_day.date() <= end.date():
         # For each day, get the data and append to daily_dataframes list
-        daily_dataframes.append(read_daily_ohlcv(current_day))
+        daily_dataframes.append(read_daily_ohlcv(current_day, base_timeframe))
         current_day += timedelta(days=1)
     # Concatenate the daily data
     df = pd.concat(daily_dataframes)
     df = df.sort_index(level='date')
     df = trim_to_date_range(date_range_str, df)
     assert times_tester(df, date_range_str, config.timeframes[0])
-    df.to_csv(os.path.join(file_path, f'ohlcv.{date_range_str}.zip'), compression='zip')
+    df.to_csv(os.path.join(file_path, f'ohlcv_{base_timeframe}.{date_range_str}.zip'), compression='zip')
 
 
-def core_generate_ohlcv(date_range_str: str = None, file_path: str = None):
+def core_generate_ohlcv(date_range_str: str = None, file_path: str = None, base_timeframe=None):
     if date_range_str is None:
         date_range_str = config.processing_date_range
     if file_path is None:
         file_path = config.path_of_data
-    raw_ohlcv = fetch_ohlcv_by_range(date_range_str)
+    raw_ohlcv = fetch_ohlcv_by_range(date_range_str,base_timeframe=base_timeframe)
     df = pd.DataFrame(raw_ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
     df['date'] = pd.to_datetime(df['timestamp'], unit='ms', utc=True)
     df = df.set_index('date')
@@ -199,7 +201,7 @@ def core_generate_ohlcv(date_range_str: str = None, file_path: str = None):
     assert times_tester(df, date_range_str, timeframe=config.timeframes[0])
     df.to_csv(os.path.join(file_path, f'ohlcv.{date_range_str}.zip'), compression='zip')
     if config.load_data_to_meta_trader:
-        MT.extract_to_data_path(os.path.join(file_path, f'ohlcv.{date_range_str}.zip'))
+        MT.extract_to_data_path(os.path.join(file_path, f'ohlcv_{base_timeframe}.{date_range_str}.zip'))
         MT.load_rates()
 
 

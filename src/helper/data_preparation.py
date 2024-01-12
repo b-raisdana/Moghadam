@@ -55,7 +55,7 @@ def no_generator(*args, **kwargs):
 
 def read_file(date_range_str: str, data_frame_type: str, generator: Callable, caster_model: Type[Pandera_DFM_Type]
               , skip_rows=None, n_rows=None, file_path: str = config.path_of_data,
-              zero_size_allowed: Union[None, bool] = None) -> pd.DataFrame:
+              zero_size_allowed: Union[None, bool] = None, generator_params: dict = None) -> pd.DataFrame:
     """
     Read data from a file and return a DataFrame. If the file does not exist or the DataFrame does not
     match the expected columns, the generator function is used to create the DataFrame.
@@ -107,7 +107,10 @@ def read_file(date_range_str: str, data_frame_type: str, generator: Callable, ca
     if zero_size_allowed is None:
         zero_size_allowed = after_under_process_date(date_range_str)
     if df is None or not cast_and_validate(df, caster_model, return_bool=True, zero_size_allowed=zero_size_allowed):
-        generator(date_range_str)
+        try:
+            generator(date_range_str, **generator_params)
+        except Exception as e:
+            raise e
         df = read_with_timeframe(data_frame_type, date_range_str, file_path, n_rows, skip_rows)
         df = cast_and_validate(df, caster_model, zero_size_allowed=zero_size_allowed)
     else:

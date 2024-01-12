@@ -52,30 +52,31 @@ def fetch_ohlcv_by_range(date_range_str: str = None, symbol: str = None, base_ti
     duration = end - start + pd.to_timedelta(config.timeframes[0])
     limit = int(duration / pd.to_timedelta(base_timeframe))
 
-    response = fetch_ohlcv(symbol, timeframe=base_timeframe, start=start, limit=limit)
+    response = fetch_ohlcv(symbol, timeframe=base_timeframe, start=start, number_of_ticks=limit,
+                           params={'timeframe': base_timeframe})
     return response
 
 
-def fetch_ohlcv(symbol, timeframe: str=None, start: datetime = None, limit=None, params=None) \
+def fetch_ohlcv(symbol, timeframe: str = None, start: datetime = None, number_of_ticks=None, params=None) \
         -> list[object]:
     if params is None:
         params = dict()
     assert start.tzinfo == pytz.utc
     exchange = ccxt.kucoin()
     if timeframe is None:
-       timeframe = config.timeframes[0]
+        timeframe = config.timeframes[0]
 
     # Convert pandas timeframe to CCXT timeframe
     ccxt_timeframe = pandas_to_ccxt_timeframes[timeframe]
     output_list = []
     width_of_timeframe = pd.to_timedelta(timeframe).seconds
     max_query_size = 1000
-    for batch_start in range(0, limit, max_query_size):
+    for batch_start in range(0, number_of_ticks, max_query_size):
         if start < datetime.utcnow().replace(tzinfo=pytz.utc):
             start_timestamp = int(start.timestamp() + batch_start * width_of_timeframe) * 1000
-            this_query_size = min(limit - batch_start, max_query_size)
+            this_query_size = min(number_of_ticks - batch_start, max_query_size)
             response = exchange.fetch_ohlcv(symbol, timeframe=ccxt_timeframe, since=start_timestamp,
-                                            limit=min(limit - batch_start, this_query_size), params=params)
+                                            limit=min(number_of_ticks - batch_start, this_query_size), params=params)
             log(f'fetch_ohlcv@{datetime.fromtimestamp(start_timestamp / 1000)}#{this_query_size}>{len(response)}',
                 stack_trace=False)
             output_list = output_list + response
@@ -85,6 +86,7 @@ def fetch_ohlcv(symbol, timeframe: str=None, start: datetime = None, limit=None,
 
 # Dictionary mapping pandas timeframes to CCXT abbreviations
 pandas_to_ccxt_timeframes = {
+    '1min': '1s',
     '1min': '1m',
     '5min': '5m',
     '15min': '15m',
