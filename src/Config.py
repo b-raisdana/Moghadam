@@ -113,6 +113,10 @@ class Config():
         self.risk_per_order_percent = 0.01  # 1%
         self.capital_max_total_risk_percentage = 0.1  # 10%
 
+        self.figure_width = 1400
+        self.figure_height = 850
+        self.figure_font_size = 8
+
         self.id = ""
 
 

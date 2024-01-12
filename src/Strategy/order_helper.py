@@ -35,6 +35,15 @@ def order_name(order: bt.Order):
 
 
 def dict_of_order(order: bt.Order):
+    """
+    order elements:
+    'date', 'ref', 'triggered', 'status', 'valid', 'date_eos', 'plen', 'created_pclose', 'created_date', 'created_size',
+     'created_price', 'created_pricelimit', 'executed_size', 'executed_remsize', 'executed_price', 'executed_value',
+     'executed_pnl', 'executed_psize', 'executed_pprice', 'info_pprice', 'info_order_group_id', 'signal',
+     'reference_date', 'reference_timeframe', 'info_custom_type', 'hidden', 'size', 'pannotated', 'executed_date'
+    :param order:
+    :return:
+    """
     t = {}
     for key, value in order.__dict__.items():
         if not key.startswith("_") and not type(value) == bt.OrderData:

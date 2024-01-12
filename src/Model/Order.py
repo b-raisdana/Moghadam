@@ -8,5 +8,5 @@ class OrderSide(Enum):
 
 class BracketOrderType(Enum):
     Original = 'original_order'
-    Stop = 'stop_order'
-    Profit = 'profit'
+    StopLoss = 'stop_order'
+    TakeProfit = 'profit'

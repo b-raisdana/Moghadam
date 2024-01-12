@@ -1,3 +1,7 @@
+import os
+
+import pandas as pd
+
 from BasePattern import read_multi_timeframe_base_patterns
 from BullBearSide import read_multi_timeframe_bull_bear_side_trends
 from Config import config
@@ -50,8 +54,12 @@ if __name__ == "__main__":
     # plot_multi_timeframe_pivots(_bull_bear_side_pivots)
 
     # generate_multi_timeframe_base_patterns()
-    # _base_patterns = read_multi_timeframe_base_patterns()
+    _base_patterns = read_multi_timeframe_base_patterns()
     # _base_patterns = _base_patterns[~_base_patterns['ignore_backtesting']]
     # plot_multi_timeframe_base_pattern(_base_patterns, ohlcva)
     # exit(0)
-    test_strategy(cash=100000)
+    orders_df = pd.read_csv(
+        os.path.join(config.path_of_data,
+                     f'BasePatternStrategy.orders.A6mbmn5Bzz2Sx9uiI4gILQ.24-01-08.00-00T24-01-11.23-59.csv'))
+    plot_multi_timeframe_base_pattern(_base_patterns, ohlcva, orders_df=orders_df)
+    # test_strategy(cash=100000)

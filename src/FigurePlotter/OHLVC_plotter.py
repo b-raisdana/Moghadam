@@ -182,7 +182,7 @@ def plot_ohlcva(ohlcva: pd.DataFrame, save: bool = True, show: bool = True, name
 
 
 def add_atr_scatter(fig: plgo.Figure, xs: pd.Series, midpoints: pd.Series, widths: pd.Series,
-                    transparency: float = 0.2, name: str = 'atr', legendgroup: str = None) -> plgo.Figure:
+                    transparency: float = 0.2, name: str = 'atr', legendgroup: str = None, showlegend=False) -> plgo.Figure:
     xs = xs.tolist()
     half_widths = widths.fillna(value=0).div(2)
     upper_band: pd.Series = midpoints + half_widths
@@ -196,6 +196,7 @@ def add_atr_scatter(fig: plgo.Figure, xs: pd.Series, midpoints: pd.Series, width
         line=dict(color='gray', dash='solid', width=0.2),
         fill='toself',
         fillcolor=f'rgba(128, 128, 128, {transparency})',  # 50% transparent gray color
+        showlegend=showlegend,
         name=name, legendgroup=legendgroup
     )
 
@@ -203,11 +204,11 @@ def add_atr_scatter(fig: plgo.Figure, xs: pd.Series, midpoints: pd.Series, width
 def plot_merged_timeframe_ohlcva(multi_timeframe_ohlcva: pt.DataFrame[MultiTimeframeOHLCVA]):
     fig = plgo.Figure()
     fig.update_layout({
-        'width': 1800,  # Set the width of the plot
-        'height': 900,
+        'width': config.figure_width,  # Set the width of the plot
+        'height': config.figure_height,
         'legend': {
             'font': {
-                'size': 8
+                'size': config.figure_font_size
             }
         }
     })
@@ -222,8 +223,8 @@ def plot_merged_timeframe_ohlcva(multi_timeframe_ohlcva: pt.DataFrame[MultiTimef
                             ).update_yaxes(fixedrange=False)
         # Add the atr boundaries
         midpoints = (ohlcva['high'] + ohlcva['low']) / 2
-        fig = add_atr_scatter(fig, ohlcva.index, midpoints=midpoints,
-                              widths=CandleSize.Spinning.value.max * ohlcva['atr'],
-                              name='Standard', legendgroup=timeframe)
-    fig = fig.update_layout(hovermode='x unified')
+        add_atr_scatter(fig, ohlcva.index, midpoints=midpoints,
+                        widths=CandleSize.Spinning.value.max * ohlcva['atr'],
+                        name='Standard', legendgroup=timeframe, showlegend=False)
+    fig.update_layout(hovermode='x unified')
     return fig

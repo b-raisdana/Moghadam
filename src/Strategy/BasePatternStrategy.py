@@ -35,7 +35,7 @@ class BasePatternStrategy(ExtendedStrategy):
     # @measure_time
     def notify_order(self, order: bt.Order):
         if order.status == bt.Order.Completed:
-            if order.info['custom_type'] == BracketOrderType.Stop.value:
+            if order.info['custom_type'] == BracketOrderType.StopLoss.value:
                 # a bracket stop-loss order executed.
 
                 # assure closing of the original and profit orders
@@ -63,12 +63,13 @@ class BasePatternStrategy(ExtendedStrategy):
                         f"Order of signal_df indexes "
                         f"expected to be {str(['date', 'ref_date', 'ref_timeframe', 'side'])} "
                         f"but is {str(self.signal_df.index.names)}")
-                new_index = (self.candle().date, original_signal_index[1], original_signal_index[2], original_signal_index[3])
+                new_index = (
+                    self.candle().date, original_signal_index[1], original_signal_index[2], original_signal_index[3])
                 self.signal_df.loc[new_index] = repeat_signal
                 if not self.signal_df.index.is_unique:
                     pass
                 log_d(f"repeated Signal:{SignalDf.to_str(new_index, repeat_signal)}@{self.candle().date} ")
-            elif order.info['custom_type'] == BracketOrderType.Profit.value:
+            elif order.info['custom_type'] == BracketOrderType.TakeProfit.value:
                 # a bracket take-profit order executed.
 
                 # assure closing of the original and stop orders
@@ -204,9 +205,8 @@ class BasePatternStrategy(ExtendedStrategy):
                 self.add_signal(timeframe, start, base_pattern, band='below')
                 if pd.notna(self.base_patterns.loc[(timeframe, start), 'below_band_signal_generated']):
                     raise AssertionError("pd.notna(self.base_patterns.loc[(timeframe, start), 'below_band_signa...")
-                self.base_patterns.loc[(
-                    timeframe,
-                    start), 'below_band_signal_generated'] = self.candle().date  # todo: test crashes here
+                self.base_patterns.loc[(timeframe, start), 'below_band_signal_generated'] = \
+                    self.candle().date
 
     def stop(self):
         _multi_timeframe_ohlcva = read_multi_timeframe_ohlcva(self.date_range_str)

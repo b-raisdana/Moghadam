@@ -1,5 +1,5 @@
 import os
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict
 
 import backtrader as bt
 import pandas as pd
@@ -24,10 +24,9 @@ class ExtendedStrategy(bt.Strategy):
 
     multi_timeframe_ohlcva: pt.DataFrame[MultiTimeframeOHLCVA] = None
 
-    original_orders = {}
-    stop_orders = {}
-    profit_orders = {}
-    archived_orders = {}
+    original_orders: Dict[int, bt.Order] = {}
+    sl_orders: Dict[int, bt.Order] = {}
+    tp_orders: Dict[int, bt.Order] = {}
     date_range_str: str = None
     true_risked_money = 0.0
     order_group_counter = None
@@ -35,9 +34,9 @@ class ExtendedStrategy(bt.Strategy):
     broker_initial_cash = None
 
     def get_order_groups(self):
-        result = {} # todo: test
-        for index in range(self.order_group_counter):
-            result[index] = (self.original_orders[index], self.stop_orders[index], self.profit_orders[index],)
+        result = {}  # todo: test
+        for index in self.original_orders.keys():
+            result[index] = (self.original_orders[index], self.sl_orders[index], self.tp_orders[index],)
         return result
 
     @measure_time
@@ -57,7 +56,7 @@ class ExtendedStrategy(bt.Strategy):
     def start(self):
         self.broker_initial_cash = self.broker.get_cash()
 
-    def order_group_id(self):
+    def new_order_group_id(self):
         return len(self.order_groups_info)
         if self.order_group_counter is None:
             self.order_group_counter = 0
@@ -104,7 +103,7 @@ class ExtendedStrategy(bt.Strategy):
         true_risked_money = abs((price - stop_loss_price) * original_order.created.size)
         self.true_risked_money += true_risked_money
 
-        order_group_id = self.order_group_id()
+        order_group_id = self.new_order_group_id()
         # order_group_risk = abs((original_order.created.price - sl_order.created.price) * original_order.size)
         self.order_groups_info[order_group_id] = {
             # 'true_risk': order_group_risk,
@@ -113,17 +112,17 @@ class ExtendedStrategy(bt.Strategy):
         }
         if (
                 order_group_id in self.original_orders.keys() or
-                order_group_id in self.stop_orders.keys() or
-                order_group_id in self.profit_orders.keys()
+                order_group_id in self.sl_orders.keys() or
+                order_group_id in self.tp_orders.keys()
         ):
             raise AssertionError(f"order_group_id is not unique!")
         original_order = add_order_info(original_order, signal, signal_index, BracketOrderType.Original, order_group_id)
-        sl_order = add_order_info(sl_order, signal, signal_index, BracketOrderType.Stop, order_group_id)
-        tp_order = add_order_info(tp_order, signal, signal_index, BracketOrderType.Profit, order_group_id)
+        sl_order = add_order_info(sl_order, signal, signal_index, BracketOrderType.StopLoss, order_group_id)
+        tp_order = add_order_info(tp_order, signal, signal_index, BracketOrderType.TakeProfit, order_group_id)
 
         self.original_orders[order_group_id] = original_order
-        self.stop_orders[order_group_id] = sl_order
-        self.profit_orders[order_group_id] = tp_order
+        self.sl_orders[order_group_id] = sl_order
+        self.tp_orders[order_group_id] = tp_order
 
         self.signal_df.loc[signal_index, 'original_order_id'] = order_name(original_order)
         self.signal_df.loc[signal_index, 'stop_loss_order_id'] = order_name(sl_order)
@@ -168,9 +167,6 @@ class ExtendedStrategy(bt.Strategy):
 
     def free_order_cash(self, limit_price: float, sl_price: float, size: float):
         # should be handled bby bachtrader!
-        # todo: check bracket order cash is not handled.
-        # todo: check sell order cash handling
-        # todo: never reached!
         # _, true_risked_money = self.risk_size_sizer(limit_price, sl_price, size)  # toddo: test
         # self.true_risked_money -= true_risked_money
         # assert self.true_risked_money > 0, "self.true_risked_money <= 0"
@@ -196,8 +192,8 @@ class ExtendedStrategy(bt.Strategy):
     def get_order_group(self, order: bt.Order) -> (bt.Order, bt.Order, bt.Order,):
         order_id = order.info['order_group_id']
         original_order = self.original_orders[order_id]
-        stop_order = self.stop_orders[order_id]
-        profit_order = self.profit_orders[order_id]
+        stop_order = self.sl_orders[order_id]
+        profit_order = self.tp_orders[order_id]
         if order not in [original_order, stop_order, profit_order]:
             raise AssertionError(f"The order: should be one of group members "
                                  f"O:{original_order} S:{stop_order} P:{profit_order}")
@@ -239,31 +235,31 @@ class ExtendedStrategy(bt.Strategy):
          (canceled) also
         :return:
         '''
-        if len(self.original_orders) != len(self.stop_orders):
+        if len(self.original_orders) != len(self.sl_orders):
             raise AssertionError("len(self.original_orders) != len(self.stop_orders)")
-        if len(self.original_orders) != len(self.profit_orders):
+        if len(self.original_orders) != len(self.tp_orders):
             raise AssertionError("len(self.original_orders) != len(self.profit_orders)")
         for i in self.original_orders.keys():
             if order_is_open(self.original_orders[i]):
-                if not order_is_open(self.stop_orders[i]):
+                if not order_is_open(self.sl_orders[i]):
                     AssertionError("!order_is_open(self.stop_orders[i])")
-                if not order_is_open(self.profit_orders[i]):
+                if not order_is_open(self.tp_orders[i]):
                     AssertionError("!order_is_open(self.profit_orders[i])")
             elif order_is_closed(self.original_orders[i]):
                 # log_w("Not working: AssertionError", stack_trace=True)
                 # if not order_is_closed(self.stop_orders[i]) or not order_is_closed(self.profit_orders[i]):
                 #     pass
-                if not order_is_closed(self.stop_orders[i]):
+                if not order_is_closed(self.sl_orders[i]):
                     nop = 1
                     AssertionError("!order_is_closed(self.stop_orders[i])")
-                if not order_is_closed(self.profit_orders[i]):
+                if not order_is_closed(self.tp_orders[i]):
                     nop = 1
                     AssertionError("!order_is_closed(self.profit_orders[i])")  # todo: test AssertionError
 
     def stop(self):
         self.next_log(force=True)
         log_d("Stopping!")
-        if self.vault_df is not None:  # todo: test
+        if self.vault_df is not None:
             self.vault_df.to_csv(os.path.join(config.path_of_data,
                                               f"{self.__class__.__name__}.vault.{config.id}.{self.date_range_str}.csv"))
         if self.orders_df is not None:
@@ -279,16 +275,16 @@ class ExtendedStrategy(bt.Strategy):
             df.index.name = 'ref_id'
             df.to_csv(os.path.join(config.path_of_data,
                                    f"{self.__class__.__name__}.original_orders.{config.id}.{self.date_range_str}.csv"))
-        if self.stop_orders is not None:
-            for index in self.stop_orders.keys():
-                t = dict_of_list(dict_of_order(self.stop_orders[index]))
+        if self.sl_orders is not None:
+            for index in self.sl_orders.keys():
+                t = dict_of_list(dict_of_order(self.sl_orders[index]))
                 df = concat(self.orders_df, pd.DataFrame(t, index=[index]))
             df.index.name = 'ref_id'
             df.to_csv(os.path.join(config.path_of_data,
                                    f"{self.__class__.__name__}.stop_orders.{config.id}.{self.date_range_str}.csv"))
-        if self.profit_orders is not None:
-            for index in self.profit_orders.keys():
-                t = dict_of_list(dict_of_order(self.profit_orders[index]))
+        if self.tp_orders is not None:
+            for index in self.tp_orders.keys():
+                t = dict_of_list(dict_of_order(self.tp_orders[index]))
                 df = concat(self.orders_df, pd.DataFrame(t, index=[index]))
             df.index.name = 'ref_id'
             df.to_csv(os.path.join(config.path_of_data,
@@ -299,11 +295,11 @@ class ExtendedStrategy(bt.Strategy):
             index = order.ref
         t_dict = dict_of_list(dict_of_order(order))
         self.orders_df = concat(self.orders_df, pd.DataFrame(t_dict, index=[self.candle().date]))
-        self.orders_df.index.name = 'date'
-        self.orders_df.to_csv(os.path.join(config.path_of_data,
-                                           f"{self.__class__.__name__}.orders.{config.id}.{self.date_range_str}.csv"))
+        if self.orders_df.index.name != 'date':
+            self.orders_df.index.name = 'date'
 
-    def log_vault(self):
+
+    def log_vault(self, save: bool = True):
         _dict = {
             'cash': self.broker.get_cash(),
             'fund_shares': self.broker.get_fundshares(),
@@ -324,15 +320,12 @@ class ExtendedStrategy(bt.Strategy):
         _dict[f"{asset}_position_upclosed"] = position.upclosed
         _dict[f"{asset}_position_updt"] = position.updt
         _dict[f"{asset}_position_upopened"] = position.upopened
-        # self.broker_history_dfloc[len(self.vault_df)] = pd.DataFrame(dict)
-        # self.vault_df.to_csv(f"{self.__class__.__name__}.vault.{config.id}.{self.date_range_str}.csv")
         _dict = dict_of_list(_dict)
         self.vault_df = concat(self.vault_df,
                                pd.DataFrame(_dict,
                                             index=[self.candle().date]))  # pd.DataFrame({**_dict}, index=order.ref)
-        self.vault_df.index.name = 'date'
-        self.vault_df.to_csv(os.path.join(config.path_of_data,
-                                          f"{self.__class__.__name__}.vault.{config.id}.{self.date_range_str}.csv"))
+        if self.vault_df.index.name != 'date':
+            self.vault_df.index.name = 'date'
 
     # @measure_time
     def notify_order(self, order: bt.Order):
@@ -366,8 +359,8 @@ class ExtendedStrategy(bt.Strategy):
             #     true_risk = abs((price - stop_loss_price) * order.executed.size)
             #     self.true_risked_money += true_risk
         elif order.status in [order.Partial]:
-            log_d(f"Order:{order_name(order)} Partially executed")
-            raise NotImplementedError
+            log_w(f"Order:{order_name(order)} Partially executed", stack_trace=True)
+            # raise NotImplementedError
         elif order.status in [order.Expired]:
             log_d(f"Order:{order_name(order)} Expired")
         elif order.status in [order.Canceled]:
@@ -377,14 +370,14 @@ class ExtendedStrategy(bt.Strategy):
         else:
             raise Exception(f"Order:{order_name(order)} Unexpected status {order.status}")
 
-        if order.info['custom_type'] == BracketOrderType.Stop.value:
-            if order.status in [order.Canceled, order.Completed]:
-                # the stop-loss order canceled (took profit) or completed (stop loss)
+        if order.info['custom_type'] in [BracketOrderType.StopLoss.value, BracketOrderType.TakeProfit.value]:
+            if order.status in [order.Completed, order.Partial]:
+                # the stop-loss order or took profit executed (completed or partial)
                 # risked money is reflected in the cash
                 order_group_id = order.info['order_group_id']
-                price = self.order_groups_info[order_group_id]['price']
-                stop_loss_price = order.created.price
-                true_risked_money = abs((price - stop_loss_price) * order.created.size)
+                price = self.original_orders[order_group_id].created.price
+                stop_loss_price = self.sl_orders[order_group_id].created.price
+                true_risked_money = abs((price - stop_loss_price) * order.executed.size)
                 self.true_risked_money -= true_risked_money
 
     def ordered_signals(self, signal_df: SignalDf = None) -> pt.DataFrame[SignalDFM]:
