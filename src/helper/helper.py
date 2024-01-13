@@ -35,6 +35,8 @@ class bcolors(Enum):
     UNDERLINE = '\033[4m'
 
 
+path_of_logs = 'logs'
+
 __severity_color_map = {
     LogSeverity.INFO: bcolors.OKGREEN,
     LogSeverity.WARNING: bcolors.WARNING,
@@ -42,6 +44,7 @@ __severity_color_map = {
     LogSeverity.DEBUG: bcolors.OKGREEN,
 }
 
+log_file_handler = open(os.path.join(path_of_logs, 'runtime.log'), 'w')
 
 def log_d(message: str, stack_trace: bool = False):
     log(message, LogSeverity.DEBUG, stack_trace)
@@ -71,6 +74,7 @@ def log(message: str, severity: LogSeverity = LogSeverity.INFO, stack_trace: boo
     time_color = bcolors.OKBLUE.value
     print(f'{severity_color}{severity.value}@{time_color}{datetime.now().strftime("%m-%d.%H:%M:%S")}:'
           f'{severity_color}{message}')
+    log_file_handler.write(f'{severity.value}@{datetime.now().strftime("%m-%d.%H:%M:%S")}:{message}\n')
     if stack_trace:
         stack = traceback.extract_stack(limit=2 + 1)[:-1]  # Remove the last item
         traceback.print_list(stack)

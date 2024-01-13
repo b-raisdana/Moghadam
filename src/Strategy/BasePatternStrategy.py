@@ -211,14 +211,16 @@ class BasePatternStrategy(ExtendedStrategy):
 
     def stop(self):
         _multi_timeframe_ohlcva = read_multi_timeframe_ohlcva(self.date_range_str)
-        orders_df = pd.DataFrame()
-        try:
-            orders_df = pd.read_csv(
-                os.path.join(config.path_of_data,
-                             f"{self.__class__.__name__}.orders.{config.id}.{self.date_range_str}.csv"))
-        except Exception as e:
-            log_e(e)
-        plot_multi_timeframe_base_pattern(self.base_patterns, _multi_timeframe_ohlcva, orders_df=orders_df)
+        # orders_df = pd.DataFrame()
+        # try:
+        #     orders_df = pd.read_csv(
+        #         os.path.join(config.path_of_data,
+        #                      f"{self.__class__.__name__}.orders.{config.id}.{self.date_range_str}.csv"))
+        # except Exception as e:
+        #     log_e(str(e))
+        self.orders_df['date'] = self.orders_df.index
+        self.orders_df = self.orders_df.astype({'date': str})
+        plot_multi_timeframe_base_pattern(self.base_patterns, _multi_timeframe_ohlcva, orders_df=self.orders_df)
         super().stop()
 
 
@@ -228,6 +230,7 @@ def test_strategy(cash: float, date_range_str: str = None):
         date_range_str = config.processing_date_range
     cerebro = bt.Cerebro()
     cerebro.addstrategy(BasePatternStrategy)
+    cerebro.broker.setcommission(commission=0.001)
     # cerebro.broker = ExtendedBroker()
     # cerebro.addsizer(MySizer)
     raw_data = read_base_timeframe_ohlcv(date_range_str)

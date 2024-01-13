@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 
 import pandas as pd
 
@@ -18,7 +19,7 @@ from ohlcv import read_multi_timeframe_ohlcv, read_base_timeframe_ohlcv
 # from data_preparation import d_types
 
 if __name__ == "__main__":
-    config.processing_date_range = date_range_to_string(days=1)
+    config.processing_date_range = date_range_to_string(days=5, end=datetime(year=2023, month=11, day=18))
     #
     #     file_path: str = config.path_of_data
     #     today_morning = today_morning()
@@ -40,7 +41,6 @@ if __name__ == "__main__":
 
     # _ohlcv = read_multi_timeframe_ohlcv(config.processing_date_range)
     # plot_multi_timeframe_ohlcv(_ohlcv, config.processing_date_range, show=True)
-    ohlcva = read_multi_timeframe_ohlcva()
     # plot_multi_timeframe_ohlcva(ohlcva, show=False)
     # _peaks_and_valleys = read_multi_timeframe_peaks_n_valleys()
     # plot_multi_timeframe_peaks_n_valleys(_peaks_and_valleys, config.processing_date_range)
@@ -54,13 +54,12 @@ if __name__ == "__main__":
     # plot_multi_timeframe_pivots(_bull_bear_side_pivots)
 
     # generate_multi_timeframe_base_patterns()
-    _base_patterns = read_multi_timeframe_base_patterns()
-    # _base_patterns = _base_patterns[~_base_patterns['ignore_backtesting']]
-    # plot_multi_timeframe_base_pattern(_base_patterns, ohlcva)
-    # exit(0)
-    # _micro_ohlcv = read_base_timeframe_ohlcv(config.processing_date_range, base_timeframe='1s')
+
+    # ohlcva = read_multi_timeframe_ohlcva()
+    # _base_patterns = read_multi_timeframe_base_patterns()
     # orders_df = pd.read_csv(
     #     os.path.join(config.path_of_data,
-    #                  f'BasePatternStrategy.orders.A6mbmn5Bzz2Sx9uiI4gILQ.24-01-08.00-00T24-01-11.23-59.csv'))
+    #                  f'BasePatternStrategy.orders.0Rzb5KJmWrXfRsnjTE1t9g.24-01-11.00-00T24-01-12.23-59.csv'))
     # plot_multi_timeframe_base_pattern(_base_patterns, ohlcva, orders_df=orders_df)
+    # exit(0)
     test_strategy(cash=100000)

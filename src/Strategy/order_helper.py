@@ -92,7 +92,7 @@ def dict_of_order(order: bt.Order):
                          'created_p2', 'created_remsize', 'created_trailamount', 'created_trailpercent',
                          'created_value', 'executed_p1', 'executed_p2', 'executed_pricelimit',
                          'executed_trailamount', 'executed_trailpercent', 'info',
-                         'executed_comm', 'executed_margin', 'comminfo', 'executed_exbits', 'info_signal_index',
+                         'executed_margin', 'comminfo', 'executed_exbits', 'info_signal_index',
                          ]]
     hidden_values = []
     for k in hidden_keys:

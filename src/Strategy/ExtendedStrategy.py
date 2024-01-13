@@ -59,10 +59,10 @@ class ExtendedStrategy(bt.Strategy):
 
     def new_order_group_id(self):
         return len(self.order_groups_info)
-        if self.order_group_counter is None:
-            self.order_group_counter = 0
-        self.order_group_counter += 1
-        return self.order_group_counter
+        # if self.order_group_counter is None:
+        #     self.order_group_counter = 0
+        # self.order_group_counter += 1
+        # return self.order_group_counter
 
     def add_signal_source_data(self):
         raise NotImplementedError
@@ -257,6 +257,24 @@ class ExtendedStrategy(bt.Strategy):
                     nop = 1
                     AssertionError("!order_is_closed(self.profit_orders[i])")  # todo: test AssertionError
 
+    # def notify_cashvalue(self, cash, value):
+    #     '''
+    #     Receives the current fund value, value status of the strategy's broker
+    #     '''
+    #     log_d(f"notify_cashvalue cash{cash}, value{value}")
+
+    def notify_trade(self, trade):
+        '''
+        Receives a trade whenever there has been a change in one
+        '''
+        log_d("notify_trade trade:" + ", ".join([f"{k}:{v}" for k, v in trade.__dict__.items()]))
+
+    # def notify_fund(self, cash, value, fundvalue, shares):
+    #     '''
+    #     Receives the current cash, value, fundvalue and fund shares
+    #     '''
+    #     log_d(f"notify_fund cash:{cash} value:{value} fundvalue:{fundvalue} shares:{shares}")
+
     def stop(self):
         self.next_log(force=True)
         log_d("Stopping!")
@@ -307,6 +325,14 @@ class ExtendedStrategy(bt.Strategy):
             self.orders_df.index.name = 'date'
 
     def log_vault(self, save: bool = True):
+        _dict = self.get_vault()
+        self.vault_df = concat(self.vault_df,
+                               pd.DataFrame(_dict,
+                                            index=[self.candle().date]))  # pd.DataFrame({**_dict}, index=order.ref)
+        if self.vault_df.index.name != 'date':
+            self.vault_df.index.name = 'date'
+
+    def get_vault(self):
         _dict = {
             'cash': self.broker.get_cash(),
             'fund_shares': self.broker.get_fundshares(),
@@ -328,11 +354,7 @@ class ExtendedStrategy(bt.Strategy):
         _dict[f"{asset}_position_updt"] = position.updt
         _dict[f"{asset}_position_upopened"] = position.upopened
         _dict = dict_of_list(_dict)
-        self.vault_df = concat(self.vault_df,
-                               pd.DataFrame(_dict,
-                                            index=[self.candle().date]))  # pd.DataFrame({**_dict}, index=order.ref)
-        if self.vault_df.index.name != 'date':
-            self.vault_df.index.name = 'date'
+        return _dict
 
     # @measure_time
     def notify_order(self, order: bt.Order):
@@ -365,6 +387,8 @@ class ExtendedStrategy(bt.Strategy):
             #     stop_loss_price = self.order_groups[order_group_id]['stop_loss_price']
             #     true_risk = abs((price - stop_loss_price) * order.executed.size)
             #     self.true_risked_money += true_risk
+            vault_dict = self.get_vault()
+            log_d(f"Vault({self.candle().date}): " + ", ".join([f"{k}:{v}" for k, v in vault_dict.items()]))
         elif order.status in [order.Partial]:
             log_w(f"Order:{order_name(order)} Partially executed", stack_trace=True)
             # raise NotImplementedError

@@ -1,0 +1,258 @@
+DEBUG@01-13.15:45:28:...Starting
+DEBUG@01-13.15:45:29:__init__(<Strategy.BasePatternStrategy.BasePatternStrategy object at 0x0000020CB9344B80>) started
+DEBUG@01-13.15:45:29:__init__(<Strategy.BasePatternStrategy.BasePatternStrategy object at 0x0000020CB9344B80>) started
+DEBUG@01-13.15:45:29:date_range_str: 23-11-13.00-01T23-11-18.00-00
+INFO@01-13.15:45:29:__init__(<Strategy.BasePatternStrategy.BasePatternStrategy object at 0x0000020CB9344B80>) executed in [92m0.050 seconds
+INFO@01-13.15:45:29:__init__(<Strategy.BasePatternStrategy.BasePatternStrategy object at 0x0000020CB9344B80>) executed in [93m0.131 seconds
+DEBUG@01-13.15:45:29:Ran 0 Next()s reached 2023-11-13 00:01:00+00:00
+DEBUG@01-13.15:45:30:Ran 100 Next()s reached 2023-11-13 01:41:00+00:00
+DEBUG@01-13.15:45:30:Ran 200 Next()s reached 2023-11-13 03:21:00+00:00
+DEBUG@01-13.15:45:31:Ran 300 Next()s reached 2023-11-13 05:01:00+00:00
+DEBUG@01-13.15:45:31:added Signal Signal11-13.06-36Buy@11-13.04-45/15minEnd11/15.20:45StopLimitnan@36945.34SL36883.40TP37225.40TR36940.40 @ 2023-11-13 06:36:00+00:00
+DEBUG@01-13.15:45:31:Signal:Signal11-13.06-36Buy@11-13.04-45/15minEnd11/15.20:45StopLimitnan@36945.34SL36883.40TP37225.40TR36940.40 Ordered: O:Buy0.1614@36940.40Ref1StopLimit S:Sell-0.1614@36883.40Ref2Stop P:Sell-0.1614@37225.40Ref3Limit
+DEBUG@01-13.15:45:31:Order:Buy0.1614@36940.40Ref1StopLimit Submitted
+DEBUG@01-13.15:45:31:Order:Sell-0.1614@36883.40Ref2Stop Submitted
+DEBUG@01-13.15:45:31:Order:Sell-0.1614@37225.40Ref3Limit Submitted
+DEBUG@01-13.15:45:31:Order:Buy0.1614@36940.40Ref1StopLimit Submitted
+DEBUG@01-13.15:45:31:Order:Sell-0.1614@36883.40Ref2Stop Submitted
+DEBUG@01-13.15:45:31:Order:Sell-0.1614@37225.40Ref3Limit Submitted
+DEBUG@01-13.15:45:31:Ran 400 Next()s reached 2023-11-13 06:41:00+00:00
+DEBUG@01-13.15:45:31:Order:Buy0.1614@36940.40Ref1StopLimit Completed
+DEBUG@01-13.15:45:31:Vault(2023-11-13 06:46:00+00:00): cash:[94030.36503337524], fund_shares:[5000000.0], fund_value:[0.01999842626650278], BTCUSDT_value:[99992.1313325139], BTCUSDT_position_size:[0.16144035514854793], BTCUSDT_position_price:[36940.4], BTCUSDT_position_adjbase:[36928.6], BTCUSDT_position_price_orig:[0.0], BTCUSDT_position_upclosed:[0], BTCUSDT_position_updt:[None], BTCUSDT_position_upopened:[0.16144035514854793]
+DEBUG@01-13.15:45:31:notify_trade trade:ref:1, data:<backtrader.feeds.pandafeed.PandasData object at 0x0000020CB9347EB0>, tradeid:0, size:0.16144035514854793, price:36940.4, value:5963.67129532942, commission:5.96367129532942, pnl:0.0, pnlcomm:-5.96367129532942, justopened:True, isopen:True, isclosed:False, baropen:406, dtopen:738837.2819444444, barclose:0, dtclose:0.0, barlen:0, historyon:False, history:[], status:1, long:True
+DEBUG@01-13.15:45:32:added Signal Signal11-13.07-29Sell@11-13.04-45/15minEnd11/15.20:45StopLimitnan@36878.46SL36940.40TP36598.40TR36883.40 @ 2023-11-13 07:29:00+00:00
+DEBUG@01-13.15:45:32:Signal:Signal11-13.07-29Sell@11-13.04-45/15minEnd11/15.20:45StopLimitnan@36878.46SL36940.40TP36598.40TR36883.40 Ordered: O:Sell-0.1614@36883.40Ref4StopLimit S:Buy0.1614@36940.40Ref5Stop P:Buy0.1614@36598.40Ref6Limit
+DEBUG@01-13.15:45:32:Order:Sell-0.1614@36883.40Ref4StopLimit Submitted
+DEBUG@01-13.15:45:32:Order:Buy0.1614@36940.40Ref5Stop Submitted
+DEBUG@01-13.15:45:32:Order:Buy0.1614@36598.40Ref6Limit Submitted
+DEBUG@01-13.15:45:32:Order:Sell-0.1614@36883.40Ref4StopLimit Submitted
+DEBUG@01-13.15:45:32:Order:Buy0.1614@36940.40Ref5Stop Submitted
+DEBUG@01-13.15:45:32:Order:Buy0.1614@36598.40Ref6Limit Submitted
+DEBUG@01-13.15:45:32:Ran 500 Next()s reached 2023-11-13 08:21:00+00:00
+DEBUG@01-13.15:45:32:Ran 600 Next()s reached 2023-11-13 10:01:00+00:00
+DEBUG@01-13.15:45:33:repeating Signal  according to Stop-Loss on Signal11-13.06-36Buy@11-13.04-45/15minEnd11/15.20:45StopLimitnan@36945.34SL36883.40TP37225.40TR36940.40 @ 23-11-13.11:11=O36901.10,H36901.20,L36868.00,C36868.70V2.60
+DEBUG@01-13.15:45:33:repeated Signal:Signal11-13.11-11Buy@11-13.04-45/15minEnd11/15.20:45StopLimitnan@36945.34SL36883.40TP37225.40TR36940.40@2023-11-13 11:11:00+00:00 
+DEBUG@01-13.15:45:33:Order:Sell-0.1614@36883.40Ref2Stop Completed
+DEBUG@01-13.15:45:33:Vault(2023-11-13 11:11:00+00:00): cash:[105927.39448515698], fund_shares:[5000000.0], fund_value:[0.019995059692658343], BTCUSDT_value:[99975.29846329172], BTCUSDT_position_size:[-0.16144035514854793], BTCUSDT_position_price:[36883.4], BTCUSDT_position_adjbase:[36868.7], BTCUSDT_position_price_orig:[0.0], BTCUSDT_position_upclosed:[0], BTCUSDT_position_updt:[None], BTCUSDT_position_upopened:[-0.16144035514854793]
+DEBUG@01-13.15:45:33:Order:Sell-0.1614@37225.40Ref3Limit Canceled
+DEBUG@01-13.15:45:33:Order:Sell-0.1614@36883.40Ref4StopLimit Completed
+DEBUG@01-13.15:45:33:Vault(2023-11-13 11:11:00+00:00): cash:[105927.39448515698], fund_shares:[5000000.0], fund_value:[0.019995059692658343], BTCUSDT_value:[99975.29846329172], BTCUSDT_position_size:[-0.16144035514854793], BTCUSDT_position_price:[36883.4], BTCUSDT_position_adjbase:[36868.7], BTCUSDT_position_price_orig:[0.0], BTCUSDT_position_upclosed:[0], BTCUSDT_position_updt:[None], BTCUSDT_position_upopened:[-0.16144035514854793]
+DEBUG@01-13.15:45:33:notify_trade trade:ref:1, data:<backtrader.feeds.pandafeed.PandasData object at 0x0000020CB9347EB0>, tradeid:0, size:0.0, price:36940.4, value:0.0, commission:11.918140490415373, pnl:-9.202100243467232, pnlcomm:-21.120240733882603, justopened:False, isopen:False, isclosed:True, baropen:406, dtopen:738837.2819444444, barclose:671, dtclose:738837.4659722223, barlen:265, historyon:False, history:[], status:2, long:True
+DEBUG@01-13.15:45:33:notify_trade trade:ref:2, data:<backtrader.feeds.pandafeed.PandasData object at 0x0000020CB9347EB0>, tradeid:0, size:-0.16144035514854793, price:36883.4, value:-5954.469195085953, commission:5.954469195085953, pnl:0.0, pnlcomm:-5.954469195085953, justopened:True, isopen:True, isclosed:False, baropen:671, dtopen:738837.4659722223, barclose:0, dtclose:0.0, barlen:0, historyon:False, history:[], status:1, long:False
+DEBUG@01-13.15:45:33:Signal:Signal11-13.11-11Buy@11-13.04-45/15minEnd11/15.20:45StopLimitnan@36945.34SL36883.40TP37225.40TR36940.40 Ordered: O:Buy0.1614@36940.40Ref7StopLimit S:Sell-0.1614@36883.40Ref8Stop P:Sell-0.1614@37225.40Ref9Limit
+DEBUG@01-13.15:45:33:Order:Buy0.1614@36940.40Ref7StopLimit Submitted
+DEBUG@01-13.15:45:33:Order:Sell-0.1614@36883.40Ref8Stop Submitted
+DEBUG@01-13.15:45:33:Order:Sell-0.1614@37225.40Ref9Limit Submitted
+DEBUG@01-13.15:45:33:Order:Buy0.1614@36940.40Ref7StopLimit Submitted
+DEBUG@01-13.15:45:33:Order:Sell-0.1614@36883.40Ref8Stop Submitted
+DEBUG@01-13.15:45:33:Order:Sell-0.1614@37225.40Ref9Limit Submitted
+DEBUG@01-13.15:45:33:Ran 700 Next()s reached 2023-11-13 11:41:00+00:00
+DEBUG@01-13.15:45:33:repeating Signal  according to Stop-Loss on Signal11-13.07-29Sell@11-13.04-45/15minEnd11/15.20:45StopLimitnan@36878.46SL36940.40TP36598.40TR36883.40 @ 23-11-13.12:58=O36934.90,H36941.10,L36934.80,C36934.90V0.64
+DEBUG@01-13.15:45:33:repeated Signal:Signal11-13.12-58Sell@11-13.04-45/15minEnd11/15.20:45StopLimitnan@36878.46SL36940.40TP36598.40TR36883.40@2023-11-13 12:58:00+00:00 
+DEBUG@01-13.15:45:33:Order:Buy0.1614@36940.40Ref5Stop Completed
+DEBUG@01-13.15:45:33:Vault(2023-11-13 12:58:00+00:00): cash:[93988.12455190747], fund_shares:[5000000.0], fund_value:[0.019990181585056718], BTCUSDT_value:[99950.90792528358], BTCUSDT_position_size:[0.16144035514854793], BTCUSDT_position_price:[36940.4], BTCUSDT_position_adjbase:[36934.9], BTCUSDT_position_price_orig:[0.0], BTCUSDT_position_upclosed:[0], BTCUSDT_position_updt:[None], BTCUSDT_position_upopened:[0.16144035514854793]
+DEBUG@01-13.15:45:33:Order:Buy0.1614@36598.40Ref6Limit Canceled
+DEBUG@01-13.15:45:33:Order:Buy0.1614@36940.40Ref7StopLimit Completed
+DEBUG@01-13.15:45:33:Vault(2023-11-13 12:58:00+00:00): cash:[93988.12455190747], fund_shares:[5000000.0], fund_value:[0.019990181585056718], BTCUSDT_value:[99950.90792528358], BTCUSDT_position_size:[0.16144035514854793], BTCUSDT_position_price:[36940.4], BTCUSDT_position_adjbase:[36934.9], BTCUSDT_position_price_orig:[0.0], BTCUSDT_position_upclosed:[0], BTCUSDT_position_updt:[None], BTCUSDT_position_upopened:[0.16144035514854793]
+DEBUG@01-13.15:45:33:notify_trade trade:ref:2, data:<backtrader.feeds.pandafeed.PandasData object at 0x0000020CB9347EB0>, tradeid:0, size:0.0, price:36883.4, value:0.0, commission:11.918140490415373, pnl:-9.202100243467232, pnlcomm:-21.120240733882603, justopened:False, isopen:False, isclosed:True, baropen:671, dtopen:738837.4659722223, barclose:778, dtclose:738837.5402777778, barlen:107, historyon:False, history:[], status:2, long:False
+DEBUG@01-13.15:45:33:notify_trade trade:ref:3, data:<backtrader.feeds.pandafeed.PandasData object at 0x0000020CB9347EB0>, tradeid:0, size:0.16144035514854793, price:36940.4, value:5963.67129532942, commission:5.96367129532942, pnl:0.0, pnlcomm:-5.96367129532942, justopened:True, isopen:True, isclosed:False, baropen:778, dtopen:738837.5402777778, barclose:0, dtclose:0.0, barlen:0, historyon:False, history:[], status:1, long:True
+DEBUG@01-13.15:45:33:Signal:Signal11-13.12-58Sell@11-13.04-45/15minEnd11/15.20:45StopLimitnan@36878.46SL36940.40TP36598.40TR36883.40 Ordered: O:Sell-0.1614@36883.40Ref10StopLimit S:Buy0.1614@36940.40Ref11Stop P:Buy0.1614@36598.40Ref12Limit
+DEBUG@01-13.15:45:33:Order:Sell-0.1614@36883.40Ref10StopLimit Submitted
+DEBUG@01-13.15:45:33:Order:Buy0.1614@36940.40Ref11Stop Submitted
+DEBUG@01-13.15:45:33:Order:Buy0.1614@36598.40Ref12Limit Submitted
+DEBUG@01-13.15:45:33:Order:Sell-0.1614@36883.40Ref10StopLimit Submitted
+DEBUG@01-13.15:45:33:Order:Buy0.1614@36940.40Ref11Stop Submitted
+DEBUG@01-13.15:45:33:Order:Buy0.1614@36598.40Ref12Limit Submitted
+DEBUG@01-13.15:45:34:repeating Signal  according to Stop-Loss on Signal11-13.11-11Buy@11-13.04-45/15minEnd11/15.20:45StopLimitnan@36945.34SL36883.40TP37225.40TR36940.40 @ 23-11-13.13:06=O36907.30,H36907.30,L36878.00,C36891.10V4.05
+DEBUG@01-13.15:45:34:repeated Signal:Signal11-13.13-06Buy@11-13.04-45/15minEnd11/15.20:45StopLimitnan@36945.34SL36883.40TP37225.40TR36940.40@2023-11-13 13:06:00+00:00 
+DEBUG@01-13.15:45:34:Order:Sell-0.1614@36883.40Ref8Stop Completed
+DEBUG@01-13.15:45:34:Vault(2023-11-13 13:06:00+00:00): cash:[105885.15400368921], fund_shares:[5000000.0], fund_value:[0.019985888343573722], BTCUSDT_value:[99929.44171786861], BTCUSDT_position_size:[-0.16144035514854793], BTCUSDT_position_price:[36883.4], BTCUSDT_position_adjbase:[36891.1], BTCUSDT_position_price_orig:[0.0], BTCUSDT_position_upclosed:[0], BTCUSDT_position_updt:[None], BTCUSDT_position_upopened:[-0.16144035514854793]
+DEBUG@01-13.15:45:34:Order:Sell-0.1614@37225.40Ref9Limit Canceled
+DEBUG@01-13.15:45:34:Order:Sell-0.1614@36883.40Ref10StopLimit Completed
+DEBUG@01-13.15:45:34:Vault(2023-11-13 13:06:00+00:00): cash:[105885.15400368921], fund_shares:[5000000.0], fund_value:[0.019985888343573722], BTCUSDT_value:[99929.44171786861], BTCUSDT_position_size:[-0.16144035514854793], BTCUSDT_position_price:[36883.4], BTCUSDT_position_adjbase:[36891.1], BTCUSDT_position_price_orig:[0.0], BTCUSDT_position_upclosed:[0], BTCUSDT_position_updt:[None], BTCUSDT_position_upopened:[-0.16144035514854793]
+DEBUG@01-13.15:45:34:notify_trade trade:ref:3, data:<backtrader.feeds.pandafeed.PandasData object at 0x0000020CB9347EB0>, tradeid:0, size:0.0, price:36940.4, value:0.0, commission:11.918140490415373, pnl:-9.202100243467232, pnlcomm:-21.120240733882603, justopened:False, isopen:False, isclosed:True, baropen:778, dtopen:738837.5402777778, barclose:786, dtclose:738837.5458333333, barlen:8, historyon:False, history:[], status:2, long:True
+DEBUG@01-13.15:45:34:notify_trade trade:ref:4, data:<backtrader.feeds.pandafeed.PandasData object at 0x0000020CB9347EB0>, tradeid:0, size:-0.16144035514854793, price:36883.4, value:-5954.469195085953, commission:5.954469195085953, pnl:0.0, pnlcomm:-5.954469195085953, justopened:True, isopen:True, isclosed:False, baropen:786, dtopen:738837.5458333333, barclose:0, dtclose:0.0, barlen:0, historyon:False, history:[], status:1, long:False
+DEBUG@01-13.15:45:34:Signal:Signal11-13.13-06Buy@11-13.04-45/15minEnd11/15.20:45StopLimitnan@36945.34SL36883.40TP37225.40TR36940.40 Ordered: O:Buy0.1614@36940.40Ref13StopLimit S:Sell-0.1614@36883.40Ref14Stop P:Sell-0.1614@37225.40Ref15Limit
+DEBUG@01-13.15:45:34:Order:Buy0.1614@36940.40Ref13StopLimit Submitted
+DEBUG@01-13.15:45:34:Order:Sell-0.1614@36883.40Ref14Stop Submitted
+DEBUG@01-13.15:45:34:Order:Sell-0.1614@37225.40Ref15Limit Submitted
+DEBUG@01-13.15:45:34:Order:Buy0.1614@36940.40Ref13StopLimit Submitted
+DEBUG@01-13.15:45:34:Order:Sell-0.1614@36883.40Ref14Stop Submitted
+DEBUG@01-13.15:45:34:Order:Sell-0.1614@37225.40Ref15Limit Submitted
+DEBUG@01-13.15:45:34:Ran 800 Next()s reached 2023-11-13 13:21:00+00:00
+DEBUG@01-13.15:45:34:Took profit on Signal:Signal11-13.12-58Sell@11-13.04-45/15minEnd11/15.20:45StopLimitnan@36878.46SL36940.40TP36598.40TR36883.40@2023-11-13 14:46:00+00:00
+DEBUG@01-13.15:45:34:Order:Buy0.1614@36598.40Ref12Limit Completed
+DEBUG@01-13.15:45:34:Vault(2023-11-13 14:46:00+00:00): cash:[99970.78685112673], fund_shares:[5000000.0], fund_value:[0.019994157370225345], BTCUSDT_value:[99970.78685112673], BTCUSDT_position_size:[0.0], BTCUSDT_position_price:[0.0], BTCUSDT_position_adjbase:[36663.7], BTCUSDT_position_price_orig:[36883.4], BTCUSDT_position_upclosed:[0.16144035514854793], BTCUSDT_position_updt:[None], BTCUSDT_position_upopened:[0]
+DEBUG@01-13.15:45:34:Order:Buy0.1614@36940.40Ref11Stop Canceled
+DEBUG@01-13.15:45:34:notify_trade trade:ref:4, data:<backtrader.feeds.pandafeed.PandasData object at 0x0000020CB9347EB0>, tradeid:0, size:0.0, price:36883.4, value:0.0, commission:11.86292788895457, pnl:46.01050121733616, pnlcomm:34.1475733283816, justopened:False, isopen:False, isclosed:True, baropen:786, dtopen:738837.5458333333, barclose:886, dtclose:738837.6152777778, barlen:100, historyon:False, history:[], status:2, long:False
+DEBUG@01-13.15:45:34:Ran 900 Next()s reached 2023-11-13 15:01:00+00:00
+DEBUG@01-13.15:45:35:Order:Buy0.1614@36940.40Ref13StopLimit Completed
+DEBUG@01-13.15:45:35:Vault(2023-11-13 16:24:00+00:00): cash:[94001.15188450197], fund_shares:[5000000.0], fund_value:[0.019994152836980174], BTCUSDT_value:[99970.76418490087], BTCUSDT_position_size:[0.16144035514854793], BTCUSDT_position_price:[36940.4], BTCUSDT_position_adjbase:[36977.2], BTCUSDT_position_price_orig:[0.0], BTCUSDT_position_upclosed:[0], BTCUSDT_position_updt:[None], BTCUSDT_position_upopened:[0.16144035514854793]
+DEBUG@01-13.15:45:35:notify_trade trade:ref:5, data:<backtrader.feeds.pandafeed.PandasData object at 0x0000020CB9347EB0>, tradeid:0, size:0.16144035514854793, price:36940.4, value:5963.67129532942, commission:5.96367129532942, pnl:0.0, pnlcomm:-5.96367129532942, justopened:True, isopen:True, isclosed:False, baropen:984, dtopen:738837.6833333333, barclose:0, dtclose:0.0, barlen:0, historyon:False, history:[], status:1, long:True
+DEBUG@01-13.15:45:35:repeating Signal  according to Stop-Loss on Signal11-13.13-06Buy@11-13.04-45/15minEnd11/15.20:45StopLimitnan@36945.34SL36883.40TP37225.40TR36940.40 @ 23-11-13.16:39=O36904.00,H36904.00,L36871.30,C36879.00V1.88
+DEBUG@01-13.15:45:35:repeated Signal:Signal11-13.16-39Buy@11-13.04-45/15minEnd11/15.20:45StopLimitnan@36945.34SL36883.40TP37225.40TR36940.40@2023-11-13 16:39:00+00:00 
+DEBUG@01-13.15:45:35:Order:Sell-0.1614@36883.40Ref14Stop Completed
+DEBUG@01-13.15:45:35:Vault(2023-11-13 16:39:00+00:00): cash:[99949.66661039284], fund_shares:[5000000.0], fund_value:[0.01998993332207857], BTCUSDT_value:[99949.66661039284], BTCUSDT_position_size:[0.0], BTCUSDT_position_price:[0.0], BTCUSDT_position_adjbase:[36904.0], BTCUSDT_position_price_orig:[36940.4], BTCUSDT_position_upclosed:[-0.16144035514854793], BTCUSDT_position_updt:[None], BTCUSDT_position_upopened:[0]
+DEBUG@01-13.15:45:35:Order:Sell-0.1614@37225.40Ref15Limit Canceled
+DEBUG@01-13.15:45:35:notify_trade trade:ref:5, data:<backtrader.feeds.pandafeed.PandasData object at 0x0000020CB9347EB0>, tradeid:0, size:0.0, price:36940.4, value:0.0, commission:11.918140490415373, pnl:-9.202100243467232, pnlcomm:-21.120240733882603, justopened:False, isopen:False, isclosed:True, baropen:984, dtopen:738837.6833333333, barclose:999, dtclose:738837.69375, barlen:15, historyon:False, history:[], status:2, long:True
+DEBUG@01-13.15:45:35:Signal:Signal11-13.16-39Buy@11-13.04-45/15minEnd11/15.20:45StopLimitnan@36945.34SL36883.40TP37225.40TR36940.40 Ordered: O:Buy0.1614@36940.40Ref16StopLimit S:Sell-0.1614@36883.40Ref17Stop P:Sell-0.1614@37225.40Ref18Limit
+DEBUG@01-13.15:45:35:Order:Buy0.1614@36940.40Ref16StopLimit Submitted
+DEBUG@01-13.15:45:35:Order:Sell-0.1614@36883.40Ref17Stop Submitted
+DEBUG@01-13.15:45:35:Order:Sell-0.1614@37225.40Ref18Limit Submitted
+DEBUG@01-13.15:45:35:Order:Buy0.1614@36940.40Ref16StopLimit Submitted
+DEBUG@01-13.15:45:35:Order:Sell-0.1614@36883.40Ref17Stop Submitted
+DEBUG@01-13.15:45:35:Order:Sell-0.1614@37225.40Ref18Limit Submitted
+DEBUG@01-13.15:45:35:Ran 1000 Next()s reached 2023-11-13 16:41:00+00:00
+DEBUG@01-13.15:45:35:Ran 1100 Next()s reached 2023-11-13 18:21:00+00:00
+DEBUG@01-13.15:45:36:Ran 1200 Next()s reached 2023-11-13 20:01:00+00:00
+DEBUG@01-13.15:45:36:Ran 1300 Next()s reached 2023-11-13 21:41:00+00:00
+DEBUG@01-13.15:45:37:Ran 1400 Next()s reached 2023-11-13 23:21:00+00:00
+DEBUG@01-13.15:45:37:Ran 1500 Next()s reached 2023-11-14 01:01:00+00:00
+DEBUG@01-13.15:45:38:Ran 1600 Next()s reached 2023-11-14 02:41:00+00:00
+DEBUG@01-13.15:45:38:Ran 1700 Next()s reached 2023-11-14 04:21:00+00:00
+DEBUG@01-13.15:45:39:Ran 1800 Next()s reached 2023-11-14 06:01:00+00:00
+DEBUG@01-13.15:45:39:Ran 1900 Next()s reached 2023-11-14 07:41:00+00:00
+DEBUG@01-13.15:45:40:Ran 2000 Next()s reached 2023-11-14 09:21:00+00:00
+DEBUG@01-13.15:45:40:Ran 2100 Next()s reached 2023-11-14 11:01:00+00:00
+DEBUG@01-13.15:45:41:Ran 2200 Next()s reached 2023-11-14 12:41:00+00:00
+DEBUG@01-13.15:45:41:Ran 2300 Next()s reached 2023-11-14 14:21:00+00:00
+DEBUG@01-13.15:45:42:Ran 2400 Next()s reached 2023-11-14 16:01:00+00:00
+DEBUG@01-13.15:45:42:Ran 2500 Next()s reached 2023-11-14 17:41:00+00:00
+DEBUG@01-13.15:45:43:Ran 2600 Next()s reached 2023-11-14 19:21:00+00:00
+DEBUG@01-13.15:45:43:Ran 2700 Next()s reached 2023-11-14 21:01:00+00:00
+DEBUG@01-13.15:45:44:Ran 2800 Next()s reached 2023-11-14 22:41:00+00:00
+DEBUG@01-13.15:45:44:Ran 2900 Next()s reached 2023-11-15 00:21:00+00:00
+DEBUG@01-13.15:45:45:Ran 3000 Next()s reached 2023-11-15 02:01:00+00:00
+DEBUG@01-13.15:45:45:Ran 3100 Next()s reached 2023-11-15 03:41:00+00:00
+DEBUG@01-13.15:45:46:added Signal Signal11-15.04-50Sell@11-15.04-00/15minEnd11/17.20:00StopLimitnan@35377.79SL35438.60TP35099.00TR35382.00 @ 2023-11-15 04:50:00+00:00
+DEBUG@01-13.15:45:46:Signal:Signal11-15.04-50Sell@11-15.04-00/15minEnd11/17.20:00StopLimitnan@35377.79SL35438.60TP35099.00TR35382.00 Ordered: O:Sell-0.1644@35382.00Ref19StopLimit S:Buy0.1644@35438.60Ref20Stop P:Buy0.1644@35099.00Ref21Limit
+DEBUG@01-13.15:45:46:Order:Sell-0.1644@35382.00Ref19StopLimit Submitted
+DEBUG@01-13.15:45:46:Order:Buy0.1644@35438.60Ref20Stop Submitted
+DEBUG@01-13.15:45:46:Order:Buy0.1644@35099.00Ref21Limit Submitted
+DEBUG@01-13.15:45:46:Order:Sell-0.1644@35382.00Ref19StopLimit Submitted
+DEBUG@01-13.15:45:46:Order:Buy0.1644@35438.60Ref20Stop Submitted
+DEBUG@01-13.15:45:46:Order:Buy0.1644@35099.00Ref21Limit Submitted
+DEBUG@01-13.15:45:46:Ran 3200 Next()s reached 2023-11-15 05:21:00+00:00
+DEBUG@01-13.15:45:46:Ran 3300 Next()s reached 2023-11-15 07:01:00+00:00
+DEBUG@01-13.15:45:47:Ran 3400 Next()s reached 2023-11-15 08:41:00+00:00
+DEBUG@01-13.15:45:47:Ran 3500 Next()s reached 2023-11-15 10:21:00+00:00
+DEBUG@01-13.15:45:48:added Signal Signal11-15.11-24Sell@11-15.04-00/4hEnd12/27.20:00StopLimitnan@35356.51SL35660.00TP33977.00TR35379.50 @ 2023-11-15 11:24:00+00:00
+DEBUG@01-13.15:45:48:Signal:Signal11-15.11-24Sell@11-15.04-00/4hEnd12/27.20:00StopLimitnan@35356.51SL35660.00TP33977.00TR35379.50 Ordered: O:Sell-0.0329@35379.50Ref22StopLimit S:Buy0.0329@35660.00Ref23Stop P:Buy0.0329@33977.00Ref24Limit
+DEBUG@01-13.15:45:48:Order:Sell-0.0329@35379.50Ref22StopLimit Submitted
+DEBUG@01-13.15:45:48:Order:Buy0.0329@35660.00Ref23Stop Submitted
+DEBUG@01-13.15:45:48:Order:Buy0.0329@33977.00Ref24Limit Submitted
+DEBUG@01-13.15:45:48:Order:Sell-0.0329@35379.50Ref22StopLimit Submitted
+DEBUG@01-13.15:45:48:Order:Buy0.0329@35660.00Ref23Stop Submitted
+DEBUG@01-13.15:45:48:Order:Buy0.0329@33977.00Ref24Limit Submitted
+DEBUG@01-13.15:45:48:Ran 3600 Next()s reached 2023-11-15 12:01:00+00:00
+DEBUG@01-13.15:45:49:Ran 3700 Next()s reached 2023-11-15 13:41:00+00:00
+DEBUG@01-13.15:45:49:Ran 3800 Next()s reached 2023-11-15 15:21:00+00:00
+DEBUG@01-13.15:45:49:Ran 3900 Next()s reached 2023-11-15 17:01:00+00:00
+DEBUG@01-13.15:45:50:Order:Buy0.1614@36940.40Ref16StopLimit Completed
+DEBUG@01-13.15:45:50:Vault(2023-11-15 18:11:00+00:00): cash:[93980.03164376809], fund_shares:[5000000.0], fund_value:[0.01999060038071081], BTCUSDT_value:[99953.00190355406], BTCUSDT_position_size:[0.16144035514854793], BTCUSDT_position_price:[36940.4], BTCUSDT_position_adjbase:[36998.0], BTCUSDT_position_price_orig:[0.0], BTCUSDT_position_upclosed:[0], BTCUSDT_position_updt:[None], BTCUSDT_position_upopened:[0.16144035514854793]
+DEBUG@01-13.15:45:50:notify_trade trade:ref:6, data:<backtrader.feeds.pandafeed.PandasData object at 0x0000020CB9347EB0>, tradeid:0, size:0.16144035514854793, price:36940.4, value:5963.67129532942, commission:5.96367129532942, pnl:0.0, pnlcomm:-5.96367129532942, justopened:True, isopen:True, isclosed:False, baropen:3971, dtopen:738839.7576388889, barclose:0, dtclose:0.0, barlen:0, historyon:False, history:[], status:1, long:True
+DEBUG@01-13.15:45:50:repeating Signal  according to Stop-Loss on Signal11-13.16-39Buy@11-13.04-45/15minEnd11/15.20:45StopLimitnan@36945.34SL36883.40TP37225.40TR36940.40 @ 23-11-15.18:12=O36979.30,H37200.00,L36881.10,C37148.50V121.46
+DEBUG@01-13.15:45:50:repeated Signal:Signal11-15.18-12Buy@11-13.04-45/15minEnd11/15.20:45StopLimitnan@36945.34SL36883.40TP37225.40TR36940.40@2023-11-15 18:12:00+00:00 
+DEBUG@01-13.15:45:50:Order:Sell-0.1614@36883.40Ref17Stop Completed
+DEBUG@01-13.15:45:50:Vault(2023-11-15 18:12:00+00:00): cash:[99928.54636965896], fund_shares:[5000000.0], fund_value:[0.01998570927393179], BTCUSDT_value:[99928.54636965896], BTCUSDT_position_size:[0.0], BTCUSDT_position_price:[0.0], BTCUSDT_position_adjbase:[36998.0], BTCUSDT_position_price_orig:[36940.4], BTCUSDT_position_upclosed:[-0.16144035514854793], BTCUSDT_position_updt:[None], BTCUSDT_position_upopened:[0]
+DEBUG@01-13.15:45:50:Order:Sell-0.1614@37225.40Ref18Limit Canceled
+DEBUG@01-13.15:45:50:notify_trade trade:ref:6, data:<backtrader.feeds.pandafeed.PandasData object at 0x0000020CB9347EB0>, tradeid:0, size:0.0, price:36940.4, value:0.0, commission:11.918140490415373, pnl:-9.202100243467232, pnlcomm:-21.120240733882603, justopened:False, isopen:False, isclosed:True, baropen:3971, dtopen:738839.7576388889, barclose:3972, dtclose:738839.7583333333, barlen:1, historyon:False, history:[], status:2, long:True
+DEBUG@01-13.15:45:50:Signal:Signal11-15.18-12Buy@11-13.04-45/15minEnd11/15.20:45StopLimitnan@36945.34SL36883.40TP37225.40TR36940.40 Ordered: O:Buy0.1614@36945.34Ref25Limit S:Sell-0.1614@36883.40Ref26Stop P:Sell-0.1614@37225.40Ref27Limit
+DEBUG@01-13.15:45:50:Order:Buy0.1614@36945.34Ref25Limit Submitted
+DEBUG@01-13.15:45:50:Order:Sell-0.1614@36883.40Ref26Stop Submitted
+DEBUG@01-13.15:45:50:Order:Sell-0.1614@37225.40Ref27Limit Submitted
+DEBUG@01-13.15:45:50:Order:Buy0.1614@36945.34Ref25Limit Submitted
+DEBUG@01-13.15:45:50:Order:Sell-0.1614@36883.40Ref26Stop Submitted
+DEBUG@01-13.15:45:50:Order:Sell-0.1614@37225.40Ref27Limit Submitted
+DEBUG@01-13.15:45:50:Order:Buy0.1614@36945.34Ref25Limit Completed
+DEBUG@01-13.15:45:50:Vault(2023-11-15 18:24:00+00:00): cash:[93958.11270537792], fund_shares:[5000000.0], fund_value:[0.019979645970578233], BTCUSDT_value:[99898.22985289116], BTCUSDT_position_size:[0.16144035514854793], BTCUSDT_position_price:[36945.34238107813], BTCUSDT_position_adjbase:[36794.5], BTCUSDT_position_price_orig:[0.0], BTCUSDT_position_upclosed:[0], BTCUSDT_position_updt:[None], BTCUSDT_position_upopened:[0.16144035514854793]
+DEBUG@01-13.15:45:50:notify_trade trade:ref:7, data:<backtrader.feeds.pandafeed.PandasData object at 0x0000020CB9347EB0>, tradeid:0, size:0.16144035514854793, price:36945.34238107813, value:5964.469195085953, commission:5.964469195085953, pnl:0.0, pnlcomm:-5.964469195085953, justopened:True, isopen:True, isclosed:False, baropen:3984, dtopen:738839.7666666667, barclose:0, dtclose:0.0, barlen:0, historyon:False, history:[], status:1, long:True
+DEBUG@01-13.15:45:50:repeating Signal  according to Stop-Loss on Signal11-15.18-12Buy@11-13.04-45/15minEnd11/15.20:45StopLimitnan@36945.34SL36883.40TP37225.40TR36940.40 @ 23-11-15.18:25=O36794.60,H37017.20,L36753.40,C37017.20V32.17
+DEBUG@01-13.15:45:50:repeated Signal:Signal11-15.18-25Buy@11-13.04-45/15minEnd11/15.20:45StopLimitnan@36945.34SL36883.40TP37225.40TR36940.40@2023-11-15 18:25:00+00:00 
+DEBUG@01-13.15:45:50:Order:Sell-0.1614@36883.40Ref26Stop Completed
+DEBUG@01-13.15:45:50:Vault(2023-11-15 18:25:00+00:00): cash:[99892.30586363513], fund_shares:[5000000.0], fund_value:[0.019978461172727027], BTCUSDT_value:[99892.30586363513], BTCUSDT_position_size:[0.0], BTCUSDT_position_price:[0.0], BTCUSDT_position_adjbase:[36794.5], BTCUSDT_position_price_orig:[36945.34238107813], BTCUSDT_position_upclosed:[-0.16144035514854793], BTCUSDT_position_updt:[None], BTCUSDT_position_upopened:[0]
+DEBUG@01-13.15:45:50:Order:Sell-0.1614@37225.40Ref27Limit Canceled
+DEBUG@01-13.15:45:50:notify_trade trade:ref:7, data:<backtrader.feeds.pandafeed.PandasData object at 0x0000020CB9347EB0>, tradeid:0, size:0.0, price:36945.34238107813, value:0.0, commission:11.904602486634715, pnl:-24.335903537191527, pnlcomm:-36.24050602382624, justopened:False, isopen:False, isclosed:True, baropen:3984, dtopen:738839.7666666667, barclose:3985, dtclose:738839.7673611111, barlen:1, historyon:False, history:[], status:2, long:True
+DEBUG@01-13.15:45:50:Signal:Signal11-15.18-25Buy@11-13.04-45/15minEnd11/15.20:45StopLimitnan@36945.34SL36883.40TP37225.40TR36940.40 Ordered: O:Buy0.1614@36945.34Ref28Limit S:Sell-0.1614@36883.40Ref29Stop P:Sell-0.1614@37225.40Ref30Limit
+DEBUG@01-13.15:45:50:Order:Buy0.1614@36945.34Ref28Limit Submitted
+DEBUG@01-13.15:45:50:Order:Sell-0.1614@36883.40Ref29Stop Submitted
+DEBUG@01-13.15:45:50:Order:Sell-0.1614@37225.40Ref30Limit Submitted
+DEBUG@01-13.15:45:50:Order:Buy0.1614@36945.34Ref28Limit Submitted
+DEBUG@01-13.15:45:50:Order:Sell-0.1614@36883.40Ref29Stop Submitted
+DEBUG@01-13.15:45:50:Order:Sell-0.1614@37225.40Ref30Limit Submitted
+DEBUG@01-13.15:45:50:Order:Buy0.1614@36945.34Ref28Limit Completed
+DEBUG@01-13.15:45:50:Vault(2023-11-15 18:26:00+00:00): cash:[93921.8721993541], fund_shares:[5000000.0], fund_value:[0.019976924656931835], BTCUSDT_value:[99884.62328465917], BTCUSDT_position_size:[0.16144035514854793], BTCUSDT_position_price:[36945.34238107813], BTCUSDT_position_adjbase:[36934.7], BTCUSDT_position_price_orig:[0.0], BTCUSDT_position_upclosed:[0], BTCUSDT_position_updt:[None], BTCUSDT_position_upopened:[0.16144035514854793]
+DEBUG@01-13.15:45:50:notify_trade trade:ref:8, data:<backtrader.feeds.pandafeed.PandasData object at 0x0000020CB9347EB0>, tradeid:0, size:0.16144035514854793, price:36945.34238107813, value:5964.469195085953, commission:5.964469195085953, pnl:0.0, pnlcomm:-5.964469195085953, justopened:True, isopen:True, isclosed:False, baropen:3986, dtopen:738839.7680555555, barclose:0, dtclose:0.0, barlen:0, historyon:False, history:[], status:1, long:True
+DEBUG@01-13.15:45:50:repeating Signal  according to Stop-Loss on Signal11-15.18-25Buy@11-13.04-45/15minEnd11/15.20:45StopLimitnan@36945.34SL36883.40TP37225.40TR36940.40 @ 23-11-15.18:27=O36928.30,H36943.60,L36829.40,C36943.60V11.91
+DEBUG@01-13.15:45:50:repeated Signal:Signal11-15.18-27Buy@11-13.04-45/15minEnd11/15.20:45StopLimitnan@36945.34SL36883.40TP37225.40TR36940.40@2023-11-15 18:27:00+00:00 
+DEBUG@01-13.15:45:50:Order:Sell-0.1614@36883.40Ref29Stop Completed
+DEBUG@01-13.15:45:50:Vault(2023-11-15 18:27:00+00:00): cash:[99870.38692524497], fund_shares:[5000000.0], fund_value:[0.019974077385048992], BTCUSDT_value:[99870.38692524497], BTCUSDT_position_size:[0.0], BTCUSDT_position_price:[0.0], BTCUSDT_position_adjbase:[36934.7], BTCUSDT_position_price_orig:[36945.34238107813], BTCUSDT_position_upclosed:[-0.16144035514854793], BTCUSDT_position_updt:[None], BTCUSDT_position_upopened:[0]
+DEBUG@01-13.15:45:50:Order:Sell-0.1614@37225.40Ref30Limit Canceled
+DEBUG@01-13.15:45:50:notify_trade trade:ref:8, data:<backtrader.feeds.pandafeed.PandasData object at 0x0000020CB9347EB0>, tradeid:0, size:0.0, price:36945.34238107813, value:0.0, commission:11.918938390171906, pnl:-10.0, pnlcomm:-21.918938390171906, justopened:False, isopen:False, isclosed:True, baropen:3986, dtopen:738839.7680555555, barclose:3987, dtclose:738839.76875, barlen:1, historyon:False, history:[], status:2, long:True
+DEBUG@01-13.15:45:50:Signal:Signal11-15.18-27Buy@11-13.04-45/15minEnd11/15.20:45StopLimitnan@36945.34SL36883.40TP37225.40TR36940.40 Ordered: O:Buy0.1614@36945.34Ref31Limit S:Sell-0.1614@36883.40Ref32Stop P:Sell-0.1614@37225.40Ref33Limit
+DEBUG@01-13.15:45:50:Order:Buy0.1614@36945.34Ref31Limit Submitted
+DEBUG@01-13.15:45:50:Order:Sell-0.1614@36883.40Ref32Stop Submitted
+DEBUG@01-13.15:45:50:Order:Sell-0.1614@37225.40Ref33Limit Submitted
+DEBUG@01-13.15:45:50:Order:Buy0.1614@36945.34Ref31Limit Submitted
+DEBUG@01-13.15:45:50:Order:Sell-0.1614@36883.40Ref32Stop Submitted
+DEBUG@01-13.15:45:50:Order:Sell-0.1614@37225.40Ref33Limit Submitted
+DEBUG@01-13.15:45:50:Order:Buy0.1614@36945.34Ref31Limit Completed
+DEBUG@01-13.15:45:50:Vault(2023-11-15 18:28:00+00:00): cash:[93900.2671532337], fund_shares:[5000000.0], fund_value:[0.019975344904938176], BTCUSDT_value:[99876.72452469089], BTCUSDT_position_size:[0.16144035514854793], BTCUSDT_position_price:[36943.4], BTCUSDT_position_adjbase:[37019.6], BTCUSDT_position_price_orig:[0.0], BTCUSDT_position_upclosed:[0], BTCUSDT_position_updt:[None], BTCUSDT_position_upopened:[0.16144035514854793]
+DEBUG@01-13.15:45:50:notify_trade trade:ref:9, data:<backtrader.feeds.pandafeed.PandasData object at 0x0000020CB9347EB0>, tradeid:0, size:0.16144035514854793, price:36943.4, value:5964.155616394866, commission:5.964155616394867, pnl:0.0, pnlcomm:-5.964155616394867, justopened:True, isopen:True, isclosed:False, baropen:3988, dtopen:738839.7694444444, barclose:0, dtclose:0.0, barlen:0, historyon:False, history:[], status:1, long:True
+DEBUG@01-13.15:45:50:repeating Signal  according to Stop-Loss on Signal11-15.18-27Buy@11-13.04-45/15minEnd11/15.20:45StopLimitnan@36945.34SL36883.40TP37225.40TR36940.40 @ 23-11-15.18:35=O36903.10,H37028.90,L36873.70,C37003.20V11.86
+DEBUG@01-13.15:45:50:repeated Signal:Signal11-15.18-35Buy@11-13.04-45/15minEnd11/15.20:45StopLimitnan@36945.34SL36883.40TP37225.40TR36940.40@2023-11-15 18:35:00+00:00 
+DEBUG@01-13.15:45:50:Order:Sell-0.1614@36883.40Ref32Stop Completed
+DEBUG@01-13.15:45:50:Vault(2023-11-15 18:35:00+00:00): cash:[99848.78187912457], fund_shares:[5000000.0], fund_value:[0.019969756375824915], BTCUSDT_value:[99848.78187912457], BTCUSDT_position_size:[0.0], BTCUSDT_position_price:[0.0], BTCUSDT_position_adjbase:[36904.0], BTCUSDT_position_price_orig:[36943.4], BTCUSDT_position_upclosed:[-0.16144035514854793], BTCUSDT_position_updt:[None], BTCUSDT_position_upopened:[0]
+DEBUG@01-13.15:45:50:Order:Sell-0.1614@37225.40Ref33Limit Canceled
+DEBUG@01-13.15:45:50:notify_trade trade:ref:9, data:<backtrader.feeds.pandafeed.PandasData object at 0x0000020CB9347EB0>, tradeid:0, size:0.0, price:36943.4, value:0.0, commission:11.91862481148082, pnl:-9.686421308912877, pnlcomm:-21.605046120393695, justopened:False, isopen:False, isclosed:True, baropen:3988, dtopen:738839.7694444444, barclose:3995, dtclose:738839.7743055555, barlen:7, historyon:False, history:[], status:2, long:True
+DEBUG@01-13.15:45:50:Signal:Signal11-15.18-35Buy@11-13.04-45/15minEnd11/15.20:45StopLimitnan@36945.34SL36883.40TP37225.40TR36940.40 Ordered: O:Buy0.1614@36945.34Ref34Limit S:Sell-0.1614@36883.40Ref35Stop P:Sell-0.1614@37225.40Ref36Limit
+DEBUG@01-13.15:45:50:Order:Buy0.1614@36945.34Ref34Limit Submitted
+DEBUG@01-13.15:45:50:Order:Sell-0.1614@36883.40Ref35Stop Submitted
+DEBUG@01-13.15:45:50:Order:Sell-0.1614@37225.40Ref36Limit Submitted
+DEBUG@01-13.15:45:50:Order:Buy0.1614@36945.34Ref34Limit Submitted
+DEBUG@01-13.15:45:50:Order:Sell-0.1614@36883.40Ref35Stop Submitted
+DEBUG@01-13.15:45:50:Order:Sell-0.1614@37225.40Ref36Limit Submitted
+DEBUG@01-13.15:45:50:Order:Buy0.1614@36945.34Ref34Limit Completed
+DEBUG@01-13.15:45:50:Vault(2023-11-15 18:36:00+00:00): cash:[93878.34821484353], fund_shares:[5000000.0], fund_value:[0.019969718026525498], BTCUSDT_value:[99848.59013262749], BTCUSDT_position_size:[0.16144035514854793], BTCUSDT_position_price:[36945.34238107813], BTCUSDT_position_adjbase:[36981.1], BTCUSDT_position_price_orig:[0.0], BTCUSDT_position_upclosed:[0], BTCUSDT_position_updt:[None], BTCUSDT_position_upopened:[0.16144035514854793]
+DEBUG@01-13.15:45:50:notify_trade trade:ref:10, data:<backtrader.feeds.pandafeed.PandasData object at 0x0000020CB9347EB0>, tradeid:0, size:0.16144035514854793, price:36945.34238107813, value:5964.469195085953, commission:5.964469195085953, pnl:0.0, pnlcomm:-5.964469195085953, justopened:True, isopen:True, isclosed:False, baropen:3996, dtopen:738839.775, barclose:0, dtclose:0.0, barlen:0, historyon:False, history:[], status:1, long:True
+DEBUG@01-13.15:45:50:Ran 4000 Next()s reached 2023-11-15 18:41:00+00:00
+DEBUG@01-13.15:45:50:Took profit on Signal:Signal11-15.18-35Buy@11-13.04-45/15minEnd11/15.20:45StopLimitnan@36945.34SL36883.40TP37225.40TR36940.40@2023-11-15 18:45:00+00:00
+DEBUG@01-13.15:45:50:Order:Sell-0.1614@37225.40Ref36Limit Completed
+DEBUG@01-13.15:45:50:Vault(2023-11-15 18:45:00+00:00): cash:[99882.02032959372], fund_shares:[5000000.0], fund_value:[0.019976404065918746], BTCUSDT_value:[99882.02032959372], BTCUSDT_position_size:[0.0], BTCUSDT_position_price:[0.0], BTCUSDT_position_adjbase:[37214.9], BTCUSDT_position_price_orig:[36945.34238107813], BTCUSDT_position_upclosed:[-0.16144035514854793], BTCUSDT_position_updt:[None], BTCUSDT_position_upopened:[0]
+DEBUG@01-13.15:45:50:Order:Sell-0.1614@36883.40Ref35Stop Canceled
+DEBUG@01-13.15:45:50:notify_trade trade:ref:10, data:<backtrader.feeds.pandafeed.PandasData object at 0x0000020CB9347EB0>, tradeid:0, size:0.0, price:36945.34238107813, value:0.0, commission:11.97415099163271, pnl:45.21260146080339, pnlcomm:33.23845046917068, justopened:False, isopen:False, isclosed:True, baropen:3996, dtopen:738839.775, barclose:4005, dtclose:738839.78125, barlen:9, historyon:False, history:[], status:2, long:True
+DEBUG@01-13.15:45:51:Ran 4100 Next()s reached 2023-11-15 20:21:00+00:00
+DEBUG@01-13.15:45:51:Ran 4200 Next()s reached 2023-11-15 22:01:00+00:00
+DEBUG@01-13.15:45:52:Ran 4300 Next()s reached 2023-11-15 23:41:00+00:00
+DEBUG@01-13.15:45:52:Ran 4400 Next()s reached 2023-11-16 01:21:00+00:00
+DEBUG@01-13.15:45:53:Ran 4500 Next()s reached 2023-11-16 03:01:00+00:00
+DEBUG@01-13.15:45:53:Ran 4600 Next()s reached 2023-11-16 04:41:00+00:00
+DEBUG@01-13.15:45:54:Ran 4700 Next()s reached 2023-11-16 06:21:00+00:00
+DEBUG@01-13.15:45:54:added Signal Signal11-16.07-03Sell@11-16.03-45/15minEnd11/18.19:45StopLimitnan@37389.25SL37458.10TP37083.70TR37395.70 @ 2023-11-16 07:03:00+00:00
+DEBUG@01-13.15:45:54:Signal:Signal11-16.07-03Sell@11-16.03-45/15minEnd11/18.19:45StopLimitnan@37389.25SL37458.10TP37083.70TR37395.70 Ordered: O:Sell-0.1452@37395.70Ref37StopLimit S:Buy0.1452@37458.10Ref38Stop P:Buy0.1452@37083.70Ref39Limit
+DEBUG@01-13.15:45:54:Order:Sell-0.1452@37395.70Ref37StopLimit Submitted
+DEBUG@01-13.15:45:54:Order:Buy0.1452@37458.10Ref38Stop Submitted
+DEBUG@01-13.15:45:54:Order:Buy0.1452@37083.70Ref39Limit Submitted
+DEBUG@01-13.15:45:54:Order:Sell-0.1452@37395.70Ref37StopLimit Submitted
+DEBUG@01-13.15:45:54:Order:Buy0.1452@37458.10Ref38Stop Submitted
+DEBUG@01-13.15:45:54:Order:Buy0.1452@37083.70Ref39Limit Submitted
+DEBUG@01-13.15:45:54:Ran 4800 Next()s reached 2023-11-16 08:01:00+00:00
+DEBUG@01-13.15:45:55:Order:Sell-0.1452@37395.70Ref37StopLimit Completed
+DEBUG@01-13.15:45:55:Vault(2023-11-16 08:15:00+00:00): cash:[105307.67062481353], fund_shares:[5000000.0], fund_value:[0.019975678026931565], BTCUSDT_value:[99878.39013465782], BTCUSDT_position_size:[-0.14523277747431912], BTCUSDT_position_price:[37395.7], BTCUSDT_position_adjbase:[37383.3], BTCUSDT_position_price_orig:[0.0], BTCUSDT_position_upclosed:[0], BTCUSDT_position_updt:[None], BTCUSDT_position_upopened:[-0.14523277747431912]
+DEBUG@01-13.15:45:55:notify_trade trade:ref:11, data:<backtrader.feeds.pandafeed.PandasData object at 0x0000020CB9347EB0>, tradeid:0, size:-0.14523277747431912, price:37395.7, value:-5431.081376596395, commission:5.431081376596396, pnl:0.0, pnlcomm:-5.431081376596396, justopened:True, isopen:True, isclosed:False, baropen:4815, dtopen:738840.34375, barclose:0, dtclose:0.0, barlen:0, historyon:False, history:[], status:1, long:False
+DEBUG@01-13.15:45:55:added Signal Signal11-16.08-26Buy@11-16.03-45/15minEnd11/18.19:45StopLimitnan@37464.55SL37395.70TP37770.10TR37458.10 @ 2023-11-16 08:26:00+00:00
+DEBUG@01-13.15:45:55:Signal:Signal11-16.08-26Buy@11-16.03-45/15minEnd11/18.19:45StopLimitnan@37464.55SL37395.70TP37770.10TR37458.10 Ordered: O:Buy0.1452@37458.10Ref40StopLimit S:Sell-0.1452@37395.70Ref41Stop P:Sell-0.1452@37770.10Ref42Limit
+DEBUG@01-13.15:45:55:Order:Buy0.1452@37458.10Ref40StopLimit Submitted
+DEBUG@01-13.15:45:55:Order:Sell-0.1452@37395.70Ref41Stop Submitted
+DEBUG@01-13.15:45:55:Order:Sell-0.1452@37770.10Ref42Limit Submitted
+DEBUG@01-13.15:45:55:Order:Buy0.1452@37458.10Ref40StopLimit Submitted
+DEBUG@01-13.15:45:55:Order:Sell-0.1452@37395.70Ref41Stop Submitted
+DEBUG@01-13.15:45:55:Order:Sell-0.1452@37770.10Ref42Limit Submitted
+DEBUG@01-13.15:45:55:Ran 4900 Next()s reached 2023-11-16 09:41:00+00:00
+DEBUG@01-13.15:45:56:repeating Signal  according to Stop-Loss on Signal11-16.07-03Sell@11-16.03-45/15minEnd11/18.19:45StopLimitnan@37389.25SL37458.10TP37083.70TR37395.70 @ 23-11-16.11:15=O37437.90,H37487.40,L37437.90,C37483.00V8.96
+DEBUG@01-13.15:45:56:repeated Signal:Signal11-16.11-15Sell@11-16.03-45/15minEnd11/18.19:45StopLimitnan@37389.25SL37458.10TP37083.70TR37395.70@2023-11-16 11:15:00+00:00 
+DEBUG@01-13.15:45:56:Order:Buy0.1452@37458.10Ref38Stop Completed
+DEBUG@01-13.15:45:56:Vault(2023-11-16 11:15:00+00:00): cash:[94416.50253318812], fund_shares:[5000000.0], fund_value:[0.019972052546251607], BTCUSDT_value:[99860.26273125803], BTCUSDT_position_size:[0.14523277747431912], BTCUSDT_position_price:[37458.1], BTCUSDT_position_adjbase:[37483.0], BTCUSDT_position_price_orig:[0.0], BTCUSDT_position_upclosed:[0], BTCUSDT_position_updt:[None], BTCUSDT_position_upopened:[0.14523277747431912]
+DEBUG@01-13.15:45:56:Order:Buy0.1452@37083.70Ref39Limit Canceled
+DEBUG@01-13.15:45:56:Order:Buy0.1452@37458.10Ref40StopLimit Completed
+DEBUG@01-13.15:45:56:Vault(2023-11-16 11:15:00+00:00): cash:[94416.50253318812], fund_shares:[5000000.0], fund_value:[0.019972052546251607], BTCUSDT_value:[99860.26273125803], BTCUSDT_position_size:[0.14523277747431912], BTCUSDT_position_price:[37458.1], BTCUSDT_position_adjbase:[37483.0], BTCUSDT_position_price_orig:[0.0], BTCUSDT_position_upclosed:[0], BTCUSDT_position_updt:[None], BTCUSDT_position_upopened:[0.14523277747431912]

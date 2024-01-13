@@ -48,10 +48,10 @@ class MultiTimeframeBasePattern(BasePattern, MultiTimeframe):
 
     @classmethod
     def str(cls, _start: datetime, timeframe: str, pattern):
-        effective_end = '/'.join([
-            pattern["end"].strftime("%H:%M") if pd.notna(pattern["end"]) else "",
-            pattern["ttl"].strftime("%H:%M") if pd.notna(pattern["ttl"]) else ""
+        effective_end = ''.join([
+            f'E{pattern["end"].strftime("%y%m/%d-%H:%M")}'  if pd.notna(pattern["end"]) else "",
+            f'T{pattern["ttl"].strftime("%y%m/%d-%H:%M")}'  if pd.notna(pattern["ttl"]) else ""
         ])
-        text = f'BASE{timeframe}/' \
-               f'{_start.strftime("%H:%M")}-{effective_end} '
+        text = f'BASE{timeframe}@' \
+               f'{_start.strftime("%y%m/%d-%H:%M")}-{effective_end} '
         return text
