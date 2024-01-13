@@ -30,18 +30,19 @@ class ExtendedDf:
     schema_data_frame_model: BasePanderaDFM = None
     _sample_df: pd.DataFrame = None
     _empty_df: pd.DataFrame = None
-    @classmethod
-    def _set_index(cls, data: pt.DataFrame['BasePanderaDFM'], index_names) -> pt.DataFrame['BasePanderaDFM']:
-        if 'date' not in data.columns:
-            raise Exception(f"Expected to find 'date' in data")
-        if hasattr(data.index, 'names') and 'timeframe' in data.index.names:
-            if 'timeframe' not in data.columns:
-                raise AttributeError(
-                    f"'timeframe' is in the indexes of {cls.__name__}.{cls.schema_data_frame_model.__name__} "
-                    f"so it is required!")
-            return data.set_index(['timeframe', 'date'])
-        else:
-            return data.set_index(['date'])
+
+    # @classmethod
+    # def _set_index(cls, data: pt.DataFrame['BasePanderaDFM'], index_names) -> pt.DataFrame['BasePanderaDFM']:
+    #     if 'date' not in data.columns:
+    #         raise Exception(f"Expected to find 'date' in data")
+    #     if hasattr(data.index, 'names') and 'timeframe' in data.index.names:
+    #         if 'timeframe' not in data.columns:
+    #             raise AttributeError(
+    #                 f"'timeframe' is in the indexes of {cls.__name__}.{cls.schema_data_frame_model.__name__} "
+    #                 f"so it is required!")
+    #         return data.set_index(['timeframe', 'date'])
+    #     else:
+    #         return data.set_index(['date'])
 
     @classmethod
     def new(cls, dictionary_of_data: dict = None, strict: bool = True) -> pt.DataFrame['BasePanderaDFM']:
@@ -61,10 +62,11 @@ class ExtendedDf:
             try:
                 index_tuple = tuple([dictionary_of_data[k] for k in _index_names])
             except KeyError:
-                raise Exception(f"Indexes {_index_names} should have value in the dictionary_of_data: {dictionary_of_data}")
+                raise Exception(
+                    f"Indexes {_index_names} should have value in the dictionary_of_data: {dictionary_of_data}")
             unused_keys = []
             for key in dictionary_of_data.keys():
-                if key in cls.schema_data_frame_model.to_schema().columns.keys(): #  _column_dtypes.keys():
+                if key in cls.schema_data_frame_model.to_schema().columns.keys():  # _column_dtypes.keys():
                     # _class = _column_dtypes[key].__args__[0]
                     # if _class == bool:
                     #     t = _class(dictionary_of_data[key])
@@ -186,6 +188,10 @@ class ExtendedDf:
             _index_names = [schema.index.name]
         cls._index_names = _index_names
         return cls._index_names
+
+    @classmethod
+    def index_id(cls, index_name: str):
+        return cls.index_names().index(index_name)
 
     @classmethod
     def column_dtypes(cls) -> Dict[str, DataType]:

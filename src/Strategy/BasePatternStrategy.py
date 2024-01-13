@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 from typing import Literal
 
@@ -8,12 +9,12 @@ from pandera import typing as pt
 from BasePattern import read_multi_timeframe_base_patterns
 from Config import config
 from FigurePlotter.BasePattern_plotter import plot_multi_timeframe_base_pattern
+from Model.Order import OrderSide, BracketOrderType
 from PanderaDFM.BasePattern import MultiTimeframeBasePattern, BasePattern
 from PanderaDFM.SignalDf import SignalDf
 from Strategy.ExtendedStrategy import ExtendedStrategy
-from Model.Order import OrderSide, BracketOrderType
 from atr import read_multi_timeframe_ohlcva
-from helper.helper import log_d, measure_time
+from helper.helper import log_d, measure_time, log_e
 from ohlcv import read_base_timeframe_ohlcv
 
 
@@ -210,12 +211,19 @@ class BasePatternStrategy(ExtendedStrategy):
 
     def stop(self):
         _multi_timeframe_ohlcva = read_multi_timeframe_ohlcva(self.date_range_str)
-        order_groups = self.get_order_groups()
-        plot_multi_timeframe_base_pattern(self.base_patterns, _multi_timeframe_ohlcva, order_groups)
+        orders_df = pd.DataFrame()
+        try:
+            orders_df = pd.read_csv(
+                os.path.join(config.path_of_data,
+                             f"{self.__class__.__name__}.orders.{config.id}.{self.date_range_str}.csv"))
+        except Exception as e:
+            log_e(e)
+        plot_multi_timeframe_base_pattern(self.base_patterns, _multi_timeframe_ohlcva, orders_df=orders_df)
         super().stop()
 
 
 def test_strategy(cash: float, date_range_str: str = None):
+    # todo: add commission
     if date_range_str is None:
         date_range_str = config.processing_date_range
     cerebro = bt.Cerebro()

@@ -1,5 +1,6 @@
 import backtrader as bt
 import pandas as pd
+import pytz
 from pandera import typing as pt
 
 from Model.Order import BracketOrderType
@@ -48,11 +49,11 @@ def dict_of_order(order: bt.Order):
     for key, value in order.__dict__.items():
         if not key.startswith("_") and not type(value) == bt.OrderData:
             if key == 'dt':
-                t['date'] = bt.num2date(value) if value is not None else None
+                t['date'] = bt.num2date(value).replace(tzinfo=pytz.UTC) if value is not None else None
             elif key == 'dteos':
-                t['date_eos'] = bt.num2date(value) if value is not None else None
+                t['date_eos'] = bt.num2date(value).replace(tzinfo=pytz.UTC) if value is not None else None
             elif key == 'valid':
-                t[key] = bt.num2date(value)
+                t[key] = bt.num2date(value).replace(tzinfo=pytz.UTC)
             elif key == 'status':
                 t[key] = order.getstatusname()
             else:
@@ -60,13 +61,13 @@ def dict_of_order(order: bt.Order):
     for key, value in order.created.__dict__.items():
         if not key.startswith("_"):
             if key == 'dt':
-                t['created_date'] = bt.num2date(value) if value is not None else None
+                t['created_date'] = bt.num2date(value).replace(tzinfo=pytz.UTC) if value is not None else None
             else:
                 t[f"created_{key}"] = str(value)
     for key, value in order.executed.__dict__.items():
         if not key.startswith("_"):
             if key == 'dt':
-                t['executed_date'] = bt.num2date(value) if value is not None else None
+                t['executed_date'] = bt.num2date(value).replace(tzinfo=pytz.UTC) if value is not None else None
             else:
                 t[f"executed_{key}"] = str(value)
     for key, value in order.info.items():
