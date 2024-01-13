@@ -34,9 +34,10 @@ class ExtendedStrategy(bt.Strategy):
     broker_initial_cash = None
 
     def get_order_groups(self):
-        result = {}  # todo: test
-        for index in self.original_orders.keys():
-            result[index] = (self.original_orders[index], self.sl_orders[index], self.tp_orders[index],)
+        result = {order_group_id: (
+            self.original_orders[order_group_id],
+            self.sl_orders[order_group_id],
+            self.tp_orders[order_group_id]) for order_group_id in self.original_orders.keys()}
         return result
 
     @measure_time
@@ -268,27 +269,34 @@ class ExtendedStrategy(bt.Strategy):
         if self.signal_df is not None:
             self.signal_df.to_csv(os.path.join(config.path_of_data,
                                                f"{self.__class__.__name__}.signals.{config.id}.{self.date_range_str}.csv"))
-        if self.original_orders is not None:
+        if self.original_orders is not None and len(self.original_orders) > 0:
+            df = pd.DataFrame()
             for index in self.original_orders.keys():
                 t = dict_of_list(dict_of_order(self.original_orders[index]))
                 df = concat(self.orders_df, pd.DataFrame(t, index=[index]))
             df.index.name = 'ref_id'
-            df.to_csv(os.path.join(config.path_of_data,
-                                   f"{self.__class__.__name__}.original_orders.{config.id}.{self.date_range_str}.csv"))
-        if self.sl_orders is not None:
+            if not df.empty:
+                df.to_csv(
+                    os.path.join(config.path_of_data,
+                                 f"{self.__class__.__name__}.original_orders.{config.id}.{self.date_range_str}.csv"))
+        if self.sl_orders is not None and len(self.sl_orders) > 0:
             for index in self.sl_orders.keys():
                 t = dict_of_list(dict_of_order(self.sl_orders[index]))
                 df = concat(self.orders_df, pd.DataFrame(t, index=[index]))
             df.index.name = 'ref_id'
-            df.to_csv(os.path.join(config.path_of_data,
-                                   f"{self.__class__.__name__}.stop_orders.{config.id}.{self.date_range_str}.csv"))
-        if self.tp_orders is not None:
+            if not df.empty:
+                df.to_csv(
+                    os.path.join(config.path_of_data,
+                                 f"{self.__class__.__name__}.stop_orders.{config.id}.{self.date_range_str}.csv"))
+        if self.tp_orders is not None and len(self.tp_orders) > 0:
             for index in self.tp_orders.keys():
                 t = dict_of_list(dict_of_order(self.tp_orders[index]))
                 df = concat(self.orders_df, pd.DataFrame(t, index=[index]))
             df.index.name = 'ref_id'
-            df.to_csv(os.path.join(config.path_of_data,
-                                   f"{self.__class__.__name__}.profit_orders.{config.id}.{self.date_range_str}.csv"))
+            if not df.empty:
+                df.to_csv(
+                    os.path.join(config.path_of_data,
+                                 f"{self.__class__.__name__}.profit_orders.{config.id}.{self.date_range_str}.csv"))
 
     def log_order(self, order: bt.Order, index=None):
         if index is None:
@@ -297,7 +305,6 @@ class ExtendedStrategy(bt.Strategy):
         self.orders_df = concat(self.orders_df, pd.DataFrame(t_dict, index=[self.candle().date]))
         if self.orders_df.index.name != 'date':
             self.orders_df.index.name = 'date'
-
 
     def log_vault(self, save: bool = True):
         _dict = {
