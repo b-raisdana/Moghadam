@@ -440,7 +440,7 @@ def multi_timeframe_times_tester(multi_timeframe_df: pt.DataFrame[MultiTimeframe
     return result
 
 
-def expected_movement_size(_list: List):
+def fine_tune_expected_movement_size(_list: List):
     return _list  # * CandleSize.Standard.value.min
 
 

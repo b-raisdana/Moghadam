@@ -31,7 +31,7 @@ class Pivot(pandera.DataFrameModel):
         if hasattr(pivot_info, 'return_end_value'):
             output += f"R{abs(pivot_info['return_end_value'] - pivot_info['level']):.0f}"
         output += f"H{pivot_info['hit']}"
-        if len(pivot_info['is_overlap_of'] or '') > 0:
+        if pd.notna(pivot_info['is_overlap_of']):
             output += f"O{pivot_info['is_overlap_of']}"
         return output
 
@@ -39,7 +39,7 @@ class Pivot(pandera.DataFrameModel):
     @staticmethod
     def name(start_time: datetime, pivot_timeframe: str, pivot_info) -> str:
         output = f"Pivot {pivot_info['level']:.0f}={pivot_timeframe}@{start_time.strftime('%m/%d.%H:%M')}"
-        if len(pivot_info['is_overlap_of'] or '') > 0:
+        if pd.notna(pivot_info['is_overlap_of']):
             output += f"O{pivot_info['is_overlap_of']}"
         return output
 

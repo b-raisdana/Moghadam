@@ -225,7 +225,6 @@ class BasePatternStrategy(ExtendedStrategy):
 
 
 def test_strategy(cash: float, date_range_str: str = None):
-    # todo: add commission
     if date_range_str is None:
         date_range_str = config.processing_date_range
     cerebro = bt.Cerebro()
@@ -240,7 +239,7 @@ def test_strategy(cash: float, date_range_str: str = None):
     # cerebro.addwriter(bt.WriterFile, csv=True)
 
     cerebro.broker.set_cash(cash)
-    cerebro.broker.set_fundmode(True, 0.02)  # 0.02 BTC ~= 1000 USD
+    cerebro.broker.set_fundmode(False)  # 0.02 BTC ~= 1000 USD
 
     print('Starting Portfolio Value: %.2f' % cerebro.broker.getvalue())
     cerebro.run()

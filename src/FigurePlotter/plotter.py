@@ -95,9 +95,55 @@ def file_id(data: pd.DataFrame, name: str = '') -> str:
         return f'{name}.{date_range_of_data(data)}'
 
 
-def timeframe_color(timeframe: str) -> str:
+def show_and_save_plot(fig: plgo.Figure, save: bool, show: bool, name_without_prefix: str, path_of_directory: str = None):
+    if path_of_directory is None:
+        path_of_directory = config.path_of_plots
+    file_path = os.path.join(path_of_directory, f'{name_without_prefix}.html')
+    with open(file_path, "w", encoding="utf-8") as file:
+        file.write(fig.to_html())
+    if show:
+        full_path = os.path.abspath(file_path)
+        webbrowser.register('firefox',
+                            None,
+                            webbrowser.BackgroundBrowser("C://Program Files//Mozilla Firefox//firefox.exe"))
+        webbrowser.get('firefox').open(f'file://{full_path}')
+        # display(combined_html, raw=True, clear=True)  # Show the final HTML in the browser
+    if not save:
+        os.remove(file_path)
 
-    h = (config.timeframes.index(timeframe)*20 + 120) % 360
+
+def update_figure_layout(fig):
+    fig.update_layout({
+        'width': config.figure_width,  # Set the width of the plot
+        'height': config.figure_height,
+        'legend': {
+            'font': {
+                'size': config.figure_font_size
+            },
+            'tracegroupgap': 1,
+        },
+        'legend_title': {
+            'font': {
+                'size': config.figure_font_size
+            },
+        },
+        'hoverlabel': {
+            'font': {
+                'size': config.figure_font_size
+            },
+            'grouptitlefont': {
+                'size': config.figure_font_size
+            },
+        },
+        'hovermode': 'x unified',
+    })
+
+
+def timeframe_color(timeframe: str) -> str:
+    h = (config.timeframes.index(timeframe) * 20 + 120) % 360
     s, b = (1, 1)
     r, g, b = [int(x * 255) for x in colorsys.hsv_to_rgb(h / 360, s, b)]
     return f'rgb({r},{g},{b})'
+
+
+INFINITY_TIME_DELTA = config.INFINITY_TIME_DELTA

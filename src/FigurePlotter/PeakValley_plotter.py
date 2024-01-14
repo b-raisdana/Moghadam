@@ -5,7 +5,7 @@ from plotly import graph_objects as plgo
 from Config import config
 from helper.data_preparation import single_timeframe, df_timedelta_to_str
 from FigurePlotter.OHLVC_plotter import plot_ohlcva
-from FigurePlotter.plotter import plot_multiple_figures, file_id, timeframe_color, save_figure
+from FigurePlotter.plotter import plot_multiple_figures, file_id, timeframe_color, save_figure, update_figure_layout
 from PanderaDFM.PeakValley import MultiTimeframePeakValley
 from PeakValley import peaks_only, valleys_only, major_peaks_n_valleys
 from atr import read_multi_timeframe_ohlcva
@@ -73,8 +73,11 @@ def plot_peaks_n_valleys(ohlcva: pd = pd.DataFrame(columns=['open', 'high', 'low
                             hovertemplate="%{text}", text=_labels)
         fig.update_layout(hovermode='x unified')
     # fig.update_layout(title_text=name)
-
+    update_figure_layout(fig)
     if show: fig.show()
     if save:
         save_figure(fig, f'peaks_n_valleys.{file_id(ohlcva, name)}', )
     return fig
+
+
+

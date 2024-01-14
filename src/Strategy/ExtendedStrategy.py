@@ -319,8 +319,10 @@ class ExtendedStrategy(bt.Strategy):
     def log_order(self, order: bt.Order, index=None):
         if index is None:
             index = order.ref
-        t_dict = dict_of_list(dict_of_order(order))
-        self.orders_df = concat(self.orders_df, pd.DataFrame(t_dict, index=[self.candle().date]))
+        order_dict = dict_of_list(dict_of_order(order))
+        vault_dict = self.get_vault()
+        order_dict = order_dict | vault_dict
+        self.orders_df = concat(self.orders_df, pd.DataFrame(order_dict, index=[self.candle().date]))
         if self.orders_df.index.name != 'date':
             self.orders_df.index.name = 'date'
 
@@ -353,6 +355,7 @@ class ExtendedStrategy(bt.Strategy):
         _dict[f"{asset}_position_upclosed"] = position.upclosed
         _dict[f"{asset}_position_updt"] = position.updt
         _dict[f"{asset}_position_upopened"] = position.upopened
+        # _dict = _dict | self.broker.positions.__dict__
         _dict = dict_of_list(_dict)
         return _dict
 
@@ -366,27 +369,12 @@ class ExtendedStrategy(bt.Strategy):
                 order_name(order) in self.signal_df['take_profit_order_id'].dropna().tolist()
         ):
             raise AssertionError(f"{order_name(order)} not found in tracked orders!")
-        # if order.isbuy():
-        #     size_positiver = 1
-        # else:
-        #     size_positiver = -1
-        # if not ((order.size * size_positiver) > 0):
-        #     raise AssertionError("not ((order.size * size_positiver) > 0)")
-        # if not ((order.size * size_positiver) > 1 / 43000):  # , "Order size less than 1 dollar"
-        #     raise AssertionError("not ((order.size * size_positiver) > 1 / 43000)")
         if order.status in [order.Submitted, order.Accepted]:
             # Order has been submitted or accepted
             log_d(f"Order:{order_name(order)} Submitted")
         elif order.status in [order.Completed]:
             # Order has been completed (executed)
             log_d(f"Order:{order_name(order)} Completed")
-            # if order.info['custom_type'] == BracketOrderType.Original.value:
-            #     # the original order executed so we have to add the risk to total risk
-            #     order_group_id = order.info['order_group']
-            #     price = order.executed.price
-            #     stop_loss_price = self.order_groups[order_group_id]['stop_loss_price']
-            #     true_risk = abs((price - stop_loss_price) * order.executed.size)
-            #     self.true_risked_money += true_risk
             vault_dict = self.get_vault()
             log_d(f"Vault({self.candle().date}): " + ", ".join([f"{k}:{v}" for k, v in vault_dict.items()]))
         elif order.status in [order.Partial]:

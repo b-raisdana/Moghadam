@@ -5,7 +5,8 @@ from typing import Literal
 import pandas as pd
 import pandera.typing as pt
 
-from Config import config, INFINITY_TIME_DELTA, TopTYPE
+from Config import config, TopTYPE
+from FigurePlotter.plotter import INFINITY_TIME_DELTA
 from MetaTrader import MT
 from PanderaDFM.OHLCV import OHLCV
 from PanderaDFM.PeakValley import PeakValley, MultiTimeframePeakValley
@@ -78,11 +79,11 @@ def calculate_distance(ohlcv: pt.DataFrame[OHLCV], peaks_or_valleys: pt.DataFram
             nop = 1
             pass
         if direction == 'right':
-            ohlcv['left_top_time'].ffill(inplace=True)
-            ohlcv['left_top_value'].ffill(inplace=True)
+            ohlcv['left_top_time'] = ohlcv['left_top_time'].ffill()
+            ohlcv['left_top_value'] = ohlcv['left_top_value'].ffill()
         else:  # direction == 'left'
-            ohlcv['right_top_time'].bfill(inplace=True)
-            ohlcv['right_top_value'].bfill(inplace=True)
+            ohlcv['right_top_time'] = ohlcv['right_top_time'].bfill()
+            ohlcv['right_top_value'] = ohlcv['right_top_value'].bfill()
         # if high/low of OHLCV is higher/lower than peak/valley high/low it is crossing the peak/valley
         ohlcv[f'{direction}_crossing'] = more_significant(ohlcv[compare_column], ohlcv[reverse + '_top_value'])
         crossing_ohlcv = ohlcv[ohlcv[f'{direction}_crossing'] == True].index
@@ -100,11 +101,11 @@ def calculate_distance(ohlcv: pt.DataFrame[OHLCV], peaks_or_valleys: pt.DataFram
         if direction.lower() == 'left':
             pass
         if direction == 'right':
-            ohlcv[f'{direction}_crossing_time'].bfill(inplace=True)
-            ohlcv[f'{direction}_crossing_value'].bfill(inplace=True)
+            ohlcv[f'{direction}_crossing_time'] = ohlcv[f'{direction}_crossing_time'].bfill()
+            ohlcv[f'{direction}_crossing_value'] = ohlcv[f'{direction}_crossing_value'].bfill()
         else:  # direction == 'left'
-            ohlcv[f'{direction}_crossing_time'].ffill(inplace=True)
-            ohlcv[f'{direction}_crossing_value'].ffill(inplace=True)
+            ohlcv[f'{direction}_crossing_time'] = ohlcv[f'{direction}_crossing_time'].ffill()
+            ohlcv[f'{direction}_crossing_value'] = ohlcv[f'{direction}_crossing_value'].ffill()
         ohlcv['masked_ohlcv'] = les_significant(ohlcv[compare_column], ohlcv[f'{direction}_crossing_value'])
         masked_ohlcv = ohlcv[ohlcv['masked_ohlcv'] == True].index
         crossed_tops = masked_ohlcv.intersection(top_indexes)

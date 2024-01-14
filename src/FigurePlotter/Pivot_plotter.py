@@ -4,7 +4,7 @@ from plotly import graph_objects as plgo
 
 from Config import config
 from FigurePlotter.OHLVC_plotter import plot_ohlcv
-from FigurePlotter.plotter import save_figure, file_id, timeframe_color
+from FigurePlotter.plotter import save_figure, file_id, timeframe_color, show_and_save_plot
 from PanderaDFM.Pivot import MultiTimeframePivot, Pivot
 from helper.data_preparation import single_timeframe
 from helper.helper import measure_time
@@ -74,9 +74,5 @@ def plot_multi_timeframe_pivots(multi_timeframe_pivots: pt.DataFrame[MultiTimefr
             name=pivot_name, line=dict(color=timeframe_color(pivot_timeframe), width=0), mode='lines',  # +text',
             legendgroup=pivot_name,  # hoverinfo='text', text=pivot_description,
         )
-    if save or html_path != '':
-        file_name = f'{file_id(base_ohlcv, name)}'
-        save_figure(fig, file_name, html_path)
-
-    if show: fig.show()
+    show_and_save_plot(fig, save, show, name_without_prefix=f'multi_timeframe_classic_pivots.{date_range_str}')
     return fig

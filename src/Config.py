@@ -2,7 +2,6 @@ import base64
 import hashlib
 import json
 import os
-import sys
 from dataclasses import dataclass
 from datetime import timedelta
 from enum import Enum
@@ -106,16 +105,16 @@ class Config():
         self.base_pattern_index_shift_after_last_candle_in_the_sequence = 1  # >1 means make sure the last candle is closed
         self.base_pattern_order_limit_price_margin_percentage = 0.1
         self.base_pattern_order_limit_price_margin_percentage = 0.05  # 5%
-        self.base_pattern_risk_reward_rate = 5  # 500%
+        self.base_pattern_risk_reward_rate = 8  # 800%
         # base patterns with size of less than n * atr (of base time frame) are not enough big to be back tested.
         self.base_pattern_small_to_trace_in_base_candles_atr_factor = 3
         self.initial_cash = 1000.0
         self.risk_per_order_percent = 0.01  # 1%
         self.capital_max_total_risk_percentage = 0.1  # 10%
 
-        self.figure_width = 1400
-        self.figure_height = 850
-        self.figure_font_size = 8
+        self.figure_width = 1700
+        self.figure_height = 900
+        self.figure_font_size = 7
 
         self.id = ""
 
@@ -143,8 +142,6 @@ if not os.path.exists(dump_filename):
 
 config.id = config_digest
 config.GLOBAL_CACHE = {}
-
-INFINITY_TIME_DELTA = config.INFINITY_TIME_DELTA
 
 
 def check_working_directory():

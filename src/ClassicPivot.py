@@ -191,9 +191,10 @@ def generate_multi_timeframe_pivot_levels(date_range_str: str = None):
             timeframe of trend
             timeframe of top
     """
+    raise NotImplementedError
     if date_range_str is None:
         date_range_str = config.processing_date_range
-    multi_timeframe_pivots = read_pivots(date_range_str)
+    multi_timeframe_pivots = read_classic_pivots(date_range_str)
     for (pivot_timeframe, pivot_time), pivot_info in multi_timeframe_pivots.sort_index(level='date'):
         multi_timeframe_pivots.loc[(pivot_timeframe, pivot_time), 'is_overlap_of'] = \
             pivot_exact_overlapped(pivot_time, multi_timeframe_pivots)
@@ -203,7 +204,7 @@ def generate_multi_timeframe_pivot_levels(date_range_str: str = None):
     update_levels()
 
 
-def read_pivots(date_range_str) -> pt.DataFrame[Pivot]:
+def read_classic_pivots(date_range_str) -> pt.DataFrame[MultiTimeframePivot]:
     multi_timeframe_bull_bear_side_pivots = read_multi_timeframe_bull_bear_side_pivots(date_range_str)
     multi_timeframe_anti_pattern_tops_pivots = read_multi_timeframe_top_pivots(date_range_str)
     # multi_timeframe_color_trend_pivots = read_multi_timeframe_color_trend_pivots()

@@ -5,7 +5,7 @@ from plotly import graph_objects as plgo
 from plotly.subplots import make_subplots
 
 from Config import config, CandleSize
-from FigurePlotter.plotter import plot_multiple_figures, file_id, DEBUG, save_figure
+from FigurePlotter.plotter import plot_multiple_figures, file_id, DEBUG, save_figure, update_figure_layout
 from PanderaDFM.OHLCV import OHLCV
 from PanderaDFM.OHLCVA import MultiTimeframeOHLCVA
 from helper.data_preparation import single_timeframe
@@ -69,15 +69,7 @@ def plot_ohlcv(ohlcv: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']
             close=base_ohlcv['close']
             , name=config.timeframes[0]
         )
-    fig.update_layout({
-        'width': 1800,  # Set the width of the plot
-        'height': 900,
-        'legend': {
-            'font': {
-                'size': 8
-            }
-        }
-    })
+    update_figure_layout(fig)
     if show: fig.show()
     if save:
         file_name = f'ohlcv.{file_id(ohlcv, name)}'
@@ -89,6 +81,68 @@ def plot_ohlcv(ohlcv: pd = pd.DataFrame(columns=['open', 'high', 'low', 'close']
 @measure_time
 def plot_ohlcva(ohlcva: pd.DataFrame, save: bool = True, show: bool = True, name: str = '',
                 base_ohlcv: pt.DataFrame[OHLCV] = None) -> plgo.Figure:
+    """
+    Plot OHLC data with an additional atr (Average True Range) boundary.
+
+    The function plots OHLC data as a candlestick chart and adds an atr boundary to the plot.
+    The boundary's middle is calculated as the average of the candle's open and close,
+    and the width of the boundary is equal to the atr value for each data point.
+
+    Parameters:
+        ohlcva (pd.DataFrame): A DataFrame containing OHLC data along with the 'atr' column representing the atr values.
+        save (bool): If True, the plot is saved as an HTML file.
+        show (bool): If True, the plot is displayed in the browser.
+
+    Returns:
+        None
+
+    Example:
+        # Assuming you have the 'ohlcva' DataFrame with the required columns (open, high, low, close, atr)
+        date_range_str = "17-10-06.00-00T17-10-06"
+        plot_ohlcva(ohlcva, date_range_str)
+        :param save:
+        :param base_ohlcv:
+        :param show:
+        :param ohlcva:
+        :param name:
+    """
+    # Calculate the middle of the boundary (average of open and close)
+    midpoints = (ohlcva['high'] + ohlcva['low']) / 2
+    # Create a figure using the plot_ohlcv function
+    fig = plot_ohlcv(ohlcva[['open', 'high', 'low', 'close']], base_ohlcv, show=False, save=False, name=name)
+
+    # Add the atr boundaries
+    fig = add_atr_scatter(fig, ohlcva.index, midpoints=midpoints,
+                          widths=CandleSize.Spinning.value.max * ohlcva['atr'],
+                          name='Standard')
+    fig = add_atr_scatter(fig, ohlcva.index, midpoints=midpoints,
+                          widths=CandleSize.Standard.value.max * ohlcva['atr'],
+                          name='Long')
+    fig = add_atr_scatter(fig, ohlcva.index, midpoints=midpoints,
+                          widths=CandleSize.Long.value.max * ohlcva['atr'],
+                          name='Spike')
+
+    fig.add_scatter(x=ohlcva.index, y=midpoints,
+                    mode='none',
+                    showlegend=False,
+                    text=[f'atr: {atr:0.1f}' for atr in ohlcva['atr']],
+                    hoverinfo='text')
+
+    fig.update_layout(hovermode='x unified')
+
+    # Show the figure or write it to an HTML file
+    if save:
+        file_name = f'ohlcva.{file_id(ohlcva, name)}'
+        save_figure(fig, file_name)
+
+    if show:
+        fig.show()
+    return fig
+
+
+@measure_time
+def plot_ohlcva_with_subplot(ohlcva: pd.DataFrame, save: bool = True, show: bool = True, name: str = '',
+                             base_ohlcv: pt.DataFrame[OHLCV] = None) -> plgo.Figure:
     """
     Plot OHLC data with an additional atr (Average True Range) boundary.
 
@@ -167,7 +221,8 @@ def plot_ohlcva(ohlcva: pd.DataFrame, save: bool = True, show: bool = True, name
         yaxis2=dict(
             fixedrange=False  # Allows zooming on the y-axis for the second subplot
         ),
-        height=800, width=1200, title_text=name)
+        # height=800, width=1200,
+        title_text=name)
     master_fig.update_yaxes(title_text="Price", row=1, col=1)
     master_fig.update_yaxes(title_text="atr", row=2, col=1)
 
@@ -182,7 +237,8 @@ def plot_ohlcva(ohlcva: pd.DataFrame, save: bool = True, show: bool = True, name
 
 
 def add_atr_scatter(fig: plgo.Figure, xs: pd.Series, midpoints: pd.Series, widths: pd.Series,
-                    transparency: float = 0.2, name: str = 'atr', legendgroup: str = None, showlegend=False) -> plgo.Figure:
+                    transparency: float = 0.2, name: str = 'atr', legendgroup: str = None,
+                    showlegend=True) -> plgo.Figure:
     xs = xs.tolist()
     half_widths = widths.fillna(value=0).div(2)
     upper_band: pd.Series = midpoints + half_widths
@@ -203,15 +259,7 @@ def add_atr_scatter(fig: plgo.Figure, xs: pd.Series, midpoints: pd.Series, width
 
 def plot_merged_timeframe_ohlcva(multi_timeframe_ohlcva: pt.DataFrame[MultiTimeframeOHLCVA]):
     fig = plgo.Figure()
-    fig.update_layout({
-        'width': config.figure_width,  # Set the width of the plot
-        'height': config.figure_height,
-        'legend': {
-            'font': {
-                'size': config.figure_font_size
-            }
-        }
-    })
+    update_figure_layout(fig)
     multi_timeframe_ohlcva_timeframes = multi_timeframe_ohlcva.index.get_level_values('timeframe').unique()
     timeframe_list = [timeframe for timeframe in config.timeframes if timeframe in multi_timeframe_ohlcva_timeframes]
     for timeframe in timeframe_list:
@@ -226,5 +274,5 @@ def plot_merged_timeframe_ohlcva(multi_timeframe_ohlcva: pt.DataFrame[MultiTimef
         add_atr_scatter(fig, ohlcva.index, midpoints=midpoints,
                         widths=CandleSize.Spinning.value.max * ohlcva['atr'],
                         name='Standard', legendgroup=timeframe, showlegend=False)
-    fig.update_layout(hovermode='x unified')
+
     return fig

@@ -13,7 +13,7 @@ from PanderaDFM.Pivot import MultiTimeframePivot
 from PeakValley import read_multi_timeframe_peaks_n_valleys, major_peaks_n_valleys
 from PivotsHelper import pivots_level_n_margins, level_ttl
 from atr import read_multi_timeframe_ohlcva
-from helper.data_preparation import single_timeframe, expected_movement_size, trigger_timeframe, read_file, \
+from helper.data_preparation import single_timeframe, fine_tune_expected_movement_size, trigger_timeframe, read_file, \
     cast_and_validate, anti_pattern_timeframe, after_under_process_date, empty_df, concat
 from helper.helper import measure_time
 
@@ -29,7 +29,8 @@ def remove_overlapping_trends(timeframe_trends: pt.DataFrame[BullBearSide]) -> p
             pd.DataFrame[Strategy.BullBearSide.BullBearSide]: A DataFrame with overlapping trends removed.
         """
     # Group the DataFrame by 'date' and find the index of the row with the maximum 'movement' within each group
-    max_movement_indices = timeframe_trends.groupby('movement_start_time')['movement'].idxmax()
+    # max_movement_indices = timeframe_trends.groupby('movement_start_time')['movement'].idxmax()
+    max_movement_indices = timeframe_trends.groupby('movement_end_time')['movement'].idxmax()
 
     # Select the rows with the maximum 'movement' based on the indices
     deduplicated_trends = timeframe_trends.loc[max_movement_indices]
@@ -37,7 +38,33 @@ def remove_overlapping_trends(timeframe_trends: pt.DataFrame[BullBearSide]) -> p
     return deduplicated_trends
 
 
-def multi_timeframe_bull_bear_side_pivots(date_range_str: str = None, timeframe_shortlist: List['str'] = None) \
+def multi_timeframe_simplified_bull_bear_side_pivots(date_range_str: str = None,
+                                                     structure_timeframe_shortlist: List['str'] = None) \
+        -> pt.DataFrame[MultiTimeframePivot]:
+    """
+    movement_start_value: pt.Series[float] = pandera.Field(nullable=True)
+    movement_end_value: pt.Series[float] = pandera.Field(nullable=True)
+    movement_start_time: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
+    movement_end_time
+    :param date_range_str:
+    :param structure_timeframe_shortlist:
+    :return:
+    """
+    """
+        if the boundary movement > 3 ATR:
+            pivot_return:
+                first candle after movement_end_time:
+                    Bullish: low < movement_end_value - 1 ATR
+                    Bearish: high > movement_end_value + 1 ATR
+
+    :param date_range_str:
+    :param structure_timeframe_shortlist:
+    :return:
+    """
+    multi_timeframe_trends = read_multi_timeframe_bull_bear_side_trends(date_range_str)
+
+
+def multi_timeframe_bull_bear_side_pivots(date_range_str: str = None, structure_timeframe_shortlist: List['str'] = None) \
         -> pt.DataFrame[MultiTimeframePivot]:
     """
     highest high of every Bullish and lowest low of every Bearish trend. for Trends
@@ -63,51 +90,44 @@ def multi_timeframe_bull_bear_side_pivots(date_range_str: str = None, timeframe_
     multi_timeframe_trends = read_multi_timeframe_bull_bear_side_trends(date_range_str)
     multi_timeframe_peaks_n_valleys = read_multi_timeframe_peaks_n_valleys(date_range_str)
     multi_timeframe_ohlcva = read_multi_timeframe_ohlcva(date_range_str)
-    # multi_timeframe_pivots = pd.DataFrame()
     multi_timeframe_pivots = empty_df(MultiTimeframePivot)
-    if timeframe_shortlist is None:
-        timeframe_shortlist = config.structure_timeframes[::-1]
-    for timeframe in timeframe_shortlist:
-        single_timeframe_peaks_n_valleys = major_peaks_n_valleys(multi_timeframe_peaks_n_valleys, timeframe)
+    if structure_timeframe_shortlist is None:
+        structure_timeframe_shortlist = config.structure_timeframes[::-1]
+    for timeframe in structure_timeframe_shortlist:
+        timeframe_peaks_n_valleys = major_peaks_n_valleys(multi_timeframe_peaks_n_valleys, timeframe)
         timeframe_ohlcva = single_timeframe(multi_timeframe_ohlcva, timeframe)
         trigger_timeframe_ohlcva = single_timeframe(multi_timeframe_ohlcva, trigger_timeframe(timeframe))
         timeframe_trends = single_timeframe(multi_timeframe_trends, timeframe)
-        _expected_movement_size = expected_movement_size(timeframe_trends['atr'])
         if len(timeframe_trends) > 0:
-            if timeframe == '15min':
-                pass
+            expected_movement_size = fine_tune_expected_movement_size(timeframe_trends['atr'])
             timeframe_trends['previous_trend'], timeframe_trends['previous_trend_movement'] = \
                 previous_trend(timeframe_trends)
-            _pivot_trends = timeframe_trends[
-                (timeframe_trends['movement'] > _expected_movement_size)
-                & (timeframe_trends['previous_trend_movement'] > _expected_movement_size * 3)
+            pivot_trends = timeframe_trends[
+                (timeframe_trends['movement'] > expected_movement_size)
+                & (timeframe_trends['previous_trend_movement'] > expected_movement_size * 3)
                 ]
-            _pivot_trends = remove_overlapping_trends(_pivot_trends)
-            # _pivot_trends = _pivot_trends.groupby('movement_start_time', group_keys=False).apply(
-            #     lambda x: x.loc[x['movement_start_time'].idxmin()])
-            if len(_pivot_trends) > 0:
+            pivot_trends = remove_overlapping_trends(pivot_trends)
+            if len(pivot_trends) > 0:
                 """
                 start of a trend considered as a Pivot if:
-                    the movement of trend is > _expected_movement_size
-                    the movement of previous trend is > _expected_movement_size * 3
+                    the movement of trend is > expected_movement_size
+                    the movement of previous trend is > expected_movement_size * 3
                 """
                 timeframe_pivots = (
-                    pd.DataFrame(data={'date': _pivot_trends['movement_start_time'], 'ttl': None, 'hit': 0})
+                    pd.DataFrame(data={'date': pivot_trends['movement_start_time'], 'ttl': None, 'hit': 0})
                     .set_index('date'))
                 timeframe_pivots['activation_time'] = timeframe_pivots.index
                 timeframe_pivots['movement_start_time'] = \
-                    timeframe_trends.loc[_pivot_trends['previous_trend'], 'movement_start_time'].to_list()
+                    timeframe_trends.loc[pivot_trends['previous_trend'], 'movement_start_time'].to_list()
                 timeframe_pivots['movement_start_value'] = \
-                    timeframe_trends.loc[_pivot_trends['previous_trend'], 'movement_start_value'].to_list()
-                timeframe_pivots['return_end_time'] = _pivot_trends['movement_end_time'].to_list()
-                timeframe_pivots['return_end_value'] = _pivot_trends['movement_end_value'].to_list()
+                    timeframe_trends.loc[pivot_trends['previous_trend'], 'movement_start_value'].to_list()
+                timeframe_pivots['return_end_time'] = pivot_trends['movement_end_time'].to_list()
+                timeframe_pivots['return_end_value'] = pivot_trends['movement_end_value'].to_list()
 
                 # find the Peaks and Valleys align with the Pivot
-                timeframe_peaks_and_valleys = single_timeframe_peaks_n_valleys.loc[
-                    single_timeframe_peaks_n_valleys.index.get_level_values('date').isin(timeframe_pivots.index)]
-                # timeframe_pivots = pivots_level_n_margins( timeframe_peaks_and_valleys, timeframe_pivots, timeframe, timeframe_ohlcva,
-                #                                  trigger_timeframe_ohlcva)
-                timeframe_pivots = pivots_level_n_margins(pivot_peaks_or_valleys=timeframe_peaks_and_valleys,
+                pivot_peaks_n_valleys = timeframe_peaks_n_valleys.loc[
+                    timeframe_peaks_n_valleys.index.get_level_values('date').isin(timeframe_pivots.index)]
+                timeframe_pivots = pivots_level_n_margins(pivot_peaks_n_valleys=pivot_peaks_n_valleys,
                                                           timeframe_pivots=timeframe_pivots,
                                                           timeframe=timeframe,
                                                           candle_body_source=timeframe_ohlcva,

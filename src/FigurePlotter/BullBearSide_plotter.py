@@ -7,7 +7,7 @@ import PeakValley
 from BullBearSide import most_two_significant_tops
 from Config import TREND, config, TopTYPE
 from FigurePlotter.PeakValley_plotter import plot_peaks_n_valleys
-from FigurePlotter.plotter import file_id, save_figure, plot_multiple_figures
+from FigurePlotter.plotter import file_id, save_figure, plot_multiple_figures, update_figure_layout
 from PanderaDFM.BullBearSide import BullBearSide, bull_bear_side_repr
 from PanderaDFM.OHLCV import OHLCV
 from PeakValley import peaks_only, valleys_only, major_peaks_n_valleys
@@ -31,44 +31,52 @@ def plot_single_timeframe_bull_bear_side_trends(single_timeframe_ohlcva: pt.Data
         included_candles = single_timeframe_ohlcva.loc[_start: _trend['end']].index
         trend_peaks = peaks_only(trend_peaks_n_valleys)['high'].sort_index(level='date')
         trend_valleys = valleys_only(trend_peaks_n_valleys)['low'].sort_index(level='date', ascending=False)
-        xs = [_start] + trend_peaks.index.get_level_values('date').tolist() + \
-             [_trend['end']] + trend_valleys.index.get_level_values('date').tolist()[::-1]
-        ys = [single_timeframe_ohlcva.loc[_start, 'open']] + trend_peaks.values.tolist() + \
-             [single_timeframe_ohlcva.loc[_trend['end'], 'close']] + trend_valleys.values.tolist()[::-1]
         fill_color = 'green' if _trend['bull_bear_side'] == TREND.BULLISH.value else \
             'red' if _trend['bull_bear_side'] == TREND.BEARISH.value else 'gray'
         text = bull_bear_side_repr(_start, _trend)
+        name = (f'{_trend["bull_bear_side"].replace("_TREND", "")}: '
+                f'{_start.strftime("%H:%M")}-{_trend["end"].strftime("%H:%M")}')
+        legendgroup = (f'{_trend["bull_bear_side"].replace("_TREND", "")}: '
+                       f'{_start.strftime("%H:%M")}-{_trend["end"].strftime("%H:%M")}')
         if remained_number_of_scatters > 0:
+            # draw boundary
+            xs = [_start] + trend_peaks.index.get_level_values('date').tolist() + \
+                 [_trend['end']] + trend_valleys.index.get_level_values('date').tolist()
+            ys = [single_timeframe_ohlcva.loc[_start, 'open']] + trend_peaks.values.tolist() + \
+                 [single_timeframe_ohlcva.loc[_trend['end'], 'close']] + trend_valleys.values.tolist()
             fig.add_scatter(x=xs, y=ys, fill="toself",  # fillcolor=fill_color,
                             fillpattern=dict(fgopacity=0.5, shape='.'),
-                            name=f'{_trend["bull_bear_side"].replace("_TREND", "")}: '
-                                 f'{_start.strftime("%H:%M")}-{_trend["end"].strftime("%H:%M")}',
+                            name=name,
+                            text=text,
                             line=dict(color=fill_color, width=0),
                             mode='lines',  # +text',
-                            legendgroup=f'{_trend["bull_bear_side"].replace("_TREND", "")}: '
-                                        f'{_start.strftime("%H:%M")}-{_trend["end"].strftime("%H:%M")}',
+                            legendgroup=legendgroup,
+                            hoverinfo='text',
                             )
+            # adds hover info to all candles
             fig.add_scatter(x=included_candles, y=single_timeframe_ohlcva.loc[included_candles, 'open'],
+                            name=name,
                             mode='none',
                             showlegend=False,
                             text=text,
-                            legendgroup=f'{_trend["bull_bear_side"].replace("_TREND", "")}: '
-                                        f'{_start.strftime("%H:%M")}-{_trend["end"].strftime("%H:%M")}',
+                            legendgroup=legendgroup,
                             hoverinfo='text')
-
+            # adds movement line
             if 'movement_start_value' in boundaries.columns:
                 fig.add_scatter(x=[_trend['movement_start_time'], _trend['movement_end_time']],
                                 y=[_trend['movement_start_value'], _trend['movement_end_value']],
+                                name=name,
+                                text=text,
                                 line=dict(color=fill_color),
-                                legendgroup=f'{_trend["bull_bear_side"].replace("_TREND", "")}: '
-                                            f'{_start.strftime("%H:%M")}-{_trend["end"].strftime("%H:%M")}',
+                                legendgroup=legendgroup,
+                                hoverinfo='text',
                                 )
             else:
                 log(f'movement not found in boundaries:{boundaries.columns}', stack_trace=False)
             remained_number_of_scatters -= 2
         else:
             break
-
+    update_figure_layout(fig)
     if save or html_path != '':
         file_name = f'single_timeframe_bull_bear_side_trends.{file_id(single_timeframe_ohlcva, name)}'
         save_figure(fig, file_name, html_path)
