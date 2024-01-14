@@ -42,6 +42,19 @@ def multi_timeframe_simplified_bull_bear_side_pivots(date_range_str: str = None,
                                                      structure_timeframe_shortlist: List['str'] = None) \
         -> pt.DataFrame[MultiTimeframePivot]:
     """
+    for timeframe:
+        peaks/valleys with any :
+            -valley/peak after it's previous peaks/valleys which ist's high/low is
+                3 ATR gt/lt peaks/valleys high/low and
+
+
+
+    :param date_range_str:
+    :param structure_timeframe_shortlist:
+    :return:
+    """
+
+    """
     movement_start_value: pt.Series[float] = pandera.Field(nullable=True)
     movement_end_value: pt.Series[float] = pandera.Field(nullable=True)
     movement_start_time: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
@@ -53,15 +66,19 @@ def multi_timeframe_simplified_bull_bear_side_pivots(date_range_str: str = None,
     """
         if the boundary movement > 3 ATR:
             pivot_return:
-                first candle after movement_end_time:
+                there is no trend ends between this trend's end and first candle after movement_end_time:
                     Bullish: low < movement_end_value - 1 ATR
                     Bearish: high > movement_end_value + 1 ATR
-
     :param date_range_str:
     :param structure_timeframe_shortlist:
     :return:
     """
     multi_timeframe_trends = read_multi_timeframe_bull_bear_side_trends(date_range_str)
+    long_trends = multi_timeframe_trends[multi_timeframe_trends['movement'] >= multi_timeframe_trends['atr']]
+    # if there is a trand which ends after the trend, if there is a >= 1 ATR jump between their end, we have a pivot.
+    for index, trend in long_trends.iterrows():
+        return_time = first_return_confirmation_candle()
+
     raise NotImplementedError
 
 
