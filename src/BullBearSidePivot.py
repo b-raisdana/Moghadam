@@ -62,6 +62,7 @@ def multi_timeframe_simplified_bull_bear_side_pivots(date_range_str: str = None,
     :return:
     """
     multi_timeframe_trends = read_multi_timeframe_bull_bear_side_trends(date_range_str)
+    raise NotImplementedError
 
 
 def multi_timeframe_bull_bear_side_pivots(date_range_str: str = None, structure_timeframe_shortlist: List['str'] = None) \

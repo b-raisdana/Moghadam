@@ -6,11 +6,11 @@ from pandera import typing as pt
 from Config import config
 from MetaTrader import MT
 from PanderaDFM.Pivot import MultiTimeframePivot
-from PeakValley import read_multi_timeframe_peaks_n_valleys, major_peaks_n_valleys
+from PeakValley import read_multi_timeframe_peaks_n_valleys
 from PivotsHelper import pivots_level_n_margins, level_ttl
 from atr import read_multi_timeframe_ohlcva
 from helper.data_preparation import single_timeframe, anti_trigger_timeframe, cast_and_validate, \
-    read_file, after_under_process_date, empty_df, concat, trigger_timeframe
+    read_file, after_under_process_date, empty_df, concat
 from helper.helper import measure_time
 
 
@@ -29,11 +29,6 @@ def tops_pivots(date_range_str) -> pt.DataFrame[MultiTimeframePivot]:
     '''
     _multi_timeframe_peaks_n_valleys = read_multi_timeframe_peaks_n_valleys(date_range_str)
     _multi_timeframe_ohlcva = read_multi_timeframe_ohlcva(date_range_str)
-    # # config.timeframes[0:1] does not have trigger time
-    # peaks_n_valleys_with_trigger_time = major_peaks_n_valleys(_multi_timeframe_peaks_n_valleys, config.timeframes[2])
-    # anti_trigger_tops = peaks_n_valleys_with_trigger_time
-    # anti_trigger_tops.index = anti_trigger_tops.index.set_levels(trigger_timeframe(peaks_n_valleys_with_trigger_time),
-    #                                                              level='timeframe')
     multi_timeframe_pivots = empty_df(MultiTimeframePivot)
     for timeframe in config.structure_timeframes[::-1][2:]:
         # 1W tops are creating classic levels for 4H, 1D for 1H and 4H for 15min structure Timeframes.
@@ -48,7 +43,6 @@ def tops_pivots(date_range_str) -> pt.DataFrame[MultiTimeframePivot]:
         timeframe_ohlcva = single_timeframe(_multi_timeframe_ohlcva, timeframe)
         trigger_timeframe_ohlcva = single_timeframe(_multi_timeframe_ohlcva, timeframe)  # trigger_timeframe(timeframe))
         _pivots = pivots_level_n_margins(pivot_peaks_n_valleys=_pivots, timeframe_pivots=_pivots,
-                                         # timeframe=anti_trigger_timeframe(timeframe),
                                          timeframe=timeframe,
                                          candle_body_source=timeframe_ohlcva,
                                          internal_atr_source=timeframe_ohlcva,
@@ -56,7 +50,7 @@ def tops_pivots(date_range_str) -> pt.DataFrame[MultiTimeframePivot]:
                                          )
         _pivots['activation_time'] = _pivots.index
         _pivots['ttl'] = _pivots.index + level_ttl(timeframe)
-        _pivots['hit'] = 0  # update_hits(multi_timeframe_pivots)
+        _pivots['hit'] = 0
         _pivots['is_overlap_of'] = None
         _pivots['deactivated_at'] = None
         _pivots['archived_at'] = None
@@ -69,6 +63,7 @@ def tops_pivots(date_range_str) -> pt.DataFrame[MultiTimeframePivot]:
     multi_timeframe_pivots = cast_and_validate(multi_timeframe_pivots, MultiTimeframePivot,
                                                zero_size_allowed=after_under_process_date(date_range_str))
     return multi_timeframe_pivots
+
 
 def zz_tops_pivots(date_range_str) -> pt.DataFrame[MultiTimeframePivot]:
     """
