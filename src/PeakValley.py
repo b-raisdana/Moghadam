@@ -164,8 +164,7 @@ def insert_crossing(base: pt.DataFrame[PeakValley], target: pt.DataFrame[OHLCV],
             target[f'{direction}_crossing_value'] = target[f'{direction}_crossing_value'].ffill()
         target['valid_crossing'] = les_significant(target[target_compare_column], target[f'{direction}_crossing_value'])
         valid_crossing_target = target[target['valid_crossing'] == True].index
-        base_index_mapped_to_target =
-        crossed_bases = bases_to_compare[bases_to_compare['target_index'].isin(valid_crossing_target)].index
+        crossed_bases = bases_to_compare[bases_to_compare['target_index'].isin(valid_crossing_target)].index # todo: test
         # crossed_bases = valid_crossing_target.intersection(base_indexes)
         number_of_crossed_bases = len(crossed_bases)
         if number_of_crossed_bases > 0:
