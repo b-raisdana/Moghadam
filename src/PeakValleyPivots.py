@@ -1,17 +1,102 @@
 import os
+from typing import Literal
 
 import pandas as pd
 from pandera import typing as pt
 
-from Config import config
+from Config import config, TopTYPE
 from MetaTrader import MT
 from PanderaDFM.Pivot import MultiTimeframePivot
-from PeakValley import read_multi_timeframe_peaks_n_valleys
+from PeakValley import read_multi_timeframe_peaks_n_valleys, peaks_only, valleys_only
 from PivotsHelper import pivots_level_n_margins, level_ttl
 from atr import read_multi_timeframe_ohlcva
 from helper.data_preparation import single_timeframe, anti_trigger_timeframe, cast_and_validate, \
     read_file, after_under_process_date, empty_df, concat
 from helper.helper import measure_time
+
+
+def atr_top_pivots(date_range_str: str = None, structure_timeframe_shortlist: List['str'] = None) \
+        -> pt.DataFrame[MultiTimeframePivot]:
+    """
+    for peaks:
+        (
+            (find first candle before far >= 3*ATR:
+                if there is not a peak between these 2)
+                and
+            (find first candle after far >= 1*ATR:
+                if there is not a peak between these 2)
+        ):
+            the peak is a pivot
+    :param date_range_str:
+    :param structure_timeframe_shortlist:
+    :return:
+    """
+
+    """
+    for timeframe:
+        peaks/valleys with any :
+            -valley/peak after it's previous peaks/valleys which ist's high/low is
+                3 ATR gt/lt peaks/valleys high/low and
+    """
+    # multi_timeframe_trends = read_multi_timeframe_bull_bear_side_trends(date_range_str)  # todo: test
+    mt_tops = read_multi_timeframe_peaks_n_valleys(date_range_str)
+    # add previous and next peaks and valleys
+    peaks = peaks_only(mt_tops)
+    valleys = valleys_only(mt_tops)
+    mt_tops = peak_or_valley_add_adjacent_tops(mt_tops, peaks, valleys, top_type)
+    # mt_tops['previous_peak_value'] = mt_tops.loc[mt_tops['previous_peak_time'].values(), 'high']
+    # merge valleys into tops to extract adjacent valley
+    mt_tops = pd.merge_asof(mt_tops, valleys[['adjacent_top']], left_index=True, right_on='forward_index',
+                            direction='forward',
+                            suffixes=("_x", ''))
+    mt_tops['next_valley_time'] = mt_tops['adjacent_top']
+    # mt_tops['next_valley_value'] = mt_tops.loc[mt_tops['next_valley_time'].values(), 'low']
+    mt_tops = pd.merge_asof(mt_tops, valleys[['adjacent_top']], left_index=True, right_on='backward_index',
+                            direction='backward',
+                            suffixes=("_x", ''))
+    mt_tops['previous_valley_time'] = mt_tops['adjacent_top']
+    # mt_tops['previous_valley_value'] = mt_tops.loc[mt_tops['previous_valley_time'].values(), 'low']
+    long_trends = multi_timeframe_trends[multi_timeframe_trends['movement'] >= multi_timeframe_trends['atr']]
+    # find peaks surrounded with enough far valleys:
+
+    """
+        movement_start_value: pt.Series[float] = pandera.Field(nullable=True)
+        movement_end_value: pt.Series[float] = pandera.Field(nullable=True)
+        movement_start_time: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
+        movement_end_time
+        """
+    """
+        if the boundary movement > 3 ATR:
+            pivot_return:
+                there is no trend ends between this trend's end and first candle after movement_end_time:
+                    Bullish: low < movement_end_value - 1 ATR
+                    Bearish: high > movement_end_value + 1 ATR
+    :param date_range_str:
+    :param structure_timeframe_shortlist:
+    :return:
+    """
+    # if there is a trand which ends after the trend, if there is a >= 1 ATR jump between their end, we have a pivot.
+    for index, trend in long_trends.iterrows():
+    # return_time = first_return_confirmation_candle()
+
+    raise NotImplementedError
+
+
+def peak_or_valley_add_adjacent_tops(mt_tops, tops, top_type: TopTYPE):
+    tops['forward_index'] = tops.index.shift(-1, freq=config.timeframe[0])
+    tops['backward_index'] = tops.index.shift(1, freq=config.timeframe[0])
+    tops['adjacent_top'] = tops.index
+    # merge peaks into tops to extract adjacent peaks
+    mt_tops = pd.merge_asof(mt_tops, tops[['adjacent_top']], left_index=True, right_on='forward_index',
+                            direction='forward',
+                            suffixes=("_x", ''))
+    mt_tops[f'next_{top_type.value}_time'] = mt_tops['adjacent_top']
+    # mt_tops['next_peak_value'] = mt_tops.loc[mt_tops['next_peak_time'].values(), 'high']
+    mt_tops = pd.merge_asof(mt_tops, tops[['adjacent_top']], left_index=True, right_on='backward_index',
+                            direction='backward',
+                            suffixes=("_x", ''))
+    mt_tops['previous_{top_type.value}_time'] = mt_tops['adjacent_top']
+    return mt_tops
 
 
 def tops_pivots(date_range_str) -> pt.DataFrame[MultiTimeframePivot]:

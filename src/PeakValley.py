@@ -46,8 +46,32 @@ def calculate_strength(peaks_or_valleys: pt.DataFrame[PeakValley], top_type: Top
 
 
 def calculate_distance(ohlcv: pt.DataFrame[OHLCV], peaks_or_valleys: pt.DataFrame[PeakValley], top_type: TopTYPE,
-                       direction: Literal['right', 'left']) -> pt.DataFrame[PeakValley]:
-    compare_column, direction, les_significant, more_significant, reverse = direction_parameters(direction, top_type)
+                       direction: Literal['right', 'left'], compare_column: str = None) -> pt.DataFrame[PeakValley]:
+    """
+    Calculates the distance of OHLCV data points from peaks or valleys in a specified direction.
+
+    Parameters:
+    - ohlcv (pt.DataFrame[OHLCV]): DataFrame containing OHLCV data.
+    - peaks_or_valleys (pt.DataFrame[PeakValley]): DataFrame containing peak/valley information.
+    - top_type (TopTYPE): Enum specifying whether peaks or valleys are considered.
+    - direction (Literal['right', 'left']): Direction to calculate distance ('right' for right, 'left' for left).
+    - compare_column (str, optional): Column to compare for peak/valley values. Defaults to None.
+
+    Returns:
+    - pt.DataFrame[PeakValley]: DataFrame with calculated distances for each peak or valley.
+
+    Columns Added to Returned DataFrame:
+    - right_distance or left_distance: Distance of each peak or valley in the specified direction.
+    - right_top_time or left_top_time: Time index of the top in the specified direction.
+    - right_top_value or left_top_value: Value of the top in the specified direction.
+    - right_crossing or left_crossing: Boolean indicating whether OHLCV data is crossing the peak/valley.
+    - right_crossing_time or left_crossing_time: Time index where the crossing occurs in the specified direction.
+    - right_crossing_value or left_crossing_value: Value of the OHLCV data at the crossing point in the specified direction.
+    - valid_crossing: Boolean indicating the validity of the crossing.
+    """
+    t_compare_column, direction, les_significant, more_significant, reverse = direction_parameters(direction, top_type)
+    if compare_column is None:
+        compare_column = t_compare_column
     ohlcv = ohlcv.copy()
     tops_to_compare = peaks_or_valleys.copy()
     tops_with_known_crossing_bar = empty_df(PeakValley)
@@ -68,16 +92,10 @@ def calculate_distance(ohlcv: pt.DataFrame[OHLCV], peaks_or_valleys: pt.DataFram
             adjacent_ohlcv_index_of_tops = \
                 shift_over(needles=top_indexes, reference=ohlcv.index, side='forward')
         assert len(adjacent_ohlcv_index_of_tops) == len(top_indexes)
-        # if len(adjacent_ohlcv_index_of_tops) == 0:
-        #     pass
         ohlcv.loc[adjacent_ohlcv_index_of_tops, f'{reverse}_top_time'] = top_indexes
-
         # add the high/low of previous peak/valley to OHLCV df
         ohlcv.loc[adjacent_ohlcv_index_of_tops, reverse + '_top_value'] = \
             tops_to_compare.loc[top_indexes, compare_column].tolist()
-        if 'left_top_value' not in ohlcv.columns:
-            nop = 1
-            pass
         if direction == 'right':
             ohlcv['left_top_time'] = ohlcv['left_top_time'].ffill()
             ohlcv['left_top_value'] = ohlcv['left_top_value'].ffill()
@@ -128,6 +146,53 @@ def calculate_distance(ohlcv: pt.DataFrame[OHLCV], peaks_or_valleys: pt.DataFram
 
 
 def direction_parameters(direction, top_type):
+    """
+    if direction.lower() == 'right':
+        reverse = 'left'
+        compare_column, les_significant, more_significant = top_operators(top_type)
+    elif direction.lower() == 'left':
+        reverse = 'right'
+        compare_column, les_significant, more_significant = top_operators(top_type, equal_is_significant=True)
+
+    top_operators(top_type, equal_is_significant=True):
+            if equal_is_significant:
+        if top_type == TopTYPE.PEAK:
+            compare_column = 'high'
+
+            def more_significant(x, y):
+                return x >= y
+
+            def les_significant(x, y):
+                return x <= y
+        else:
+            compare_column = 'low'
+
+            def more_significant(x, y):
+                return x <= y
+
+            def les_significant(x, y):
+                return x >= y
+    else:
+        if top_type == TopTYPE.PEAK:
+            compare_column = 'high'
+
+            def more_significant(x, y):
+                return x > y
+
+            def les_significant(x, y):
+                return x < y
+        else:
+            compare_column = 'low'
+
+            def more_significant(x, y):
+                return x < y
+
+            def les_significant(x, y):
+                return x > y
+    :param direction:
+    :param top_type:
+    :return:
+    """
     direction = direction.lower()
     if direction.lower() == 'right':
         reverse = 'left'
