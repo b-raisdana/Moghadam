@@ -146,12 +146,19 @@ def insert_crossing(base: pt.DataFrame[PeakValley], target: pt.DataFrame[OHLCV],
         target[f'{direction}_crossing'] = \
             more_significant(target[target_compare_column], target[reverse + '_base_value'])
         crossing_targets = target[target[f'{direction}_crossing'] == True].index
+        # if direction == 'right':
+        #     shifted_crossing_target = \
+        #         target[target[f'{direction}_crossing'].shift(-1) == True].index
+        # else:  # direction == 'left'
+        #     shifted_crossing_target = \
+        #         target[target[f'{direction}_crossing'].shift(1) == True].index
         if direction == 'right':
-            shifted_crossing_target = \
-                target[target[f'{direction}_crossing'].shift(-1) == True].index
-        else:  # direction == 'left'
-            shifted_crossing_target = \
-                target[target[f'{direction}_crossing'].shift(1) == True].index
+            pass
+        else:
+            pass
+        shifted_crossing_target = \
+            target[target[f'{direction}_crossing'].notna() & target[
+                f'{direction}_crossing']].index  # todo: test for right direction
 
         target.loc[shifted_crossing_target, f'{direction}_crossing_time'] = \
             pd.to_datetime(crossing_targets.get_level_values(level='date'))
@@ -165,14 +172,15 @@ def insert_crossing(base: pt.DataFrame[PeakValley], target: pt.DataFrame[OHLCV],
             target[f'{direction}_crossing_value'] = target[f'{direction}_crossing_value'].ffill()
         target['valid_crossing'] = les_significant(target[target_compare_column], target[f'{direction}_crossing_value'])
         valid_crossing_target = target[target['valid_crossing'] == True].index
-        crossed_bases = bases_to_compare[bases_to_compare['target_index'].isin(valid_crossing_target)].index # todo: test
+        crossed_bases = bases_to_compare[
+            bases_to_compare['target_index'].isin(valid_crossing_target)].index  # todo: test
         # crossed_bases = valid_crossing_target.intersection(base_indexes)
         number_of_crossed_bases = len(crossed_bases)
         if number_of_crossed_bases > 0:
             base.loc[crossed_bases, f'{direction}_crossing_time'] = \
-                target.loc[bases_to_compare[crossed_bases, 'target_index'], f'{direction}_crossing_time']
+                target.loc[bases_to_compare.loc[crossed_bases, 'target_index'], f'{direction}_crossing_time']
             base.loc[crossed_bases, f'{direction}_crossing_value'] = \
-                target.loc[bases_to_compare[crossed_bases, 'target_index'], f'{direction}_crossing_value']
+                target.loc[bases_to_compare.loc[crossed_bases, 'target_index'], f'{direction}_crossing_value']
             if len(bases_with_known_crossing_target) == 0:
                 bases_with_known_crossing_target = bases_to_compare.loc[crossed_bases]
             else:
