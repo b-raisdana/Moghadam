@@ -7,8 +7,10 @@ from ClassicPivot import read_classic_pivots
 from Config import config
 from FigurePlotter.BasePattern_plotter import plot_multi_timeframe_base_pattern
 from FigurePlotter.BullBearSide_plotter import plot_multi_timeframe_bull_bear_side_trends
+from FigurePlotter.PeakValley_plotter import plot_multi_timeframe_peaks_n_valleys
 from FigurePlotter.Pivot_plotter import plot_multi_timeframe_pivots
 from PeakValley import read_multi_timeframe_peaks_n_valleys
+from PeakValleyPivots import atr_top_pivots
 from atr import read_multi_timeframe_ohlcva
 from helper.helper import date_range_to_string
 
@@ -35,10 +37,13 @@ if __name__ == "__main__":
 
     # ohlcva = read_multi_timeframe_ohlcva()
     # _peaks_and_valleys = read_multi_timeframe_peaks_n_valleys()
+    # plot_multi_timeframe_peaks_n_valleys(_peaks_and_valleys, config.processing_date_range)
     # bull_bear_side = read_multi_timeframe_bull_bear_side_trends()
     # plot_multi_timeframe_bull_bear_side_trends(ohlcva, _peaks_and_valleys, bull_bear_side)
-    generate_multi_timeframe_bull_bear_side_pivots(config.processing_date_range)
-    _pivots = read_multi_timeframe_bull_bear_side_pivots(config.processing_date_range)
+    _pivots = atr_top_pivots()
+    #
+    # generate_multi_timeframe_bull_bear_side_pivots(config.processing_date_range)
+    # _pivots = read_multi_timeframe_bull_bear_side_pivots(config.processing_date_range)
     plot_multi_timeframe_pivots(_pivots)
     exit(0)
     # generate_multi_timeframe_base_patterns()

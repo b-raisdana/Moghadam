@@ -2,7 +2,7 @@ import re
 import string
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Callable, Union, List, Type, Any, Dict
+from typing import Callable, Union, Type, Any, Dict, Literal
 from zipfile import BadZipFile
 
 import numpy as np
@@ -429,6 +429,7 @@ def dict_of_list(input_dict):
     result = {k: [v] for k, v in input_dict.items()}
     return result
 
+
 def multi_timeframe_times_tester(multi_timeframe_df: pt.DataFrame[MultiTimeframe], date_range_str: str,
                                  return_bool: bool = False, ignore_processing_date_range: bool = True,
                                  processing_date_range: str = None):
@@ -438,10 +439,6 @@ def multi_timeframe_times_tester(multi_timeframe_df: pt.DataFrame[MultiTimeframe
         result = result & times_tester(_timeframe_df, date_range_str, timeframe, return_bool,
                                        ignore_processing_date_range, processing_date_range)
     return result
-
-
-def fine_tune_expected_movement_size(_list: List):
-    return _list  # * CandleSize.Standard.value.min
 
 
 def shift_timeframe(timeframe, shifter):
@@ -690,7 +687,8 @@ def trim_to_date_range(date_range_str: str, df: pd.DataFrame, ignore_duplicate_i
     return df
 
 
-def expand_date_range(date_range_str: str, time_delta: timedelta, mode: str, limit_to_processing_period: bool = None) \
+def expand_date_range(date_range_str: str, time_delta: timedelta, mode: Literal['start', 'end', 'both'],
+                      limit_to_processing_period: bool = None) \
         -> str:
     if limit_to_processing_period is None:
         limit_to_processing_period = config.limit_to_under_process_period
@@ -782,7 +780,7 @@ def empty_df(model_class: Type[Pandera_DFM_Type]) -> pd.DataFrame:
     return _empty_df
 
 
-def shift_over(needles: Axes, reference: Axes, side: str, start=None, end=None) -> Axes:
+def nearest_match(needles: Axes, reference: Axes, direction: str, start=None, end=None) -> Axes:
     """
     it will merge the indexes for both forward and backward and return. missing indexes in forward will be filled
     forward and missing indexes of backward will be filled backward.\n
@@ -795,7 +793,7 @@ def shift_over(needles: Axes, reference: Axes, side: str, start=None, end=None) 
     :param reference: reference list
     :param start: filtering the start of output indexes
     :param end: filtering the rnd of output indexes
-    :param side: should be either "forward" or "backward". use "forward" to get the PREVIOUS reference for needles and
+    :param direction: should be either "forward" or "backward". use "forward" to get the PREVIOUS reference for needles and
     use "backward" to get the NEXT reference for needles
     :return: Axes indexed as the combination of forward and backward indexes and 2 columns:
         'forward': forward input mapped to indexes and forward filled.
@@ -822,30 +820,30 @@ def shift_over(needles: Axes, reference: Axes, side: str, start=None, end=None) 
                         2 3 5 10 10 20 NA
     """
     # Todo: replace with pd.merge_asof
-    side = side.lower()
-    if side == 'forward':
+    direction = direction.lower()
+    if direction == 'forward':
         forward = reference
         backward = needles
-    elif side == 'backward':
+    elif direction == 'backward':
         forward = needles
         backward = reference
     else:
         raise Exception('side should be either "forward" or "backward".')
     df = pd.DataFrame(index=forward.append(backward).unique())
     df = df.sort_index()
-    if side == 'forward':
+    if direction == 'forward':
         df.loc[forward, 'forward'] = forward
         df['forward'] = df['forward'].ffill().shift(1)
-    elif side == 'backward':
+    elif direction == 'backward':
         df.loc[backward, 'backward'] = backward
         df['backward'] = df['backward'].bfill().shift(-1)
     if start is not None:
         df = df[df.index >= start]
     if end is not None:
         df = df[df.index >= end]
-    if side == 'forward':
+    if direction == 'forward':
         return df.loc[needles, 'forward'].to_list()
-    elif side == 'backward':
+    elif direction == 'backward':
         return df.loc[needles, 'backward'].to_list()
 
 

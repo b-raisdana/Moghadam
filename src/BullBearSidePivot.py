@@ -10,10 +10,10 @@ from MetaTrader import MT
 from PanderaDFM.BullBearSide import BullBearSide
 from PanderaDFM.BullBearSidePivot import BullBearSidePivot
 from PanderaDFM.Pivot import MultiTimeframePivot
-from PeakValley import read_multi_timeframe_peaks_n_valleys, major_peaks_n_valleys, peaks_only, valleys_only
+from PeakValley import read_multi_timeframe_peaks_n_valleys, major_peaks_n_valleys
 from PivotsHelper import pivots_level_n_margins, level_ttl
 from atr import read_multi_timeframe_ohlcva
-from helper.data_preparation import single_timeframe, fine_tune_expected_movement_size, trigger_timeframe, read_file, \
+from helper.data_preparation import single_timeframe, trigger_timeframe, read_file, \
     cast_and_validate, anti_pattern_timeframe, after_under_process_date, empty_df, concat
 from helper.helper import measure_time
 
@@ -36,9 +36,6 @@ def remove_overlapping_trends(timeframe_trends: pt.DataFrame[BullBearSide]) -> p
     deduplicated_trends = timeframe_trends.loc[max_movement_indices]
 
     return deduplicated_trends
-
-
-
 
 
 def multi_timeframe_bull_bear_side_pivots(date_range_str: str = None, structure_timeframe_shortlist: List['str'] = None) \
@@ -181,3 +178,7 @@ def generate_multi_timeframe_bull_bear_side_pivots(date_range_str: str = None,
                     add a new level for the pivot   
     """
     # raise Exception('Not implemented')
+
+
+def fine_tune_expected_movement_size(_list: List):
+    return _list  # * CandleSize.Standard.value.min
