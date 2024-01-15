@@ -112,6 +112,7 @@ def insert_crossing(base: pt.DataFrame[PeakValley], target: pt.DataFrame[OHLCV],
     if f'{direction}_crossing_value' not in base.columns:
         base[f'{direction}_crossing_value'] = pd.Series(dtype=float)
     bases_to_compare = base.copy()
+    bases_to_compare['target_index'] = nearest_match(bases_to_compare.index, target.index, direction='forward', shift=0)
     bases_with_known_crossing_target = empty_df(PeakValley)
     number_of_crossed_bases = 1
     while number_of_crossed_bases > 0:
@@ -161,17 +162,17 @@ def insert_crossing(base: pt.DataFrame[PeakValley], target: pt.DataFrame[OHLCV],
         else:  # direction == 'left'
             target[f'{direction}_crossing_time'] = target[f'{direction}_crossing_time'].ffill()
             target[f'{direction}_crossing_value'] = target[f'{direction}_crossing_value'].ffill()
-        target['masked_target'] = les_significant(target[target_compare_column], target[f'{direction}_crossing_value'])
-        target['masked_target'] = les_significant(target[target_compare_column], target[f'{direction}_crossing_value'])
-        masked_target = target[target['masked_target'] == True].index
-        crossed_bases = nearest_match(masked_target, base_indexes, )
-        crossed_bases = masked_target.intersection(base_indexes)
+        target['valid_crossing'] = les_significant(target[target_compare_column], target[f'{direction}_crossing_value'])
+        valid_crossing_target = target[target['valid_crossing'] == True].index
+        base_index_mapped_to_target =
+        crossed_bases = bases_to_compare[bases_to_compare['target_index'].isin(valid_crossing_target)].index
+        # crossed_bases = valid_crossing_target.intersection(base_indexes)
         number_of_crossed_bases = len(crossed_bases)
         if number_of_crossed_bases > 0:
             base.loc[crossed_bases, f'{direction}_crossing_time'] = \
-                target.loc[crossed_bases, f'{direction}_crossing_time']
+                target.loc[bases_to_compare[crossed_bases, 'target_index'], f'{direction}_crossing_time']
             base.loc[crossed_bases, f'{direction}_crossing_value'] = \
-                target.loc[crossed_bases, f'{direction}_crossing_value']
+                target.loc[bases_to_compare[crossed_bases, 'target_index'], f'{direction}_crossing_value']
             if len(bases_with_known_crossing_target) == 0:
                 bases_with_known_crossing_target = bases_to_compare.loc[crossed_bases]
             else:
@@ -390,8 +391,12 @@ def top_operators(top_type, cross_direction: Literal['up', 'down'] = 'up', equal
         more_significant = gt
         les_significant = lt
     elif cross_direction == 'down':
-        more_significant = gt
-        les_significant = lt
+        if top_type == TopTYPE.PEAK:
+            compare_column = 'low'
+        else:
+            compare_column = 'high'
+        more_significant = lt
+        les_significant = gt
     else:
         raise ValueError(f"invalid cross_direction:{cross_direction}")
     return compare_column, les_significant, more_significant

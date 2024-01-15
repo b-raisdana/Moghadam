@@ -186,7 +186,7 @@ def insert_pivot_passage(timeframe_tops: pt.DataFrame[MultiTimeframePeakValley],
     """
     if top_type == TopTYPE.PEAK:
         high_low = 'high'
-        cross_direction = 'ddown'
+        cross_direction = 'down'
     else:  # top_type == TopTYPE.VALLEY
         high_low = 'low'
         cross_direction = 'up'
