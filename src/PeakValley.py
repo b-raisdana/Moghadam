@@ -101,6 +101,7 @@ def insert_crossing(base: pt.DataFrame[PeakValley], target: pt.DataFrame[OHLCV],
     - right_crossing_value or left_crossing_value: Value of the OHLCV data at the crossing point in the specified direction.
     - valid_crossing: Boolean indicating the validity of the crossing.
     """
+    # todo: test all usages!
     target_compare_column, direction, les_significant, more_significant, reverse = direction_parameters(direction,
                                                                                                         base_type,
                                                                                                         cross_direction)
