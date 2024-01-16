@@ -1,0 +1,25 @@
+DEBUG@01-16.18:33:38:...Starting
+DEBUG@01-16.18:33:39:insert_pivot_passages(165*Index(['open', 'close', 'high', 'low', 'volume', 'peak_or_valley', 'strength',
+       'permanent_strength', 'atr'],
+      dtype='object'), 7201*Index(['open', 'close', 'high', 'low', 'volume', 'atr'], dtype='object')) started
+DEBUG@01-16.18:33:39:insert_pivot_passage(78*Index(['open', 'close', 'high', 'low', 'volume', 'peak_or_valley', 'strength',
+       'permanent_strength', 'atr', 'right_crossing_time',
+       'right_crossing_value', 'left_crossing_time', 'left_crossing_value'],
+      dtype='object'), 7201*Index(['open', 'close', 'high', 'low', 'volume', 'atr'], dtype='object'), top_type:TopTYPE.PEAK) started
+DEBUG@01-16.18:33:39:insert_crossing(78*Index(['open', 'close', 'high', 'low', 'volume', 'peak_or_valley', 'strength',
+       'permanent_strength', 'atr', 'right_crossing_time',
+       'right_crossing_value', 'left_crossing_time', 'left_crossing_value',
+       'next_target'],
+      dtype='object'), 7201*Index(['open', 'close', 'high', 'low', 'volume', 'atr'], dtype='object'), TopTYPE.PEAK, right, down, base_target_column:next_target) started
+INFO@01-16.18:35:07:Error in insert_crossing(78*Index(['open', 'close', 'high', 'low', 'volume', 'peak_or_valley', 'strength',
+       'permanent_strength', 'atr', 'right_crossing_time',
+       'right_crossing_value', 'left_crossing_time', 'left_crossing_value',
+       'next_target'],
+      dtype='object'), 7201*Index(['open', 'close', 'high', 'low', 'volume', 'atr'], dtype='object'), TopTYPE.PEAK, right, down, base_target_column:next_target): 
+INFO@01-16.18:35:07:Error in insert_pivot_passage(78*Index(['open', 'close', 'high', 'low', 'volume', 'peak_or_valley', 'strength',
+       'permanent_strength', 'atr', 'right_crossing_time',
+       'right_crossing_value', 'left_crossing_time', 'left_crossing_value'],
+      dtype='object'), 7201*Index(['open', 'close', 'high', 'low', 'volume', 'atr'], dtype='object'), top_type:TopTYPE.PEAK): 
+INFO@01-16.18:35:07:Error in insert_pivot_passages(165*Index(['open', 'close', 'high', 'low', 'volume', 'peak_or_valley', 'strength',
+       'permanent_strength', 'atr'],
+      dtype='object'), 7201*Index(['open', 'close', 'high', 'low', 'volume', 'atr'], dtype='object')): 

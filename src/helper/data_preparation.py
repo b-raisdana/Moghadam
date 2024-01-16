@@ -789,6 +789,7 @@ def nearest_match(needles: Axes, reference: Axes, direction: str, start=None, en
     to find adjacent or nearest NEXT row we can use as:\n
     mapped_list = shift_over(needles, reference, 'backward')
 
+    :param shift:
     :param needles: needles list
     :param reference: reference list
     :param start: filtering the start of output indexes

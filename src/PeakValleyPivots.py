@@ -1,15 +1,17 @@
 import os
-from typing import List
+from typing import List, Annotated
 
 import pandas as pd
 from pandera import typing as pt
 
 from Config import config, TopTYPE
 from MetaTrader import MT
+from PanderaDFM.MultiTimeframe import MultiTimeframe
+from PanderaDFM.OHLCV import OHLCV
 from PanderaDFM.OHLCVA import MultiTimeframeOHLCVA, OHLCVA
 from PanderaDFM.PeakValley import MultiTimeframePeakValley, PeakValley
 from PanderaDFM.Pivot import MultiTimeframePivot
-from PeakValley import read_multi_timeframe_peaks_n_valleys, insert_crossing
+from PeakValley import read_multi_timeframe_peaks_n_valleys, insert_crossing, peaks_only, valleys_only
 from PivotsHelper import pivots_level_n_margins, level_ttl
 from atr import read_multi_timeframe_ohlcva
 from helper.data_preparation import single_timeframe, anti_trigger_timeframe, cast_and_validate, \
@@ -30,17 +32,18 @@ def insert_more_significant_top(base_tops: pt.DataFrame[MultiTimeframePeakValley
 
         def target(low, atr):
             return low - atr
-    if 'atr' not in base_tops.columns:  # todo: test
-        base_tops = insert_peak_n_valley_atr(base_tops, target_tops)
+    # if 'atr' not in base_tops.columns:  # todo: test
+    #     base_tops = insert_peak_n_valley_atr(base_tops, target_tops)
+    assert 'atr' in base_tops.columns
     indexes = base_tops[base_tops['peak_or_valley'] == top_type.value]
 
     base_tops.loc[indexes, 'next_target'] = target(base_tops[indexes, high_low], base_tops[indexes, 'atr'])
     base_tops.loc[indexes] = insert_crossing(base_tops.loc[indexes], target_tops, top_type,
-                                             'right', base_compare_column='next_target')
+                                             'right', base_target_column='next_target')
 
     base_tops.loc[indexes, 'previous_target'] = target(base_tops[indexes, high_low], 3 * base_tops[indexes, 'atr'])
     base_tops.loc[indexes] = insert_crossing(base_tops.loc[indexes], target_tops, top_type,
-                                             'left', base_compare_column='previous_target')
+                                             'left', base_target_column='previous_target')
     return base_tops
 
 
@@ -78,9 +81,12 @@ def atr_top_pivots(date_range_str: str = None, structure_timeframe_shortlist: Li
                            in mt_tops.iterrows()]
     expanded_atr_start = min(mt_tops_mapped_time)
     expanded_atr_date_range_str = date_range_to_string(start=min(start, expanded_atr_start), end=end)
-    mt_ohlcva: pt.DataFrame[MultiTimeframeOHLCVA] = read_multi_timeframe_ohlcva(expanded_atr_date_range_str)
+    mt_ohlcva = read_multi_timeframe_ohlcva(expanded_atr_date_range_str)
+    base_ohlcva = single_timeframe(mt_ohlcva, config.timeframes[0])
+    # filter to tops of structure timeframes
     mt_tops = mt_tops[mt_tops.index.get_level_values('timeframe').isin(structure_timeframe_shortlist)]
-    mt_tops = insert_pivot_passages(mt_tops, mt_ohlcva, )
+    mt_tops = insert_multi_timeframe_atr(mt_tops, mt_ohlcva)
+    mt_tops = insert_pivot_passages(mt_tops, base_ohlcva)
     mt_tops['right_crossing_candle_time'] = mt_tops['right_crossing_time']
     mt_tops['left_crossing_candle_time'] = mt_tops['left_crossing_time']
     passages_satisfied_tops = mt_tops[mt_tops['right_crossing'].notna() and mt_tops['left_crossing'].notna()].copy()
@@ -141,103 +147,158 @@ def atr_top_pivots(date_range_str: str = None, structure_timeframe_shortlist: Li
     # raise NotImplementedError
 
 
+@measure_time
 def insert_pivot_passages(mt_tops: pt.DataFrame[MultiTimeframePeakValley],
-                          mt_ohlcva: pt.DataFrame[MultiTimeframeOHLCVA]) -> pt.DataFrame[MultiTimeframePeakValley]:
+                          base_ohlcv: pt.DataFrame[OHLCV]) -> pt.DataFrame[MultiTimeframePeakValley]:
+    """
+
+    :param mt_tops:
+    :param base_ohlcv:
+    :return:
+    adds:
+    "left_crossing_time" = time of first candle before with 3 * ATR adds
+    "right_crossing_time" = time of first candle before with 1 * ATR -
+    'right_crossing_value', 'left_crossing_value'
+    """
+    if 'right_crossing_time' not in mt_tops.columns:
+        mt_tops['right_crossing_time'] = pd.Series(Annotated[pd.DatetimeTZDtype, "ns", "UTC"])
+    if 'right_crossing_value' not in mt_tops.columns:
+        mt_tops['right_crossing_value'] = pd.Series(float)
+    if 'left_crossing_time' not in mt_tops.columns:
+        mt_tops['left_crossing_time'] = pd.Series(Annotated[pd.DatetimeTZDtype, "ns", "UTC"])
+    if 'left_crossing_value' not in mt_tops.columns:
+        mt_tops['left_crossing_value'] = pd.Series(float)
+
     timeframe_short_list = mt_tops.index.get_level_values('timeframe').unique()
-    for timeframe in timeframe_short_list:
-        ohlcva = single_timeframe(mt_ohlcva, timeframe)
-        timeframe_tops = single_timeframe(mt_tops, timeframe)
-        timeframe_top_indexes = timeframe_tops.index
-        """
-        "left_crossing_time" = time of first candle before with 3 * ATR adds 
-        "right_crossing_time" = time of first candle before with 1 * ATR - 
-        right_crossing or left_crossing: Boolean indicating whether OHLCV data is crossing the peak/valley. - 
-        right_crossing_time or left_crossing_time: Time index where the crossing occurs in the specified direction. - right_crossing_value or left_crossing_value: Value of the OHLCV data at the crossing point in the specified direction.
-        """
-        mt_tops.loc[timeframe_top_indexes, ['right_crossing', 'left_crossing', 'right_crossing_time',
-                                            'left_crossing_time', 'right_crossing_value', 'left_crossing_value']] = \
-            insert_pivot_passage(timeframe_tops, ohlcva, top_type=TopTYPE.PEAK
-                                 )[['right_crossing', 'left_crossing', 'right_crossing_time',
-                                    'left_crossing_time', 'right_crossing_value', 'left_crossing_value']]  # todo: test
-        mt_tops.loc[timeframe_top_indexes, ['right_crossing', 'left_crossing', 'right_crossing_time',
-                                            'left_crossing_time', 'right_crossing_value', 'left_crossing_value']] = \
-            insert_pivot_passage(timeframe_tops, ohlcva, top_type=TopTYPE.VALLEY
-                                 )[['right_crossing', 'left_crossing', 'right_crossing_time',
-                                    'left_crossing_time', 'right_crossing_value', 'left_crossing_value']]
+    # for timeframe in timeframe_short_list:
+    #     ohlcva = single_timeframe(mt_ohlcva, timeframe)
+    #     timeframe_tops = mt_tops[mt_tops.index.get_level_values(level='timeframe') == timeframe]
+    #     # single_timeframe(mt_tops, timeframe)
+    peaks = peaks_only(mt_tops)
+    peaks_indexes = peaks.index
+    # peaks = peaks.droplevel('timeframe')
+    valleys = valleys_only(mt_tops)
+    valleys_indexes = valleys.index
+    # valleys = valleys.droplevel('timeframe')
+
+    mt_tops.loc[peaks_indexes, ['right_crossing_time', 'left_crossing_time',
+                                'right_crossing_value', 'left_crossing_value']] = \
+        insert_pivot_passage(peaks, base_ohlcv, top_type=TopTYPE.PEAK
+                             )[['right_crossing_time', 'left_crossing_time',
+                                'right_crossing_value', 'left_crossing_value']]
+
+    mt_tops.loc[valleys_indexes, ['right_crossing_time', 'left_crossing_time',
+                                  'right_crossing_value', 'left_crossing_value']] = \
+        insert_pivot_passage(valleys, base_ohlcv, top_type=TopTYPE.VALLEY
+                             )[['right_crossing_time', 'left_crossing_time',
+                                'right_crossing_value', 'left_crossing_value']]
+    # timeframe_short_list = mt_tops.index.get_level_values('timeframe').unique()
+    # for timeframe in timeframe_short_list:
+    #     ohlcva = single_timeframe(mt_ohlcva, timeframe)
+    #     timeframe_tops = mt_tops[mt_tops.index.get_level_values(level='timeframe') == timeframe]
+    #     # single_timeframe(mt_tops, timeframe)
+    #     peaks = peaks_only(timeframe_tops)
+    #     peaks_indexes = peaks.index
+    #     peaks = peaks.droplevel('timeframe')
+    #     valleys = valleys_only(timeframe_tops)
+    #     valleys_indexes = valleys.index
+    #     valleys = valleys.droplevel('timeframe')
+    #
+    #     mt_tops.loc[peaks_indexes, ['right_crossing_time', 'left_crossing_time',
+    #                                 'right_crossing_value', 'left_crossing_value']] = \
+    #         insert_pivot_passage(peaks, ohlcva, top_type=TopTYPE.PEAK
+    #                              )[['right_crossing_time', 'left_crossing_time',
+    #                                 'right_crossing_value', 'left_crossing_value']]  # todo: test
+    #
+    #     mt_tops.loc[valleys_indexes, ['right_crossing_time', 'left_crossing_time',
+    #                                   'right_crossing_value', 'left_crossing_value']] = \
+    #         insert_pivot_passage(valleys, ohlcva, top_type=TopTYPE.VALLEY
+    #                              )[['right_crossing_time', 'left_crossing_time',
+    #                                 'right_crossing_value', 'left_crossing_value']]
     return mt_tops
 
 
-def insert_pivot_passage(timeframe_tops: pt.DataFrame[MultiTimeframePeakValley],
-                         ohlcva: pt.DataFrame[OHLCVA], top_type: TopTYPE) \
+@measure_time
+def insert_pivot_passage(timeframe_peak_or_valleys: pt.DataFrame[MultiTimeframePeakValley],
+                         base_ohlcv: pt.DataFrame[OHLCV], top_type: TopTYPE) \
         -> pt.DataFrame[MultiTimeframePeakValley]:
     """
     find the first candle before with 3 * ATR distance and first candle next with 1 * ATR distance.
-    :param ohlcva:
-    :param timeframe_tops:
+    :param base_ohlcv:
+    :param timeframe_peak_or_valleys:
     :param top_type:
     :return:
-    adds "left_crossing_time" = time of first candle before with 3 * ATR
-    adds "right_crossing_time" = time of first candle before with 1 * ATR
-    - right_crossing and left_crossing: Boolean indicating whether OHLCV data is crossing the peak/valley.
     - right_crossing_time and left_crossing_time: Time index where the crossing occurs in the specified direction.
     - right_crossing_value and left_crossing_value: Value of the OHLCV data at the crossing point in the specified direction.
-
-    adds "atr" = ATR at the time
     """
+
     if top_type == TopTYPE.PEAK:
         high_low = 'high'
         cross_direction = 'down'
+
+        def aggregate(high, n_atr):
+            return high - n_atr
     else:  # top_type == TopTYPE.VALLEY
         high_low = 'low'
         cross_direction = 'up'
-    if 'atr' not in timeframe_tops.columns:  # todo: test
-        timeframe_tops = insert_peak_n_valley_atr(timeframe_tops, ohlcva)
-    peak_or_valley_indexes = timeframe_tops[timeframe_tops['peak_or_valley'] == top_type.value].index
-    timeframe_tops.loc[peak_or_valley_indexes, 'next_target'] = \
-        timeframe_tops.loc[peak_or_valley_indexes, high_low] - timeframe_tops.loc[peak_or_valley_indexes, 'atr']
-    timeframe_tops.loc[peak_or_valley_indexes, ['right_crossing_time', 'right_crossing_value']] = \
-        insert_crossing(timeframe_tops.loc[peak_or_valley_indexes], ohlcva, top_type,
-                        'right', cross_direction, base_compare_column='next_target')[['right_crossing_time', 'right_crossing_value']]
-    timeframe_tops.loc[peak_or_valley_indexes, 'previous_target'] = \
-        timeframe_tops.loc[peak_or_valley_indexes, high_low] - 3 * timeframe_tops.loc[peak_or_valley_indexes, 'atr']
-    timeframe_tops.loc[peak_or_valley_indexes, ['left_crossing_time', 'left_crossing_value']] = \
-        insert_crossing(timeframe_tops.loc[peak_or_valley_indexes], ohlcva, top_type,
-                        'left', cross_direction, base_compare_column='previous_target')[['left_crossing_time', 'left_crossing_value']]
-    return timeframe_tops
+
+        def aggregate(low, n_atr):
+            return low + n_atr
+
+    peak_or_valley_indexes = timeframe_peak_or_valleys[
+        timeframe_peak_or_valleys['peak_or_valley'] == top_type.value].index
+    timeframe_peak_or_valleys.loc[peak_or_valley_indexes, 'next_target'] = \
+        aggregate(timeframe_peak_or_valleys.loc[peak_or_valley_indexes, high_low],
+                  timeframe_peak_or_valleys.loc[peak_or_valley_indexes, 'atr'])
+    timeframe_peak_or_valleys.loc[peak_or_valley_indexes, ['right_crossing_time', 'right_crossing_value']] = \
+        insert_crossing(timeframe_peak_or_valleys.loc[peak_or_valley_indexes], base_ohlcv, top_type, 'right',
+                        cross_direction,
+                        base_target_column='next_target')[['right_crossing_time', 'right_crossing_value']]
+
+    timeframe_peak_or_valleys.loc[peak_or_valley_indexes, 'previous_target'] = \
+        aggregate(timeframe_peak_or_valleys.loc[peak_or_valley_indexes, high_low], 3 * timeframe_peak_or_valleys.loc[
+            peak_or_valley_indexes, 'atr'])
+    timeframe_peak_or_valleys.loc[peak_or_valley_indexes, ['left_crossing_time', 'left_crossing_value']] = \
+        insert_crossing(timeframe_peak_or_valleys.loc[peak_or_valley_indexes], base_ohlcv, top_type, 'left',
+                        cross_direction,
+                        base_target_column='previous_target')[['left_crossing_time', 'left_crossing_value']]
+
+    return timeframe_peak_or_valleys
 
 
-def insert_peak_n_valley_atr(timeframe_tops: pt.DataFrame[PeakValley],
-                             ohlcva: pt.DataFrame[OHLCVA]) -> pt.DataFrame[PeakValley]:
-    # the 'date' index of top based on base_timeframe. the 'date' of mt_ohlcva is according to timeframe.
-    # So we use pd.merge_asof(...) to adopt
-    # timeframe_tops['timeframe_column'] = timeframe_tops.index.get_level_values('timeframe')
-    # timeframe_tops['date_column'] = timeframe_tops.index.get_level_values('date')
-    # timeframe_short_list = timeframe_tops.index.get_level_values('timeframe').unique()
-    # for timeframe in timeframe_short_list:
-    #     timeframe_top_indexes = timeframe_tops[timeframe_tops.index.get_level_values(level='timeframe') == timeframe].index
-    #     ohlcva = single_timeframe(mt_ohlcva, timeframe)
-    timeframe_tops['atr'] = pd.merge_asof(timeframe_tops, ohlcva[['atr']], left_index=True, right_index=True,
-                                          direction='backward', suffixes=('_x', ''))['atr'] # todo: test
-    if timeframe_tops['atr'].isna().any().any():
-        AssertionError("mt_tops['atr'].isna().any().any()")
-    return timeframe_tops
+# def insert_peak_n_valley_atr(timeframe_tops: pt.DataFrame[PeakValley],
+#                              ohlcva: pt.DataFrame[OHLCVA]) -> pt.DataFrame[PeakValley]:
+def insert_multi_timeframe_atr(df: pt.DataFrame[MultiTimeframe],
+                               mt_ohlcva: pt.DataFrame[MultiTimeframeOHLCVA]) -> pt.DataFrame[MultiTimeframePeakValley]:
+    timeframe_shortlist = df.index.get_level_values('timeframe').unique()
+    for timeframe in timeframe_shortlist:
+        ohlcva = single_timeframe(mt_ohlcva, timeframe)
 
+        timeframe_rows = df[df.index.get_level_values('timeframe') == timeframe]
+        timeframe_indexes = timeframe_rows.index
+        timeframe_rows = timeframe_rows.reset_index(level='timeframe')
 
-def peak_or_valley_add_adjacent_tops(mt_tops, tops, top_type: TopTYPE):
-    tops['forward_index'] = tops.index.shift(-1, freq=config.timeframe[0])
-    tops['backward_index'] = tops.index.shift(1, freq=config.timeframe[0])
-    tops['adjacent_top'] = tops.index
-    # merge peaks into tops to extract adjacent peaks
-    mt_tops = pd.merge_asof(mt_tops, tops[['adjacent_top']], left_index=True, right_on='forward_index',
-                            direction='forward',
-                            suffixes=("_x", ''))
-    mt_tops[f'next_{top_type.value}_time'] = mt_tops['adjacent_top']
-    # mt_tops['next_peak_value'] = mt_tops.loc[mt_tops['next_peak_time'].values(), 'high']
-    mt_tops = pd.merge_asof(mt_tops, tops[['adjacent_top']], left_index=True, right_on='backward_index',
-                            direction='backward',
-                            suffixes=("_x", ''))
-    mt_tops['previous_{top_type.value}_time'] = mt_tops['adjacent_top']
-    return mt_tops
+        timeframe_rows['atr'] = pd.merge_asof(timeframe_rows, ohlcva[['atr']], left_index=True, right_index=True,
+                                              direction='backward', suffixes=('_x', ''))['atr']  # todo: test
+        timeframe_rows = timeframe_rows.set_index('timeframe', append=True)
+        timeframe_rows = timeframe_rows.swaplevel()
+        df.loc[timeframe_indexes, 'atr'] = timeframe_rows['atr']
+    if df['atr'].isna().any().any():
+        AssertionError("df['atr'].isna().any().any()")
+    return df
+    # # the 'date' index of top based on base_timeframe. the 'date' of mt_ohlcva is according to timeframe.
+    # # So we use pd.merge_asof(...) to adopt
+    # # timeframe_tops['timeframe_column'] = timeframe_tops.index.get_level_values('timeframe')
+    # # timeframe_tops['date_column'] = timeframe_tops.index.get_level_values('date')
+    # # timeframe_short_list = timeframe_tops.index.get_level_values('timeframe').unique()
+    # # for timeframe in timeframe_short_list:
+    # #     timeframe_top_indexes = timeframe_tops[timeframe_tops.index.get_level_values(level='timeframe') == timeframe].index
+    # #     ohlcva = single_timeframe(mt_ohlcva, timeframe)
+    # timeframe_tops['atr'] = pd.merge_asof(timeframe_tops, ohlcva[['atr']], left_index=True, right_index=True,
+    #                                       direction='backward', suffixes=('_x', ''))['atr']  # todo: test
+    # if timeframe_tops['atr'].isna().any().any():
+    #     AssertionError("mt_tops['atr'].isna().any().any()")
+    # return timeframe_tops
 
 
 def tops_pivots(date_range_str) -> pt.DataFrame[MultiTimeframePivot]:
