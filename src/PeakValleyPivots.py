@@ -111,7 +111,7 @@ def atr_top_pivots(date_range_str: str = None, structure_timeframe_shortlist: Li
         & (movement_satisfied_tops['left_more_significant_peak_time'] <= movement_satisfied_tops['movement_start_time'])
         ]
 
-    resistance_pivots = pivots[pivots['peak_or_valley'] == TopTYPE.PEAK.value].index # tdod: test
+    resistance_pivots = pivots[pivots['peak_or_valley'] == TopTYPE.PEAK.value].index # tdod: test 1
     pivots.loc[resistance_pivots, 'level'] = pivots.loc[resistance_pivots, 'high']
     support_pivots = pivots[pivots['peak_or_valley'] == TopTYPE.VALLEY.value].index
     pivots.loc[support_pivots, 'level'] = pivots.loc[support_pivots, 'low']
