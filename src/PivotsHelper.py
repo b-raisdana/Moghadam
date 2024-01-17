@@ -9,7 +9,7 @@ from helper.helper import measure_time
 
 
 @measure_time
-def pivots_level_n_margins(pivot_peaks_n_valleys: pd.DataFrame,
+def pivots_level_n_margins(pivot_time_peaks_n_valleys: pd.DataFrame,
                            timeframe_pivots: pd.DataFrame,
                            timeframe: str,
                            candle_body_source: pd.DataFrame,
@@ -20,7 +20,7 @@ def pivots_level_n_margins(pivot_peaks_n_valleys: pd.DataFrame,
     Calculate pivot levels and margins based on peak or valley type for a single timeframe.
 
     Args:
-        pivot_peaks_n_valleys (pd.DataFrame): DataFrame containing peak or valley data.
+        pivot_time_peaks_n_valleys (pd.DataFrame): DataFrame containing peak or valley data.
         timeframe_pivots (pd.DataFrame): DataFrame to store the processed pivot data.
         timeframe (str): The desired timeframe for mapping pivot times.
         candle_body_source (pd.DataFrame): DataFrame containing candle body data with 'open' and 'close' columns.
@@ -35,21 +35,21 @@ def pivots_level_n_margins(pivot_peaks_n_valleys: pd.DataFrame,
     #                     f'and timeframe_pivots({len(timeframe_pivots)}) should have the same length')
     if timeframe == '1h':
         pass
-    no_timeframe_peaks_n_valleys = pivot_peaks_n_valleys.reset_index(level='timeframe')
-    pivot_peaks = peaks_only(no_timeframe_peaks_n_valleys)
-    timeframe_pivots = peaks_or_valleys_pivots_level_n_margins(pivot_peaks, TopTYPE.PEAK,
+    no_timeframe_peaks_n_valleys = pivot_time_peaks_n_valleys.reset_index(level='timeframe')
+    pivot_time_peaks = peaks_only(no_timeframe_peaks_n_valleys)
+    timeframe_pivots = peaks_or_valleys_pivots_level_n_margins(pivot_time_peaks, TopTYPE.PEAK,
                                                                timeframe_pivots, timeframe,
                                                                candle_body_source, internal_atr_source,
                                                                breakout_atr_source)
-    pivot_valleys = valleys_only(no_timeframe_peaks_n_valleys)
-    timeframe_pivots = peaks_or_valleys_pivots_level_n_margins(pivot_valleys, TopTYPE.VALLEY,
+    pivot_time_valleys = valleys_only(no_timeframe_peaks_n_valleys)
+    timeframe_pivots = peaks_or_valleys_pivots_level_n_margins(pivot_time_valleys, TopTYPE.VALLEY,
                                                                timeframe_pivots, timeframe,
                                                                candle_body_source, internal_atr_source,
                                                                breakout_atr_source)
     return timeframe_pivots
 
 
-def peaks_or_valleys_pivots_level_n_margins(no_timeframe_pivot_peaks_or_valleys: pd.DataFrame,
+def peaks_or_valleys_pivots_level_n_margins(no_timeframe_pivot_time_peaks_or_valleys: pd.DataFrame,
                                             _type: TopTYPE,
                                             timeframe_pivots: pd.DataFrame,
                                             timeframe: str,
@@ -61,7 +61,7 @@ def peaks_or_valleys_pivots_level_n_margins(no_timeframe_pivot_peaks_or_valleys:
     Processes the pivot data to determine levels, margins, and other metrics for a single timeframe.
 
     Args:
-        no_timeframe_pivot_peaks_or_valleys (pd.DataFrame): Input pivot data, typically containing high and low prices.
+        no_timeframe_pivot_time_peaks_or_valleys (pd.DataFrame): Input pivot data, typically containing high and low prices.
         _type (TopTYPE): Enum indicating whether the pivot data represents peaks or valleys.
         timeframe_pivots (pd.DataFrame): DataFrame to store processed pivot data.
         timeframe (str): A string specifying the desired timeframe for mapping pivot times.
@@ -80,24 +80,24 @@ def peaks_or_valleys_pivots_level_n_margins(no_timeframe_pivot_peaks_or_valleys:
         raise ValueError("Invalid type. Use either 'peak' or 'valley'.")
     if timeframe not in config.timeframes:
         raise ValueError(f"'{timeframe}' is not a valid timeframe. Please select from {config.timeframe}.")
-    if len(no_timeframe_pivot_peaks_or_valleys) == 0:
+    if len(no_timeframe_pivot_time_peaks_or_valleys) == 0:
         return timeframe_pivots
 
     if _type.value == 'peak':
         high_low = 'high'
     else:  # 'valley'
         high_low = 'low'
-    no_timeframe_pivot_peaks_or_valleys['level_y'] = no_timeframe_pivot_peaks_or_valleys[[high_low]]
-    timeframe_pivots = timeframe_pivots.merge(no_timeframe_pivot_peaks_or_valleys[['level_y']], how='left',
+    no_timeframe_pivot_time_peaks_or_valleys['level_y'] = no_timeframe_pivot_time_peaks_or_valleys[[high_low]]
+    timeframe_pivots = timeframe_pivots.merge(no_timeframe_pivot_time_peaks_or_valleys[['level_y']], how='left',
                                               left_index=True, right_index=True)
-    timeframe_pivots.loc[no_timeframe_pivot_peaks_or_valleys.index, 'level'] = \
-        timeframe_pivots.loc[no_timeframe_pivot_peaks_or_valleys.index, 'level_y']
+    timeframe_pivots.loc[no_timeframe_pivot_time_peaks_or_valleys.index, 'level'] = \
+        timeframe_pivots.loc[no_timeframe_pivot_time_peaks_or_valleys.index, 'level_y']
     timeframe_pivots = timeframe_pivots.drop('level_y', axis='columns')
     if 'level' not in timeframe_pivots.columns:
-        AssertionError("'level' not in timeframe_pivots.columns")
+        raise AssertionError("'level' not in timeframe_pivots.columns")
     if timeframe_pivots[['level']].isna().any().any():
-        AssertionError("timeframe_pivots[['level']].isna().any().any()")
-    timeframe_pivots = pivot_margins(timeframe_pivots, _type, no_timeframe_pivot_peaks_or_valleys,
+        raise AssertionError("timeframe_pivots[['level']].isna().any().any()")
+    timeframe_pivots = pivot_margins(timeframe_pivots, _type, no_timeframe_pivot_time_peaks_or_valleys,
                                      candle_body_source, timeframe, internal_margin_atr, breakout_margin_atr)
     return timeframe_pivots
 
@@ -120,6 +120,9 @@ def pivot_margins(pivots: pd.DataFrame, _type: TopTYPE, pivot_peaks_or_valleys: 
 
     Returns:
         pd.DataFrame: Updated DataFrame with calculated margins.
+        Adds following columns:
+        'internal_margin': ???
+        'external_margin': ???
     """
     if _type == TopTYPE.PEAK:
         choose_body_operator = max
@@ -159,7 +162,7 @@ def pivot_margins(pivots: pd.DataFrame, _type: TopTYPE, pivot_peaks_or_valleys: 
         pivots.loc[pivot_times, 'external_margin'] = \
             pivots.loc[pivot_times, 'level'] - pivots.loc[pivot_times, 'breakout_margin_atr']
     if pivots[['internal_margin', 'external_margin']].isna().any().any():
-        AssertionError("pivots[['internal_margin', 'external_margin']].isna().any().any()")
+        raise AssertionError("pivots[['internal_margin', 'external_margin']].isna().any().any()")
     return pivots
 
 

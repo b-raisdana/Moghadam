@@ -101,7 +101,7 @@ def multi_timeframe_bull_bear_side_pivots(date_range_str: str = None, structure_
                 # find the Peaks and Valleys align with the Pivot
                 pivot_peaks_n_valleys = timeframe_peaks_n_valleys.loc[
                     timeframe_peaks_n_valleys.index.get_level_values('date').isin(timeframe_pivots.index)]
-                timeframe_pivots = pivots_level_n_margins(pivot_peaks_n_valleys=pivot_peaks_n_valleys,
+                timeframe_pivots = pivots_level_n_margins(pivot_time_peaks_n_valleys=pivot_peaks_n_valleys,
                                                           timeframe_pivots=timeframe_pivots,
                                                           timeframe=timeframe,
                                                           candle_body_source=timeframe_ohlcva,

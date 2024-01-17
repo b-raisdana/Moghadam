@@ -8,7 +8,7 @@ from BullBearSidePivot import read_multi_timeframe_bull_bear_side_pivots
 from Config import config
 from PanderaDFM.OHLCV import OHLCV
 from PanderaDFM.Pivot import MultiTimeframePivot, Pivot
-from PeakValleyPivots import read_multi_timeframe_top_pivots
+from PeakValleyPivots import read_multi_timeframe_major_times_top_pivots
 from helper.data_preparation import single_timeframe, empty_df, concat
 from helper.helper import measure_time
 
@@ -206,7 +206,7 @@ def generate_multi_timeframe_pivot_levels(date_range_str: str = None):
 
 def read_classic_pivots(date_range_str) -> pt.DataFrame[MultiTimeframePivot]:
     multi_timeframe_bull_bear_side_pivots = read_multi_timeframe_bull_bear_side_pivots(date_range_str)
-    multi_timeframe_anti_pattern_tops_pivots = read_multi_timeframe_top_pivots(date_range_str)
+    multi_timeframe_anti_pattern_tops_pivots = read_multi_timeframe_major_times_top_pivots(date_range_str)
     # multi_timeframe_color_trend_pivots = read_multi_timeframe_color_trend_pivots()
     multi_timeframe_pivots = concat(
         multi_timeframe_bull_bear_side_pivots,

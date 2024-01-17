@@ -410,7 +410,7 @@ def add_trend_extremum(_boundaries, single_timeframe_peak_n_valley: pt.DataFrame
     grouped_ohlcv = ohlcv.groupby(by='bbs_index').agg({'high_time': 'first', 'low_time': 'first', })
     _boundaries[['low_time', 'high_time']] = grouped_ohlcv[['low_time', 'high_time']]
     if _boundaries[['low_time', 'high_time']].isna().any().any():
-        AssertionError("_boundaries[['low_time', 'high_time']].isna().any().any()")
+        raise AssertionError("_boundaries[['low_time', 'high_time']].isna().any().any()")
     return _boundaries
 
 

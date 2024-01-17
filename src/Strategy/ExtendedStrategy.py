@@ -243,19 +243,14 @@ class ExtendedStrategy(bt.Strategy):
         for i in self.original_orders.keys():
             if order_is_open(self.original_orders[i]):
                 if not order_is_open(self.sl_orders[i]):
-                    AssertionError("!order_is_open(self.stop_orders[i])")
+                    raise AssertionError("!order_is_open(self.stop_orders[i])")
                 if not order_is_open(self.tp_orders[i]):
-                    AssertionError("!order_is_open(self.profit_orders[i])")
+                    raise AssertionError("!order_is_open(self.profit_orders[i])")
             elif order_is_closed(self.original_orders[i]):
-                # log_w("Not working: AssertionError", stack_trace=True)
-                # if not order_is_closed(self.stop_orders[i]) or not order_is_closed(self.profit_orders[i]):
-                #     pass
                 if not order_is_closed(self.sl_orders[i]):
-                    nop = 1
-                    AssertionError("!order_is_closed(self.stop_orders[i])")
+                    raise AssertionError("!order_is_closed(self.stop_orders[i])")
                 if not order_is_closed(self.tp_orders[i]):
-                    nop = 1
-                    AssertionError("!order_is_closed(self.profit_orders[i])")  # todo: test AssertionError
+                    raise AssertionError("!order_is_closed(self.profit_orders[i])")  # todo: test AssertionError
 
     # def notify_cashvalue(self, cash, value):
     #     '''
