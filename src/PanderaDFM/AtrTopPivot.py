@@ -7,7 +7,7 @@ from PanderaDFM.Pivot import MultiTimeframePivot
 
 
 class MultiTimeAtrTopPivot(MultiTimeframePivot):
-    movement_start: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
-    movement_end: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
+    movement_start_time: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
+    movement_end_time: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
     movement_start_value: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
     movement_end_value: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]

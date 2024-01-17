@@ -101,13 +101,11 @@ def multi_timeframe_bull_bear_side_pivots(date_range_str: str = None, structure_
                 # find the Peaks and Valleys align with the Pivot
                 pivot_peaks_n_valleys = timeframe_peaks_n_valleys.loc[
                     timeframe_peaks_n_valleys.index.get_level_values('date').isin(timeframe_pivots.index)]
-                timeframe_pivots = pivots_level_n_margins(pivot_time_peaks_n_valleys=pivot_peaks_n_valleys,
-                                                          timeframe_pivots=timeframe_pivots,
-                                                          timeframe=timeframe,
-                                                          candle_body_source=timeframe_ohlcva,
+                timeframe_pivots = pivots_level_n_margins(timeframe_pivots=timeframe_pivots,
+                                                          pivot_time_peaks_n_valleys=pivot_peaks_n_valleys,
+                                                          timeframe=timeframe, candle_body_source=timeframe_ohlcva,
                                                           internal_atr_source=timeframe_ohlcva,
-                                                          breakout_atr_source=trigger_timeframe_ohlcva,
-                                                          )
+                                                          breakout_atr_source=trigger_timeframe_ohlcva)
                 timeframe_pivots['ttl'] = timeframe_pivots.index + level_ttl(timeframe)
                 timeframe_pivots['deactivated_at'] = None
                 timeframe_pivots['archived_at'] = None
