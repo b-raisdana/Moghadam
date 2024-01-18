@@ -6,7 +6,7 @@ from pandera import typing as pt
 
 from Config import config, TopTYPE
 from MetaTrader import MT
-from PanderaDFM.AtrTopPivot import MultiTimeAtrTopPivot
+from PanderaDFM.AtrTopPivot import MultiTimeAtrTopPivotDFM, AtrTopPivotDFM, MultiTimeAtrMovementPivotDf, AtrMovementPivotDf
 from PanderaDFM.MultiTimeframe import MultiTimeframe
 from PanderaDFM.OHLCV import OHLCV
 from PanderaDFM.OHLCVA import MultiTimeframeOHLCVA
@@ -21,7 +21,7 @@ from helper.helper import measure_time, date_range, date_range_to_string
 
 
 def insert_more_significant_top(base_tops: pt.DataFrame[MultiTimeframePeakValley],
-                                target_tops: pt.DataFrame[MultiTimeframeOHLCVA], top_type: TopTYPE) \
+                                target_tops: pt.DataFrame[MultiTimeframePeakValley], top_type: TopTYPE) \
         -> pt.DataFrame[MultiTimeframePeakValley]:
     if top_type == TopTYPE.PEAK:
         high_low = 'high'
@@ -50,9 +50,8 @@ def insert_more_significant_top(base_tops: pt.DataFrame[MultiTimeframePeakValley
     return base_tops
 
 
-def insert_more_significant_tops(mt_tops: pt.DataFrame[MultiTimeframePeakValley],
-                                 mt_ohlcva: pt.DataFrame[MultiTimeframeOHLCVA]) -> pt.DataFrame[
-    MultiTimeframePeakValley]:  # todo: test
+def insert_more_significant_tops(mt_tops: pt.DataFrame[MultiTimeframePeakValley],)\
+        -> pt.DataFrame[MultiTimeframePeakValley]:  # todo: test
     # peaks = peaks_only(mt_tops)
     # mt_tops = insert_more_significant_top(peaks, mt_ohlcva, TopTYPE.PEAK)
     # valleys = valleys_only(mt_tops)
@@ -62,8 +61,8 @@ def insert_more_significant_tops(mt_tops: pt.DataFrame[MultiTimeframePeakValley]
     return mt_tops
 
 
-def atr_top_pivots(date_range_str: str = None, structure_timeframe_shortlist: List['str'] = None) \
-        -> pt.DataFrame[MultiTimeAtrTopPivot]:
+def atr_movement_pivots(date_range_str: str = None, structure_timeframe_shortlist: List['str'] = None) \
+        -> pt.DataFrame[MultiTimeAtrTopPivotDFM]:
     """
     for peaks:
         (
@@ -84,8 +83,8 @@ def atr_top_pivots(date_range_str: str = None, structure_timeframe_shortlist: Li
         date_range_str = config.processing_date_range
     mt_tops: pt.DataFrame[MultiTimeframePeakValley] = read_multi_timeframe_peaks_n_valleys(date_range_str)  # todo: test
     start, end = date_range(date_range_str)
-    mt_tops_mapped_time = [to_timeframe(date, timeframe, ignore_cached_times=True) for (timeframe, date), top_data
-                           in mt_tops.iterrows()]
+    mt_tops_mapped_time = [to_timeframe(date, timeframe, ignore_cached_times=True, do_not_warn=True)
+                           for (timeframe, date), top_data in mt_tops.iterrows()]
     expanded_atr_start = min(mt_tops_mapped_time)
     expanded_atr_date_range_str = date_range_to_string(start=min(start, expanded_atr_start), end=end)
     mt_ohlcva = read_multi_timeframe_ohlcva(expanded_atr_date_range_str)
@@ -94,14 +93,14 @@ def atr_top_pivots(date_range_str: str = None, structure_timeframe_shortlist: Li
     mt_tops = mt_tops[mt_tops.index.get_level_values('timeframe').isin(structure_timeframe_shortlist)]
     mt_tops = insert_multi_timeframe_atr(mt_tops, mt_ohlcva)
     mt_tops = insert_pivot_movements(mt_tops, base_ohlcva)
-    mt_tops['return_end_time'] = mt_tops['right_crossing_time']
-    mt_tops['movement_start_time'] = mt_tops['left_crossing_time']
-    mt_tops['return_end_value'] = mt_tops['right_crossing_value']
-    mt_tops['movement_start_value'] = mt_tops['left_crossing_value']
+    mt_tops['return_end_time'] = mt_tops['right_crossing_time'].astype('datetime64[ns, UTC]')
+    mt_tops['movement_start_time'] = mt_tops['left_crossing_time'].astype('datetime64[ns, UTC]')
+    mt_tops['return_end_value'] = mt_tops['right_crossing_value'].astype(float)
+    mt_tops['movement_start_value'] = mt_tops['left_crossing_value'].astype(float)
     movement_satisfied_tops = mt_tops[
         mt_tops['movement_start_time'].notna() & mt_tops['return_end_time'].notna()].copy()
     # mt_tops = mt_tops[movement_satisfied_tops]  # Optional
-    movement_satisfied_tops = insert_more_significant_tops(movement_satisfied_tops, mt_ohlcva)
+    movement_satisfied_tops = insert_more_significant_tops(movement_satisfied_tops,)
     movement_satisfied_tops['right_more_significant_peak_time'] = movement_satisfied_tops['right_crossing_time']
     movement_satisfied_tops['left_more_significant_peak_time'] = movement_satisfied_tops['left_crossing_time']
     movement_satisfied_tops['right_more_significant_peak_value'] = movement_satisfied_tops['right_crossing_value']
@@ -109,45 +108,56 @@ def atr_top_pivots(date_range_str: str = None, structure_timeframe_shortlist: Li
     pivots = movement_satisfied_tops[
         (movement_satisfied_tops['right_more_significant_peak_time'] >= movement_satisfied_tops['return_end_time'])
         & (movement_satisfied_tops['left_more_significant_peak_time'] <= movement_satisfied_tops['movement_start_time'])
-        ]
+        ].copy()
 
-    resistance_pivots = pivots[pivots['peak_or_valley'] == TopTYPE.PEAK.value].index # tdod: test 1
+    resistance_pivots = pivots[pivots['peak_or_valley'] == TopTYPE.PEAK.value].index
     pivots.loc[resistance_pivots, 'level'] = pivots.loc[resistance_pivots, 'high']
     support_pivots = pivots[pivots['peak_or_valley'] == TopTYPE.VALLEY.value].index
     pivots.loc[support_pivots, 'level'] = pivots.loc[support_pivots, 'low']
 
     if structure_timeframe_shortlist is None:
         structure_timeframe_shortlist = config.structure_timeframes[::-1]
+    multi_timeframe_pivots = MultiTimeAtrMovementPivotDf.new()
     for timeframe in pivots.index.get_level_values('timeframe').intersection(structure_timeframe_shortlist):
         timeframe_ohlcva = single_timeframe(mt_ohlcva, timeframe)
-        trigger_timeframe_ohlcva = single_timeframe(mt_ohlcva, trigger_timeframe(timeframe))
+        # trigger_timeframe_ohlcva = single_timeframe(mt_ohlcva, trigger_timeframe(timeframe))
         timeframe_pivots = pivots[pivots.index.get_level_values(level='timeframe') == timeframe]
         timeframe_pivots = timeframe_pivots.reset_index(level='timeframe')
 
         timeframe_pivots['activation_time'] = timeframe_pivots.index
 
-        timeframe_resistance_pivots = timeframe_pivots[timeframe_pivots['peak_or_valley'] == TopTYPE.PEAK.value].index
-        timeframe_support_pivots = timeframe_pivots[timeframe_pivots['peak_or_valley'] == TopTYPE.VALLEY.value].index
-
         # find the Peaks and Valleys align with the Pivot
         timeframe_resistance_pivots = timeframe_pivots[timeframe_pivots['peak_or_valley'] == TopTYPE.PEAK.value].index
-        timeframe_pivots.loc[timeframe_resistance_pivots] = \
-            pivot_margins(timeframe_pivots.loc[timeframe_resistance_pivots], _type=TopTYPE.VALLEY,
+        timeframe_pivots.loc[timeframe_resistance_pivots, ['internal_margin', 'external_margin', ]] = \
+            pivot_margins(timeframe_pivots.loc[timeframe_resistance_pivots], _type=TopTYPE.PEAK,
                           pivot_peaks_or_valleys=timeframe_pivots.loc[timeframe_resistance_pivots],
-                          candle_body_source=timeframe_pivots.loc[timeframe_resistance_pivots], timeframe=timeframe,
+                          candle_body_source=timeframe_ohlcva,  # timeframe_pivots.loc[timeframe_resistance_pivots],
+                          timeframe=timeframe,
                           internal_margin_atr=timeframe_ohlcva,
-                          breakout_margin_atr=trigger_timeframe_ohlcva)
+                          breakout_margin_atr=timeframe_ohlcva)[['internal_margin', 'external_margin']]
+
+        timeframe_support_pivots = timeframe_pivots[timeframe_pivots['peak_or_valley'] == TopTYPE.VALLEY.value].index
+        timeframe_pivots.loc[timeframe_support_pivots, ['internal_margin', 'external_margin', ]] = \
+            pivot_margins(timeframe_pivots.loc[timeframe_support_pivots], _type=TopTYPE.VALLEY,
+                          pivot_peaks_or_valleys=timeframe_pivots.loc[timeframe_support_pivots],
+                          candle_body_source=timeframe_ohlcva,  # timeframe_pivots.loc[timeframe_support_pivots],
+                          timeframe=timeframe,
+                          internal_margin_atr=timeframe_ohlcva,
+                          breakout_margin_atr=timeframe_ohlcva)[['internal_margin', 'external_margin']]
+
         timeframe_pivots['ttl'] = timeframe_pivots.index + level_ttl(timeframe)
-        timeframe_pivots['deactivated_at'] = None
-        timeframe_pivots['archived_at'] = None
-        timeframe_pivots['is_overlap_of'] = None
-        timeframe_pivots = cast_and_validate(timeframe_pivots, MultiTimeAtrTopPivot)
+        timeframe_pivots['deactivated_at'] = pd.Series(dtype='datetime64[ns, UTC]')
+        timeframe_pivots['archived_at'] = pd.Series(dtype='datetime64[ns, UTC]')
+        timeframe_pivots['is_overlap_of'] = pd.Series(dtype='str')
+        timeframe_pivots['hit'] = 0
+        timeframe_pivots = AtrMovementPivotDf.cast_and_validate(timeframe_pivots)
         timeframe_pivots['timeframe'] = timeframe
         timeframe_pivots = timeframe_pivots.set_index('timeframe', append=True)
         timeframe_pivots = timeframe_pivots.swaplevel()
-        multi_timeframe_pivots = concat(multi_timeframe_pivots, timeframe_pivots)
-    pivots = cast_and_validate(multi_timeframe_pivots, MultiTimeframePivot,
-                               zero_size_allowed=after_under_process_date(date_range_str))
+        # timeframe_pivots = cast_and_validate(timeframe_pivots, MultiTimeAtrTopPivotDFM)
+        # multi_timeframe_pivots = concat(multi_timeframe_pivots, timeframe_pivots)
+        multi_timeframe_pivots = MultiTimeAtrMovementPivotDf.concat(multi_timeframe_pivots, timeframe_pivots)
+    pivots = MultiTimeAtrMovementPivotDf.cast_and_validate(multi_timeframe_pivots)
     return pivots
     # """
     # for timeframe:

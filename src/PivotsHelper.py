@@ -105,7 +105,7 @@ def peak_or_valley_pivots_level_n_margins(timeframe_pivots: pd.DataFrame, pivot_
     return timeframe_pivots
 
 
-@measure_time
+# @measure_time
 def pivot_margins(pivots: pd.DataFrame, _type: TopTYPE, pivot_peaks_or_valleys: pd.DataFrame,
                   candle_body_source: pd.DataFrame, timeframe: str, internal_margin_atr: pd.DataFrame,
                   breakout_margin_atr: pd.DataFrame) -> pd.DataFrame:
@@ -135,17 +135,24 @@ def pivot_margins(pivots: pd.DataFrame, _type: TopTYPE, pivot_peaks_or_valleys: 
         internal_func = max
     pivot_times = pivot_peaks_or_valleys.index.get_level_values('date')
     # nearest_body = max/min(candle_body_source[['open', 'close']])
-    candle_body_source['nearest_body'] = candle_body_source[['open', 'close']] \
-        .apply(choose_body_operator, axis='columns')
-    mapped_pivot_times = [to_timeframe(pivot_time, timeframe) for pivot_time in
-                          pivot_peaks_or_valleys.index.get_level_values('date')]
-    candle_body_source: pd.DataFrame = candle_body_source.loc[mapped_pivot_times, 'nearest_body']
-    pivots = pd.merge_asof(pivots, candle_body_source, left_index=True, right_index=True, direction='backward',
-                           suffixes=('_x', ''))
-    # internal_margin = min/max( level -/+ internal_margin_atr ) of mapped time
-    internal_margin_atr = internal_margin_atr.rename(columns={'atr': 'internal_margin_atr'})[['internal_margin_atr']]
-    pivots = pd.merge_asof(pivots, internal_margin_atr, left_index=True, right_index=True, direction='backward',
-                           suffixes=('_x', ''))
+    if 'open' in pivots.columns and 'close' in pivots.columns:
+        pivots['nearest_body'] = pivots[['open', 'close']].apply(choose_body_operator, axis='columns')
+    else:
+        candle_body_source['nearest_body'] = candle_body_source[['open', 'close']] \
+            .apply(choose_body_operator, axis='columns')
+        mapped_pivot_times = [to_timeframe(pivot_time, timeframe) for pivot_time in
+                              pivot_peaks_or_valleys.index.get_level_values('date')]
+        # candle_body_source: pd.DataFrame = candle_body_source.loc[mapped_pivot_times, 'nearest_body']
+        pivots = pd.merge_asof(pivots, candle_body_source, left_index=True, right_index=True, direction='backward',
+                               suffixes=('_x', ''))  # todo: test without mapped_pivot_times
+    if 'atr' in pivots.columns:
+        pivots['internal_margin_atr'] = pivots['atr']
+    else:
+        # internal_margin = min/max( level -/+ internal_margin_atr ) of mapped time
+        internal_margin_atr = internal_margin_atr.rename(columns={'atr': 'internal_margin_atr'}) \
+            [['internal_margin_atr']]
+        pivots = pd.merge_asof(pivots, internal_margin_atr, left_index=True, right_index=True, direction='backward',
+                               suffixes=('_x', ''))
     if _type.value == TopTYPE.PEAK.value:
         pivots.loc[pivot_times, 'atr_margin'] = \
             pivots.loc[pivot_times, 'level'] - pivots.loc[pivot_times, 'internal_margin_atr']
@@ -156,8 +163,10 @@ def pivot_margins(pivots: pd.DataFrame, _type: TopTYPE, pivot_peaks_or_valleys: 
         pivots.loc[pivot_times, ['nearest_body', 'atr_margin']].apply(internal_func, axis='columns')
     # external_margin = level +/- breakout_margin_atr of mapped time
     breakout_margin_atr = breakout_margin_atr.rename(columns={'atr': 'breakout_margin_atr'})[['breakout_margin_atr']]
+    pivots.drop(columns=['breakout_margin_atr', ], errors='ignore', inplace=True)
     pivots = pd.merge_asof(pivots, breakout_margin_atr, left_index=True, right_index=True, direction='backward',
-                           suffixes=('_x', ''))
+                           # suffixes=('_x', '')
+                           )
     if _type.value == TopTYPE.PEAK.value:
         pivots.loc[pivot_times, 'external_margin'] = \
             pivots.loc[pivot_times, 'level'] + pivots.loc[pivot_times, 'breakout_margin_atr']
@@ -168,10 +177,10 @@ def pivot_margins(pivots: pd.DataFrame, _type: TopTYPE, pivot_peaks_or_valleys: 
         raise AssertionError("pivots[['internal_margin', 'external_margin']].isna().any().any()")
     return pivots
 
-@measure_time
+
 def zz_pivot_margins(pivots: pd.DataFrame, _type: TopTYPE, pivot_peaks_or_valleys: pd.DataFrame,
-                  candle_body_source: pd.DataFrame, timeframe: str, internal_margin_atr: pd.DataFrame,
-                  breakout_margin_atr: pd.DataFrame) -> pd.DataFrame:
+                     candle_body_source: pd.DataFrame, timeframe: str, internal_margin_atr: pd.DataFrame,
+                     breakout_margin_atr: pd.DataFrame) -> pd.DataFrame:
     """
     Calculate margins for pivot levels based on peak or valley type.
 
@@ -230,6 +239,71 @@ def zz_pivot_margins(pivots: pd.DataFrame, _type: TopTYPE, pivot_peaks_or_valley
     if pivots[['internal_margin', 'external_margin']].isna().any().any():
         raise AssertionError("pivots[['internal_margin', 'external_margin']].isna().any().any()")
     return pivots
+
+
+@measure_time
+def zz_pivot_margins(pivots: pd.DataFrame, _type: TopTYPE, pivot_peaks_or_valleys: pd.DataFrame,
+                     candle_body_source: pd.DataFrame, timeframe: str, internal_margin_atr: pd.DataFrame,
+                     breakout_margin_atr: pd.DataFrame) -> pd.DataFrame:
+    """
+    Calculate margins for pivot levels based on peak or valley type.
+
+    Args:
+        pivots (pd.DataFrame): DataFrame containing pivot levels with a 'level' column.
+        _type (TopTYPE): Type of pivot, either 'peak' or 'valley'.
+        pivot_peaks_or_valleys (pd.DataFrame): DataFrame containing peak or valley information.
+        candle_body_source (pd.DataFrame): DataFrame containing candle body data with 'open' and 'close' columns.
+        timeframe (str): Timeframe used for mapping pivot times.
+        internal_margin_atr (pd.DataFrame): DataFrame containing atr (Average True Range) data with 'atr' column.
+        breakout_margin_atr (pd.DataFrame): DataFrame containing atr (Average True Range) data with 'atr' column.
+
+    Returns:
+        pd.DataFrame: Updated DataFrame with calculated margins.
+        Adds following columns:
+        'internal_margin': ???
+        'external_margin': ???
+    """
+    if _type == TopTYPE.PEAK:
+        choose_body_operator = max
+        internal_func = min
+    else:  # _type == TopTYPE.valley
+        choose_body_operator = min
+        internal_func = max
+    pivot_times = pivot_peaks_or_valleys.index.get_level_values('date')
+    # nearest_body = max/min(candle_body_source[['open', 'close']])
+    candle_body_source['nearest_body'] = candle_body_source[['open', 'close']] \
+        .apply(choose_body_operator, axis='columns')
+    mapped_pivot_times = [to_timeframe(pivot_time, timeframe) for pivot_time in
+                          pivot_peaks_or_valleys.index.get_level_values('date')]
+    candle_body_source: pd.DataFrame = candle_body_source.loc[mapped_pivot_times, 'nearest_body']
+    pivots = pd.merge_asof(pivots, candle_body_source, left_index=True, right_index=True, direction='backward',
+                           suffixes=('_x', ''))
+    # internal_margin = min/max( level -/+ internal_margin_atr ) of mapped time
+    internal_margin_atr = internal_margin_atr.rename(columns={'atr': 'internal_margin_atr'})[['internal_margin_atr']]
+    pivots = pd.merge_asof(pivots, internal_margin_atr, left_index=True, right_index=True, direction='backward',
+                           suffixes=('_x', ''))
+    if _type.value == TopTYPE.PEAK.value:
+        pivots.loc[pivot_times, 'atr_margin'] = \
+            pivots.loc[pivot_times, 'level'] - pivots.loc[pivot_times, 'internal_margin_atr']
+    else:
+        pivots.loc[pivot_times, 'atr_margin'] = \
+            pivots.loc[pivot_times, 'level'] + pivots.loc[pivot_times, 'internal_margin_atr']
+    pivots.loc[pivot_times, 'internal_margin'] = \
+        pivots.loc[pivot_times, ['nearest_body', 'atr_margin']].apply(internal_func, axis='columns')
+    # external_margin = level +/- breakout_margin_atr of mapped time
+    breakout_margin_atr = breakout_margin_atr.rename(columns={'atr': 'breakout_margin_atr'})[['breakout_margin_atr']]
+    pivots = pd.merge_asof(pivots, breakout_margin_atr, left_index=True, right_index=True, direction='backward',
+                           suffixes=('_x', ''))
+    if _type.value == TopTYPE.PEAK.value:
+        pivots.loc[pivot_times, 'external_margin'] = \
+            pivots.loc[pivot_times, 'level'] + pivots.loc[pivot_times, 'breakout_margin_atr']
+    else:
+        pivots.loc[pivot_times, 'external_margin'] = \
+            pivots.loc[pivot_times, 'level'] - pivots.loc[pivot_times, 'breakout_margin_atr']
+    if pivots[['internal_margin', 'external_margin']].isna().any().any():
+        raise AssertionError("pivots[['internal_margin', 'external_margin']].isna().any().any()")
+    return pivots
+
 
 def level_ttl(timeframe) -> datetime.timedelta:
     return 512 * pd.to_timedelta(timeframe)

@@ -4,30 +4,65 @@ from plotly import graph_objects as plgo
 
 from Config import config
 from FigurePlotter.OHLVC_plotter import plot_ohlcv
-from FigurePlotter.plotter import save_figure, file_id, timeframe_color, show_and_save_plot
+from FigurePlotter.plotter import timeframe_color, show_and_save_plot
+from PanderaDFM.AtrTopPivot import MultiTimeAtrMovementPivotDf
 from PanderaDFM.Pivot import MultiTimeframePivot, Pivot
 from helper.data_preparation import single_timeframe
 from helper.helper import measure_time
 from ohlcv import read_multi_timeframe_ohlcv
 
 
+# @measure_time
+# def plot_multi_timeframe_atr_movement_pivots(multi_timeframe_pivots: pt.DataFrame[MultiTimeframePivot],
+#                                              date_range_str: str = None, show: bool = True,
+#                                              save: bool = True) -> plgo.Figure:
+#     fig = plot_multi_timeframe_pivots(multi_timeframe_pivots, date_range_str, show=False, save=False)
+#     for index, pivot in multi_timeframe_pivots.iterrows():
+#         pivot_start = index[MultiTimeAtrMovementPivotDf.index_id('date')]
+#         pivot_timeframe = index[MultiTimeAtrMovementPivotDf.index_id('timeframe')]
+#         pivot_name = Pivot.name(pivot_start, pivot_timeframe, pivot)
+#         pivot_description = Pivot.description(pivot_start, pivot_timeframe, pivot)
+#         text = pivot_description
+#         legend_group = pivot_name
+#         # add movement start scatter
+#         fig.add_scatter(x=[index[MultiTimeAtrMovementPivotDf.index_id('date')], pivot['movement_start_time']],
+#                         y=[pivot['level'], pivot['movement_start_value'], ],  # mode="line",
+#                         fillcolor="yellow",
+#                         name="NoT",
+#                         showlegend=False,
+#                         text=[text],
+#                         hovertemplate="%{text}",
+#                         legendgroup=legend_group, )
+#
+#         # add return end scatter
+#         fig.add_scatter(x=[index[MultiTimeAtrMovementPivotDf.index_id('date')], pivot['return_end_time']],
+#                         y=[pivot['level'], pivot['return_end_value'], ],  # mode="line",
+#                         fillcolor="yellow",
+#                         name="NoT",
+#                         showlegend=False,
+#                         text=[text],
+#                         hovertemplate="%{text}",
+#                         legendgroup=legend_group, )
+#
+#     show_and_save_plot(fig, save, show, name_without_prefix=f'multi_timeframe_classic_pivots.{date_range_str}')
+#     return fig
+
+
 @measure_time
 def plot_multi_timeframe_pivots(multi_timeframe_pivots: pt.DataFrame[MultiTimeframePivot],
-                                date_range_str: str = None,
-                                name: str = '', show: bool = True,
-                                html_path: str = '', save: bool = True) -> plgo.Figure:
+                                date_range_str: str = None, show: bool = True, save: bool = True) -> plgo.Figure:
     # Create the figure using plot_peaks_n_valleys function
     multi_timeframe_ohlcv = read_multi_timeframe_ohlcv(date_range_str)
     end_time = max(multi_timeframe_ohlcv.index.get_level_values('date'))
     base_ohlcv = single_timeframe(multi_timeframe_ohlcv, config.timeframes[0])
-    fig = plot_ohlcv(ohlcv=base_ohlcv, show=False, save=False, name=f'ohlcv{config.timeframes[0]}')
+    fig = plot_ohlcv(ohlcv=base_ohlcv, show=False, save=False, name=config.timeframes[0])
     for timeframe in config.timeframes[1:]:
         ohlcv = single_timeframe(multi_timeframe_ohlcv, timeframe)
         fig.add_trace(plgo.Candlestick(x=ohlcv.index,
                                        open=ohlcv['open'],
                                        high=ohlcv['high'],
                                        low=ohlcv['low'],
-                                       close=ohlcv['close'], name=f'ohlcv{timeframe}'))
+                                       close=ohlcv['close'], name=timeframe))
 
     multi_timeframe_pivots = multi_timeframe_pivots.sort_index(level='date')
     for (pivot_timeframe, pivot_start), pivot_info in multi_timeframe_pivots.iterrows():
@@ -42,7 +77,7 @@ def plot_multi_timeframe_pivots(multi_timeframe_pivots: pt.DataFrame[MultiTimefr
             fig.add_scatter(x=[
                 pivot_info['movement_start_time'], pivot_start, pivot_info['return_end_time']],
                 y=[pivot_info['movement_start_value'], pivot_info['level'], pivot_info['return_end_value']],
-                name=pivot_name, line=dict(color='cyan', width=0.5), mode='lines',  # +text',
+                name=pivot_name, line=dict(color='red', width=0.5), mode='lines',  # +text',
                 legendgroup=pivot_name, showlegend=False, hoverinfo='none',
             )
 

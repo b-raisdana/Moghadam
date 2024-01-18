@@ -8,16 +8,16 @@ from Config import config
 from FigurePlotter.BasePattern_plotter import plot_multi_timeframe_base_pattern
 from FigurePlotter.BullBearSide_plotter import plot_multi_timeframe_bull_bear_side_trends
 from FigurePlotter.PeakValley_plotter import plot_multi_timeframe_peaks_n_valleys
-from FigurePlotter.Pivot_plotter import plot_multi_timeframe_pivots
+from FigurePlotter.Pivot_plotter import plot_multi_timeframe_pivots, plot_multi_timeframe_pivots
 from PeakValley import read_multi_timeframe_peaks_n_valleys
-from PeakValleyPivots import atr_top_pivots
+from PeakValleyPivots import atr_movement_pivots
 from atr import read_multi_timeframe_ohlcva
 from helper.helper import date_range_to_string
 
 # from data_preparation import d_types
 
 if __name__ == "__main__":
-    config.processing_date_range = date_range_to_string(days=5, end=datetime(year=2023, month=11, day=18))
+    config.processing_date_range = date_range_to_string(days=1, end=datetime(year=2023, month=11, day=18))
     #
     #     file_path: str = config.path_of_data
     #     today_morning = today_morning()
@@ -40,7 +40,7 @@ if __name__ == "__main__":
     # plot_multi_timeframe_peaks_n_valleys(_peaks_and_valleys, config.processing_date_range)
     # bull_bear_side = read_multi_timeframe_bull_bear_side_trends()
     # plot_multi_timeframe_bull_bear_side_trends(ohlcva, _peaks_and_valleys, bull_bear_side)
-    _pivots = atr_top_pivots()
+    _pivots = atr_movement_pivots()
     #
     # generate_multi_timeframe_bull_bear_side_pivots(config.processing_date_range)
     # _pivots = read_multi_timeframe_bull_bear_side_pivots(config.processing_date_range)

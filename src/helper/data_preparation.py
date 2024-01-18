@@ -15,7 +15,7 @@ from pandera import typing as pt, DataType
 
 from Config import config
 from PanderaDFM.MultiTimeframe import MultiTimeframe_Type, MultiTimeframe
-from helper.helper import log, date_range, date_range_to_string, morning, Pandera_DFM_Type, LogSeverity, log_d
+from helper.helper import log, date_range, date_range_to_string, morning, Pandera_DFM_Type, LogSeverity, log_d, log_w
 
 
 def date_range_of_data(data: pd.DataFrame) -> str:
@@ -301,7 +301,8 @@ def single_timeframe(multi_timeframe_data: pt.DataFrame[MultiTimeframe_Type], ti
     return validate_no_timeframe(single_timeframe_data.droplevel('timeframe'))
 
 
-def to_timeframe(time: Union[DatetimeIndex, datetime, Timestamp], timeframe: str, ignore_cached_times: bool = False) \
+def to_timeframe(time: Union[DatetimeIndex, datetime, Timestamp], timeframe: str, ignore_cached_times: bool = False,
+                 do_not_warn: bool = False) \
         -> Union[datetime, DatetimeIndex]:
     """
     Round down the given datetime or DatetimeIndex to the nearest time based on the specified timeframe.
@@ -318,7 +319,10 @@ def to_timeframe(time: Union[DatetimeIndex, datetime, Timestamp], timeframe: str
 
     Raises:
         Exception: If time types are incompatible, or if rounding requirements are not met.
+        :param do_not_warn: Set it true if you are sure about using this method.
     """
+    if not do_not_warn:
+        log_w("Try not to use to_timeframe and use pd.merge_asof(...) instead", stack_trace=False)
 
     def round_single_datetime(dt: Union[datetime, Timestamp]):
         """
@@ -834,7 +838,7 @@ def nearest_match(needles: Axes, reference: Axes, direction: str, start=None, en
     df = df.sort_index()
     if direction == 'forward':
         df.loc[forward, 'forward'] = forward
-        if shift!=0:
+        if shift != 0:
             df['forward'] = df['forward'].ffill().shift(shift)
         else:
             df['forward'] = df['forward'].ffill()

@@ -17,9 +17,8 @@ class Pivot(pandera.DataFrameModel):
     ttl: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]  # = pandera.Field(nullable=True)
     deactivated_at: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
     archived_at: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
-    hit: pt.Series[int] = pandera.Field(nullable=True, coerce=True)
+    hit: pt.Series[int] = pandera.Field(nullable=True)
     is_overlap_of: pt.Series[str] = pandera.Field(nullable=True)
-
 
     @staticmethod
     def description(start_time: datetime, pivot_timeframe: str, pivot_info) -> str:
@@ -35,7 +34,6 @@ class Pivot(pandera.DataFrameModel):
             output += f"O{pivot_info['is_overlap_of']}"
         return output
 
-
     @staticmethod
     def name(start_time: datetime, pivot_timeframe: str, pivot_info) -> str:
         output = f"Pivot {pivot_info['level']:.0f}={pivot_timeframe}@{start_time.strftime('%m/%d.%H:%M')}"
@@ -45,4 +43,5 @@ class Pivot(pandera.DataFrameModel):
 
 
 class MultiTimeframePivot(Pivot, MultiTimeframe):
-    hit: pt.Series[int] = pandera.Field()
+    pass
+    # hit: pt.Series[int] = pandera.Field()

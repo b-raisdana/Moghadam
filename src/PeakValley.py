@@ -68,10 +68,10 @@ def insert_distance(base: pt.DataFrame[PeakValley], target: pt.DataFrame[OHLCV],
     - right_crossing_time or left_crossing_time: Time index where the crossing occurs in the specified direction.
     - right_crossing_value or left_crossing_value: Value of the OHLCV data at the crossing point in the specified direction.
     """
-    base = insert_crossing(base, target, top_type, direction, base_compare_column)  # todo: test
+    base = insert_crossing(base, target, top_type, direction, base_target_column=base_compare_column)  # todo: test
     valid_crossing_times = base[base[f'{direction}_crossing_time'].notna()].index
     base.loc[valid_crossing_times, direction + '_distance'] = \
-        abs(pd.to_datetime(valid_crossing_times) - target.loc[valid_crossing_times, f'{direction}_crossing_time'])
+        abs(pd.to_datetime(valid_crossing_times) - base.loc[valid_crossing_times, f'{direction}_crossing_time'])
     return base
 
 
