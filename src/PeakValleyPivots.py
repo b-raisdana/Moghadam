@@ -27,11 +27,11 @@ def insert_more_significant_top(base_tops: pt.DataFrame[MultiTimeframePeakValley
         -> pt.DataFrame[MultiTimeframePeakValley]:
     if top_type == TopTYPE.PEAK:
         high_low = 'high'
-        cross_direction = 'up'
+        cross_direction = 'out'
 
     else:  # top_type == TopTYPE.VALLEY
         high_low = 'low'
-        cross_direction = 'down'
+        cross_direction = 'in'
 
     assert 'atr' in base_tops.columns
     peak_or_valley_indexes = base_tops[base_tops['peak_or_valley'] == top_type.value].index
@@ -352,12 +352,12 @@ def insert_pivot_movement_times(timeframe_peak_or_valleys: pt.DataFrame[PeakVall
     peak_or_valleys['previous_target'] = \
         aggregate(peak_or_valleys[high_low], 3 * timeframe_peak_or_valleys.loc[peak_or_valley_indexes, 'atr'])
     timeframe_peak_or_valleys.loc[peak_or_valley_indexes, ['left_crossing_time', 'left_crossing_value']] = \
-        insert_crossing(peak_or_valleys, base_ohlcv, top_type, 'left', 'down',
+        insert_crossing(peak_or_valleys, base_ohlcv, top_type, 'left', 'in',
                         base_target_column='previous_target')[['left_crossing_time', 'left_crossing_value']]
 
     peak_or_valleys['next_target'] = aggregate(peak_or_valleys[high_low], peak_or_valleys['atr'])
     timeframe_peak_or_valleys.loc[peak_or_valley_indexes, ['right_crossing_time', 'right_crossing_value']] = \
-        insert_crossing(peak_or_valleys, base_ohlcv, top_type, 'right', 'down',
+        insert_crossing(peak_or_valleys, base_ohlcv, top_type, 'right', 'in',
                         base_target_column='next_target')[['right_crossing_time', 'right_crossing_value']]
 
     return timeframe_peak_or_valleys

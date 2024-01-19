@@ -77,11 +77,15 @@ def insert_distance(base: pt.DataFrame[PeakValley], target: pt.DataFrame[OHLCV],
 
 # @measure_time
 def insert_crossing(base: pt.DataFrame[PeakValley], target: pd.DataFrame, base_type: TopTYPE,
-                    direction: Literal['right', 'left'], cross_direction: Literal['up', 'down'] = 'up',
+                    direction: Literal['right', 'left'], cross_direction: Literal['out', 'in'] = 'out',
                     base_target_column: str = None) -> pt.DataFrame[PeakValley]:
     """
     find the fist crossing candle in 'target' which crosses 'base['base_compare_column']'  toward the 'direction'.
-    according to 'base_type'=high/low it will consider to find first crossing up/down candle.
+    according to 'base_type'=high/low it will consider to find first crossing in/out candle.
+    crossing in for Peaks = target < base
+    crossing out for Peaks = target > base
+    crossing in for Valleys = target > base
+    crossing out for Valleys = target < base
 
     Parameters:
     - target (pd.DataFrame): A single-timeframe DataFrame containing the compared-to data.
@@ -104,8 +108,8 @@ def insert_crossing(base: pt.DataFrame[PeakValley], target: pd.DataFrame, base_t
         raise ValueError("Expected single-timeframe target but 'timeframe' in target.index.names")
     if direction not in ['right', 'left']:
         raise ValueError(f"direction({direction}) not in ['right', 'left']")
-    if cross_direction not in ['up', 'down']:
-        raise ValueError("cross_direction not in ['up', 'down']:" + cross_direction)
+    if cross_direction not in ['out', 'in']:
+        raise ValueError("cross_direction not in ['out', 'in']:" + cross_direction)
     # todo: test all usages!
     target_compare_column, direction, les_significant, more_significant, reverse = direction_parameters(direction,
                                                                                                         base_type,
@@ -121,6 +125,8 @@ def insert_crossing(base: pt.DataFrame[PeakValley], target: pd.DataFrame, base_t
     bases_to_compare = base.copy()
     bases_to_compare['target_index'] = nearest_match(bases_to_compare.index.get_level_values('date'), target.index,
                                                      direction='forward', shift=0)
+    drop_base_without_crossing(bases_to_compare, target, base_target_column, target_compare_column, base_type,
+                               cross_direction, direction)
     bases_with_known_crossing_target = empty_df(PeakValley)
     number_of_crossed_bases = 1
     while number_of_crossed_bases > 0 and len(bases_to_compare) > 0:
@@ -131,7 +137,7 @@ def insert_crossing(base: pt.DataFrame[PeakValley], target: pd.DataFrame, base_t
         number_of_crossed_bases = len(crossed_bases)
         if number_of_crossed_bases > 0:
             # add crossing information to base
-            base = insert_crossing_info(base, crossed_bases, direction, target, target_compare_column)
+            insert_crossing_info(base, crossed_bases, direction, target, target_compare_column)
             if len(bases_with_known_crossing_target) == 0:
                 bases_with_known_crossing_target = bases_to_compare.loc[crossed_bases.index]
             else:
@@ -141,9 +147,38 @@ def insert_crossing(base: pt.DataFrame[PeakValley], target: pd.DataFrame, base_t
                 raise AssertionError('bases_with_known_crossing_target.index.duplicated(keep=False).any()')
             bases_to_compare = bases_to_compare.drop(crossed_bases.index)
     compared_bases = concat(bases_with_known_crossing_target, bases_to_compare).sort_index()
-    assert not compared_bases.index.duplicated(keep=False).any()
-    assert len(compared_bases) == len(base)
+    if len(bases_to_compare) > 0:
+        AssertionError("len(bases_to_compare) > 0")
+    if compared_bases.index.duplicated(keep=False).any():
+        AssertionError("compared_bases.index.duplicated(keep=False).any()")
+    if len(compared_bases) != len(base):
+        AssertionError("len(compared_bases) != len(base)")
     return base
+
+
+def drop_base_without_crossing(bases_to_compare, target, base_target_column, target_compare_column, base_type,
+                               cross_direction, direction):
+    if ((base_type == TopTYPE.PEAK and cross_direction == 'out') # todo: test
+            or (base_type == TopTYPE.VALLEY and cross_direction == 'in')):
+        if direction == 'left':
+            target['min_value'] = target[target_compare_column].rolling(window=len(target[target_compare_column]),
+                                                                        min_periods=1, step=1)
+        else:  # direction == 'right':
+            target['min_value'] = target[target_compare_column].rolling(window=len(target[target_compare_column]),
+                                                                        min_periods=1, step=-1)
+        without_crossings = bases_to_compare[
+            bases_to_compare[base_target_column] > target['min_value']]
+    else:
+        if direction == 'left':
+            target['max_value'] = target[target_compare_column].rolling(window=len(target[target_compare_column]),
+                                                                        min_periods=1, step=1)
+        else:  # direction == 'right':
+            target['max_value'] = target[target_compare_column].rolling(window=len(target[target_compare_column]),
+                                                                        min_periods=1, step=-1)
+        without_crossings = bases_to_compare[
+            bases_to_compare[base_target_column] < target['max_value']]
+    bases_to_compare.drop(index=without_crossings.index, inplace=True)
+    return without_crossings
 
 
 # def insert_crossing_info(base, bases_to_compare, crossed_bases, direction, target):
@@ -155,7 +190,7 @@ def insert_crossing_info(base, crossed_bases, direction, target, target_compare_
     #     target.loc[bases_to_compare.loc[crossed_bases, 'target_index'], f'{direction}_crossing_value'].to_list()
     base.loc[crossed_bases.index, f'{direction}_crossing_value'] = \
         target.loc[crossed_bases['target_date'].tolist(), target_compare_column].to_list()
-    return base
+    # return base
 
 
 # pd.set_option('future.no_silent_downcasting', True)
@@ -361,7 +396,7 @@ def find_crossings(base_compare_column, bases_to_compare, direction, more_signif
 #     return tops_with_known_crossing_bar
 
 
-def direction_parameters(direction, top_type, cross_direction: Literal['up', 'down']):
+def direction_parameters(direction, top_type, cross_direction: Literal['out', 'in']):
     """
     if direction.lower() == 'right':
         reverse = 'left'
@@ -424,7 +459,7 @@ def direction_parameters(direction, top_type, cross_direction: Literal['up', 'do
     return compare_column, direction, les_significant, more_significant, reverse
 
 
-def top_operators(top_type, cross_direction: Literal['up', 'down'] = 'up', equal_is_significant: bool = False):
+def top_operators(top_type, cross_direction: Literal['out', 'in'] = 'out', equal_is_significant: bool = False):
     if equal_is_significant:
         if top_type == TopTYPE.PEAK:
             compare_column = 'high'
@@ -459,10 +494,10 @@ def top_operators(top_type, cross_direction: Literal['up', 'down'] = 'up', equal
 
             def lt(x, y):
                 return x > y
-    if cross_direction == 'up':
+    if cross_direction == 'out':
         more_significant = gt
         les_significant = lt
-    elif cross_direction == 'down':
+    elif cross_direction == 'in':
         if top_type == TopTYPE.PEAK:
             compare_column = 'low'
         else:
