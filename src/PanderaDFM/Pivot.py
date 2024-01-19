@@ -11,6 +11,7 @@ from PanderaDFM.MultiTimeframe import MultiTimeframe
 class Pivot(pandera.DataFrameModel):
     date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
     level: pt.Series[float]
+    is_resistance: pt.Series[bool]
     internal_margin: pt.Series[float]
     external_margin: pt.Series[float]
     activation_time: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]

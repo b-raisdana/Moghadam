@@ -158,7 +158,7 @@ def insert_crossing_info(base, crossed_bases, direction, target, target_compare_
     return base
 
 
-pd.set_option('future.no_silent_downcasting', True)
+# pd.set_option('future.no_silent_downcasting', True)
 
 
 def find_crossings(base_compare_column, bases_to_compare, direction, more_significant, reverse, target,
@@ -190,7 +190,7 @@ def find_crossings(base_compare_column, bases_to_compare, direction, more_signif
     bases_with_adjacent_target = bases_to_compare[bases_to_compare['adjacent_target_date'].notna()]
     # adjacent_target_dates = [target_date for target_date in adjacent_target_dates if pd.notna(target_date)]
     adjacent_target_dates = bases_with_adjacent_target['adjacent_target_date']
-    if len(adjacent_target_dates) > len(set(adjacent_target_dates)):
+    if len(adjacent_target_dates) != len(set(adjacent_target_dates)):
         raise AssertionError("find_crossings only implemented for unique adjacent_target_index!")
     # prepare for iteration
 

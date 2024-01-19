@@ -255,30 +255,30 @@ def update_hit(active_timeframe_pivots: pt.DataFrame[Pivot], all_timerame_pivots
     return active_timeframe_pivots
 
 
-def old_update_hit(active_multi_timeframe_pivots: pt.DataFrame[MultiTimeframePivot]) \
-        -> pt.DataFrame[MultiTimeframePivot]:
-    """
-    number of pivots:
-        after activation time
-        between inner_margin and outer_margin of level
-    if hit_count > 2: mark level as inactive.
-    if price moved from inner_margin to outer_margin: reset hit count to 0 and mark level as active
-
-    :return:
-    """
-    # multi_timeframe_pivots = update_inactive_levels(multi_timeframe_pivots)
-    # active_multi_timeframe_pivots = multi_timeframe_pivots[multi_timeframe_pivots['deactivated_at'].isnull()]
-    pivots_low_margin = active_multi_timeframe_pivots['internal_margin', 'external_margin'].min()
-    pivots_high_margin = active_multi_timeframe_pivots['internal_margin', 'external_margin'].max()
-    overlapping_pivots = active_multi_timeframe_pivots[
-        (level_info['level'] >= pivots_low_margin)
-        & (level_info['level'] <= pivots_high_margin)
-        ]
-    root_overlapping_pivots = overlapping_pivots[overlapping_pivots['is_overlap_of'].isnull()].sort_index(level='date')
-    root_overlapping_pivot = root_overlapping_pivots[-1]
-    active_multi_timeframe_pivots.loc[level_index, 'is_overlap_of'] = root_overlapping_pivot.index
-    active_multi_timeframe_pivots.loc[root_overlapping_pivot.index, 'hit'] += 1
-    if root_overlapping_pivot['hit'] > config.LEVEL_MAX_HIT:
-        active_multi_timeframe_pivots.loc[root_overlapping_pivot.index, 'deactivated_at'] = level_index
-
-    return multi_timeframe_pivots
+# def old_update_hit(active_multi_timeframe_pivots: pt.DataFrame[MultiTimeframePivot]) \
+#         -> pt.DataFrame[MultiTimeframePivot]:
+#     """
+#     number of pivots:
+#         after activation time
+#         between inner_margin and outer_margin of level
+#     if hit_count > 2: mark level as inactive.
+#     if price moved from inner_margin to outer_margin: reset hit count to 0 and mark level as active
+#
+#     :return:
+#     """
+#     # multi_timeframe_pivots = update_inactive_levels(multi_timeframe_pivots)
+#     # active_multi_timeframe_pivots = multi_timeframe_pivots[multi_timeframe_pivots['deactivated_at'].isnull()]
+#     pivots_low_margin = active_multi_timeframe_pivots['internal_margin', 'external_margin'].min()
+#     pivots_high_margin = active_multi_timeframe_pivots['internal_margin', 'external_margin'].max()
+#     overlapping_pivots = active_multi_timeframe_pivots[
+#         (level_info['level'] >= pivots_low_margin)
+#         & (level_info['level'] <= pivots_high_margin)
+#         ]
+#     root_overlapping_pivots = overlapping_pivots[overlapping_pivots['is_overlap_of'].isnull()].sort_index(level='date')
+#     root_overlapping_pivot = root_overlapping_pivots[-1]
+#     active_multi_timeframe_pivots.loc[level_index, 'is_overlap_of'] = root_overlapping_pivot.index
+#     active_multi_timeframe_pivots.loc[root_overlapping_pivot.index, 'hit'] += 1
+#     if root_overlapping_pivot['hit'] > config.LEVEL_MAX_HIT:
+#         active_multi_timeframe_pivots.loc[root_overlapping_pivot.index, 'deactivated_at'] = level_index
+#
+#     return multi_timeframe_pivots

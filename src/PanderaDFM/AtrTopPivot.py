@@ -18,7 +18,7 @@ class AtrTopPivotDFM(Pivot, BaseDFM):
     return_end_value: pt.Series[float]
 
 
-class MultiTimeAtrTopPivotDFM(AtrTopPivotDFM, MultiTimeframe):
+class MultiTimeframeAtrTopPivotDFM(AtrTopPivotDFM, MultiTimeframe):
     pass
 
 
@@ -33,6 +33,7 @@ _sample_df = pd.DataFrame({
     'return_end_time': \
         [Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC))],
     'movement_start_value': [0.0],
+    'is_resistance': [False],
     'return_end_value': [0.0],
     'level': [0.0],
     'internal_margin': [0.0],
@@ -44,8 +45,8 @@ _sample_df = pd.DataFrame({
 AtrMovementPivotDf._sample_df = _sample_df.set_index(['date', ])
 
 
-class MultiTimeAtrMovementPivotDf(ExtendedDf):
-    schema_data_frame_model = MultiTimeAtrTopPivotDFM
+class MultiTimeframeAtrMovementPivotDf(ExtendedDf):
+    schema_data_frame_model = MultiTimeframeAtrTopPivotDFM
 
 
 _sample_df = pd.DataFrame({
@@ -56,6 +57,7 @@ _sample_df = pd.DataFrame({
     'return_end_time': \
         [Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC))],
     'movement_start_value': [0.0],
+    'is_resistance': [False],
     'return_end_value': [0.0],
     'level': [0.0],
     'internal_margin': [0.0],
@@ -64,4 +66,4 @@ _sample_df = pd.DataFrame({
         [Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC))],
     'ttl': [Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC))],
 })
-MultiTimeAtrMovementPivotDf._sample_df = _sample_df.set_index(['timeframe', 'date', ])
+MultiTimeframeAtrMovementPivotDf._sample_df = _sample_df.set_index(['timeframe', 'date', ])
