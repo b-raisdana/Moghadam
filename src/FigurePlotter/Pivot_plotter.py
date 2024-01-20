@@ -66,10 +66,21 @@ def plot_multi_timeframe_pivots(multi_timeframe_pivots: pt.DataFrame[MultiTimefr
                                        high=ohlcv['high'],
                                        low=ohlcv['low'],
                                        close=ohlcv['close'], name=timeframe))
+        pivot_name = f"Piv{timeframe}R"
+        fig.add_scatter(x=[1],            y=[1],
+            name=pivot_name, line=dict(color='red', width=0), mode='lines',
+            legendgroup=pivot_name, showlegend=True, hoverinfo='none',
+        )
+        pivot_name = f"Piv{timeframe}S"
+        fig.add_scatter(x=[1],            y=[1],
+            name=pivot_name, line=dict(color='red', width=0), mode='lines',
+            legendgroup=pivot_name, showlegend=True, hoverinfo='none',
+        )
 
     multi_timeframe_pivots = multi_timeframe_pivots.sort_index(level='date')
     for (pivot_timeframe, pivot_start), pivot_info in multi_timeframe_pivots.iterrows():
-        pivot_name = Pivot.name(pivot_start, pivot_timeframe, pivot_info)
+        # pivot_name = Pivot.name(pivot_start, pivot_timeframe, pivot_info)
+        pivot_name = f"Piv{pivot_timeframe}R" if pivot_info['is_resistance'] else f"Piv{pivot_timeframe}S"
         pivot_description = Pivot.description(pivot_start, pivot_timeframe, pivot_info)
         # add movement and return paths
         if (hasattr(pivot_info, 'movement_start_time')
@@ -102,7 +113,7 @@ def plot_multi_timeframe_pivots(multi_timeframe_pivots: pt.DataFrame[MultiTimefr
             y=[pivot_info['level'], pivot_info['level']],
             text=[pivot_description] * 2,
             name=pivot_name, line=dict(color=color, width=0.5), mode='lines',  # +text',
-            legendgroup=pivot_name, showlegend=True, hoverinfo='text',
+            legendgroup=pivot_name, showlegend=False, hoverinfo='text',
         )
         # # draw the level boundary
         # fig.add_scatter(

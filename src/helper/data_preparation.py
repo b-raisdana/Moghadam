@@ -322,7 +322,7 @@ def to_timeframe(time: Union[DatetimeIndex, datetime, Timestamp], timeframe: str
         :param do_not_warn: Set it true if you are sure about using this method.
     """
     if not do_not_warn:
-        log_w("Try not to use to_timeframe and use pd.merge_asof(...) instead", stack_trace=False)
+        log_w("Try not to use to_timeframe and use pd.merge_asof(...) instead")
 
     def round_single_datetime(dt: Union[datetime, Timestamp]):
         """

@@ -33,27 +33,27 @@ def insert_more_significant_top(base_tops: pt.DataFrame[MultiTimeframePeakValley
         high_low = 'low'
         cross_direction = 'in'
 
-    assert 'atr' in base_tops.columns
     target = target_tops.reset_index(level='timeframe')
+    for direction in ['left', 'right']:
+        if f'{direction}_crossing_time' not in base_tops.columns:
+            base_tops[f'{direction}_crossing_time'] = pd.Series(dtype='datetime64[ns, UTC]')
+        if f'{direction}_crossing_value' not in base_tops.columns:
+            base_tops[f'{direction}_crossing_value'] = pd.Series(dtype=float)
 
     peak_or_valley_indexes = base_tops[base_tops['peak_or_valley'] == top_type.value].index
     base_tops.loc[peak_or_valley_indexes, 'target'] = base_tops.loc[peak_or_valley_indexes, high_low]
     base_tops.loc[peak_or_valley_indexes, ['left_crossing_time', 'left_crossing_value']] = \
-        insert_crossing(base_tops.loc[peak_or_valley_indexes], target, top_type,
-                        'left', base_target_column='target',
+        insert_crossing(base_tops.loc[peak_or_valley_indexes], target, top_type, 'left', base_target_column='target',
                         cross_direction=cross_direction)[['left_crossing_time', 'left_crossing_value']]
-    base_tops.loc[peak_or_valley_indexes, ['right_crossing_time', 'right_crossing_value']] = insert_crossing(
-        base_tops.loc[peak_or_valley_indexes], target, top_type,
-        'right', base_target_column='target',
-        cross_direction=cross_direction)[['right_crossing_time', 'right_crossing_value']]
+    base_tops.loc[peak_or_valley_indexes, ['right_crossing_time', 'right_crossing_value']] = \
+        insert_crossing(base_tops.loc[peak_or_valley_indexes], target, top_type, 'right', base_target_column='target',
+                        cross_direction=cross_direction)[['right_crossing_time', 'right_crossing_value']]
     return base_tops
 
 
 def insert_more_significant_tops(timeframe_tops: pt.DataFrame[PeakValley],
                                  compared_tops: pt.DataFrame[MultiTimeframePeakValley]) \
         -> pt.DataFrame[MultiTimeframePeakValley]:
-    # timeframe_tops = insert_more_significant_top(timeframe_tops, compared_tops, TopTYPE.PEAK)
-    # timeframe_tops = insert_more_significant_top(timeframe_tops, compared_tops, TopTYPE.VALLEY)
     timeframe_tops.drop(
         columns=['right_crossing_time', 'left_crossing_time', 'right_crossing_value', 'left_crossing_value'],
         inplace=True, errors='ignore')
@@ -139,54 +139,6 @@ def atr_movement_pivots(date_range_str: str = None, structure_timeframe_shortlis
                         .isin(timeframe_pivots.index.get_level_values('date'))].index)
     pivots = insert_pivot_info(mt_ohlcva, pivots, structure_timeframe_shortlist)
     return pivots
-    # """
-    # for timeframe:
-    #     peaks/valleys with any :
-    #         -valley/peak after it's previous peaks/valleys which ist's high/low is
-    #             3 ATR gt/lt peaks/valleys high/low and
-    # """
-    # # multi_timeframe_trends = read_multi_timeframe_bull_bear_side_trends(date_range_str)  # toddo: test
-    #
-    # # add previous and next peaks and valleys
-    # peaks = peaks_only(mt_tops)
-    # valleys = valleys_only(mt_tops)
-    # mt_tops = peak_or_valley_add_adjacent_tops(mt_tops, peaks, valleys, top_type)
-    # # mt_tops['previous_peak_value'] = mt_tops.loc[mt_tops['previous_peak_time'].values(), 'high']
-    # # merge valleys into tops to extract adjacent valley
-    # mt_tops = pd.merge_asof(mt_tops, valleys[['adjacent_top']], left_index=True, right_on='forward_index',
-    #                         direction='forward',
-    #                         suffixes=("_x", ''))
-    # mt_tops['next_valley_time'] = mt_tops['adjacent_top']
-    # # mt_tops['next_valley_value'] = mt_tops.loc[mt_tops['next_valley_time'].values(), 'low']
-    # mt_tops = pd.merge_asof(mt_tops, valleys[['adjacent_top']], left_index=True, right_on='backward_index',
-    #                         direction='backward',
-    #                         suffixes=("_x", ''))
-    # mt_tops['previous_valley_time'] = mt_tops['adjacent_top']
-    # # mt_tops['previous_valley_value'] = mt_tops.loc[mt_tops['previous_valley_time'].values(), 'low']
-    # long_trends = multi_timeframe_trends[multi_timeframe_trends['movement'] >= multi_timeframe_trends['atr']]
-    # # find peaks surrounded with enough far valleys:
-    #
-    # """
-    #     movement_start_value: pt.Series[float] = pandera.Field(nullable=True)
-    #     movement_end_value: pt.Series[float] = pandera.Field(nullable=True)
-    #     movement_start_time: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
-    #     movement_end_time
-    #     """
-    # """
-    #     if the boundary movement > 3 ATR:
-    #         pivot_return:
-    #             there is no trend ends between this trend's end and first candle after movement_end_time:
-    #                 Bullish: low < movement_end_value - 1 ATR
-    #                 Bearish: high > movement_end_value + 1 ATR
-    # :param date_range_str:
-    # :param structure_timeframe_shortlist:
-    # :return:
-    # """
-    # # if there is a trand which ends after the trend, if there is a >= 1 ATR jump between their end, we have a pivot.
-    # for index, trend in long_trends.iterrows():
-    # # return_time = first_return_confirmation_candle()
-    #
-    # raise NotImplementedError
 
 
 def insert_pivot_info(mt_ohlcva, pivots, structure_timeframe_shortlist):

@@ -114,7 +114,7 @@ def core_generate_multi_timeframe_ohlcva(date_range_str: str = None, file_path: 
         expanded_date_multi_timeframe_ohlcv = read_multi_timeframe_ohlcv(expanded_date_range)
         timeframe_ohlcv = single_timeframe(expanded_date_multi_timeframe_ohlcv, timeframe)
         timeframe_ohlcva = insert_atr(timeframe_ohlcv)
-        timeframe_ohlcva = timeframe_ohlcva.dropna(subset=['atr'])
+        timeframe_ohlcva = timeframe_ohlcva.dropna(subset=['atr']).copy()
         timeframe_ohlcva['timeframe'] = timeframe
         timeframe_ohlcva = timeframe_ohlcva.set_index('timeframe', append=True)
         timeframe_ohlcva = timeframe_ohlcva.swaplevel()

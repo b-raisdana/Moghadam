@@ -5,7 +5,7 @@ import pandas as pd
 from Config import TopTYPE, config
 from PeakValley import peaks_only, valleys_only
 from helper.data_preparation import to_timeframe
-from helper.helper import measure_time
+from helper.helper import measure_time, log_w
 
 
 # @measure_time
@@ -33,12 +33,6 @@ def pivots_level_n_margins(timeframe_pivots: pd.DataFrame, pivot_time_peaks_n_va
     if hasattr(timeframe_pivots.index, 'names') and 'timeframe' in timeframe_pivots.index.names:
         raise ValueError("Expected single-timeframe timeframe_pivots "
                          "but 'timeframe' in timeframe_pivots.index.names")
-    # if len(pivot_peaks_n_valleys) != len(timeframe_pivots):
-    #     raise Exception(f'pivot_peaks_or_valleys({len(pivot_peaks_n_valleys)}) '
-    #                     f'and timeframe_pivots({len(timeframe_pivots)}) should have the same length')
-    # if timeframe == '1h':
-    #     pass
-    # no_timeframe_peaks_n_valleys = pivot_time_peaks_n_valleys.reset_index(level='timeframe')
     pivot_time_peaks = peaks_only(pivot_time_peaks_n_valleys)
     timeframe_pivots = peak_or_valley_pivots_level_n_margins(timeframe_pivots, pivot_time_peaks, TopTYPE.PEAK,
                                                              timeframe, candle_body_source, internal_atr_source,
@@ -140,11 +134,8 @@ def pivot_margins(pivots: pd.DataFrame, _type: TopTYPE, pivot_peaks_or_valleys: 
     else:
         candle_body_source['nearest_body'] = candle_body_source[['open', 'close']] \
             .apply(choose_body_operator, axis='columns')
-        mapped_pivot_times = [to_timeframe(pivot_time, timeframe) for pivot_time in
-                              pivot_peaks_or_valleys.index.get_level_values('date')]
-        # candle_body_source: pd.DataFrame = candle_body_source.loc[mapped_pivot_times, 'nearest_body']
         pivots = pd.merge_asof(pivots, candle_body_source, left_index=True, right_index=True, direction='backward',
-                               suffixes=('_x', ''))  # todo: test without mapped_pivot_times
+                               suffixes=('_x', ''))
     if 'atr' in pivots.columns:
         pivots['internal_margin_atr'] = pivots['atr']
     else:
@@ -153,6 +144,9 @@ def pivot_margins(pivots: pd.DataFrame, _type: TopTYPE, pivot_peaks_or_valleys: 
             [['internal_margin_atr']]
         pivots = pd.merge_asof(pivots, internal_margin_atr, left_index=True, right_index=True, direction='backward',
                                suffixes=('_x', ''))
+        if any([str(column).endswith('_x') for column in pivots.columns]):
+            raise AssertionError("any([str(column).endswith('_x') for column in pivots.columns])")
+        log_w("Remove 'suffixes=('_x', '')'")
     if _type.value == TopTYPE.PEAK.value:
         pivots.loc[pivot_times, 'atr_margin'] = \
             pivots.loc[pivot_times, 'level'] - pivots.loc[pivot_times, 'internal_margin_atr']
@@ -164,9 +158,7 @@ def pivot_margins(pivots: pd.DataFrame, _type: TopTYPE, pivot_peaks_or_valleys: 
     # external_margin = level +/- breakout_margin_atr of mapped time
     breakout_margin_atr = breakout_margin_atr.rename(columns={'atr': 'breakout_margin_atr'})[['breakout_margin_atr']]
     pivots.drop(columns=['breakout_margin_atr', ], errors='ignore', inplace=True)
-    pivots = pd.merge_asof(pivots, breakout_margin_atr, left_index=True, right_index=True, direction='backward',
-                           # suffixes=('_x', '')
-                           )
+    pivots = pd.merge_asof(pivots, breakout_margin_atr, left_index=True, right_index=True, direction='backward', )
     if _type.value == TopTYPE.PEAK.value:
         pivots.loc[pivot_times, 'external_margin'] = \
             pivots.loc[pivot_times, 'level'] + pivots.loc[pivot_times, 'breakout_margin_atr']
