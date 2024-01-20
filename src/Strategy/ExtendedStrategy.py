@@ -250,7 +250,7 @@ class ExtendedStrategy(bt.Strategy):
                 if not order_is_closed(self.sl_orders[i]):
                     raise AssertionError("!order_is_closed(self.stop_orders[i])")
                 if not order_is_closed(self.tp_orders[i]):
-                    raise AssertionError("!order_is_closed(self.profit_orders[i])")  # todo: test AssertionError
+                    raise AssertionError("!order_is_closed(self.profit_orders[i])")
 
     # def notify_cashvalue(self, cash, value):
     #     '''

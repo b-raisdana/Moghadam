@@ -186,11 +186,6 @@ def generate_multi_timeframe_pivot_levels(date_range_str: str = None):
     pivot information:
         index: datetime
     """
-    """
-        todo: test timeframe of SR as:
-            timeframe of trend
-            timeframe of top
-    """
     raise NotImplementedError
     if date_range_str is None:
         date_range_str = config.processing_date_range

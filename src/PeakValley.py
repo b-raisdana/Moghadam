@@ -12,7 +12,7 @@ from PanderaDFM.OHLCV import OHLCV
 from PanderaDFM.PeakValley import PeakValley, MultiTimeframePeakValley
 from helper.data_preparation import read_file, cast_and_validate, trim_to_date_range, \
     expand_date_range, after_under_process_date, empty_df, nearest_match, concat
-from helper.helper import measure_time, date_range
+from helper.helper import measure_time, date_range, log_w
 from ohlcv import read_base_timeframe_ohlcv
 
 
@@ -68,7 +68,8 @@ def insert_distance(base: pt.DataFrame[PeakValley], target: pt.DataFrame[OHLCV],
     - right_crossing_time or left_crossing_time: Time index where the crossing occurs in the specified direction.
     - right_crossing_value or left_crossing_value: Value of the OHLCV data at the crossing point in the specified direction.
     """
-    base = insert_crossing(base, target, top_type, direction, base_target_column=base_compare_column)  # todo: test
+    log_w("Test again")
+    base = insert_crossing(base, target, top_type, direction, base_target_column=base_compare_column)
     valid_crossing_times = base[base[f'{direction}_crossing_time'].notna()].index
     base.loc[valid_crossing_times, direction + '_distance'] = \
         abs(pd.to_datetime(valid_crossing_times) - base.loc[valid_crossing_times, f'{direction}_crossing_time'])
@@ -110,7 +111,7 @@ def insert_crossing(base: pt.DataFrame[PeakValley], target: pd.DataFrame, base_t
         raise ValueError(f"direction({direction}) not in ['right', 'left']")
     if cross_direction not in ['out', 'in']:
         raise ValueError("cross_direction not in ['out', 'in']:" + cross_direction)
-    # todo: test all usages!
+    log_w("Test again")
     target_compare_column, direction, les_significant, more_significant, reverse = direction_parameters(direction,
                                                                                                         base_type,
                                                                                                         cross_direction)
@@ -158,25 +159,26 @@ def insert_crossing(base: pt.DataFrame[PeakValley], target: pd.DataFrame, base_t
 
 def drop_base_without_crossing(bases_to_compare, target, base_target_column, target_compare_column, base_type,
                                cross_direction, direction):
-    if ((base_type == TopTYPE.PEAK and cross_direction == 'out') # todo: test
+    n = len(target)
+    if ((base_type == TopTYPE.PEAK and cross_direction == 'out')
             or (base_type == TopTYPE.VALLEY and cross_direction == 'in')):
-        if direction == 'left':
-            target['min_value'] = target[target_compare_column].rolling(window=len(target[target_compare_column]),
-                                                                        min_periods=1, step=1)
+        if target_compare_column != 'high':
+            raise AssertionError("target_compare_column != 'high'")
+        if direction == 'left':  # todo: test
+            target['max_value'] = target['high'].rolling(window=n, min_periods=0, ).max()
         else:  # direction == 'right':
-            target['min_value'] = target[target_compare_column].rolling(window=len(target[target_compare_column]),
-                                                                        min_periods=1, step=-1)
+            target['max_value'] = target['high'].iloc[::-1].rolling(window=n, min_periods=0).max()
         without_crossings = bases_to_compare[
-            bases_to_compare[base_target_column] > target['min_value']]
+            bases_to_compare[base_target_column] > target.loc[bases_to_compare['target_index'], 'max_value']]
     else:
+        if target_compare_column != 'low':
+            raise AssertionError("target_compare_column != 'low'")
         if direction == 'left':
-            target['max_value'] = target[target_compare_column].rolling(window=len(target[target_compare_column]),
-                                                                        min_periods=1, step=1)
+            target['min_value'] = target['low'].rolling(window=n, min_periods=0).min()
         else:  # direction == 'right':
-            target['max_value'] = target[target_compare_column].rolling(window=len(target[target_compare_column]),
-                                                                        min_periods=1, step=-1)
+            target['min_value'] = target['low'].iloc[::-1].rolling(window=n, min_periods=0).min()
         without_crossings = bases_to_compare[
-            bases_to_compare[base_target_column] < target['max_value']]
+            bases_to_compare[base_target_column] < target.loc[bases_to_compare['target_index'], 'min_value']]
     bases_to_compare.drop(index=without_crossings.index, inplace=True)
     return without_crossings
 
@@ -259,7 +261,7 @@ def find_crossings(base_compare_column, bases_to_compare, direction, more_signif
     if crossed_bases['target_date'].isna().any().any():
         raise AssertionError("crossed_bases['target_date'].isna().any().any()")
     target.loc[crossed_bases['target_date'], 'crossed_base_index'] = crossed_bases.index
-    # if not target[target['crossed_base_index'].notna()]['crossed_base_index'].is_unique:  # todo: test AssertionError
+    # if not target[target['crossed_base_index'].notna()]['crossed_base_index'].is_unique:  # toddo: test AssertionError
     #     raise AssertionError("not target[target['crossed_base_index'].notna()]['crossed_base_index'].is_unique")
     # crossing_targets = target[target[f'{direction}_crossing'] == True].index
     # log_w("test if shift is needed", stack_trace=False)
@@ -290,7 +292,7 @@ def find_crossings(base_compare_column, bases_to_compare, direction, more_signif
     # target['valid_crossing'] = (more_significant(target[f'{direction}_crossing_value'], target['base_target']))
     # valid_crossing_target = target[target['valid_crossing'] == True].index
     # crossed_bases = bases_to_compare[
-    #     bases_to_compare['target_index'].isin(valid_crossing_target)].index  # todo: test
+    #     bases_to_compare['target_index'].isin(valid_crossing_target)].index  # toddo: test
     return crossed_bases, target
 
 

@@ -38,6 +38,7 @@ if __name__ == "__main__":
     # ohlcva = read_multi_timeframe_ohlcva()
     # _peaks_and_valleys = read_multi_timeframe_peaks_n_valleys()
     # plot_multi_timeframe_peaks_n_valleys(_peaks_and_valleys, config.processing_date_range)
+    # exit(0)
     # bull_bear_side = read_multi_timeframe_bull_bear_side_trends()
     # plot_multi_timeframe_bull_bear_side_trends(ohlcva, _peaks_and_valleys, bull_bear_side)
     _pivots = atr_movement_pivots()

@@ -114,7 +114,7 @@ def peaks_valleys_in_range(peaks_n_valleys: pd.DataFrame, start: pd.Timestamp, e
 
 def add_canal_lines(_boundaries, single_timeframe_peaks_n_valleys):
     log_w("Not tested")
-    if _boundaries is None:  # todo: test add_canal_lines
+    if _boundaries is None:
         return _boundaries
     for i, _boundary in _boundaries.iterrows():
         if _boundary['bull_bear_side'] == TREND.SIDE.value:
