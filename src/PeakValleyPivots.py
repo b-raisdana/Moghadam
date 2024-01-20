@@ -103,7 +103,8 @@ def atr_movement_pivots(date_range_str: str = None, structure_timeframe_shortlis
     pivots = MultiTimeframeAtrMovementPivotDf.new()
     for timeframe in structure_timeframe_shortlist[::-1]:
         if timeframe in mt_tops.index.get_level_values('timeframe'):
-            timeframe_tops: pt.DataFrame[PeakValley] = major_peaks_n_valleys(mt_tops, timeframe)
+            # timeframe_tops: pt.DataFrame[PeakValley] = major_peaks_n_valleys(mt_tops, timeframe)
+            timeframe_tops: pt.DataFrame[PeakValley] = mt_tops.copy()
             timeframe_tops.reset_index(level='timeframe', inplace=True)
             ohlcva: pt.DataFrame[OHLCVA] = single_timeframe(mt_ohlcva, timeframe)
             timeframe_tops = pd.merge_asof(timeframe_tops, ohlcva[['atr']], left_index=True, right_index=True,

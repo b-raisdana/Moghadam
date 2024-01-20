@@ -57,7 +57,12 @@ def plot_multi_timeframe_pivots(multi_timeframe_pivots: pt.DataFrame[MultiTimefr
     multi_timeframe_ohlcv = read_multi_timeframe_ohlcv(date_range_str)
     end_time = max(multi_timeframe_ohlcv.index.get_level_values('date'))
     base_ohlcv = single_timeframe(multi_timeframe_ohlcv, config.timeframes[0])
+
     # plot multiple timeframes candle chart all together.
+    resistance_timeframes = multi_timeframe_pivots[multi_timeframe_pivots['is_resistance']]\
+        .index.get_level_values(level='timeframe').unique()
+    support_timeframes = multi_timeframe_pivots[~multi_timeframe_pivots['is_resistance']]\
+        .index.get_level_values(level='timeframe').unique()
     fig = plot_ohlcv(ohlcv=base_ohlcv, show=False, save=False, name=config.timeframes[0])
     for timeframe in config.timeframes[1:]:
         ohlcv = single_timeframe(multi_timeframe_ohlcv, timeframe)
@@ -66,16 +71,18 @@ def plot_multi_timeframe_pivots(multi_timeframe_pivots: pt.DataFrame[MultiTimefr
                                        high=ohlcv['high'],
                                        low=ohlcv['low'],
                                        close=ohlcv['close'], name=timeframe))
-        pivot_name = f"Piv{timeframe}R"
-        fig.add_scatter(x=[1],            y=[1],
-            name=pivot_name, line=dict(color='red', width=0), mode='lines',
-            legendgroup=pivot_name, showlegend=True, hoverinfo='none',
-        )
-        pivot_name = f"Piv{timeframe}S"
-        fig.add_scatter(x=[1],            y=[1],
-            name=pivot_name, line=dict(color='red', width=0), mode='lines',
-            legendgroup=pivot_name, showlegend=True, hoverinfo='none',
-        )
+        if timeframe in resistance_timeframes:
+            pivot_name = f"Piv{timeframe}R"
+            fig.add_scatter(x=[base_ohlcv.index[0]],            y=[base_ohlcv['open']],
+                name=pivot_name, line=dict(color='red', width=0), mode='lines',
+                legendgroup=pivot_name, showlegend=True, hoverinfo='none',
+            )
+        if timeframe in support_timeframes:
+            pivot_name = f"Piv{timeframe}S"
+            fig.add_scatter(x=[base_ohlcv.index[0]],            y=[base_ohlcv['open']],
+                name=pivot_name, line=dict(color='red', width=0), mode='lines',
+                legendgroup=pivot_name, showlegend=True, hoverinfo='none',
+            )
 
     multi_timeframe_pivots = multi_timeframe_pivots.sort_index(level='date')
     for (pivot_timeframe, pivot_start), pivot_info in multi_timeframe_pivots.iterrows():
@@ -115,14 +122,14 @@ def plot_multi_timeframe_pivots(multi_timeframe_pivots: pt.DataFrame[MultiTimefr
             name=pivot_name, line=dict(color=color, width=0.5), mode='lines',  # +text',
             legendgroup=pivot_name, showlegend=False, hoverinfo='text',
         )
-        # # draw the level boundary
-        # fig.add_scatter(
-        #     x=[pivot_info['activation_time'], level_end_time, level_end_time, pivot_info['activation_time']],
-        #     y=[pivot_info['external_margin'], pivot_info['external_margin'],
-        #        pivot_info['internal_margin'], pivot_info['internal_margin']],
-        #     fill="toself", fillpattern=dict(fgopacity=0.85),
-        #     name=pivot_name, line=dict(color=timeframe_color(pivot_timeframe), width=0), mode='lines',  # +text',
-        #     legendgroup=pivot_name, showlegend=False, # hoverinfo='text', text=pivot_description,
-        # )
+        # draw the level boundary
+        fig.add_scatter(
+            x=[pivot_info['activation_time'], level_end_time, level_end_time, pivot_info['activation_time']],
+            y=[pivot_info['external_margin'], pivot_info['external_margin'],
+               pivot_info['internal_margin'], pivot_info['internal_margin']],
+            fill="toself", opacity=0.3,
+            name=pivot_name, line=dict(color=timeframe_color(pivot_timeframe), width=0), mode='lines',  # +text',
+            legendgroup=pivot_name, showlegend=False, # hoverinfo='text', text=pivot_description,
+        )
     show_and_save_plot(fig, save, show, name_without_prefix=f'multi_timeframe_classic_pivots.{date_range_str}')
     return fig
