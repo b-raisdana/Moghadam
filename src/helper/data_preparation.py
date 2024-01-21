@@ -732,7 +732,7 @@ def times_in_date_range(date_range_str: str, timeframe: str,
         under_process_scope_start, under_process_scope_end = date_range(processing_date_range)
         end = min(end, under_process_scope_end)
         start = max(start, under_process_scope_start)
-    in_timeframe_start_date = to_timeframe(start, timeframe, ignore_cached_times=True)
+    in_timeframe_start_date = to_timeframe(start, timeframe, ignore_cached_times=True, do_not_warn=True)
     if start < end:
         if in_timeframe_start_date < start:
             in_timeframe_start_date += pd.to_timedelta(timeframe)

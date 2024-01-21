@@ -12,7 +12,7 @@ from PanderaDFM.OHLCV import OHLCV
 from PanderaDFM.PeakValley import PeakValley, MultiTimeframePeakValley
 from helper.data_preparation import read_file, cast_and_validate, trim_to_date_range, \
     expand_date_range, after_under_process_date, empty_df, nearest_match, concat
-from helper.helper import measure_time, date_range, log_w
+from helper.helper import measure_time, date_range
 from ohlcv import read_base_timeframe_ohlcv
 
 
@@ -75,7 +75,7 @@ def insert_distance(base: pt.DataFrame[PeakValley], target: pt.DataFrame[OHLCV],
     return base
 
 
-# @measure_time
+@measure_time
 def insert_crossing(base: pt.DataFrame[PeakValley], target: pd.DataFrame, base_type: TopTYPE,
                     direction: Literal['right', 'left'], cross_direction: Literal['out', 'in'] = 'out',
                     base_target_column: str = None) -> pt.DataFrame[PeakValley]:

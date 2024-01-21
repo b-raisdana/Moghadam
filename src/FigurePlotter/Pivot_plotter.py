@@ -5,7 +5,6 @@ from plotly import graph_objects as plgo
 from Config import config
 from FigurePlotter.OHLVC_plotter import plot_ohlcv
 from FigurePlotter.plotter import timeframe_color, show_and_save_plot
-from PanderaDFM.AtrTopPivot import MultiTimeframeAtrMovementPivotDf
 from PanderaDFM.Pivot import MultiTimeframePivot, Pivot
 from helper.data_preparation import single_timeframe
 from helper.helper import measure_time
@@ -59,9 +58,9 @@ def plot_multi_timeframe_pivots(multi_timeframe_pivots: pt.DataFrame[MultiTimefr
     base_ohlcv = single_timeframe(multi_timeframe_ohlcv, config.timeframes[0])
 
     # plot multiple timeframes candle chart all together.
-    resistance_timeframes = multi_timeframe_pivots[multi_timeframe_pivots['is_resistance']]\
+    resistance_timeframes = multi_timeframe_pivots[multi_timeframe_pivots['is_resistance']] \
         .index.get_level_values(level='timeframe').unique()
-    support_timeframes = multi_timeframe_pivots[~multi_timeframe_pivots['is_resistance']]\
+    support_timeframes = multi_timeframe_pivots[~multi_timeframe_pivots['is_resistance']] \
         .index.get_level_values(level='timeframe').unique()
     fig = plot_ohlcv(ohlcv=base_ohlcv, show=False, save=False, name=config.timeframes[0])
     for timeframe in config.timeframes[1:]:
@@ -73,16 +72,16 @@ def plot_multi_timeframe_pivots(multi_timeframe_pivots: pt.DataFrame[MultiTimefr
                                        close=ohlcv['close'], name=timeframe))
         if timeframe in resistance_timeframes:
             pivot_name = f"Piv{timeframe}R"
-            fig.add_scatter(x=[base_ohlcv.index[0]],            y=[base_ohlcv['open']],
-                name=pivot_name, line=dict(color='red', width=0), mode='lines',
-                legendgroup=pivot_name, showlegend=True, hoverinfo='none',
-            )
+            fig.add_scatter(x=[base_ohlcv.index[0]], y=[base_ohlcv['open']],
+                            name=pivot_name, line=dict(color='red', width=0), mode='lines',
+                            legendgroup=pivot_name, showlegend=True, hoverinfo='none',
+                            )
         if timeframe in support_timeframes:
             pivot_name = f"Piv{timeframe}S"
-            fig.add_scatter(x=[base_ohlcv.index[0]],            y=[base_ohlcv['open']],
-                name=pivot_name, line=dict(color='red', width=0), mode='lines',
-                legendgroup=pivot_name, showlegend=True, hoverinfo='none',
-            )
+            fig.add_scatter(x=[base_ohlcv.index[0]], y=[base_ohlcv['open']],
+                            name=pivot_name, line=dict(color='red', width=0), mode='lines',
+                            legendgroup=pivot_name, showlegend=True, hoverinfo='none',
+                            )
 
     multi_timeframe_pivots = multi_timeframe_pivots.sort_index(level='date')
     for (pivot_timeframe, pivot_start), pivot_info in multi_timeframe_pivots.iterrows():
@@ -95,13 +94,16 @@ def plot_multi_timeframe_pivots(multi_timeframe_pivots: pt.DataFrame[MultiTimefr
                 and hasattr(pivot_info, 'movement_start_value')
                 and hasattr(pivot_info, 'return_end_value')
         ):
-            fig.add_scatter(x=[
-                pivot_info['movement_start_time'], pivot_start, pivot_info['return_end_time']],
-                y=[pivot_info['movement_start_value'], pivot_info['level'], pivot_info['return_end_value']],
-                name=pivot_name, line=dict(color='red', width=0.5), mode='lines',  # +text',
-                legendgroup=pivot_name, showlegend=False, hoverinfo='none',
-            )
-
+            fig.add_scatter(x=[pivot_info['movement_start_time'], pivot_start, ],
+                            y=[pivot_info['movement_start_value'], pivot_info['level'], ],
+                            name=pivot_name, line=dict(color='green', width=0.5), mode='lines',  # +text',
+                            legendgroup=pivot_name, showlegend=False, hoverinfo='none',
+                            )
+            fig.add_scatter(x=[pivot_start, pivot_info['return_end_time']],
+                            y=[pivot_info['level'], pivot_info['return_end_value']],
+                            name=pivot_name, line=dict(color='red', width=0.5), mode='lines',  # +text',
+                            legendgroup=pivot_name, showlegend=False, hoverinfo='none',
+                            )
         # add a dotted line from creating time of level to the activation time
         fig.add_scatter(
             x=[pivot_start, pivot_info['activation_time']],
@@ -118,7 +120,7 @@ def plot_multi_timeframe_pivots(multi_timeframe_pivots: pt.DataFrame[MultiTimefr
         fig.add_scatter(
             x=[pivot_info['activation_time'], level_end_time],
             y=[pivot_info['level'], pivot_info['level']],
-            text=[pivot_description] * 2,
+            text=[pivot_description],
             name=pivot_name, line=dict(color=color, width=0.5), mode='lines',  # +text',
             legendgroup=pivot_name, showlegend=False, hoverinfo='text',
         )
@@ -129,7 +131,7 @@ def plot_multi_timeframe_pivots(multi_timeframe_pivots: pt.DataFrame[MultiTimefr
                pivot_info['internal_margin'], pivot_info['internal_margin']],
             fill="toself", opacity=0.3,
             name=pivot_name, line=dict(color=timeframe_color(pivot_timeframe), width=0), mode='lines',  # +text',
-            legendgroup=pivot_name, showlegend=False, # hoverinfo='text', text=pivot_description,
+            legendgroup=pivot_name, showlegend=False,  hoverinfo='none', #text=pivot_description,
         )
     show_and_save_plot(fig, save, show, name_without_prefix=f'multi_timeframe_classic_pivots.{date_range_str}')
     return fig
