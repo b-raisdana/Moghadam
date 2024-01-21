@@ -6,7 +6,7 @@ from pandera import typing as pt
 
 from Config import config, TopTYPE
 from MetaTrader import MT
-from PanderaDFM.AtrTopPivot import MultiTimeframeAtrTopPivotDFM, MultiTimeframeAtrMovementPivotDf, \
+from PanderaDFM.AtrTopPivot import MultiTimeframeAtrMovementPivotDFM, MultiTimeframeAtrMovementPivotDf, \
     AtrMovementPivotDf
 from PanderaDFM.MultiTimeframe import MultiTimeframe
 from PanderaDFM.OHLCV import OHLCV
@@ -69,9 +69,11 @@ def insert_more_significant_tops(timeframe_tops: pt.DataFrame[PeakValley],
     return timeframe_tops
 
 
+
+
 @measure_time
 def atr_movement_pivots(date_range_str: str = None, structure_timeframe_shortlist: List['str'] = None,
-                        same_time_multiple_timeframes: bool = False) -> pt.DataFrame[MultiTimeframeAtrTopPivotDFM]:
+                        same_time_multiple_timeframes: bool = False) -> pt.DataFrame[MultiTimeframeAtrMovementPivotDFM]:
     """
     for peaks:
         (
@@ -141,12 +143,26 @@ def atr_movement_pivots(date_range_str: str = None, structure_timeframe_shortlis
                     mt_tops = mt_tops.drop(
                         index=mt_tops[mt_tops.index.get_level_values('date') \
                             .isin(timeframe_pivots.index.get_level_values('date'))].index)
-    pivots = insert_pivot_info(mt_ohlcva, pivots, structure_timeframe_shortlist)
+    pivots = insert_pivot_info(pivots, mt_ohlcva, structure_timeframe_shortlist)
+    pivots = insert_pivot_ftc(pivots, mt_ohlcva, structure_timeframe_shortlist)
     return pivots
 
+def insert_pivot_ftc(pivots: pt.DataFrame[MultiTimeframeAtrMovementPivotDFM], base_patterns: pt.DataFrame[], structure_timeframe_shortlist):
+    """
+    The FTC is a base pattern in the last 38% of pivot movement price range.
+    The FTC base pattern should start within the movement time range.
+    The base pattern timeframe should be below the pivot timeframe.
+
+    :param base_patterns:
+    :param pivots:
+    :param structure_timeframe_shortlist:
+    :return:
+    """
+    for pivot_index, pivot_info in pivots:
+        ftcs =
 
 @measure_time
-def insert_pivot_info(mt_ohlcva, pivots, structure_timeframe_shortlist):
+def insert_pivot_info(pivots, mt_ohlcva, structure_timeframe_shortlist):
     insert_pivot_level_n_type(pivots)
     if structure_timeframe_shortlist is None:
         structure_timeframe_shortlist = config.structure_timeframes[::-1]

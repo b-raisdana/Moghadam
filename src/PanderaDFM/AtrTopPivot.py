@@ -11,19 +11,19 @@ from PanderaDFM.MultiTimeframe import MultiTimeframe
 from PanderaDFM.Pivot import Pivot
 
 
-class AtrTopPivotDFM(Pivot, BaseDFM):
+class AtrMovementPivotDFM(Pivot, BaseDFM):
     movement_start_time: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
     return_end_time: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
     movement_start_value: pt.Series[float]
     return_end_value: pt.Series[float]
 
 
-class MultiTimeframeAtrTopPivotDFM(AtrTopPivotDFM, MultiTimeframe):
+class MultiTimeframeAtrMovementPivotDFM(AtrMovementPivotDFM, MultiTimeframe):
     pass
 
 
 class AtrMovementPivotDf(ExtendedDf):
-    schema_data_frame_model = AtrTopPivotDFM
+    schema_data_frame_model = AtrMovementPivotDFM
 
 
 _sample_df = pd.DataFrame({
@@ -46,7 +46,7 @@ AtrMovementPivotDf._sample_df = _sample_df.set_index(['date', ])
 
 
 class MultiTimeframeAtrMovementPivotDf(ExtendedDf):
-    schema_data_frame_model = MultiTimeframeAtrTopPivotDFM
+    schema_data_frame_model = MultiTimeframeAtrMovementPivotDFM
 
 
 _sample_df = pd.DataFrame({
