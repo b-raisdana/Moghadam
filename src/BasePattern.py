@@ -294,7 +294,7 @@ def generate_multi_timeframe_base_patterns(date_range_str: str = None, file_path
     base_patterns = multi_timeframe_base_patterns(multi_timeframe_ohlcva,
                                                   timeframe_shortlist=timeframe_shortlist)
     base_patterns = trim_to_date_range(date_range_str, base_patterns)
-    base_patterns=base_patterns.sort_index(level='date')
+    base_patterns = base_patterns.sort_index(level='date')
     base_patterns.to_csv(os.path.join(file_path, f'multi_timeframe_base_pattern.{date_range_str}.zip'),
                          compression='zip')
 
@@ -302,11 +302,8 @@ def generate_multi_timeframe_base_patterns(date_range_str: str = None, file_path
 def read_multi_timeframe_base_patterns(date_range_str: str = None) -> pt.DataFrame[MultiTimeframeBasePattern]:
     if date_range_str is None:
         date_range_str = config.processing_date_range
-    result = read_file(
-        date_range_str,
-        'multi_timeframe_base_pattern',
-        generate_multi_timeframe_base_patterns,
-        MultiTimeframeBasePattern)
+    result = read_file(date_range_str, 'multi_timeframe_base_pattern',
+                       generate_multi_timeframe_base_patterns, MultiTimeframeBasePattern)
     return result
 
 

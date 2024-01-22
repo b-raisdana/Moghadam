@@ -68,7 +68,7 @@ def insert_distance(base: pt.DataFrame[PeakValley], target: pt.DataFrame[OHLCV],
     - right_crossing_time or left_crossing_time: Time index where the crossing occurs in the specified direction.
     - right_crossing_value or left_crossing_value: Value of the OHLCV data at the crossing point in the specified direction.
     """
-    base = insert_crossing(base, target, top_type, direction, base_target_column=base_compare_column)
+    base = insert_top_crossing(base, target, top_type, direction, base_target_column=base_compare_column)
     valid_crossing_times = base[base[f'{direction}_crossing_time'].notna()].index
     base.loc[valid_crossing_times, direction + '_distance'] = \
         abs(pd.to_datetime(valid_crossing_times) - base.loc[valid_crossing_times, f'{direction}_crossing_time'])
@@ -76,9 +76,9 @@ def insert_distance(base: pt.DataFrame[PeakValley], target: pt.DataFrame[OHLCV],
 
 
 @measure_time
-def insert_crossing(base: pt.DataFrame[PeakValley], target: pd.DataFrame, base_type: TopTYPE,
-                    direction: Literal['right', 'left'], cross_direction: Literal['out', 'in'] = 'out',
-                    base_target_column: str = None) -> pt.DataFrame[PeakValley]:
+def insert_top_crossing(base: pt.DataFrame[PeakValley], target: pd.DataFrame, base_type: TopTYPE,
+                        direction: Literal['right', 'left'], cross_direction: Literal['out', 'in'] = 'out',
+                        base_target_column: str = None) -> pt.DataFrame[PeakValley]:
     """
     find the fist crossing candle in 'target' which crosses 'base['base_compare_column']'  toward the 'direction'.
     according to 'base_type'=high/low it will consider to find first crossing in/out candle.
@@ -131,8 +131,8 @@ def insert_crossing(base: pt.DataFrame[PeakValley], target: pd.DataFrame, base_t
     number_of_crossed_bases = 1
     while number_of_crossed_bases > 0 and len(bases_to_compare) > 0:
         # iteration preparation
-        crossed_bases, target = find_crossings(base_target_column, bases_to_compare, direction, more_significant,
-                                               reverse, target, target_compare_column)
+        crossed_bases, target = find_crossing(bases_to_compare, base_target_column, target, target_compare_column,
+                                              direction, reverse, more_significant)
         # crossed_bases = valid_crossing_target.intersection(base_indexes)
         number_of_crossed_bases = len(crossed_bases)
         if number_of_crossed_bases > 0:
@@ -197,13 +197,10 @@ def insert_crossing_info(base, crossed_bases, direction, target, target_compare_
 # pd.set_option('future.no_silent_downcasting', True)
 
 
-def find_crossings(base_compare_column, bases_to_compare, direction, more_significant, reverse, target,
-                   target_compare_column):
+def find_crossing(bases_to_compare, base_compare_column, target, target_compare_column, direction, reverse,
+                  more_significant):
     target = target.drop(columns=['right_base_index', 'right_base_target', 'left_base_index', 'left_base_target',
                                   'right_crossing', 'left_crossing',
-                                  # 'right_crossing_time', 'right_crossing_value',
-                                  # 'left_crossing_time', 'left_crossing_value',
-                                  # 'valid_crossing'
                                   ], errors='ignore')
     bases_to_compare = bases_to_compare.drop(columns=[direction + '_distance'], errors='ignore')
 
@@ -260,38 +257,6 @@ def find_crossings(base_compare_column, bases_to_compare, direction, more_signif
     if crossed_bases['target_date'].isna().any().any():
         raise AssertionError("crossed_bases['target_date'].isna().any().any()")
     target.loc[crossed_bases['target_date'], 'crossed_base_index'] = crossed_bases.index
-    # if not target[target['crossed_base_index'].notna()]['crossed_base_index'].is_unique:  # toddo: test AssertionError
-    #     raise AssertionError("not target[target['crossed_base_index'].notna()]['crossed_base_index'].is_unique")
-    # crossing_targets = target[target[f'{direction}_crossing'] == True].index
-    # log_w("test if shift is needed", stack_trace=False)
-    # # if direction == 'right':
-    # #     shifted_crossing_target = \
-    # #         target[target[f'{direction}_crossing'].shift(-1) == True].index
-    # # else:  # direction == 'left'
-    # #     shifted_crossing_target = \
-    # #         target[target[f'{direction}_crossing'].shift(1) == True].index
-    # if direction == 'right':
-    #     pass
-    # else:
-    #     pass
-    # shifted_crossing_target = \
-    #     target[target[f'{direction}_crossing'].notna() & target[
-    #         f'{direction}_crossing']].index  # toddo: test for right direction
-    # target.loc[shifted_crossing_target, f'{direction}_crossing_time'] = \
-    #     pd.to_datetime(crossing_targets.get_level_values(level='date'))
-    # target.loc[shifted_crossing_target, f'{direction}_crossing_value'] = \
-    #     target.loc[crossing_targets, target_compare_column].to_list()
-    # if direction == 'right':
-    #     target[f'{direction}_crossing_time'] = target[f'{direction}_crossing_time'].bfill()
-    #     target[f'{direction}_crossing_value'] = target[f'{direction}_crossing_value'].bfill()
-    # else:  # direction == 'left'
-    #     target[f'{direction}_crossing_time'] = target[f'{direction}_crossing_time'].ffill()
-    #     target[f'{direction}_crossing_value'] = target[f'{direction}_crossing_value'].ffill()
-    # # target['valid_crossing'] = les_significant(target[target_compare_column], target[f'{direction}_crossing_value'])
-    # target['valid_crossing'] = (more_significant(target[f'{direction}_crossing_value'], target['base_target']))
-    # valid_crossing_target = target[target['valid_crossing'] == True].index
-    # crossed_bases = bases_to_compare[
-    #     bases_to_compare['target_index'].isin(valid_crossing_target)].index  # toddo: test
     return crossed_bases, target
 
 

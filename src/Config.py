@@ -118,6 +118,8 @@ class Config():
         self.figure_height = 900
         self.figure_font_size = 7
 
+        self.pivot_number_of_active_hits = 2
+
         self.id = ""
 
 
