@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, List
 
 import pandas as pd
 import pandera
@@ -21,7 +21,11 @@ class PivotDFM(pandera.DataFrameModel):
     passing: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
     deactivated_at: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
     hit: pt.Series[int] = pandera.Field(nullable=True)
-    is_overlap_of: pt.Series[str] = pandera.Field(nullable=True)
+    # the master pivot which this pivot is overlapping with
+    master_pivot_timeframe: pt.Series[str] = pandera.Field(nullable=True)
+    master_pivot_date: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
+    ftc_base_pattern_timeframes: pt.Series[List[str]] = pandera.Field(nullable=True)
+    ftc_base_pattern_dates: pt.Series[List[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]] = pandera.Field(nullable=True)
 
     @staticmethod
     def description(start_time: datetime, pivot_timeframe: str, pivot_info) -> str:
@@ -33,15 +37,15 @@ class PivotDFM(pandera.DataFrameModel):
         if hasattr(pivot_info, 'return_end_value'):
             output += f"R{abs(pivot_info['return_end_value'] - pivot_info['level']):.0f}"
         output += f"H{pivot_info['hit']}"
-        if pd.notna(pivot_info['is_overlap_of']):
-            output += f"O{pivot_info['is_overlap_of']}"
+        if pd.notna(pivot_info['master_pivot_timeframe']):
+            output += f"O{pivot_info['master_pivot_timeframe']}/{pivot_info['master_pivot_date']}"
         return output
 
     @staticmethod
     def name(start_time: datetime, pivot_timeframe: str, pivot_info) -> str:
         output = f"Pivot {pivot_info['level']:.0f}={pivot_timeframe}@{start_time.strftime('%m/%d.%H:%M')}"
-        if pd.notna(pivot_info['is_overlap_of']):
-            output += f"O{pivot_info['is_overlap_of']}"
+        if pd.notna(pivot_info['master_pivot_timeframe']):
+            output += f"O{pivot_info['master_pivot_timeframe']}/{pivot_info['master_pivot_date']}"
         return output
 
 

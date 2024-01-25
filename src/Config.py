@@ -106,6 +106,8 @@ class Config():
         self.base_pattern_order_limit_price_margin_percentage = 0.1
         self.base_pattern_order_limit_price_margin_percentage = 0.05  # 5%
         self.base_pattern_risk_reward_rate = 5  # 500% = average rate of looses to achieve a win.
+
+        self.ftc_price_range_percentage = 0.38  # the FTC will be in the last 38% of the movement.
         # 300% = we expect the profit to be 300% of trading fee to consider the trade profitable.
         self.trading_fee_safe_side_multiplier = 3
         # base patterns with size of less than n * atr (of base time frame) are not enough big to be back tested.

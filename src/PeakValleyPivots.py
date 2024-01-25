@@ -185,7 +185,8 @@ def insert_pivot_info(pivots, mt_ohlcva, structure_timeframe_shortlist, base_tim
         timeframe_pivots['ttl'] = timeframe_pivots.index + level_ttl(timeframe)
         timeframe_pivots['deactivated_at'] = pd.Series(dtype='datetime64[ns, UTC]')
         timeframe_pivots['archived_at'] = pd.Series(dtype='datetime64[ns, UTC]')
-        timeframe_pivots['is_overlap_of'] = pd.Series(dtype='str')
+        timeframe_pivots['master_pivot_timeframe'] = pd.Series(dtype='str')
+        timeframe_pivots['master_pivot_date'] = pd.Series(dtype='datetime64[ns, UTC]')
         timeframe_pivots['hit'] = 0
         timeframe_pivots = AtrMovementPivotDf.cast_and_validate(timeframe_pivots)
         timeframe_pivots['timeframe'] = timeframe
@@ -400,7 +401,8 @@ def major_times_tops_pivots(date_range_str) -> pt.DataFrame[MultiTimeframePivotD
         _pivots['activation_time'] = _pivots.index
         _pivots['ttl'] = _pivots.index + level_ttl(timeframe)
         _pivots['hit'] = 0
-        _pivots['is_overlap_of'] = None
+        _pivots['master_pivot_timeframe'] = None
+        _pivots['master_pivot_date'] = None
         _pivots['deactivated_at'] = None
         _pivots['archived_at'] = None
         if len(_pivots) > 0:
@@ -450,7 +452,8 @@ def zz_tops_pivots(date_range_str) -> pt.DataFrame[MultiTimeframePivotDFM]:
         _pivots['activation_time'] = _pivots.index
         _pivots['ttl'] = _pivots.index + level_ttl(timeframe)
         _pivots['hit'] = 0  # update_hits(multi_timeframe_pivots)
-        _pivots['is_overlap_of'] = None
+        _pivots['master_pivot_timeframe'] = None
+        _pivots['master_pivot_date'] = None
         _pivots['deactivated_at'] = None
         _pivots['archived_at'] = None
         if len(_pivots) > 0:

@@ -9,6 +9,7 @@ from BasePattern import read_multi_timeframe_base_patterns
 from BullBearSidePivot import read_multi_timeframe_bull_bear_side_pivots
 from Config import config
 from PanderaDFM.AtrTopPivot import MultiTimeframeAtrMovementPivotDFM
+from PanderaDFM.BasePattern import MultiTimeframeBasePattern
 from PanderaDFM.OHLCV import OHLCV
 from PanderaDFM.Pivot import MultiTimeframePivotDFM, PivotDFM, MultiTimeframePivotDf
 from PeakValley import find_crossing
@@ -48,18 +49,18 @@ def first_exited_bar(pivot: pt.DataFrame[PivotDFM], timeframe_ohlcv: pt.DataFram
         return None, None
 
 
-def exit_bars(timeframe_active_pivots: pt.DataFrame[PivotDFM], timeframe_ohlcv: pt.DataFrame[OHLCV]) \
-        -> list[Tuple[datetime, float]]:
-    exit_bars = [
-        first_exited_bar(start, pivot, timeframe_ohlcv)
-        for start, pivot in timeframe_active_pivots.iterrows()
-    ]
-    return exit_bars
+# def exit_bars(timeframe_active_pivots: pt.DataFrame[PivotDFM], timeframe_ohlcv: pt.DataFrame[OHLCV]) \
+#         -> list[Tuple[datetime, float]]:
+#     exit_bars = [
+#         first_exited_bar(start, pivot, timeframe_ohlcv)
+#         for start, pivot in timeframe_active_pivots.iterrows()
+#     ]
+#     return exit_bars
 
 
-def passing_time(timeframe_active_pivots: pt.DataFrame[PivotDFM], timeframe_ohlcv: pt.DataFrame[OHLCV]):
-    _exit_bars = exit_bars(timeframe_active_pivots, timeframe_ohlcv)
-    return dict(_exit_bars).keys()
+# def passing_time(timeframe_active_pivots: pt.DataFrame[PivotDFM], timeframe_ohlcv: pt.DataFrame[OHLCV]):
+#     _exit_bars = exit_bars(timeframe_active_pivots, timeframe_ohlcv)
+#     return dict(_exit_bars).keys()
 
 
 def insert_passing_time(may_have_passing: pt.DataFrame[PivotDFM], base_timeframe_ohlcv: pt.DataFrame[OHLCV]):
@@ -218,10 +219,10 @@ def reactivated_passed_levels(_time, ohlcv: pt.DataFrame[OHLCV],
 #     return pivot_levels
 
 
-def get_date_range_of_pivots_ftc():
-    raise NotImplementedError
-    _, end = date_range(config.processing_date_range)
-    first_movement_start = active_pivot_levels['movement_start_time'].dropna().min()
+# def get_date_range_of_pivots_ftc():
+#     raise NotImplementedError
+#     _, end = date_range(config.processing_date_range)
+#     first_movement_start = active_pivot_levels['movement_start_time'].dropna().min()
 
 
 # def update_levels(active_pivot_levels: pt.DataFrame[MultiTimeframePivotDFM],
@@ -233,36 +234,38 @@ def get_date_range_of_pivots_ftc():
 #     insert_pivot_ftc(active_pivot_levels)
 
 
-@measure_time
-def generate_classic_pivots(date_range_str: str = None):
-    """
-    definition of pivot:
-        highest high of every Bullish and lowest low of every Bearish trend. for Trends
-            conditions:
-                >= 3 atr
-                >= 1 atr reverse movement after the most significant top
-            index = highest high for Bullish and lowest low for Bearish
-            highest high is not the last peak of Bullish and lowest low is not the last Valley raise a warning log:
-                timeframe, trend start time (index), time of last top
-                time and high of highest high in Bullish and time and low of lowest low in Bearish,
-        same color trends >= 3 atr + reverse same color trend >= 1 atr
-            condition:
+# @measure_time
+# def generate_classic_pivots(date_range_str: str = None):
+#     """
+#     definition of pivot:
+#         highest high of every Bullish and lowest low of every Bearish trend. for Trends
+#             conditions:
+#                 >= 3 atr
+#                 >= 1 atr reverse movement after the most significant top
+#             index = highest high for Bullish and lowest low for Bearish
+#             highest high is not the last peak of Bullish and lowest low is not the last Valley raise a warning log:
+#                 timeframe, trend start time (index), time of last top
+#                 time and high of highest high in Bullish and time and low of lowest low in Bearish,
+#         same color trends >= 3 atr + reverse same color trend >= 1 atr
+#             condition:
+#
+#     pivot information:
+#         index: datetime
+#     """
+#     if date_range_str is None:  # toddo: test
+#         date_range_str = config.processing_date_range
+#     multi_timeframe_pivots = read_classic_pivots(date_range_str)
+#     raise NotImplementedError
+#     #
+#     # for (pivot_timeframe, pivot_time), pivot_info in multi_timeframe_pivots.sort_index(level='date'):
+#     #     multi_timeframe_pivots.loc[(pivot_timeframe, pivot_time), 'is_overlap_of'] = \
+#     #         pivot_exact_overlapped(pivot_time, multi_timeframe_pivots)
+#     # base_timeframe_ohlcv = read_base_timeframe_ohlcv()
+#     # update_pivot_deactivation(multi_timeframe_pivots, base_timeframe_ohlcv)
 
-    pivot information:
-        index: datetime
-    """
-    if date_range_str is None:  # todo: test
-        date_range_str = config.processing_date_range
-    multi_timeframe_pivots = read_classic_pivots(date_range_str)
-    for (pivot_timeframe, pivot_time), pivot_info in multi_timeframe_pivots.sort_index(level='date'):
-        multi_timeframe_pivots.loc[(pivot_timeframe, pivot_time), 'is_overlap_of'] = \
-            pivot_exact_overlapped(pivot_time, multi_timeframe_pivots)
-    raise NotImplementedError
-    # base_timeframe_ohlcv = read_base_timeframe_ohlcv()
-    # update_pivot_deactivation(multi_timeframe_pivots, base_timeframe_ohlcv)
 
-
-def insert_ftc(pivots: pt.DataFrame[MultiTimeframeAtrMovementPivotDFM], structure_timeframe_shortlist):
+def insert_ftc(pivots: pt.DataFrame[MultiTimeframeAtrMovementPivotDFM],
+               base_patterns: pt.DataFrame[MultiTimeframeBasePattern]):
     """
     The FTC is a base pattern in the last 38% of pivot movement price range.
     The FTC base pattern should start within the movement time range.
@@ -273,12 +276,24 @@ def insert_ftc(pivots: pt.DataFrame[MultiTimeframeAtrMovementPivotDFM], structur
     :param structure_timeframe_shortlist:
     :return:
     """
-    raise NotImplementedError
-    date_range_of_pivots_ftc = get_date_range_of_pivots_ftc()
-    base_patterns = read_multi_timeframe_base_patterns(date_range_of_pivots_ftc)
+    pivots['ftc_high'] = pivots[['movement_start_value', 'level']].max(axis='columns')  # todo: test
+    pivots['ftc_low'] = pivots[['movement_start_value', 'level']].min(axis='columns')
+    pivots['movement_size'] = pivots['movement_end_value'] - pivots['movement_start_value']
+    pivots['ftc_price_range_start'] = \
+        pivots['movement_end_value'] - (pivots['movement_size'] * config.ftc_price_range_percentage)
 
-    for pivot_index, pivot_info in pivots:
-        ftcs =
+    for (timeframe, start), pivot_info in pivots:
+        ftc_base_patterns = base_patterns[
+            (base_patterns.index.get_level_values(level='date') < start)
+            & (base_patterns.index.get_level_values(level='date') > pivots['movement_start_time'])
+            & (base_patterns['internal_high'] <= pivots['ftc_high'])
+            & (base_patterns['internal_low'] >= pivots['ftc_low'])
+            ]
+        if len(ftc_base_patterns) > 0:
+            pivots.loc[(timeframe, start), 'ftc_base_pattern_timeframes'] = \
+                ftc_base_patterns.index.get_level_values(level='timeframe').tolist()
+            pivots.loc[(timeframe, start), 'ftc_base_pattern_dates'] = \
+                ftc_base_patterns.index.get_level_values(level='date').tolist()
 
 
 def read_classic_pivots(date_range_str) -> pt.DataFrame[MultiTimeframePivotDFM]:
@@ -293,26 +308,49 @@ def read_classic_pivots(date_range_str) -> pt.DataFrame[MultiTimeframePivotDFM]:
     return multi_timeframe_pivots
 
 
-def pivot_exact_overlapped(pivot_time, multi_timeframe_pivots):
-    # todo: try to merge with update_hit
-    # new_pivots['is_overlap_of'] = None
-    if not len(multi_timeframe_pivots) > 0:
-        return None
+def insert_is_overlap_of(multi_timeframe_pivots: pt.DataFrame[MultiTimeframePivotDFM]):
+    """
+    find the pivot with maximum timeframe and if there are several pivots with the same maximum timeframe, the first is
+    the most significant.
+    :param multi_timeframe_pivots:
+    :return:
+    """
+    for mt_index, pivot_info in multi_timeframe_pivots.iterrows():
+        lows = multi_timeframe_pivots[['internal_margin', 'external_margin']].min(axis='columns')
+        highs = multi_timeframe_pivots[['internal_margin', 'external_margin']].max(axis='columns')
+        overlapped_pivots = multi_timeframe_pivots[
+            (pivot_info['level'] < highs)
+            & (pivot_info['level'] > lows)
+            ]
+        if len(overlapped_pivots) > 0:
+            overlapped_timeframes = overlapped_pivots.index.get_level_values(level='timeframe').unique()
+            timeframe = [t for t in config.timeframes[::-1] if t in overlapped_timeframes][0]
+            (master_pivot_timeframe, master_pivot_date) = \
+                overlapped_pivots[overlapped_pivots['timeframe'] == timeframe].sort_index(level='date').iloc[0].index
+            multi_timeframe_pivots.loc[mt_index, 'master_pivot_timeframe'] = master_pivot_timeframe
+            multi_timeframe_pivots.loc[mt_index, 'master_pivot_date'] = master_pivot_date
 
-    # for pivot_time, pivot in new_pivots.iterrows():
-    overlapping_major_timeframes = \
-        multi_timeframe_pivots[multi_timeframe_pivots.index.get_level_values('date') == pivot_time]
-    if len(overlapping_major_timeframes) > 0:
-        root_pivot = overlapping_major_timeframes[
-            multi_timeframe_pivots['is_overlap_of'].isna()
-        ]
-        if len(root_pivot) == 1:
-            # new_pivots.loc[pivot_time, 'is_overlap_of'] = \
-            return root_pivot.index.get_level_values('timeframe')[0]
-        else:
-            raise Exception(f'Expected to find only one root_pivot but found({len(root_pivot)}):{root_pivot}')
-    # return new_pivots
-    # raise Exception(f'Expected to find a root_pivot but found zero')
+
+# def pivot_exact_overlapped(pivot_time, multi_timeframe_pivots):
+#     # todo: try to merge with update_hit
+#     # new_pivots['is_overlap_of'] = None
+#     if not len(multi_timeframe_pivots) > 0:
+#         return None
+#
+#     # for pivot_time, pivot in new_pivots.iterrows():
+#     overlapping_major_timeframes = \
+#         multi_timeframe_pivots[multi_timeframe_pivots.index.get_level_values('date') == pivot_time]
+#     if len(overlapping_major_timeframes) > 0:
+#         root_pivot = overlapping_major_timeframes[
+#             multi_timeframe_pivots['is_overlap_of'].isna()
+#         ]
+#         if len(root_pivot) == 1:
+#             # new_pivots.loc[pivot_time, 'is_overlap_of'] = \
+#             return root_pivot.index.get_level_values('timeframe')[0]
+#         else:
+#             raise Exception(f'Expected to find only one root_pivot but found({len(root_pivot)}):{root_pivot}')
+#     # return new_pivots
+#     # raise Exception(f'Expected to find a root_pivot but found zero')
 
 
 def update_hit(active_timeframe_pivots: pt.DataFrame[PivotDFM], base_timeframe_ohlcv) -> pt.DataFrame[PivotDFM]:
