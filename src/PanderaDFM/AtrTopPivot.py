@@ -8,17 +8,17 @@ from pandera import typing as pt
 
 from PanderaDFM.ExtendedDf import ExtendedDf, BaseDFM
 from PanderaDFM.MultiTimeframe import MultiTimeframe
-from PanderaDFM.Pivot import Pivot
+from PanderaDFM.Pivot import PivotDFM, MultiTimeframePivotDFM
 
 
-class AtrMovementPivotDFM(Pivot, BaseDFM):
+class AtrMovementPivotDFM(PivotDFM, BaseDFM):
     movement_start_time: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
     return_end_time: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
     movement_start_value: pt.Series[float]
     return_end_value: pt.Series[float]
 
 
-class MultiTimeframeAtrMovementPivotDFM(AtrMovementPivotDFM, MultiTimeframe):
+class MultiTimeframeAtrMovementPivotDFM(AtrMovementPivotDFM, MultiTimeframePivotDFM):
     pass
 
 

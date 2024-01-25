@@ -4,6 +4,7 @@ from typing import List, Annotated
 import pandas as pd
 from pandera import typing as pt
 
+from ClassicPivot import insert_ftc, update_pivot_deactivation
 from Config import config, TopTYPE
 from MetaTrader import MT
 from PanderaDFM.AtrTopPivot import MultiTimeframeAtrMovementPivotDFM, MultiTimeframeAtrMovementPivotDf, \
@@ -12,7 +13,7 @@ from PanderaDFM.MultiTimeframe import MultiTimeframe
 from PanderaDFM.OHLCV import OHLCV
 from PanderaDFM.OHLCVA import MultiTimeframeOHLCVA, OHLCVA
 from PanderaDFM.PeakValley import MultiTimeframePeakValley, PeakValley
-from PanderaDFM.Pivot import MultiTimeframePivot
+from PanderaDFM.Pivot import MultiTimeframePivotDFM
 from PeakValley import read_multi_timeframe_peaks_n_valleys, insert_top_crossing, peaks_only, valleys_only
 from PivotsHelper import pivots_level_n_margins, level_ttl, pivot_margins
 from atr import read_multi_timeframe_ohlcva
@@ -69,8 +70,6 @@ def insert_more_significant_tops(timeframe_tops: pt.DataFrame[PeakValley],
     return timeframe_tops
 
 
-
-
 @measure_time
 def atr_movement_pivots(date_range_str: str = None, structure_timeframe_shortlist: List['str'] = None,
                         same_time_multiple_timeframes: bool = False) -> pt.DataFrame[MultiTimeframeAtrMovementPivotDFM]:
@@ -99,7 +98,7 @@ def atr_movement_pivots(date_range_str: str = None, structure_timeframe_shortlis
     expanded_atr_start = min(mt_tops_mapped_time)
     expanded_atr_date_range_str = date_range_to_string(start=min(start, expanded_atr_start), end=end)
     mt_ohlcva = read_multi_timeframe_ohlcva(expanded_atr_date_range_str)
-    base_ohlcva = single_timeframe(mt_ohlcva, config.timeframes[0])
+    base_timeframe_ohlcva = single_timeframe(mt_ohlcva, config.timeframes[0])
 
     # filter to tops of structure timeframes
     mt_tops = mt_tops[mt_tops.index.get_level_values('timeframe').isin(structure_timeframe_shortlist)]
@@ -113,7 +112,7 @@ def atr_movement_pivots(date_range_str: str = None, structure_timeframe_shortlis
             ohlcva: pt.DataFrame[OHLCVA] = single_timeframe(mt_ohlcva, timeframe)
             timeframe_tops = pd.merge_asof(timeframe_tops, ohlcva[['atr']], left_index=True, right_index=True,
                                            direction='backward')
-            insert_pivot_movements(timeframe_tops, base_ohlcva)
+            insert_pivot_movements(timeframe_tops, base_timeframe_ohlcva)
 
             movement_satisfied_tops = timeframe_tops[
                 timeframe_tops['movement_start_time'].notna() & timeframe_tops['return_end_time'].notna()].copy()
@@ -143,14 +142,13 @@ def atr_movement_pivots(date_range_str: str = None, structure_timeframe_shortlis
                     mt_tops = mt_tops.drop(
                         index=mt_tops[mt_tops.index.get_level_values('date') \
                             .isin(timeframe_pivots.index.get_level_values('date'))].index)
-    pivots = insert_pivot_info(pivots, mt_ohlcva, structure_timeframe_shortlist)
-    pivots = insert_pivot_ftc(pivots, mt_ohlcva, structure_timeframe_shortlist)
+    pivots = insert_pivot_info(pivots, mt_ohlcva, structure_timeframe_shortlist, base_timeframe_ohlcva)
+    pivots = insert_ftc(pivots, mt_ohlcva)
     return pivots
 
 
-
 @measure_time
-def insert_pivot_info(pivots, mt_ohlcva, structure_timeframe_shortlist):
+def insert_pivot_info(pivots, mt_ohlcva, structure_timeframe_shortlist, base_timeframe_ohlcv):
     insert_pivot_level_n_type(pivots)
     if structure_timeframe_shortlist is None:
         structure_timeframe_shortlist = config.structure_timeframes[::-1]
@@ -193,9 +191,11 @@ def insert_pivot_info(pivots, mt_ohlcva, structure_timeframe_shortlist):
         timeframe_pivots['timeframe'] = timeframe
         timeframe_pivots = timeframe_pivots.set_index('timeframe', append=True)
         timeframe_pivots = timeframe_pivots.swaplevel()
-        multi_timeframe_pivots = MultiTimeframeAtrMovementPivotDf.concat(multi_timeframe_pivots,
-                                                                         timeframe_pivots)
+        multi_timeframe_pivots: pt.DataFrame[MultiTimeframeAtrMovementPivotDFM] = \
+            MultiTimeframeAtrMovementPivotDf.concat(multi_timeframe_pivots, timeframe_pivots)
     pivots = MultiTimeframeAtrMovementPivotDf.cast_and_validate(multi_timeframe_pivots)
+    update_pivot_deactivation(multi_timeframe_pivots, base_timeframe_ohlcv)  # todo: test
+    insert_ftc(multi_timeframe_pivots, structure_timeframe_shortlist)
     return pivots
 
 
@@ -364,7 +364,7 @@ def insert_multi_timeframe_atr(df: pt.DataFrame[MultiTimeframe],
     # return timeframe_tops
 
 
-def major_times_tops_pivots(date_range_str) -> pt.DataFrame[MultiTimeframePivot]:
+def major_times_tops_pivots(date_range_str) -> pt.DataFrame[MultiTimeframePivotDFM]:
     """
 
     :param date_range_str:
@@ -379,7 +379,7 @@ def major_times_tops_pivots(date_range_str) -> pt.DataFrame[MultiTimeframePivot]
     '''
     _multi_timeframe_peaks_n_valleys = read_multi_timeframe_peaks_n_valleys(date_range_str)
     _multi_timeframe_ohlcva = read_multi_timeframe_ohlcva(date_range_str)
-    multi_timeframe_pivots = empty_df(MultiTimeframePivot)
+    multi_timeframe_pivots = empty_df(MultiTimeframePivotDFM)
     for timeframe in config.structure_timeframes[::-1][2:]:
         # 1W tops are creating classic levels for 4H, 1D for 1H and 4H for 15min structure Timeframes.
         _pivots = single_timeframe(_multi_timeframe_peaks_n_valleys, anti_trigger_timeframe(timeframe))
@@ -409,12 +409,12 @@ def major_times_tops_pivots(date_range_str) -> pt.DataFrame[MultiTimeframePivot]
             _pivots = _pivots.swaplevel()
             multi_timeframe_pivots = concat(multi_timeframe_pivots, _pivots)
     multi_timeframe_pivots = multi_timeframe_pivots.sort_index(level='date')
-    multi_timeframe_pivots = cast_and_validate(multi_timeframe_pivots, MultiTimeframePivot,
+    multi_timeframe_pivots = cast_and_validate(multi_timeframe_pivots, MultiTimeframePivotDFM,
                                                zero_size_allowed=after_under_process_date(date_range_str))
     return multi_timeframe_pivots
 
 
-def zz_tops_pivots(date_range_str) -> pt.DataFrame[MultiTimeframePivot]:
+def zz_tops_pivots(date_range_str) -> pt.DataFrame[MultiTimeframePivotDFM]:
     """
 
     :param date_range_str:
@@ -429,7 +429,7 @@ def zz_tops_pivots(date_range_str) -> pt.DataFrame[MultiTimeframePivot]:
     '''
     _multi_timeframe_peaks_n_valleys = read_multi_timeframe_peaks_n_valleys(date_range_str)
     _multi_timeframe_ohlcva = read_multi_timeframe_ohlcva(date_range_str)
-    multi_timeframe_pivots = empty_df(MultiTimeframePivot)
+    multi_timeframe_pivots = empty_df(MultiTimeframePivotDFM)
     for timeframe in config.structure_timeframes[::-1][2:]:
         # 1W tops are creating classic levels for 4H, 1D for 1H and 4H for 15min structure Timeframes.
         _pivots = single_timeframe(_multi_timeframe_peaks_n_valleys, anti_trigger_timeframe(timeframe))
@@ -459,14 +459,14 @@ def zz_tops_pivots(date_range_str) -> pt.DataFrame[MultiTimeframePivot]:
             _pivots = _pivots.swaplevel()
             multi_timeframe_pivots = concat(multi_timeframe_pivots, _pivots)
     multi_timeframe_pivots = multi_timeframe_pivots.sort_index(level='date')
-    multi_timeframe_pivots = cast_and_validate(multi_timeframe_pivots, MultiTimeframePivot,
+    multi_timeframe_pivots = cast_and_validate(multi_timeframe_pivots, MultiTimeframePivotDFM,
                                                zero_size_allowed=after_under_process_date(date_range_str))
     return multi_timeframe_pivots
 
 
 def read_multi_timeframe_major_times_top_pivots(date_range_str: str = None):
     result = read_file(date_range_str, 'multi_timeframe_major_times_top_pivots',
-                       generate_multi_timeframe_major_times_top_pivots, MultiTimeframePivot)
+                       generate_multi_timeframe_major_times_top_pivots, MultiTimeframePivotDFM)
     return result
 
 

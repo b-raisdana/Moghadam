@@ -784,7 +784,8 @@ def empty_df(model_class: Type[Pandera_DFM_Type]) -> pd.DataFrame:
     return _empty_df
 
 
-def nearest_match(needles: Axes, reference: Axes, direction: str, start=None, end=None, shift: int = 1) -> Axes:
+# def nearest_match(needles: Axes, reference: Axes, direction: str, start=None, end=None, shift: int = 1) -> Axes:
+def nearest_match(needles: Axes, reference: Axes, direction: str, shift: int = 1) -> Axes:
     """
     it will merge the indexes for both forward and backward and return. missing indexes in forward will be filled
     forward and missing indexes of backward will be filled backward.\n
@@ -796,8 +797,6 @@ def nearest_match(needles: Axes, reference: Axes, direction: str, start=None, en
     :param shift:
     :param needles: needles list
     :param reference: reference list
-    :param start: filtering the start of output indexes
-    :param end: filtering the rnd of output indexes
     :param direction: should be either "forward" or "backward". use "forward" to get the PREVIOUS reference for needles and
     use "backward" to get the NEXT reference for needles
     :return: Axes indexed as the combination of forward and backward indexes and 2 columns:
@@ -848,10 +847,10 @@ def nearest_match(needles: Axes, reference: Axes, direction: str, start=None, en
             df['backward'] = df['backward'].bfill().shift(-shift)
         else:
             df['backward'] = df['backward'].bfill()
-    if start is not None:
-        df = df[df.index >= start]
-    if end is not None:
-        df = df[df.index >= end]
+    # if start is not None:
+    #     df = df[df.index >= start]
+    # if end is not None:
+    #     df = df[df.index >= end]
     if direction == 'forward':
         return df.loc[needles, 'forward'].to_list()
     elif direction == 'backward':

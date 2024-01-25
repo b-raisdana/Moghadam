@@ -36,6 +36,7 @@ class SignalDFM(pandera.DataFrameModel):
     stop_loss_order_id: pt.Series[str] = pandera.Field(nullable=True, default=None)
     take_profit_order_id: pt.Series[str] = pandera.Field(nullable=True, default=None)
     order_is_active: pt.Series[bool] = pandera.Field(nullable=True, default=None)  # , ignore_na=False
+
     # todo: if the signal end changed we have to update signal orders
     # updated: pt.Series[bool] = pandera.Field(nullable=True, default=True)
 
@@ -80,7 +81,7 @@ class SignalDf(ExtendedDf):
     def to_str(cls, signal_index: Tuple[Timestamp, Timestamp, str, str], signal: pt.Series[SignalDFM]):
         values = signal.to_dict()
         index_dict = dict(zip(SignalDFM.to_schema().index.names, list(signal_index)))
-        side_indicator = f"{('Buy' if index_dict['side']==OrderSide.Buy.value else 'Sell')}"
+        side_indicator = f"{('Buy' if index_dict['side'] == OrderSide.Buy.value else 'Sell')}"
         result = (f"Signal{index_dict['date'].strftime('%m-%d.%H-%M')}{side_indicator}"
                   f"@{index_dict['ref_date'].strftime('%m-%d.%H-%M')}/{index_dict['ref_timeframe']}"
                   f"End{pd.to_datetime(values['end']).strftime('%m/%d.%H:%M')}"

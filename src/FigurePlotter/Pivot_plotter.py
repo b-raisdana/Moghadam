@@ -5,7 +5,7 @@ from plotly import graph_objects as plgo
 from Config import config
 from FigurePlotter.OHLVC_plotter import plot_ohlcv
 from FigurePlotter.plotter import timeframe_color, show_and_save_plot
-from PanderaDFM.Pivot import MultiTimeframePivot, Pivot
+from PanderaDFM.Pivot import MultiTimeframePivotDFM, PivotDFM
 from helper.data_preparation import single_timeframe
 from helper.helper import measure_time
 from ohlcv import read_multi_timeframe_ohlcv
@@ -48,7 +48,7 @@ from ohlcv import read_multi_timeframe_ohlcv
 
 
 @measure_time
-def plot_multi_timeframe_pivots(multi_timeframe_pivots: pt.DataFrame[MultiTimeframePivot],
+def plot_multi_timeframe_pivots(multi_timeframe_pivots: pt.DataFrame[MultiTimeframePivotDFM],
                                 date_range_str: str = None, show: bool = True, save: bool = True) -> plgo.Figure:
     if date_range_str is None:
         date_range_str = config.processing_date_range
@@ -87,7 +87,7 @@ def plot_multi_timeframe_pivots(multi_timeframe_pivots: pt.DataFrame[MultiTimefr
     for (pivot_timeframe, pivot_start), pivot_info in multi_timeframe_pivots.iterrows():
         # pivot_name = Pivot.name(pivot_start, pivot_timeframe, pivot_info)
         pivot_name = f"Piv{pivot_timeframe}R" if pivot_info['is_resistance'] else f"Piv{pivot_timeframe}S"
-        pivot_description = Pivot.description(pivot_start, pivot_timeframe, pivot_info)
+        pivot_description = PivotDFM.description(pivot_start, pivot_timeframe, pivot_info)
         # add movement and return paths
         if (hasattr(pivot_info, 'movement_start_time')
                 and hasattr(pivot_info, 'return_end_time')

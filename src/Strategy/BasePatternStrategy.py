@@ -118,6 +118,13 @@ class BasePatternStrategy(ExtendedStrategy):
             ]
         return result
 
+    def is_trading_fee_reasonable(self, limit_price, take_profit):
+        commission_rate = self.broker.getcommissioninfo()['commission']  # todo: test
+        average_cost_of_trade = ((config.base_pattern_risk_reward_rate + 1) * commission_rate) * limit_price
+        if abs(take_profit - limit_price) < (average_cost_of_trade * config.trading_fee_safe_side_multiplier):
+            return False
+        return True
+
     def add_signal(self, base_pattern_timeframe: str, base_pattern_date: datetime,
                    base_pattern: pt.Series[MultiTimeframeBasePattern],
                    band: Literal['upper', 'below']) -> pt.DataFrame[SignalDf.schema_data_frame_model]:
@@ -142,15 +149,9 @@ class BasePatternStrategy(ExtendedStrategy):
         stop_loss = base_pattern[f'internal_{reverse_high_low}']
         take_profit = opr(base_pattern[f'internal_{high_low}'], base_length * config.base_pattern_risk_reward_rate)
         trigger_price = base_pattern[f'internal_{high_low}']
-        # else:  # band == 'below':
-        #     side = OrderSide.Sell.value
-        #     limit_price = (base_pattern['internal_low'] -
-        #                    base_pattern['atr'] * config.base_pattern_order_limit_price_margin_percentage)
-        #     stop_loss = base_pattern['internal_high']
-        #     take_profit = base_pattern['internal_low'] - base_length * config.base_pattern_risk_reward_rate
-        #     trigger_price = base_pattern['internal_low']
+        if not self.is_trading_fee_reasonable(limit_price, take_profit):
+            return self.signal_df  # todo: test
 
-        # size, true_risked_money = self.my_sizer(limit_price=limit_price, sl_price=stop_loss)
         # todo: ref_date and ref_timeframe never been used.
         # todo: use .loc to generate and assign signal in one step.
         if pd.notna(base_pattern['end']):
@@ -159,7 +160,7 @@ class BasePatternStrategy(ExtendedStrategy):
             effective_end = base_pattern['ttl']
         if pd.isna(effective_end):
             raise AssertionError("pd.isna(effective_end)")
-        # todo: optimize and simplify by removing signals and putting orders instead.
+        # todo: optimize and simplify by removing signals and putting orders directly.
 
         new_signal = SignalDf.new({  # todo: debug from here
             'date': self.candle().date,

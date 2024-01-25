@@ -3,21 +3,23 @@ from typing import Annotated
 
 import pandas as pd
 import pandera
+from pandas import Timestamp
 from pandera import typing as pt
 
+from PanderaDFM.ExtendedDf import ExtendedDf
 from PanderaDFM.MultiTimeframe import MultiTimeframe
 
 
-class Pivot(pandera.DataFrameModel):
-    date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
+class PivotDFM(pandera.DataFrameModel):
+    date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]  # the original time of creating pivot
     level: pt.Series[float]
     is_resistance: pt.Series[bool]
     internal_margin: pt.Series[float]
     external_margin: pt.Series[float]
-    activation_time: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
+    original_start: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]  # this part activated at (passing time)
     ttl: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]  # = pandera.Field(nullable=True)
+    passing: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
     deactivated_at: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
-    archived_at: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
     hit: pt.Series[int] = pandera.Field(nullable=True)
     is_overlap_of: pt.Series[str] = pandera.Field(nullable=True)
 
@@ -43,6 +45,24 @@ class Pivot(pandera.DataFrameModel):
         return output
 
 
-class MultiTimeframePivot(Pivot, MultiTimeframe):
+class MultiTimeframePivotDFM(PivotDFM, MultiTimeframe):
     pass
-    # hit: pt.Series[int] = pandera.Field()
+
+
+class MultiTimeframePivotDf(ExtendedDf):
+    schema_data_frame_model = MultiTimeframePivotDFM
+    _sample_df = None
+    _empty_obj = None
+
+
+_sample_df = pd.DataFrame({
+    'date': [Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC))],
+    'timeframe': ['test'],
+    'level': [0.0],
+    'is_resistance': [False],
+    'internal_margin': [0.0],
+    'original_start': [
+        Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC))],
+    'ttl': [Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC))],
+})
+MultiTimeframePivotDf._sample_df = _sample_df.set_index(['date', 'timeframe'])

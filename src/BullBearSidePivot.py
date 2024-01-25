@@ -9,7 +9,7 @@ from Config import config
 from MetaTrader import MT
 from PanderaDFM.BullBearSide import BullBearSide
 from PanderaDFM.BullBearSidePivot import BullBearSidePivot
-from PanderaDFM.Pivot import MultiTimeframePivot
+from PanderaDFM.Pivot import MultiTimeframePivotDFM
 from PeakValley import read_multi_timeframe_peaks_n_valleys, major_peaks_n_valleys
 from PivotsHelper import pivots_level_n_margins, level_ttl
 from atr import read_multi_timeframe_ohlcva
@@ -39,7 +39,7 @@ def remove_overlapping_trends(timeframe_trends: pt.DataFrame[BullBearSide]) -> p
 
 
 def multi_timeframe_bull_bear_side_pivots(date_range_str: str = None, structure_timeframe_shortlist: List['str'] = None) \
-        -> pt.DataFrame[MultiTimeframePivot]:
+        -> pt.DataFrame[MultiTimeframePivotDFM]:
     """
     highest high of every Bullish and lowest low of every Bearish trend. for Trends
             conditions:
@@ -64,7 +64,7 @@ def multi_timeframe_bull_bear_side_pivots(date_range_str: str = None, structure_
     multi_timeframe_trends = read_multi_timeframe_bull_bear_side_trends(date_range_str)
     multi_timeframe_peaks_n_valleys = read_multi_timeframe_peaks_n_valleys(date_range_str)
     multi_timeframe_ohlcva = read_multi_timeframe_ohlcva(date_range_str)
-    multi_timeframe_pivots = empty_df(MultiTimeframePivot)
+    multi_timeframe_pivots = empty_df(MultiTimeframePivotDFM)
     if structure_timeframe_shortlist is None:
         structure_timeframe_shortlist = config.structure_timeframes[::-1]
     for timeframe in structure_timeframe_shortlist:
@@ -116,15 +116,15 @@ def multi_timeframe_bull_bear_side_pivots(date_range_str: str = None, structure_
                 timeframe_pivots = timeframe_pivots.set_index('timeframe', append=True)
                 timeframe_pivots = timeframe_pivots.swaplevel()
                 multi_timeframe_pivots = concat(multi_timeframe_pivots, timeframe_pivots)
-    multi_timeframe_pivots = cast_and_validate(multi_timeframe_pivots, MultiTimeframePivot,
+    multi_timeframe_pivots = cast_and_validate(multi_timeframe_pivots, MultiTimeframePivotDFM,
                                                zero_size_allowed=after_under_process_date(date_range_str))
     return multi_timeframe_pivots
 
 
 def read_multi_timeframe_bull_bear_side_pivots(date_range_str: str = None) \
-        -> pt.DataFrame[MultiTimeframePivot]:
+        -> pt.DataFrame[MultiTimeframePivotDFM]:
     result = read_file(date_range_str, 'multi_timeframe_bull_bear_side_pivots',
-                       generate_multi_timeframe_bull_bear_side_pivots, MultiTimeframePivot)
+                       generate_multi_timeframe_bull_bear_side_pivots, MultiTimeframePivotDFM)
     return result
 
 

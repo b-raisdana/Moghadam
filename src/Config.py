@@ -105,7 +105,9 @@ class Config():
         self.base_pattern_index_shift_after_last_candle_in_the_sequence = 1  # >1 means make sure the last candle is closed
         self.base_pattern_order_limit_price_margin_percentage = 0.1
         self.base_pattern_order_limit_price_margin_percentage = 0.05  # 5%
-        self.base_pattern_risk_reward_rate = 8  # 800%
+        self.base_pattern_risk_reward_rate = 5  # 500% = average rate of looses to achieve a win.
+        # 300% = we expect the profit to be 300% of trading fee to consider the trade profitable.
+        self.trading_fee_safe_side_multiplier = 3
         # base patterns with size of less than n * atr (of base time frame) are not enough big to be back tested.
         self.base_pattern_small_to_trace_in_base_candles_atr_factor = 3
         self.initial_cash = 1000.0
