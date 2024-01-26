@@ -25,6 +25,7 @@ class PivotDFM(pandera.DataFrameModel):
     # the master pivot which this pivot is overlapping with
     master_pivot_timeframe: pt.Series[str] = pandera.Field(nullable=True)
     master_pivot_date: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
+
     # ftc_base_pattern_timeframes: pt.Series[List[str]] = pandera.Field(nullable=True)
     # ftc_base_pattern_dates: pt.Series[List[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]] = pandera.Field(nullable=True)
 
@@ -50,14 +51,28 @@ class PivotDFM(pandera.DataFrameModel):
         return output
 
 
+class PivotDf(ExtendedDf):
+    schema_data_frame_model = PivotDFM
+
+
+_sample_df = pd.DataFrame({
+    'date': [Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC))],
+    'level': [0.0],
+    'is_resistance': [False],
+    'internal_margin': [0.0],
+    'original_start': [
+        Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC))],
+    'ttl': [Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC))],
+})
+PivotDf._sample_df = _sample_df.set_index(['date'])
+
+
 class MultiTimeframePivotDFM(PivotDFM, MultiTimeframe):
     pass
 
 
 class MultiTimeframePivotDf(ExtendedDf):
     schema_data_frame_model = MultiTimeframePivotDFM
-    _sample_df = None
-    _empty_obj = None
 
 
 _sample_df = pd.DataFrame({

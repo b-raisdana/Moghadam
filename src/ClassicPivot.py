@@ -1,25 +1,22 @@
-from datetime import datetime
 from enum import Enum
-from typing import Tuple, Union, Literal, List
+from enum import Enum
+from typing import Literal, List
 
 import pandas as pd
 from pandera import typing as pt
 
-from BasePattern import read_multi_timeframe_base_patterns
 from BullBearSidePivot import read_multi_timeframe_bull_bear_side_pivots
 from Config import config, TopTYPE
-from PanderaDFM.AtrTopPivot import MultiTimeframeAtrMovementPivotDFM, MultiTimeframeAtrMovementPivotDf, \
-    AtrMovementPivotDf
+from PanderaDFM.AtrTopPivot import AtrMovementPivotDf, AtrMovementPivotDFM
 from PanderaDFM.BasePattern import MultiTimeframeBasePattern
 from PanderaDFM.OHLCV import OHLCV
 from PanderaDFM.OHLCVA import OHLCVA
-from PanderaDFM.Pivot import MultiTimeframePivotDFM, PivotDFM, MultiTimeframePivotDf
+from PanderaDFM.Pivot import MultiTimeframePivotDFM, PivotDFM, MultiTimeframePivotDf, PivotDf
 from PeakValley import find_crossing
 from PeakValleyPivots import read_multi_timeframe_major_times_top_pivots
 from PivotsHelper import pivot_margins, level_ttl
-from helper.data_preparation import single_timeframe, empty_df, concat, nearest_match
-from helper.helper import measure_time, date_range
-from ohlcv import read_base_timeframe_ohlcv
+from helper.data_preparation import concat, nearest_match
+from helper.helper import measure_time
 
 
 class LevelDirection(Enum):
@@ -66,25 +63,26 @@ class LevelDirection(Enum):
 #     return dict(_exit_bars).keys()
 
 
-def insert_passing_time(may_have_passing: pt.DataFrame[PivotDFM], base_timeframe_ohlcv: pt.DataFrame[OHLCV]):
-    support_pivots_index = may_have_passing[may_have_passing['is_resistance'] == False]  # todo: test
-    if 'passing_time' not in may_have_passing.columns:
-        may_have_passing['passing_time'] = pd.Series(dtype='datetime64[ns, UTC]')
-    may_have_passing.loc[support_pivots_index, 'passing_time'] = \
-        find_crossing(may_have_passing.loc[support_pivots_index], 'external_margin',
-                      base_timeframe_ohlcv, 'high', 'right', lambda base, target: target > base,
+def insert_passing_time(pivots: pt.DataFrame[PivotDFM], base_timeframe_ohlcv: pt.DataFrame[OHLCV]):
+    if 'passing_time' not in pivots.columns:
+        pivots['passing_time'] = pd.Series(dtype='datetime64[ns, UTC]')
+
+    support_pivots = pivots[pivots['is_resistance'] == False]  # todo: test
+    pivots.loc[support_pivots.index, 'passing_time'] = \
+        find_crossing(support_pivots, 'external_margin',
+                      base_timeframe_ohlcv, 'high', 'right', lambda target, base: target < base,
+                      return_both=False,
                       )
 
-    resistance_pivots_index = may_have_passing[may_have_passing['is_resistance'] == True]
-    may_have_passing.loc[resistance_pivots_index, 'passing_time'] = \
-        find_crossing(may_have_passing.loc[resistance_pivots_index], 'external_margin',
-                      base_timeframe_ohlcv, 'low', 'right', lambda base, target: target < base,
+    resistance_pivots = pivots[pivots['is_resistance'] == True]
+    pivots.loc[resistance_pivots.index, 'passing_time'] = \
+        find_crossing(resistance_pivots, 'external_margin',
+                      base_timeframe_ohlcv, 'low', 'right', lambda target, base: target > base,
+                      return_both=False,
                       )
 
-    valid_passing_pivots = may_have_passing[may_have_passing['passing'].notna()
-                                            & (may_have_passing['passing'] < may_have_passing['ttl'])
-                                            ]
-    may_have_passing.loc[valid_passing_pivots, 'deactivated_at'] = may_have_passing.loc[valid_passing_pivots, 'passing']
+    valid_passing_pivots = pivots[pivots['passing'].notna() & (pivots['passing'] < pivots['ttl'])]
+    pivots.loc[valid_passing_pivots, 'deactivated_at'] = pivots.loc[valid_passing_pivots, 'passing']
 
 
 def deactivate_by_ttl(pivots: pt.DataFrame[MultiTimeframePivotDFM], base_timeframe_ohlcv: pt.DataFrame[OHLCV]):
@@ -96,15 +94,18 @@ def deactivate_by_ttl(pivots: pt.DataFrame[MultiTimeframePivotDFM], base_timefra
     pivots.loc[ttl_expired, 'deactivated_at'] = pivots.loc[ttl_expired, 'ttl']
 
 
-def duplicate_on_passing_times(pivots: pt.DataFrame[MultiTimeframePivotDFM], base_timeframe_ohlcv: pt.DataFrame[OHLCV]):
+def duplicate_on_passing_times(pivots: pt.DataFrame['PivotDFM'], base_timeframe_ohlcv: pt.DataFrame[OHLCV]):
+    if 'passing' in pivots.columns:
+        raise AssertionError("'passing' in pivots.columns")
+    pivots['passing'] = pd.Series(dtype='datetime64[ns, UTC]')
     may_have_passing = pivots[pivots['deactivated_at'].isna()]  # todo: test
     while len(may_have_passing) > 0:  # len(old_pivots_with_passing) < pivots[pivots['passing'].notna()]:
         insert_passing_time(may_have_passing, base_timeframe_ohlcv)
         passed_pivots = may_have_passing[may_have_passing['passing'].notna()].index
-        may_have_passing = MultiTimeframePivotDf.new()
+        may_have_passing = PivotDf.new()
         for (timeframe, pivot_date), pivot_info in passed_pivots.iterrows():
             passed_pivots.loc[(timeframe, pivot_date), 'deactivated_at'] = pivot_date['passing']
-            new_pivot = MultiTimeframePivotDf.new({  # todo: debug from here
+            new_pivot = PivotDf.new({  # todo: debug from here
                 'date': pivot_info['passing'],
                 'level': pivot_info['level'],
                 'is_resistance': not pivot_info['is_resistance'],
@@ -139,7 +140,7 @@ def inactivate_3rd_hit(pivots: pt.DataFrame['MultiTimeframePivotDFM'], base_time
         pivots.loc[deactivate_by_hit, f'hit_start_{config.pivot_number_of_active_hits - 1}']
 
 
-def update_pivot_deactivation(multi_timeframe_pivots: pt.DataFrame['MultiTimeframePivotDFM'],
+def update_pivot_deactivation(timeframe_pivots: pt.DataFrame['PivotDFM'],
                               base_timeframe_ohlcv: pt.DataFrame[OHLCV]):
     """
         hit_count = number of pivots:
@@ -152,10 +153,10 @@ def update_pivot_deactivation(multi_timeframe_pivots: pt.DataFrame['MultiTimefra
     # for timeframe in config.timeframes:
     #     timeframe_active_pivots = single_timeframe(multi_timeframe_active_pivots, timeframe).copy()
     #     timeframe_inactive_pivots = single_timeframe(multi_timeframe_inactive_pivots, timeframe).copy()
-    duplicate_on_passing_times(multi_timeframe_pivots, base_timeframe_ohlcv)
+    duplicate_on_passing_times(timeframe_pivots, base_timeframe_ohlcv)  # todo: test
     # reactivate_passed_levels(timeframe_active_pivots, timeframe_inactive_pivots))
-    inactivate_3rd_hit(multi_timeframe_pivots)
-    deactivate_by_ttl(multi_timeframe_pivots, base_timeframe_ohlcv)
+    inactivate_3rd_hit(timeframe_pivots, base_timeframe_ohlcv)
+    deactivate_by_ttl(timeframe_pivots, base_timeframe_ohlcv)
     #     final_multi_timeframe_active_pivots = (concat(final_multi_timeframe_active_pivots, timeframe_active_pivots)
     #                                            .sort_index(level='date'))
     #     final_multi_timeframe_inactive_pivots = (
@@ -268,36 +269,36 @@ def reactivated_passed_levels(_time, ohlcv: pt.DataFrame[OHLCV],
 #     # update_pivot_deactivation(multi_timeframe_pivots, base_timeframe_ohlcv)
 
 
-def insert_ftc(pivots: pt.DataFrame[MultiTimeframeAtrMovementPivotDFM],
-               base_patterns: pt.DataFrame[MultiTimeframeBasePattern]):
-    """
-    The FTC is a base pattern in the last 38% of pivot movement price range.
-    The FTC base pattern should start within the movement time range.
-    The base pattern timeframe should be below the pivot timeframe.
-
-    :param base_patterns:
-    :param pivots:
-    :param structure_timeframe_shortlist:
-    :return:
-    """
-    pivots['ftc_high'] = pivots[['movement_start_value', 'level']].max(axis='columns')  # todo: test
-    pivots['ftc_low'] = pivots[['movement_start_value', 'level']].min(axis='columns')
-    pivots['movement_size'] = pivots['movement_end_value'] - pivots['movement_start_value']
-    pivots['ftc_price_range_start'] = \
-        pivots['movement_end_value'] - (pivots['movement_size'] * config.ftc_price_range_percentage)
-
-    for (timeframe, start), pivot_info in pivots:
-        ftc_base_patterns = base_patterns[
-            (base_patterns.index.get_level_values(level='date') < start)
-            & (base_patterns.index.get_level_values(level='date') > pivots['movement_start_time'])
-            & (base_patterns['internal_high'] <= pivots['ftc_high'])
-            & (base_patterns['internal_low'] >= pivots['ftc_low'])
-            ]
-        if len(ftc_base_patterns) > 0:
-            pivots.loc[(timeframe, start), 'ftc_base_pattern_timeframes'] = \
-                ftc_base_patterns.index.get_level_values(level='timeframe').tolist()
-            pivots.loc[(timeframe, start), 'ftc_base_pattern_dates'] = \
-                ftc_base_patterns.index.get_level_values(level='date').tolist()
+# def insert_ftc(pivots: pt.DataFrame[AtrMovementPivotDFM],
+#                base_patterns: pt.DataFrame[MultiTimeframeBasePattern]):
+#     """
+#     The FTC is a base pattern in the last 38% of pivot movement price range.
+#     The FTC base pattern should start within the movement time range.
+#     The base pattern timeframe should be below the pivot timeframe.
+#
+#     :param base_patterns:
+#     :param pivots:
+#     :param structure_timeframe_shortlist:
+#     :return:
+#     """
+#     pivots['ftc_high'] = pivots[['movement_start_value', 'level']].max(axis='columns')  # todo: test
+#     pivots['ftc_low'] = pivots[['movement_start_value', 'level']].min(axis='columns')
+#     pivots['movement_size'] = pivots['movement_end_value'] - pivots['movement_start_value']
+#     pivots['ftc_price_range_start'] = \
+#         pivots['movement_end_value'] - (pivots['movement_size'] * config.ftc_price_range_percentage)
+#
+#     for (timeframe, start), pivot_info in pivots:
+#         ftc_base_patterns = base_patterns[
+#             (base_patterns.index.get_level_values(level='date') < start)
+#             & (base_patterns.index.get_level_values(level='date') > pivots['movement_start_time'])
+#             & (base_patterns['internal_high'] <= pivots['ftc_high'])
+#             & (base_patterns['internal_low'] >= pivots['ftc_low'])
+#             ]
+#         if len(ftc_base_patterns) > 0:
+#             pivots.loc[(timeframe, start), 'ftc_base_pattern_timeframes'] = \
+#                 ftc_base_patterns.index.get_level_values(level='timeframe').tolist()
+#             pivots.loc[(timeframe, start), 'ftc_base_pattern_dates'] = \
+#                 ftc_base_patterns.index.get_level_values(level='date').tolist()
 
 
 def read_classic_pivots(date_range_str) -> pt.DataFrame[MultiTimeframePivotDFM]:
@@ -358,9 +359,9 @@ def insert_is_overlap_of(multi_timeframe_pivots: pt.DataFrame[MultiTimeframePivo
 
 
 def update_hit(active_timeframe_pivots: pt.DataFrame[PivotDFM], base_timeframe_ohlcv) -> pt.DataFrame[PivotDFM]:
-    if 'passed_time' not in active_timeframe_pivots.columns:  # todo: test
-        AssertionError("Expected passing_time be calculated before: "
-                       "! 'passed_time' not in active_timeframe_pivots.columns")
+    if 'passing' not in active_timeframe_pivots.columns:  # todo: test
+        AssertionError("Expected passing be calculated before: "
+                       "'passing' not in active_timeframe_pivots.columns")
     t_pivot_indexes = active_timeframe_pivots.index
     active_timeframe_pivots.loc[t_pivot_indexes, 'boundary_of_hit_start_0'] = \
         nearest_match(needles=t_pivot_indexes, reference=base_timeframe_ohlcv, direction='forward', shift=1)
@@ -410,25 +411,25 @@ def insert_hits(active_timeframe_pivots: pt.DataFrame[PivotDFM], hit_boundary_co
 def insert_hit(pivots: pt.DataFrame[PivotDFM], n: int, base_timeframe_ohlcv: pt.DataFrame[OHLCV],
                side: Literal['start', 'end'], pivot_type: Literal['Resistance', 'Support']):
     if pivot_type == 'Resistance':  # todo: test
-        def gt(base, target):
+        def gt(target, base):
             return target >= base
 
-        def lt(base, target):
+        def lt(target, base):
             return target > base
     else:  # pivot_type == 'Support'
-        def gt(base, target):
+        def gt(target, base):
             return target <= base
 
-        def lt(base, target):
+        def lt(target, base):
             return target < base
     if side == 'start':
         pivots[f'hit_start_{n}'] = \
             find_crossing(pivots, 'internal_margin', base_timeframe_ohlcv, 'high',
-                          'right', gt)
+                          'right', gt, return_both=False, )
     else:
         pivots[f'hit_end_{n}'] = \
             find_crossing(pivots, 'internal_margin', base_timeframe_ohlcv, 'high',
-                          'right', lt)
+                          'right', lt, return_both=False, )
 
     if pivots['is_resistance'].isna().any():
         raise AssertionError("active_timeframe_pivots['is_resistance'].isna().any()")
@@ -462,57 +463,59 @@ def insert_hit(pivots: pt.DataFrame[PivotDFM], n: int, base_timeframe_ohlcv: pt.
 #
 #     return multi_timeframe_pivots
 @measure_time
-def insert_pivot_info(pivots: pt.DataFrame[MultiTimeframePivotDFM], mt_ohlcva: pt.DataFrame[OHLCVA],
-                      structure_timeframe_shortlist: List[str], base_timeframe_ohlcv: pt.DataFrame[OHLCV]):
-    insert_pivot_type_n_level(pivots)
-    if structure_timeframe_shortlist is None:
-        structure_timeframe_shortlist = config.structure_timeframes[::-1]
-    multi_timeframe_pivots = MultiTimeframeAtrMovementPivotDf.new()
-    for timeframe in pivots.index.get_level_values('timeframe').intersection(structure_timeframe_shortlist):
-        timeframe_ohlcva = single_timeframe(mt_ohlcva, timeframe)
-        timeframe_pivots = pivots[pivots.index.get_level_values(level='timeframe') == timeframe]
-        timeframe_pivots = timeframe_pivots.reset_index(level='timeframe')
+def insert_pivot_info(timeframe_pivots: pt.DataFrame['PivotDFM'], ohlcva: pt.DataFrame[OHLCVA],
+                      structure_timeframe_shortlist: List[str], base_timeframe_ohlcv: pt.DataFrame[OHLCV],
+                      timeframe: str):
+    insert_pivot_type_n_level(timeframe_pivots)
+    # if structure_timeframe_shortlist is None:
+    #     structure_timeframe_shortlist = config.structure_timeframes[::-1]
+    # multi_timeframe_pivots = MultiTimeframeAtrMovementPivotDf.new()
+    # # for timeframe in pivots.index.get_level_values('timeframe').intersection(structure_timeframe_shortlist):
+    # # timeframe_ohlcva = ohlcva  # single_timeframe(mt_ohlcva, timeframe)
+    # timeframe_pivots = pivots[pivots.index.get_level_values(level='timeframe') == timeframe]
+    # timeframe_pivots = timeframe_pivots.reset_index(level='timeframe')
 
-        timeframe_pivots['original_start'] = timeframe_pivots.index
+    timeframe_pivots['original_start'] = timeframe_pivots.index  # todo: test
 
-        timeframe_resistance_pivots = timeframe_pivots[
-            timeframe_pivots['peak_or_valley'] == TopTYPE.PEAK.value].index
-        timeframe_pivots.loc[timeframe_resistance_pivots, ['internal_margin', 'external_margin']] = \
-            pivot_margins(timeframe_pivots.loc[timeframe_resistance_pivots], _type=TopTYPE.PEAK,
-                          pivot_peaks_or_valleys=timeframe_pivots.loc[timeframe_resistance_pivots],
-                          candle_body_source=timeframe_ohlcva,
-                          # timeframe_pivots.loc[timeframe_resistance_pivots],
-                          timeframe=timeframe,
-                          internal_margin_atr=timeframe_ohlcva,
-                          breakout_margin_atr=timeframe_ohlcva)[['internal_margin', 'external_margin']]
+    timeframe_resistance_pivots = timeframe_pivots[
+        timeframe_pivots['peak_or_valley'] == TopTYPE.PEAK.value].index
+    timeframe_pivots.loc[timeframe_resistance_pivots, ['internal_margin', 'external_margin']] = \
+        pivot_margins(timeframe_pivots.loc[timeframe_resistance_pivots], _type=TopTYPE.PEAK,
+                      pivot_peaks_or_valleys=timeframe_pivots.loc[timeframe_resistance_pivots],
+                      candle_body_source=ohlcva,
+                      # timeframe_pivots.loc[timeframe_resistance_pivots],
+                      timeframe=timeframe,
+                      internal_margin_atr=ohlcva,
+                      breakout_margin_atr=ohlcva)[['internal_margin', 'external_margin']]
 
-        timeframe_support_pivots = timeframe_pivots[
-            timeframe_pivots['peak_or_valley'] == TopTYPE.VALLEY.value].index
-        timeframe_pivots.loc[timeframe_support_pivots, ['internal_margin', 'external_margin', ]] = \
-            pivot_margins(timeframe_pivots.loc[timeframe_support_pivots], _type=TopTYPE.VALLEY,
-                          pivot_peaks_or_valleys=timeframe_pivots.loc[timeframe_support_pivots],
-                          candle_body_source=timeframe_ohlcva,
-                          # timeframe_pivots.loc[timeframe_support_pivots],
-                          timeframe=timeframe,
-                          internal_margin_atr=timeframe_ohlcva,
-                          breakout_margin_atr=timeframe_ohlcva)[['internal_margin', 'external_margin']]
+    timeframe_support_pivots = timeframe_pivots[
+        timeframe_pivots['peak_or_valley'] == TopTYPE.VALLEY.value].index
+    timeframe_pivots.loc[timeframe_support_pivots, ['internal_margin', 'external_margin', ]] = \
+        pivot_margins(timeframe_pivots.loc[timeframe_support_pivots], _type=TopTYPE.VALLEY,
+                      pivot_peaks_or_valleys=timeframe_pivots.loc[timeframe_support_pivots],
+                      candle_body_source=ohlcva,
+                      # timeframe_pivots.loc[timeframe_support_pivots],
+                      timeframe=timeframe,
+                      internal_margin_atr=ohlcva,
+                      breakout_margin_atr=ohlcva)[['internal_margin', 'external_margin']]
 
-        timeframe_pivots['ttl'] = timeframe_pivots.index + level_ttl(timeframe)
-        timeframe_pivots['deactivated_at'] = pd.Series(dtype='datetime64[ns, UTC]')
-        timeframe_pivots['archived_at'] = pd.Series(dtype='datetime64[ns, UTC]')
-        timeframe_pivots['master_pivot_timeframe'] = pd.Series(dtype='str')
-        timeframe_pivots['master_pivot_date'] = pd.Series(dtype='datetime64[ns, UTC]')
-        timeframe_pivots['hit'] = 0
-        timeframe_pivots = AtrMovementPivotDf.cast_and_validate(timeframe_pivots)
-        timeframe_pivots['timeframe'] = timeframe
-        timeframe_pivots = timeframe_pivots.set_index('timeframe', append=True)
-        timeframe_pivots = timeframe_pivots.swaplevel()
-        multi_timeframe_pivots: pt.DataFrame[MultiTimeframeAtrMovementPivotDFM] = \
-            MultiTimeframeAtrMovementPivotDf.concat(multi_timeframe_pivots, timeframe_pivots)
-    pivots = MultiTimeframeAtrMovementPivotDf.cast_and_validate(multi_timeframe_pivots)
-    update_pivot_deactivation(multi_timeframe_pivots, base_timeframe_ohlcv)  # todo: test
-    insert_ftc(multi_timeframe_pivots, structure_timeframe_shortlist)
-    return pivots
+    timeframe_pivots['ttl'] = timeframe_pivots.index + level_ttl(timeframe)
+    timeframe_pivots['deactivated_at'] = pd.Series(dtype='datetime64[ns, UTC]')
+    timeframe_pivots['archived_at'] = pd.Series(dtype='datetime64[ns, UTC]')
+    timeframe_pivots['master_pivot_timeframe'] = pd.Series(dtype='str')
+    timeframe_pivots['master_pivot_date'] = pd.Series(dtype='datetime64[ns, UTC]')
+    timeframe_pivots['hit'] = 0
+    update_pivot_deactivation(timeframe_pivots, base_timeframe_ohlcv)  # todo: test
+    # insert_ftc(timeframe_pivots, structure_timeframe_shortlist)
+    timeframe_pivots = AtrMovementPivotDf.cast_and_validate(timeframe_pivots)
+    # timeframe_pivots['timeframe'] = timeframe
+    # timeframe_pivots = timeframe_pivots.set_index('timeframe', append=True)
+    # timeframe_pivots = timeframe_pivots.swaplevel()
+    #     multi_timeframe_pivots: pt.DataFrame[MultiTimeframeAtrMovementPivotDFM] = \
+    #         MultiTimeframeAtrMovementPivotDf.concat(multi_timeframe_pivots, timeframe_pivots)
+    # pivots = MultiTimeframeAtrMovementPivotDf.cast_and_validate(multi_timeframe_pivots)
+
+    return timeframe_pivots
 
 
 def insert_pivot_type_n_level(pivots: pt.DataFrame[MultiTimeframePivotDFM]):

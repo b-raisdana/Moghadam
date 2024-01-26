@@ -118,7 +118,7 @@ def insert_top_crossing(base: pt.DataFrame[PeakValley], target: pd.DataFrame, ba
     if base_target_column is None:
         base_target_column = target_compare_column
     target = target.copy()
-    target['target_date'] = target.index
+    # target['target_date'] = target.index
     if f'{direction}_crossing_time' not in base.columns:
         base[f'{direction}_crossing_time'] = pd.Series(dtype='datetime64[ns, UTC]')
     if f'{direction}_crossing_value' not in base.columns:
@@ -197,7 +197,19 @@ def insert_crossing_info(base, crossed_bases, direction, target, target_compare_
 # pd.set_option('future.no_silent_downcasting', True)
 
 
-def find_crossing(bases_to_compare, base_compare_column, target, target_compare_column, direction, more_significant):
+def find_crossing(bases_to_compare, base_compare_column, target, target_compare_column, direction, more_significant,
+                  return_both: bool = True):
+    """
+
+    :param bases_to_compare:
+    :param base_compare_column:
+    :param target:
+    :param target_compare_column:
+    :param direction:
+    :param more_significant: f(target, base)
+    :param return_both:
+    :return:
+    """
     if direction == 'right':
         reverse = 'left'
     elif direction == 'left':
@@ -251,6 +263,8 @@ def find_crossing(bases_to_compare, base_compare_column, target, target_compare_
         date_chooser = 'min'
     else:
         date_chooser = 'max'
+    # if 'target_date' not in target.columns:
+    target['target_date'] = target.index
     crossed_bases = target[target[f'{direction}_crossing']] \
         .groupby(by=[f'{reverse}_base_index']).agg({'target_date': date_chooser})
     if not crossed_bases.index.is_unique:
@@ -262,7 +276,10 @@ def find_crossing(bases_to_compare, base_compare_column, target, target_compare_
     if crossed_bases['target_date'].isna().any().any():
         raise AssertionError("crossed_bases['target_date'].isna().any().any()")
     target.loc[crossed_bases['target_date'], 'crossed_base_index'] = crossed_bases.index
-    return crossed_bases, target
+    if return_both:
+        return crossed_bases, target
+    else:
+        return crossed_bases['target_date']
 
 
 # def zz_insert_distance(base: pt.DataFrame[PeakValley], target: pt.DataFrame[OHLCV], top_type: TopTYPE,

@@ -11,7 +11,7 @@ from PanderaDFM.OHLCVA import OHLCVA
 from PanderaDFM.PeakValley import MultiTimeframePeakValley, PeakValley
 from PeakValley import read_multi_timeframe_peaks_n_valleys, peaks_only, valleys_only, insert_top_crossing
 from atr import read_multi_timeframe_ohlcva
-from helper.data_preparation import to_timeframe, single_timeframe
+from helper.data_preparation import to_timeframe, single_timeframe, pattern_timeframe
 from helper.helper import measure_time, date_range, date_range_to_string
 
 
@@ -86,9 +86,35 @@ def atr_movement_pivots(date_range_str: str = None, structure_timeframe_shortlis
                     mt_tops = mt_tops.drop(
                         index=mt_tops[mt_tops.index.get_level_values('date') \
                             .isin(timeframe_pivots.index.get_level_values('date'))].index)
-    pivots = insert_pivot_info(pivots, mt_ohlcva, structure_timeframe_shortlist, base_timeframe_ohlcva)
+    insert_major_timeframe(pivots, structure_timeframe_shortlist)
+    for timeframe in structure_timeframe_shortlist[::-1]:
+        if timeframe in pivots.index.get_level_values(level='timeframe').unique():
+            timeframe_pivots = single_timeframe(pivots, timeframe)
+            insert_pivot_info(timeframe_pivots, ohlcva, structure_timeframe_shortlist, base_timeframe_ohlcva,
+                              timeframe)
+    # pivots = insert_pivot_info(pivots, mt_ohlcva, structure_timeframe_shortlist, base_timeframe_ohlcva)
     # pivots = insert_ftc(pivots, mt_ohlcva)
     return pivots
+
+
+def insert_major_timeframe(pivots, structure_timeframe_shortlist):
+    for timeframe in structure_timeframe_shortlist[::-1][:-1]:
+        timeframe_pivots = single_timeframe(pivots, timeframe)
+        same_time_pattern_timeframe_pivots = pivots[
+            pivots.index.get_level_values(level='date').isin(timeframe_pivots.index.get_level_values(level='date'))
+            & (pivots.index.get_level_values(level='timeframe') == pattern_timeframe(timeframe))
+            ]
+        if len(timeframe_pivots) != len(same_time_pattern_timeframe_pivots):
+            raise AssertionError("Expected every pivot overlaps with a pivot in pattern time. "
+                                 "len(timeframe_pivots) != len(same_time_pattern_timeframe_pivots)")
+    pivots['timeframe_timedelta'] = pd.to_timedelta(pivots.index.get_level_values(level='timeframe'))
+    unique_date_pivots = pivots.groupby(level='date')['timeframe_timedelta'].idxmax().tolist()
+    pivots['major_timeframe'] = False
+    pivots.loc[unique_date_pivots, 'major_timeframe'] = True
+    if len(pivots[pivots['major_timeframe']]) != len(pivots.index.get_level_values(level='date').unique()):
+        raise AssertionError(
+            "For each date/time which is a pivot expected to have one and only one major-timeframe pivot."
+            "len(pivots[pivots['major_timeframe'] == True]) != pivots.index.get_level_values(level='date').unique()")
 
 
 @measure_time

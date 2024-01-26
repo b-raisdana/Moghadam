@@ -15,6 +15,7 @@ class AtrMovementPivotDFM(BaseDFM, PivotDFM):
     return_end_time: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
     movement_start_value: pt.Series[float]
     return_end_value: pt.Series[float]
+    major_timeframe: pt.Series[bool]
 
 
 class AtrMovementPivotDf(ExtendedDf):
@@ -36,6 +37,7 @@ _sample_df = pd.DataFrame({
     'original_start': \
         [Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC))],
     'ttl': [Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC))],
+    'major_timeframe': [False],
 })
 AtrMovementPivotDf._sample_df = _sample_df.set_index(['date', ])
 
@@ -64,6 +66,7 @@ _sample_df = pd.DataFrame({
     'original_start': \
         [Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC))],
     'ttl': [Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC))],
+    'major_timeframe': [False],
 })
 MultiTimeframeAtrMovementPivotDf._sample_df = _sample_df.set_index(['timeframe', 'date', ])
 
