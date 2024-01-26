@@ -130,16 +130,10 @@ def insert_top_crossing(base: pt.DataFrame[PeakValley], target: pd.DataFrame, ba
                                cross_direction, direction)
     bases_with_known_crossing_target = empty_df(PeakValley)
     number_of_crossed_bases = 1
-    is_first_iteration = True
     while number_of_crossed_bases > 0 and len(bases_to_compare) > 0:
-        # todo: test if second iteration runs ever
-        if not is_first_iteration:
-            raise AssertionError("The second iteration!")
-        is_first_iteration = False
         # iteration preparation
         crossed_bases, target = find_crossing(bases_to_compare, base_target_column, target, target_compare_column,
                                               direction, more_significant)
-        # crossed_bases = valid_crossing_target.intersection(base_indexes)
         number_of_crossed_bases = len(crossed_bases)
         if number_of_crossed_bases > 0:
             # add crossing information to base
@@ -203,8 +197,7 @@ def insert_crossing_info(base, crossed_bases, direction, target, target_compare_
 # pd.set_option('future.no_silent_downcasting', True)
 
 
-def find_crossing(bases_to_compare, base_compare_column, target, target_compare_column, direction, more_significant,
-                  end: datetime):
+def find_crossing(bases_to_compare, base_compare_column, target, target_compare_column, direction, more_significant):
     if direction == 'right':
         reverse = 'left'
     elif direction == 'left':

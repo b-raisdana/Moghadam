@@ -10,7 +10,7 @@ from FigurePlotter.BullBearSide_plotter import plot_multi_timeframe_bull_bear_si
 from FigurePlotter.PeakValley_plotter import plot_multi_timeframe_peaks_n_valleys
 from FigurePlotter.Pivot_plotter import plot_multi_timeframe_pivots, plot_multi_timeframe_pivots
 from PeakValley import read_multi_timeframe_peaks_n_valleys
-from PeakValleyPivots import atr_movement_pivots
+from AtrMovementPivots import atr_movement_pivots
 from atr import read_multi_timeframe_ohlcva
 from helper.helper import date_range_to_string
 
@@ -18,7 +18,7 @@ from helper.helper import date_range_to_string
 
 if __name__ == "__main__":
     # config.processing_date_range = date_range_to_string(days=5, end=datetime(year=2023, month=11, day=18))
-    config.processing_date_range = date_range_to_string(days=30)
+    config.processing_date_range = date_range_to_string(days=2)
     #
     #     file_path: str = config.path_of_data
     #     today_morning = today_morning()

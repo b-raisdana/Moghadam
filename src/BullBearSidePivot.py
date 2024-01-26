@@ -90,7 +90,7 @@ def multi_timeframe_bull_bear_side_pivots(date_range_str: str = None, structure_
                 timeframe_pivots = (
                     pd.DataFrame(data={'date': pivot_trends['movement_start_time'], 'ttl': None, 'hit': 0})
                     .set_index('date'))
-                timeframe_pivots['activation_time'] = timeframe_pivots.index
+                timeframe_pivots['original_start'] = timeframe_pivots.index
                 timeframe_pivots['movement_start_time'] = \
                     timeframe_trends.loc[pivot_trends['previous_trend'], 'movement_start_time'].to_list()
                 timeframe_pivots['movement_start_value'] = \

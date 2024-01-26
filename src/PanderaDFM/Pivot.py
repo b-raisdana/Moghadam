@@ -3,6 +3,7 @@ from typing import Annotated, List
 
 import pandas as pd
 import pandera
+import pytz
 from pandas import Timestamp
 from pandera import typing as pt
 
@@ -24,8 +25,8 @@ class PivotDFM(pandera.DataFrameModel):
     # the master pivot which this pivot is overlapping with
     master_pivot_timeframe: pt.Series[str] = pandera.Field(nullable=True)
     master_pivot_date: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
-    ftc_base_pattern_timeframes: pt.Series[List[str]] = pandera.Field(nullable=True)
-    ftc_base_pattern_dates: pt.Series[List[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]] = pandera.Field(nullable=True)
+    # ftc_base_pattern_timeframes: pt.Series[List[str]] = pandera.Field(nullable=True)
+    # ftc_base_pattern_dates: pt.Series[List[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]] = pandera.Field(nullable=True)
 
     @staticmethod
     def description(start_time: datetime, pivot_timeframe: str, pivot_info) -> str:

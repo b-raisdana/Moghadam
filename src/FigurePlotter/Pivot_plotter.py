@@ -106,7 +106,7 @@ def plot_multi_timeframe_pivots(multi_timeframe_pivots: pt.DataFrame[MultiTimefr
                             )
         # add a dotted line from creating time of level to the activation time
         fig.add_scatter(
-            x=[pivot_start, pivot_info['activation_time']],
+            x=[pivot_start, pivot_info['original_start']],
             y=[pivot_info['level'], pivot_info['level']],
             name=pivot_name, line=dict(color='blue', dash='dot', width=0.5), mode='lines',  # +text',
             legendgroup=pivot_name, showlegend=False, hoverinfo='none',
@@ -118,7 +118,7 @@ def plot_multi_timeframe_pivots(multi_timeframe_pivots: pt.DataFrame[MultiTimefr
                             f' {pivot_info} ttl is Null')
         level_end_time = min(pivot_info['ttl'], end_time)
         fig.add_scatter(
-            x=[pivot_info['activation_time'], level_end_time],
+            x=[pivot_info['original_start'], level_end_time],
             y=[pivot_info['level'], pivot_info['level']],
             text=[pivot_description],
             name=pivot_name, line=dict(color=color, width=0.5), mode='lines',  # +text',
@@ -126,7 +126,7 @@ def plot_multi_timeframe_pivots(multi_timeframe_pivots: pt.DataFrame[MultiTimefr
         )
         # draw the level boundary
         fig.add_scatter(
-            x=[pivot_info['activation_time'], level_end_time, level_end_time, pivot_info['activation_time']],
+            x=[pivot_info['original_start'], level_end_time, level_end_time, pivot_info['original_start']],
             y=[pivot_info['external_margin'], pivot_info['external_margin'],
                pivot_info['internal_margin'], pivot_info['internal_margin']],
             fill="toself", opacity=0.3,
