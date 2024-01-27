@@ -55,21 +55,35 @@ class ExtendedDf:
                 raise NotImplementedError("List values as dictionary_of_data values!")
             _new = cls._empty_df.copy()
             _index_names = cls.index_names()
-            try:
-                index_tuple = tuple([dictionary_of_data[k] for k in _index_names])
-            except KeyError:
-                raise Exception(
-                    f"Indexes {_index_names} should have value in the dictionary_of_data: {dictionary_of_data}")
+            if len(_index_names) > 1:
+                try:
+                    the_index = tuple([dictionary_of_data[k] for k in _index_names])
+                except KeyError:
+                    raise Exception(
+                        f"Indexes {_index_names} should have value in the dictionary_of_data: {dictionary_of_data}")
+            else:
+                try:
+                    the_index = dictionary_of_data[_index_names[0]]
+                except KeyError:
+                    raise Exception(
+                        f"Indexes {_index_names} should have value in the dictionary_of_data: {dictionary_of_data}")
             unused_keys = []
             for key in dictionary_of_data.keys():
-                if key in cls.schema_data_frame_model.to_schema().columns.keys():  # _column_dtypes.keys():
-                    _new.loc[index_tuple, key] = dictionary_of_data[key]
+                if not strict or key in cls.schema_data_frame_model.to_schema().columns.keys():  # _column_dtypes.keys():
+                    _new.loc[the_index, key] = dictionary_of_data[key]
                 elif key not in _index_names:
                     unused_keys += [key]
             if len(unused_keys) > 0:
-                if strict:
-                    raise Exception(f"Unused keys in the dictionary: {','.join(unused_keys)}")
-            _new = cls.schema_data_frame_model.to_schema().validate(_new, lazy=True)
+                raise Exception(f"Unused keys in the dictionary: {','.join(unused_keys)}")
+            try:
+                _new = cls.schema_data_frame_model.to_schema().validate(_new, lazy=True)
+            except pandera.errors.SchemaErrors as e:
+                if ("coerce_dtype('int64')         [nan]".replace(" ", "")
+                        in str(e).replace(" ", "")):
+                    raise TypeError("Use pt.Series[pd.Int32Dtype] instead of pt.Series[int]"
+                                    " to allow nullable int series: " + str(e))
+                else:
+                    raise e
             return _new
         _new = cls._empty_df.copy()
         return _new
@@ -179,6 +193,9 @@ class ExtendedDf:
             if schema.index.name is None or schema.index.name == "":
                 raise AttributeError('Set name of index as title!')
             _index_names = [schema.index.name]
+        if len(_index_names) == 0 or None in _index_names:
+            raise ValueError("Use = pandera.Field(check_name=True) for single index."
+                             "len(_index_names) == 0 or None in _index_names")
         cls._index_names = _index_names
         return cls._index_names
 

@@ -124,6 +124,8 @@ class Config():
 
         self.pivot_number_of_active_hits = 2
 
+        self.check_assertions = False
+
         self.id = ""
 
 

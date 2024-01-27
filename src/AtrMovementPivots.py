@@ -242,7 +242,7 @@ def insert_more_significant_tops(timeframe_tops: pt.DataFrame[PeakValley],
     timeframe_tops.drop(
         columns=['right_crossing_time', 'left_crossing_time', 'right_crossing_value', 'left_crossing_value'],
         inplace=True, errors='ignore')
-    insert_more_significant_top(timeframe_tops, compared_tops, TopTYPE.PEAK)  # todo: test
+    insert_more_significant_top(timeframe_tops, compared_tops, TopTYPE.PEAK)
     insert_more_significant_top(timeframe_tops, compared_tops, TopTYPE.VALLEY)
     timeframe_tops.rename(columns={
         'right_crossing_time': 'right_more_significant_top',

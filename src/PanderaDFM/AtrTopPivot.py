@@ -10,7 +10,7 @@ from PanderaDFM.ExtendedDf import ExtendedDf, BaseDFM
 from PanderaDFM.Pivot import MultiTimeframePivotDFM, PivotDFM
 
 
-class AtrMovementPivotDFM(BaseDFM, PivotDFM):
+class AtrMovementPivotDFM(PivotDFM):
     movement_start_time: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
     return_end_time: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
     movement_start_value: pt.Series[float]

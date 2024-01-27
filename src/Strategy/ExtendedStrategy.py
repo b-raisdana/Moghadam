@@ -53,16 +53,11 @@ class ExtendedStrategy(bt.Strategy):
         }
         self.next_runs = 0
 
-    # orders_files = None
     def start(self):
         self.broker_initial_cash = self.broker.get_cash()
 
     def new_order_group_id(self):
         return len(self.order_groups_info)
-        # if self.order_group_counter is None:
-        #     self.order_group_counter = 0
-        # self.order_group_counter += 1
-        # return self.order_group_counter
 
     def add_signal_source_data(self):
         raise NotImplementedError
@@ -105,13 +100,10 @@ class ExtendedStrategy(bt.Strategy):
         self.true_risked_money += true_risked_money
 
         order_group_id = self.new_order_group_id()
-        # order_group_risk = abs((original_order.created.price - sl_order.created.price) * original_order.size)
         self.order_groups_info[order_group_id] = {
-            # 'true_risk': order_group_risk,
             'price': original_order.created.price,
-            # 'stop_loss': sl_order.created.price,
         }
-        if (
+        if config.check_assertions and (
                 order_group_id in self.original_orders.keys() or
                 order_group_id in self.sl_orders.keys() or
                 order_group_id in self.tp_orders.keys()
@@ -128,10 +120,7 @@ class ExtendedStrategy(bt.Strategy):
         self.signal_df.loc[signal_index, 'original_order_id'] = order_name(original_order)
         self.signal_df.loc[signal_index, 'stop_loss_order_id'] = order_name(sl_order)
         self.signal_df.loc[signal_index, 'take_profit_order_id'] = order_name(tp_order)
-        # self.signal_df.loc[signal_index, 'end'] = self.candle().date
-        # self.signal_df.loc[signal_index, 'led_to_order_at'] = self.candle().date
         self.signal_df.loc[signal_index, 'order_is_active'] = True
-        # self.signal_df.loc[signal_index, 'updated'] = False
 
         return original_order, sl_order, tp_order
 
@@ -149,29 +138,11 @@ class ExtendedStrategy(bt.Strategy):
         else:
             raise NotImplementedError  # true_risked_money = size * self.candle().close
         if true_risked_money < remained_risk_able:
-            # self.true_risked_money += true_risked_money
             return size
         elif remained_risk_able > 0:
-            # self.true_risked_money += remained_risk_able
             return remained_risk_able / self.candle().close
         else:
             return 0
-
-        # remaining_cash = config.initial_cash - self.true_risked_money
-        # if remaining_cash >= max_allowed_total_capital_at_risk:
-        #     size, true_risked_money = self.my_sizer(limit_price, sl_price, size)
-        #     self.true_risked_money += true_risked_money
-        #     return size
-        # else:
-        #     # If remaining cash is less than 10% of initial allocated cash, allocate zero
-        #     return 0
-
-    def free_order_cash(self, limit_price: float, sl_price: float, size: float):
-        # should be handled bby bachtrader!
-        # _, true_risked_money = self.risk_size_sizer(limit_price, sl_price, size)  # toddo: test
-        # self.true_risked_money -= true_risked_money
-        # assert self.true_risked_money > 0, "self.true_risked_money <= 0"
-        pass
 
     def candle(self, backward_index: int = 0) -> BaseTickStructure:
         return BaseTickStructure(
@@ -195,7 +166,7 @@ class ExtendedStrategy(bt.Strategy):
         original_order = self.original_orders[order_id]
         stop_order = self.sl_orders[order_id]
         profit_order = self.tp_orders[order_id]
-        if order not in [original_order, stop_order, profit_order]:
+        if config.check_assertions and order not in [original_order, stop_order, profit_order]:
             raise AssertionError(f"The order: should be one of group members "
                                  f"O:{original_order} S:{stop_order} P:{profit_order}")
         return original_order, stop_order, profit_order
@@ -216,14 +187,10 @@ class ExtendedStrategy(bt.Strategy):
             return 0
 
     def next(self):
-        # if self.candle().date == Timestamp("2024-01-07 13:12:00+00:00"):
-        #     pass
         self.next_log()
         if len(self.original_orders) > 0:
             self.verify_triple_oder_status()
         self.extract_signals()
-        # if self.candle().date == Timestamp("2024-01-07 22:31:00+00:00"):
-        #     pass
         self.execute_active_signals()
 
     def verify_triple_oder_status(self):
@@ -414,62 +381,8 @@ class ExtendedStrategy(bt.Strategy):
             ]
         return result
 
-    # def update_ordered_signals(self):
-    #     ordered_signals = self.ordered_signals()
-    #     for index, signal in ordered_signals.iterrows():
-    #         if SignalDf.stopped(signal, self.candle()):  # toddo: test
-    #             log_d(f'Signal repeated according to Stop-Loss on {SignalDf.to_str(index, signal)} @ {self.candle()}')
-    #             repeat_signal = signal.copy()
-    #             repeat_signal['original_index'] = index
-    #             repeat_signal['order_is_active'] = False
-    #             repeat_signal['original_order_id'] = pd.NA
-    #             repeat_signal['end'] = pd.NA
-    #             self.signal_df.loc[self.candle().date] = repeat_signal
-    #             log_d(f"repeated Signal:{SignalDf.to_str(self.candle().date, repeat_signal)}@{self.candle().date} ")
-    #         elif SignalDf.took_profit(signal, self.candle()):
-    #             log_d(f'Took profit on Signal:{SignalDf.to_str(index, signal)}@{self.candle().date}')
-    #         # elif SignalDf.expired(signal, self.candle()):
-    #         #     log(f'Signal:{SignalDf.to_str(signal)}@{self.candle()} Expired')
-
-    # def update_signal_trigger_status(self, side: OrderSide):
-    #     side_indexes = self.signal_df[self.signal_df['side'] == side.value].index
-    #     if side == OrderSide.Buy:
-    #         self.signal_df.loc[side_indexes, 'trigger_satisfied'] = \
-    #             (self.signal_df.loc[side_indexes, 'trigger_satisfied'] |
-    #              (self.signal_df.loc[side_indexes, 'trigger_price'] < self.candle().high))
-    #     else:  # side == OrderSide.Sell:
-    #         self.signal_df.loc[side_indexes, 'trigger_satisfied'] = \
-    #             (self.signal_df.loc[side_indexes, 'trigger_satisfied'] |
-    #              (self.signal_df.loc[side_indexes, 'trigger_price'] < self.candle().high))
-    #     assert all(self.signal_df.loc[self.signal_df['trigger_price'].isna(), 'trigger_satisfied'] == True)
-
-    def executable_signals(self) -> pt.DataFrame[SignalDFM]:
-        return self.active_signals()
-        # self.update_signal_trigger_status(OrderSide.Buy)
-        # self.update_signal_trigger_status(OrderSide.Sell)
-        # active_signals = self.active_signals()  # .copy()
-        # # if len(active_signals) > 0:        #     pass
-        # trigger_signal_indexes = active_signals[active_signals['trigger_satisfied']].index
-        # # if len(trigger_signal_indexes) > 0:        #     pass
-        # buy_signal_indexes = active_signals[active_signals['side'] == 'buy'].index
-        # # if len(buy_signal_indexes) > 0:        #     pass
-        # buy_trigger_signal_indexes = trigger_signal_indexes.intersection(buy_signal_indexes)
-        # # if len(buy_trigger_signal_indexes) > 0:        #     pass
-        # sell_signal_indexes = active_signals.index.difference(buy_signal_indexes)
-        # # if len(sell_signal_indexes) > 0:        #     pass
-        # sell_trigger_signal_indexes = trigger_signal_indexes.intersection(sell_signal_indexes)
-        # # if len(sell_trigger_signal_indexes) > 0:        #     pass
-        # executable_signal_indexes = buy_trigger_signal_indexes.union(sell_trigger_signal_indexes)
-        # # if len(executable_signal_indexes) > 0:        #     pass
-        # return active_signals.loc[executable_signal_indexes]
-
-    def idx_in_indexes(self, df: pd.DataFrame, ):
-        if not hasattr(df.index, 'names'):
-            raise AssertionError("df must have MultiIndex.")
-
-    # @measure_time
     def execute_active_signals(self):
-        _executable_signals = self.executable_signals()
+        _executable_signals = self.active_signals()
         # for signal_index, signal in self.executable_signals().iterrows():
         for idx in range(len(_executable_signals)):
             signal = _executable_signals.iloc[idx]

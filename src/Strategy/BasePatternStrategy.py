@@ -30,7 +30,7 @@ class BasePatternStrategy(ExtendedStrategy):
         self.add_signal_source_data()
         super().__init__()
         if self.date_range_str is None:
-            raise AssertionError("expected the self.date_range_str be not None!")
+            raise ValueError("expected the self.date_range_str be not None!")
         # self.orders_files = open(f'BasePatternStrategy.{config.id}.{self.date_range_str}.csv', 'w')
 
     # @measure_time

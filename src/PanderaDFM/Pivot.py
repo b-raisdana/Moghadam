@@ -1,27 +1,30 @@
 from datetime import datetime
-from typing import Annotated, List
+from typing import Annotated
 
+import numpy as np
 import pandas as pd
 import pandera
 import pytz
 from pandas import Timestamp
 from pandera import typing as pt
 
-from PanderaDFM.ExtendedDf import ExtendedDf
+from PanderaDFM.ExtendedDf import ExtendedDf, BaseDFM
 from PanderaDFM.MultiTimeframe import MultiTimeframe
 
 
-class PivotDFM(pandera.DataFrameModel):
-    date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]  # the original time of creating pivot
+class PivotDFM(BaseDFM):
+    date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(
+        check_name=True)  # the original time of creating pivot
     level: pt.Series[float]
     is_resistance: pt.Series[bool]
     internal_margin: pt.Series[float]
     external_margin: pt.Series[float]
     original_start: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]  # this part activated at (passing time)
     ttl: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]  # = pandera.Field(nullable=True)
-    passing: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
+    passing_time: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
     deactivated_at: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
-    hit: pt.Series[int] = pandera.Field(nullable=True)
+    # hit: pt.Series[int] = pandera.Field(nullable=True)
+    hit: pt.Series[pd.Int32Dtype] = pandera.Field(nullable=True)
     # the master pivot which this pivot is overlapping with
     master_pivot_timeframe: pt.Series[str] = pandera.Field(nullable=True)
     master_pivot_date: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
@@ -60,6 +63,7 @@ _sample_df = pd.DataFrame({
     'level': [0.0],
     'is_resistance': [False],
     'internal_margin': [0.0],
+    'external_margin': [0.0],
     'original_start': [
         Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC))],
     'ttl': [Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC))],
@@ -81,6 +85,7 @@ _sample_df = pd.DataFrame({
     'level': [0.0],
     'is_resistance': [False],
     'internal_margin': [0.0],
+    'external_margin': [0.0],
     'original_start': [
         Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC))],
     'ttl': [Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC))],

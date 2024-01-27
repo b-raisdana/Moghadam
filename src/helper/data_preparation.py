@@ -411,7 +411,7 @@ def times_tester(df: pd.DataFrame, date_range_str: str, timeframe: str, return_b
             log(message)
             return False
         else:
-            raise AssertionError(message)
+            raise ValueError(message)
     else:
         if exact_match:
             excess_times = actual_times - expected_times
@@ -424,7 +424,7 @@ def times_tester(df: pd.DataFrame, date_range_str: str, timeframe: str, return_b
                     log(message)
                     return False
                 else:
-                    raise AssertionError(message)
+                    raise ValueError(message)
         else:
             return True
 
@@ -684,7 +684,7 @@ def trim_to_date_range(date_range_str: str, df: pd.DataFrame, ignore_duplicate_i
     duplicate_indices = df.index[df.index.duplicated()].unique()
     if not ignore_duplicate_index:
         if len(duplicate_indices) != 0:
-            raise AssertionError("len(duplicate_indices) != 0")
+            raise ValueError("len(duplicate_indices) != 0")
     # else:
     #     if len(duplicate_indices) > 0:
     #         log(f"Found duplicate indices:" + str(duplicate_indices))
@@ -833,7 +833,12 @@ def nearest_match(needles: Axes, reference: Axes, direction: str, shift: int = 1
         backward = reference
     else:
         raise Exception('side should be either "forward" or "backward".')
-    df = pd.DataFrame(index=forward.append(backward).unique())
+    union = []
+    [union.append(i) for i in forward]
+    [union.append(i) for i in backward]
+    union = list(set(union))
+    # df = pd.DataFrame(index=forward.append(backward).unique())
+    df = pd.DataFrame(index=union)
     df = df.sort_index()
     if direction == 'forward':
         df.loc[forward, 'forward'] = forward

@@ -9,12 +9,12 @@ import pytz
 from pandas import Timestamp
 from pandera import typing as pt
 
-from PanderaDFM.ExtendedDf import ExtendedDf
+from PanderaDFM.ExtendedDf import ExtendedDf, BaseDFM
 from Model.Order import OrderSide
 from helper.helper import log_w
 
 
-class SignalDFM(pandera.DataFrameModel):
+class SignalDFM(BaseDFM):
     # from start of exact this candle the signal is valid
     date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]  # = pandera.Field(title='date')
     ref_date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
@@ -40,12 +40,12 @@ class SignalDFM(pandera.DataFrameModel):
     # todo: if the signal end changed we have to update signal orders
     # updated: pt.Series[bool] = pandera.Field(nullable=True, default=True)
 
-    class Config:
-        # to resolve pandera.errors.SchemaError: column ['XXXX'] not in dataframe
-        add_missing_columns = True
-        # to resolve pandera.errors.SchemaError: expected series ['XXXX'/None] to have type datetime64[ns, UTC]
-        # , got object
-        coerce = True
+    # class Config:
+    #     # to resolve pandera.errors.SchemaError: column ['XXXX'] not in dataframe
+    #     add_missing_columns = True
+    #     # to resolve pandera.errors.SchemaError: expected series ['XXXX'/None] to have type datetime64[ns, UTC]
+    #     # , got object
+    #     coerce = True
 
     # @pandera.dataframe_check
     # def end_after_start_check(cls, df, *args, **kwargs):
