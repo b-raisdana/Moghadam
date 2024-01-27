@@ -1,0 +1,81 @@
+DEBUG@01-27.16:52:11:...Starting
+DEBUG@01-27.16:52:11:atr_movement_pivots(same_time_multiple_timeframes:True) started
+DEBUG@01-27.16:52:12:insert_pivot_movements(66*Index(['timeframe', 'open', 'close', 'high', 'low', 'volume', 'peak_or_valley',
+       'strength', 'permanent_strength', 'atr'],
+      dtype='object'), 2880*Index(['open', 'close', 'high', 'low', 'volume', 'atr'], dtype='object')) started
+DEBUG@01-27.16:52:12:insert_top_crossing(29*Index(['timeframe', 'open', 'close', 'high', 'low', 'volume', 'peak_or_valley',
+       'strength', 'permanent_strength', 'atr', 'right_crossing_time',
+       'right_crossing_value', 'left_crossing_time', 'left_crossing_value',
+       'previous_target'],
+      dtype='object'), 2880*Index(['open', 'close', 'high', 'low', 'volume', 'atr'], dtype='object'), TopTYPE.PEAK, left, in, base_target_column:previous_target) started
+INFO@01-27.16:52:12:insert_top_crossing(29*Index(['timeframe', 'open', 'close', 'high', 'low', 'volume', 'peak_or_valley',
+       'strength', 'permanent_strength', 'atr', 'right_crossing_time',
+       'right_crossing_value', 'left_crossing_time', 'left_crossing_value',
+       'previous_target'],
+      dtype='object'), 2880*Index(['open', 'close', 'high', 'low', 'volume', 'atr'], dtype='object'), TopTYPE.PEAK, left, in, base_target_column:previous_target) executed in [92m0.046 seconds
+DEBUG@01-27.16:52:12:insert_top_crossing(29*Index(['timeframe', 'open', 'close', 'high', 'low', 'volume', 'peak_or_valley',
+       'strength', 'permanent_strength', 'atr', 'right_crossing_time',
+       'right_crossing_value', 'left_crossing_time', 'left_crossing_value',
+       'previous_target', 'next_target'],
+      dtype='object'), 2880*Index(['open', 'close', 'high', 'low', 'volume', 'atr'], dtype='object'), TopTYPE.PEAK, right, in, base_target_column:next_target) started
+INFO@01-27.16:52:12:insert_top_crossing(29*Index(['timeframe', 'open', 'close', 'high', 'low', 'volume', 'peak_or_valley',
+       'strength', 'permanent_strength', 'atr', 'right_crossing_time',
+       'right_crossing_value', 'left_crossing_time', 'left_crossing_value',
+       'previous_target', 'next_target'],
+      dtype='object'), 2880*Index(['open', 'close', 'high', 'low', 'volume', 'atr'], dtype='object'), TopTYPE.PEAK, right, in, base_target_column:next_target) executed in [93m0.169 seconds
+DEBUG@01-27.16:52:12:insert_top_crossing(37*Index(['timeframe', 'open', 'close', 'high', 'low', 'volume', 'peak_or_valley',
+       'strength', 'permanent_strength', 'atr', 'right_crossing_time',
+       'right_crossing_value', 'left_crossing_time', 'left_crossing_value',
+       'previous_target'],
+      dtype='object'), 2880*Index(['open', 'close', 'high', 'low', 'volume', 'atr'], dtype='object'), TopTYPE.VALLEY, left, in, base_target_column:previous_target) started
+INFO@01-27.16:52:12:insert_top_crossing(37*Index(['timeframe', 'open', 'close', 'high', 'low', 'volume', 'peak_or_valley',
+       'strength', 'permanent_strength', 'atr', 'right_crossing_time',
+       'right_crossing_value', 'left_crossing_time', 'left_crossing_value',
+       'previous_target'],
+      dtype='object'), 2880*Index(['open', 'close', 'high', 'low', 'volume', 'atr'], dtype='object'), TopTYPE.VALLEY, left, in, base_target_column:previous_target) executed in [92m0.031 seconds
+DEBUG@01-27.16:52:12:insert_top_crossing(37*Index(['timeframe', 'open', 'close', 'high', 'low', 'volume', 'peak_or_valley',
+       'strength', 'permanent_strength', 'atr', 'right_crossing_time',
+       'right_crossing_value', 'left_crossing_time', 'left_crossing_value',
+       'previous_target', 'next_target'],
+      dtype='object'), 2880*Index(['open', 'close', 'high', 'low', 'volume', 'atr'], dtype='object'), TopTYPE.VALLEY, right, in, base_target_column:next_target) started
+INFO@01-27.16:52:12:insert_top_crossing(37*Index(['timeframe', 'open', 'close', 'high', 'low', 'volume', 'peak_or_valley',
+       'strength', 'permanent_strength', 'atr', 'right_crossing_time',
+       'right_crossing_value', 'left_crossing_time', 'left_crossing_value',
+       'previous_target', 'next_target'],
+      dtype='object'), 2880*Index(['open', 'close', 'high', 'low', 'volume', 'atr'], dtype='object'), TopTYPE.VALLEY, right, in, base_target_column:next_target) executed in [93m0.100 seconds
+INFO@01-27.16:52:12:insert_pivot_movements(66*Index(['timeframe', 'open', 'close', 'high', 'low', 'volume', 'peak_or_valley',
+       'strength', 'permanent_strength', 'atr'],
+      dtype='object'), 2880*Index(['open', 'close', 'high', 'low', 'volume', 'atr'], dtype='object')) executed in [93m0.378 seconds
+DEBUG@01-27.16:52:12:insert_pivot_movements(66*Index(['timeframe', 'open', 'close', 'high', 'low', 'volume', 'peak_or_valley',
+       'strength', 'permanent_strength', 'atr'],
+      dtype='object'), 2880*Index(['open', 'close', 'high', 'low', 'volume', 'atr'], dtype='object')) started
+DEBUG@01-27.16:52:12:insert_top_crossing(29*Index(['timeframe', 'open', 'close', 'high', 'low', 'volume', 'peak_or_valley',
+       'strength', 'permanent_strength', 'atr', 'right_crossing_time',
+       'right_crossing_value', 'left_crossing_time', 'left_crossing_value',
+       'previous_target'],
+      dtype='object'), 2880*Index(['open', 'close', 'high', 'low', 'volume', 'atr'], dtype='object'), TopTYPE.PEAK, left, in, base_target_column:previous_target) started
+INFO@01-27.16:52:12:insert_top_crossing(29*Index(['timeframe', 'open', 'close', 'high', 'low', 'volume', 'peak_or_valley',
+       'strength', 'permanent_strength', 'atr', 'right_crossing_time',
+       'right_crossing_value', 'left_crossing_time', 'left_crossing_value',
+       'previous_target'],
+      dtype='object'), 2880*Index(['open', 'close', 'high', 'low', 'volume', 'atr'], dtype='object'), TopTYPE.PEAK, left, in, base_target_column:previous_target) executed in [92m0.035 seconds
+DEBUG@01-27.16:52:12:insert_top_crossing(29*Index(['timeframe', 'open', 'close', 'high', 'low', 'volume', 'peak_or_valley',
+       'strength', 'permanent_strength', 'atr', 'right_crossing_time',
+       'right_crossing_value', 'left_crossing_time', 'left_crossing_value',
+       'previous_target', 'next_target'],
+      dtype='object'), 2880*Index(['open', 'close', 'high', 'low', 'volume', 'atr'], dtype='object'), TopTYPE.PEAK, right, in, base_target_column:next_target) started
+INFO@01-27.16:52:12:insert_top_crossing(29*Index(['timeframe', 'open', 'close', 'high', 'low', 'volume', 'peak_or_valley',
+       'strength', 'permanent_strength', 'atr', 'right_crossing_time',
+       'right_crossing_value', 'left_crossing_time', 'left_crossing_value',
+       'previous_target', 'next_target'],
+      dtype='object'), 2880*Index(['open', 'close', 'high', 'low', 'volume', 'atr'], dtype='object'), TopTYPE.PEAK, right, in, base_target_column:next_target) executed in [93m0.149 seconds
+DEBUG@01-27.16:52:12:insert_top_crossing(37*Index(['timeframe', 'open', 'close', 'high', 'low', 'volume', 'peak_or_valley',
+       'strength', 'permanent_strength', 'atr', 'right_crossing_time',
+       'right_crossing_value', 'left_crossing_time', 'left_crossing_value',
+       'previous_target'],
+      dtype='object'), 2880*Index(['open', 'close', 'high', 'low', 'volume', 'atr'], dtype='object'), TopTYPE.VALLEY, left, in, base_target_column:previous_target) started
+INFO@01-27.16:52:12:insert_top_crossing(37*Index(['timeframe', 'open', 'close', 'high', 'low', 'volume', 'peak_or_valley',
+       'strength', 'permanent_strength', 'atr', 'right_crossing_time',
+       'right_crossing_value', 'left_crossing_time', 'left_crossing_value',
+       'previous_target'],
+      dtype='object'), 2880*Index(['open', 'close', 'high', 'low', 'volume', 'atr'], dtype='object'), TopTYPE.VALLEY, left, in, base_target_column:previous_target) executed in [92m0.039 seconds

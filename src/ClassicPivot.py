@@ -1,3 +1,4 @@
+import warnings
 from enum import Enum
 from typing import Literal, List
 
@@ -121,6 +122,7 @@ def duplicate_on_passing_times(pivots: pt.DataFrame['PivotDFM'], base_timeframe_
                 'external_margin': pivot_info['internal_margin'],
                 # 'hit': 0,
                 'ttl': pivot_info['ttl'],
+                'return_end_time': pivot_info['passing_time'],
                 'passing_time': pd.NaT,
                 'deactivated_at': pd.NaT,
             })
@@ -131,7 +133,9 @@ def duplicate_on_passing_times(pivots: pt.DataFrame['PivotDFM'], base_timeframe_
             if not may_have_passing['passing_time'].dropna().is_unique:
                 raise AssertionError("not may_have_passing['passing_time'].is_unique")
         for t_index, t_pivot in may_have_passing.iterrows():
-            pivots.loc[t_index] = t_pivot
+            with warnings.catch_warnings():
+                warnings.simplefilter(action='ignore', category=FutureWarning)
+                pivots.loc[t_index] = t_pivot
         # pivots = MultiTimeframePivotDf.concat(pivots, may_have_passing)
         if not pivots.index.is_unique:
             raise AssertionError("not pivots.index.is_unique")
@@ -388,6 +392,7 @@ def update_hit(timeframe_pivots: pt.DataFrame[PivotDFM], base_timeframe_ohlcv) -
     # timeframe_pivots.loc[pivot_indexes, 'boundary_of_hit_start_0'] = \
     #     nearest_match(needles=pivot_indexes, reference=base_timeframe_ohlcv.index, direction='backward', shift=1)
     for n in range(config.pivot_number_of_active_hits):
+        timeframe_pivots[f'boundary_of_hit_start_{n}'] =  pd.Series(dtype='datetime64[ns, UTC]')
         if n == 0:
             timeframe_pivots.loc[pivot_indexes, 'boundary_of_hit_start_0'] = \
                 nearest_match(needles=timeframe_pivots['return_end_time'].tolist(),
@@ -397,6 +402,7 @@ def update_hit(timeframe_pivots: pt.DataFrame[PivotDFM], base_timeframe_ohlcv) -
             timeframe_pivots.loc[pivot_indexes, f'boundary_of_hit_start_{n}'] = \
                 nearest_match(needles=timeframe_pivots.loc[pivot_indexes, f'boundary_of_hit_end_{n - 1}'],
                               reference=base_timeframe_ohlcv.index, direction='backward', shift=1)
+        # timeframe_pivots[f'hit_start_{n}'] = pd.Series(dtype='datetime64[ns, UTC]')
         timeframe_pivots.loc[pivot_indexes][f'hit_start_{n}'] = (
             insert_hits(timeframe_pivots.loc[pivot_indexes], f'boundary_of_hit_start_{n}', n, \
                         base_timeframe_ohlcv, 'start'))[f'hit_start_{n}']
@@ -404,6 +410,7 @@ def update_hit(timeframe_pivots: pt.DataFrame[PivotDFM], base_timeframe_ohlcv) -
         timeframe_pivots.loc[pivot_indexes, f'boundary_of_hit_end_{n}'] = \
             nearest_match(needles=timeframe_pivots.loc[pivot_indexes, f'boundary_of_hit_start_{n}'],
                           reference=base_timeframe_ohlcv.index, direction='backward', shift=1)
+        # timeframe_pivots[f'hit_end_{n}'] = pd.Series(dtype='datetime64[ns, UTC]')
         timeframe_pivots.loc[pivot_indexes][f'hit_end_{n}'] = (
             insert_hits(timeframe_pivots.loc[pivot_indexes], f'boundary_of_hit_end_{n}', n, \
                         base_timeframe_ohlcv, 'end'))[f'hit_end_{n}']
@@ -453,10 +460,14 @@ def insert_hit(pivots: pt.DataFrame[PivotDFM], n: int, base_timeframe_ohlcv: pt.
         def lt(target, base):
             return target < base
     if side == 'start':
+        if not pivots.index.is_unique:
+            pass
         pivots[f'hit_start_{n}'] = \
             find_crossing(pivots, 'internal_margin', base_timeframe_ohlcv, 'high',
                           'right', gt, return_both=False, )
     else:
+        if not pivots.index.is_unique:
+            pass
         pivots[f'hit_end_{n}'] = \
             find_crossing(pivots, 'internal_margin', base_timeframe_ohlcv, 'high',
                           'right', lt, return_both=False, )
