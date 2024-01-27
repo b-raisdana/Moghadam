@@ -833,12 +833,14 @@ def nearest_match(needles: Axes, reference: Axes, direction: str, shift: int = 1
         backward = reference
     else:
         raise Exception('side should be either "forward" or "backward".')
-    union = []
-    [union.append(i) for i in forward]
-    [union.append(i) for i in backward]
-    union = list(set(union))
-    # df = pd.DataFrame(index=forward.append(backward).unique())
-    df = pd.DataFrame(index=union)
+    if isinstance(needles, DatetimeIndex) and isinstance(reference, DatetimeIndex):
+        df = pd.DataFrame(index=forward.append(backward).unique())
+    else:
+        union = []
+        [union.append(i) for i in forward]
+        [union.append(i) for i in backward]
+        union = list(set(union))
+        df = pd.DataFrame(index=union)
     df = df.sort_index()
     if direction == 'forward':
         df.loc[forward, 'forward'] = forward
