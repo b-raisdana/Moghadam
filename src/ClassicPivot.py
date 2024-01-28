@@ -1,4 +1,5 @@
 import warnings
+from datetime import datetime
 from enum import Enum
 from typing import Literal, List
 
@@ -15,7 +16,7 @@ from PeakValley import find_crossing
 from PeakValleyPivots import read_multi_timeframe_major_times_top_pivots
 from PivotsHelper import pivot_margins, level_ttl
 from helper.data_preparation import concat, nearest_match
-from helper.helper import measure_time
+from helper.helper import measure_time, log_w
 
 
 class LevelDirection(Enum):
@@ -88,12 +89,17 @@ def insert_passing_time(pivots: pt.DataFrame[PivotDFM], base_timeframe_ohlcv: pt
     pivots.loc[valid_passing_pivots, 'deactivated_at'] = pivots.loc[valid_passing_pivots, 'passing_time']
 
 
-def deactivate_by_ttl(pivots: pt.DataFrame[MultiTimeframePivotDFM], base_timeframe_ohlcv: pt.DataFrame[OHLCV]):
-    end = base_timeframe_ohlcv.index.get_level_values(level='date').max()  # todo: test
+def deactivate_by_ttl(pivots: pt.DataFrame[PivotDFM], end: datetime):
+    deactivated_after_ttl = pivots[pivots['deactivated_at'].notna() & (pivots['deactivated_at'] > pivots['ttl'])].index
+    if len(deactivated_after_ttl) > 0:
+        pass  # todo: test
+    pivots.loc[deactivated_after_ttl, 'deactivated_at'] = pivots.loc[deactivated_after_ttl, 'ttl']
     ttl_expired = pivots[
-        (pivots['deactivated_at'].isna() | ~pivots['deactivated_at'])
+        pivots['deactivated_at'].isna()
         & (pivots['ttl'] < end)
         ].index
+    if len(ttl_expired) > 0:
+        pass  # todo: test
     pivots.loc[ttl_expired, 'deactivated_at'] = pivots.loc[ttl_expired, 'ttl']
 
 
@@ -159,15 +165,15 @@ def duplicate_on_passing_times(pivots: pt.DataFrame['PivotDFM'], base_timeframe_
 #     return timeframe_active_pivots, timeframe_inactive_pivots
 
 
-def inactivate_3rd_hit(pivots: pt.DataFrame['MultiTimeframePivotDFM'], base_timeframe_ohlcv: pt.DataFrame[OHLCV]):
-    pivots = update_hit(pivots, base_timeframe_ohlcv)  # todo: test
-    deactivate_by_hit = pivots[pivots['hit'] > config.pivot_number_of_active_hits].index
+def inactivate_3rd_hit(pivots: pt.DataFrame['PivotDFM'], ohlcv: pt.DataFrame[OHLCV]):
+    pivots = update_hit(pivots, ohlcv)
+    deactivate_by_hit = pivots[pivots[f'hit_end_{config.pivot_number_of_active_hits-1}'].notna()].index
     pivots.loc[deactivate_by_hit, 'deactivated_at'] = \
-        pivots.loc[deactivate_by_hit, f'hit_start_{config.pivot_number_of_active_hits - 1}']
+        pivots.loc[deactivate_by_hit, f'hit_end_{config.pivot_number_of_active_hits-1}']
 
 
 def update_pivot_deactivation(timeframe_pivots: pt.DataFrame['PivotDFM'],
-                              base_timeframe_ohlcv: pt.DataFrame[OHLCV], timeframe: str):
+                              base_timeframe_ohlcv: pt.DataFrame[OHLCV], timeframe: str, ohlcv: pt.DataFrame[OHLCV], ):
     """
         hit_count = number of pivots:
             after activation time
@@ -181,8 +187,9 @@ def update_pivot_deactivation(timeframe_pivots: pt.DataFrame['PivotDFM'],
     #     timeframe_inactive_pivots = single_timeframe(multi_timeframe_inactive_pivots, timeframe).copy()
     timeframe_pivots = duplicate_on_passing_times(timeframe_pivots, base_timeframe_ohlcv, timeframe)
     # reactivate_passed_levels(timeframe_active_pivots, timeframe_inactive_pivots))
-    inactivate_3rd_hit(timeframe_pivots, base_timeframe_ohlcv)  # todo: test
-    deactivate_by_ttl(timeframe_pivots, base_timeframe_ohlcv)
+    inactivate_3rd_hit(timeframe_pivots, ohlcv)
+    end = base_timeframe_ohlcv.index.get_level_values(level='date').max()
+    deactivate_by_ttl(timeframe_pivots, end)
     #     final_multi_timeframe_active_pivots = (concat(final_multi_timeframe_active_pivots, timeframe_active_pivots)
     #                                            .sort_index(level='date'))
     #     final_multi_timeframe_inactive_pivots = (
@@ -191,7 +198,7 @@ def update_pivot_deactivation(timeframe_pivots: pt.DataFrame['PivotDFM'],
     #
     # return multi_timeframe_active_pivots, multi_timeframe_inactive_pivots
     # archive_cold_levels(update__time, multi_timeframe_pivots)
-
+    return timeframe_pivots
 
 def reactivated_passed_levels(_time, ohlcv: pt.DataFrame[OHLCV],
                               multi_timeframe_pivots: pt.DataFrame[MultiTimeframePivotDFM]) \
@@ -388,66 +395,71 @@ def update_hit(timeframe_pivots: pt.DataFrame[PivotDFM], base_timeframe_ohlcv) -
     if 'passing_time' not in timeframe_pivots.columns:  # todo: test
         AssertionError("Expected passing_time be calculated before: "
                        "'passing_time' not in active_timeframe_pivots.columns")
-    pivot_indexes = timeframe_pivots.index
-    # timeframe_pivots.loc[pivot_indexes, 'boundary_of_hit_start_0'] = \
-    #     nearest_match(needles=pivot_indexes, reference=base_timeframe_ohlcv.index, direction='backward', shift=1)
+    may_have_hit = timeframe_pivots.index
     for n in range(config.pivot_number_of_active_hits):
-        timeframe_pivots[f'boundary_of_hit_start_{n}'] =  pd.Series(dtype='datetime64[ns, UTC]')
+        timeframe_pivots[f'boundary_of_hit_start_{n}'] = pd.Series(dtype='datetime64[ns, UTC]')
+        timeframe_pivots[f'boundary_of_hit_end_{n}'] = pd.Series(dtype='datetime64[ns, UTC]')
+        # finding hit n start
         if n == 0:
-            timeframe_pivots.loc[pivot_indexes, 'boundary_of_hit_start_0'] = \
-                nearest_match(needles=timeframe_pivots['return_end_time'].tolist(),
+            timeframe_pivots.loc[may_have_hit, 'boundary_of_hit_start_0'] = \
+                nearest_match(needles=timeframe_pivots.loc[may_have_hit, 'return_end_time'].tolist(),
                               reference=base_timeframe_ohlcv.index,
                               direction='backward', shift=1)
         else:
-            timeframe_pivots.loc[pivot_indexes, f'boundary_of_hit_start_{n}'] = \
-                nearest_match(needles=timeframe_pivots.loc[pivot_indexes, f'boundary_of_hit_end_{n - 1}'],
+            timeframe_pivots.loc[may_have_hit, f'boundary_of_hit_start_{n}'] = \
+                nearest_match(needles=timeframe_pivots.loc[may_have_hit, f'hit_end_{n - 1}'],
                               reference=base_timeframe_ohlcv.index, direction='backward', shift=1)
-        # timeframe_pivots[f'hit_start_{n}'] = pd.Series(dtype='datetime64[ns, UTC]')
-        timeframe_pivots.loc[pivot_indexes][f'hit_start_{n}'] = (
-            insert_hits(timeframe_pivots.loc[pivot_indexes], f'boundary_of_hit_start_{n}', n, \
+        timeframe_pivots.loc[may_have_hit, f'hit_start_{n}'] = (
+            insert_hits(timeframe_pivots.loc[may_have_hit], f'boundary_of_hit_start_{n}', n, \
                         base_timeframe_ohlcv, 'start'))[f'hit_start_{n}']
-
-        timeframe_pivots.loc[pivot_indexes, f'boundary_of_hit_end_{n}'] = \
-            nearest_match(needles=timeframe_pivots.loc[pivot_indexes, f'boundary_of_hit_start_{n}'],
+        # finding hit n end
+        started_pivots = timeframe_pivots[timeframe_pivots[f'hit_start_{n}'].notna()].index
+        timeframe_pivots.loc[started_pivots, f'boundary_of_hit_end_{n}'] = \
+            nearest_match(needles=timeframe_pivots.loc[started_pivots, f'hit_start_{n}'],
                           reference=base_timeframe_ohlcv.index, direction='backward', shift=1)
-        # timeframe_pivots[f'hit_end_{n}'] = pd.Series(dtype='datetime64[ns, UTC]')
-        timeframe_pivots.loc[pivot_indexes][f'hit_end_{n}'] = (
-            insert_hits(timeframe_pivots.loc[pivot_indexes], f'boundary_of_hit_end_{n}', n, \
+        timeframe_pivots.loc[started_pivots, f'hit_end_{n}'] = (
+            insert_hits(timeframe_pivots.loc[started_pivots], f'boundary_of_hit_end_{n}', n, \
                         base_timeframe_ohlcv, 'end'))[f'hit_end_{n}']
-        invalid_hit_ends = timeframe_pivots[timeframe_pivots.loc[pivot_indexes, f'hit_end_{n}'] <
-                                            timeframe_pivots.loc[pivot_indexes, f'passed']]
+        invalid_hit_ends = timeframe_pivots[timeframe_pivots[f'hit_end_{n}'] <
+                                            timeframe_pivots['passing_time']].index
         timeframe_pivots.loc[invalid_hit_ends, f'hit_end_{n}'] = pd.NaT
-        timeframe_pivots.loc[timeframe_pivots[f'hit_end_{n}'].notna(), 'hit'] = n
-        pivot_indexes = timeframe_pivots[timeframe_pivots[f'hit_end_{n}'].notna()]
-
+        timeframe_pivots.loc[timeframe_pivots[f'hit_end_{n}'].notna(), 'hit'] = n + 1
+        # filter for next iteration
+        may_have_hit = timeframe_pivots[timeframe_pivots[f'hit_end_{n}'].notna()].index
     return timeframe_pivots
 
 
 def insert_hits(active_timeframe_pivots: pt.DataFrame[PivotDFM], hit_boundary_column: str, n: int,
                 base_timeframe_ohlcv: pt.DataFrame[OHLCV],
                 side: Literal['start', 'end']):
-    t_df: pd.DataFrame = active_timeframe_pivots.reset_index(level='date')  # todo: test
-    t_df.rename(columns={'date': 'old_date'}, inplace=True)
+    if not active_timeframe_pivots[hit_boundary_column].is_unique:
+        log_w("Repetitive active_timeframe_pivots[hit_boundary_column] may produce inconsistent results.")
+        raise ValueError("Repetitive active_timeframe_pivots[hit_boundary_column] may produce inconsistent results."
+                         "not active_timeframe_pivots[hit_boundary_column].is_unique")
+    t_df: pd.DataFrame = active_timeframe_pivots.reset_index(level='date')
+    t_df.rename(columns={'date': 'start_date'}, inplace=True)
     t_df.rename(columns={hit_boundary_column: 'date'}, inplace=True)
-    t_df.set_index('date', inplace=True)  # todo: test
+    t_df.set_index('date', inplace=True)
     resistance_indexes = t_df[t_df['is_resistance'] == True].index
     t_df.loc[resistance_indexes, f'hit_{side}_{n}'] = \
         insert_hit(t_df.loc[resistance_indexes], n, base_timeframe_ohlcv, side, 'Resistance') \
             [f'hit_{side}_{n}']
+    # insert_hit(t_df.loc[resistance_indexes], n, base_timeframe_ohlcv, side, 'Resistance')
     t_support_indexes = t_df[t_df['is_resistance'] == False].index
     t_df.loc[t_support_indexes, f'hit_{side}_{n}'] = \
         insert_hit(t_df.loc[t_support_indexes], n, base_timeframe_ohlcv, side, 'Support') \
             [f'hit_{side}_{n}']
+    # insert_hit(t_df.loc[t_support_indexes], n, base_timeframe_ohlcv, side, 'Support')
     t_df.reset_index(inplace=True)
     t_df.rename(columns={'date': hit_boundary_column}, inplace=True)
-    t_df.rename(columns={'old_date': 'date'}, inplace=True)
+    t_df.rename(columns={'start_date': 'date'}, inplace=True)
     t_df.set_index('date', inplace=True)
     return t_df
 
 
 def insert_hit(pivots: pt.DataFrame[PivotDFM], n: int, base_timeframe_ohlcv: pt.DataFrame[OHLCV],
                side: Literal['start', 'end'], pivot_type: Literal['Resistance', 'Support']):
-    if pivot_type == 'Resistance':  # todo: test
+    if pivot_type == 'Resistance':
         def gt(target, base):
             return target >= base
 
@@ -460,18 +472,18 @@ def insert_hit(pivots: pt.DataFrame[PivotDFM], n: int, base_timeframe_ohlcv: pt.
         def lt(target, base):
             return target < base
     if side == 'start':
-        if not pivots.index.is_unique:
-            pass
-        pivots[f'hit_start_{n}'] = \
+        # if not pivots.index.is_unique:
+        #     pass
+        pivots.loc[pivots.index, f'hit_start_{n}'] = \
             find_crossing(pivots, 'internal_margin', base_timeframe_ohlcv, 'high',
                           'right', gt, return_both=False, )
     else:
-        if not pivots.index.is_unique:
-            pass
-        pivots[f'hit_end_{n}'] = \
+        # if not pivots.index.is_unique:
+        #     pass
+        pivots.loc[pivots.index, f'hit_end_{n}'] = \
             find_crossing(pivots, 'internal_margin', base_timeframe_ohlcv, 'high',
                           'right', lt, return_both=False, )
-
+    return pivots
     # if pivots['is_resistance'].isna().any():
     #     raise AssertionError("active_timeframe_pivots['is_resistance'].isna().any()")
 
@@ -503,10 +515,9 @@ def insert_hit(pivots: pt.DataFrame[PivotDFM], n: int, base_timeframe_ohlcv: pt.
 #         active_multi_timeframe_pivots.loc[root_overlapping_pivot.index, 'deactivated_at'] = level_index
 #
 #     return multi_timeframe_pivots
-@measure_time
+# @measure_time
 def insert_pivot_info(timeframe_pivots: pt.DataFrame['PivotDFM'], ohlcva: pt.DataFrame[OHLCVA],
-                      structure_timeframe_shortlist: List[str], base_timeframe_ohlcv: pt.DataFrame[OHLCV],
-                      timeframe: str):
+                      base_timeframe_ohlcv: pt.DataFrame[OHLCV], timeframe: str):
     insert_pivot_type_n_level(timeframe_pivots)
     # if structure_timeframe_shortlist is None:
     #     structure_timeframe_shortlist = config.structure_timeframes[::-1]
@@ -523,21 +534,13 @@ def insert_pivot_info(timeframe_pivots: pt.DataFrame['PivotDFM'], ohlcva: pt.Dat
     timeframe_pivots.loc[timeframe_resistance_pivots, ['internal_margin', 'external_margin']] = \
         pivot_margins(timeframe_pivots.loc[timeframe_resistance_pivots], _type=TopTYPE.PEAK,
                       pivot_peaks_or_valleys=timeframe_pivots.loc[timeframe_resistance_pivots],
-                      candle_body_source=ohlcva,
-                      # timeframe_pivots.loc[timeframe_resistance_pivots],
-                      timeframe=timeframe,
-                      internal_margin_atr=ohlcva,
-                      breakout_margin_atr=ohlcva)[['internal_margin', 'external_margin']]
+                      candle_body_source=ohlcva, breakout_margin_atr=ohlcva)[['internal_margin', 'external_margin']]
 
     timeframe_support_pivots = timeframe_pivots[
         timeframe_pivots['peak_or_valley'] == TopTYPE.VALLEY.value].index
     timeframe_pivots.loc[timeframe_support_pivots, ['internal_margin', 'external_margin', ]] = \
         pivot_margins(timeframe_pivots.loc[timeframe_support_pivots], _type=TopTYPE.VALLEY,
-                      pivot_peaks_or_valleys=timeframe_pivots.loc[timeframe_support_pivots],
-                      candle_body_source=ohlcva,
-                      # timeframe_pivots.loc[timeframe_support_pivots],
-                      timeframe=timeframe,
-                      internal_margin_atr=ohlcva,
+                      pivot_peaks_or_valleys=timeframe_pivots.loc[timeframe_support_pivots], candle_body_source=ohlcva,
                       breakout_margin_atr=ohlcva)[['internal_margin', 'external_margin']]
 
     timeframe_pivots['ttl'] = timeframe_pivots.index + level_ttl(timeframe)
@@ -546,9 +549,9 @@ def insert_pivot_info(timeframe_pivots: pt.DataFrame['PivotDFM'], ohlcva: pt.Dat
     timeframe_pivots['master_pivot_timeframe'] = pd.Series(dtype='str')
     timeframe_pivots['master_pivot_date'] = pd.Series(dtype='datetime64[ns, UTC]')
     timeframe_pivots['hit'] = 0
-    update_pivot_deactivation(timeframe_pivots, base_timeframe_ohlcv, timeframe)  # todo: test
+    timeframe_pivots = update_pivot_deactivation(timeframe_pivots, base_timeframe_ohlcv, timeframe, ohlcva)  # todo: test
     # insert_ftc(timeframe_pivots, structure_timeframe_shortlist)
-    timeframe_pivots = AtrMovementPivotDf.cast_and_validate(timeframe_pivots)
+    # timeframe_pivots = AtrMovementPivotDf.cast_and_validate(timeframe_pivots)
     # timeframe_pivots['timeframe'] = timeframe
     # timeframe_pivots = timeframe_pivots.set_index('timeframe', append=True)
     # timeframe_pivots = timeframe_pivots.swaplevel()
@@ -559,7 +562,7 @@ def insert_pivot_info(timeframe_pivots: pt.DataFrame['PivotDFM'], ohlcva: pt.Dat
     return timeframe_pivots
 
 
-def insert_pivot_type_n_level(pivots: pt.DataFrame[MultiTimeframePivotDFM]):
+def insert_pivot_type_n_level(pivots: pt.DataFrame[PivotDFM]):
     if 'is_resistance' not in pivots.columns:
         pivots['is_resistance'] = pd.Series(dtype=bool)
     resistance_pivots = pivots[pivots['peak_or_valley'] == TopTYPE.PEAK.value].index

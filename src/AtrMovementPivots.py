@@ -5,7 +5,8 @@ from pandera import typing as pt
 
 from ClassicPivot import insert_pivot_info
 from Config import config, TopTYPE
-from PanderaDFM.AtrTopPivot import MultiTimeframeAtrMovementPivotDFM, MultiTimeframeAtrMovementPivotDf
+from PanderaDFM.AtrTopPivot import MultiTimeframeAtrMovementPivotDFM, MultiTimeframeAtrMovementPivotDf, \
+    AtrMovementPivotDf
 from PanderaDFM.OHLCV import OHLCV
 from PanderaDFM.OHLCVA import OHLCVA
 from PanderaDFM.PeakValley import MultiTimeframePeakValley, PeakValley
@@ -87,14 +88,21 @@ def atr_movement_pivots(date_range_str: str = None, structure_timeframe_shortlis
                         index=mt_tops[mt_tops.index.get_level_values('date') \
                             .isin(timeframe_pivots.index.get_level_values('date'))].index)
     insert_major_timeframe(pivots, structure_timeframe_shortlist)
+    final_pivots = MultiTimeframeAtrMovementPivotDf.new()
     for timeframe in structure_timeframe_shortlist[::-1]:
         if timeframe in pivots.index.get_level_values(level='timeframe').unique():
+            ohlcva: pt.DataFrame[OHLCVA] = single_timeframe(mt_ohlcva, timeframe)
             timeframe_pivots = single_timeframe(pivots, timeframe)
-            insert_pivot_info(timeframe_pivots, ohlcva, structure_timeframe_shortlist, base_timeframe_ohlcva,
-                              timeframe)
+            timeframe_pivots = insert_pivot_info(timeframe_pivots, ohlcva, base_timeframe_ohlcva, timeframe)
+            timeframe_pivots = AtrMovementPivotDf.cast_and_validate(timeframe_pivots)
+            timeframe_pivots['timeframe'] = timeframe
+            timeframe_pivots.set_index('timeframe', append=True, inplace=True)
+            timeframe_pivots = timeframe_pivots.swaplevel()
+            final_pivots = MultiTimeframeAtrMovementPivotDf.concat(final_pivots, timeframe_pivots)
+    final_pivots = MultiTimeframeAtrMovementPivotDf.cast_and_validate(final_pivots)
     # pivots = insert_pivot_info(pivots, mt_ohlcva, structure_timeframe_shortlist, base_timeframe_ohlcva)
     # pivots = insert_ftc(pivots, mt_ohlcva)
-    return pivots
+    return final_pivots
 
 
 def insert_major_timeframe(pivots, structure_timeframe_shortlist):

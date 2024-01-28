@@ -96,15 +96,14 @@ def peak_or_valley_pivots_level_n_margins(timeframe_pivots: pd.DataFrame, pivot_
         raise AssertionError("'level' not in timeframe_pivots.columns")
     if timeframe_pivots[['level']].isna().any().any():
         raise AssertionError("timeframe_pivots[['level']].isna().any().any()")
-    timeframe_pivots = pivot_margins(timeframe_pivots, _type, pivot_time_peaks_or_valleys,
-                                     candle_body_source, timeframe, internal_margin_atr, breakout_margin_atr)
+    timeframe_pivots = pivot_margins(timeframe_pivots, _type, pivot_time_peaks_or_valleys, candle_body_source,
+                                     breakout_margin_atr)
     return timeframe_pivots
 
 
 # @measure_time
 def pivot_margins(pivots: pd.DataFrame, _type: TopTYPE, pivot_peaks_or_valleys: pd.DataFrame,
-                  candle_body_source: pd.DataFrame, timeframe: str, internal_margin_atr: pd.DataFrame,
-                  breakout_margin_atr: pd.DataFrame) -> pd.DataFrame:
+                  candle_body_source: pd.DataFrame, breakout_margin_atr: pd.DataFrame) -> pd.DataFrame:
     """
     Calculate margins for pivot levels based on peak or valley type.
 
@@ -131,32 +130,34 @@ def pivot_margins(pivots: pd.DataFrame, _type: TopTYPE, pivot_peaks_or_valleys: 
         internal_func = max
     pivot_times = pivot_peaks_or_valleys.index.get_level_values('date')
     # nearest_body = max/min(candle_body_source[['open', 'close']])
-    if 'open' in pivots.columns and 'close' in pivots.columns:
-        pivots['nearest_body'] = pivots[['open', 'close']].apply(choose_body_operator, axis='columns')
-    else:
-        candle_body_source['nearest_body'] = candle_body_source[['open', 'close']] \
-            .apply(choose_body_operator, axis='columns')
-        pivots = pd.merge_asof(pivots, candle_body_source, left_index=True, right_index=True, direction='backward',
-                               suffixes=('_x', ''))
-    if 'atr' in pivots.columns:
-        pivots['internal_margin_atr'] = pivots['atr']
-    else:
-        # internal_margin = min/max( level -/+ internal_margin_atr ) of mapped time
-        internal_margin_atr = internal_margin_atr.rename(columns={'atr': 'internal_margin_atr'}) \
-            [['internal_margin_atr']]
-        pivots = pd.merge_asof(pivots, internal_margin_atr, left_index=True, right_index=True, direction='backward',
-                               suffixes=('_x', ''))
-        if any([str(column).endswith('_x') for column in pivots.columns]):
-            raise AssertionError("any([str(column).endswith('_x') for column in pivots.columns])")
-        log_w("Remove 'suffixes=('_x', '')'")
-    if _type.value == TopTYPE.PEAK.value:
-        pivots.loc[pivot_times, 'atr_margin'] = \
-            pivots.loc[pivot_times, 'level'] - pivots.loc[pivot_times, 'internal_margin_atr']
-    else:
-        pivots.loc[pivot_times, 'atr_margin'] = \
-            pivots.loc[pivot_times, 'level'] + pivots.loc[pivot_times, 'internal_margin_atr']
-    pivots.loc[pivot_times, 'internal_margin'] = \
-        pivots.loc[pivot_times, ['nearest_body', 'atr_margin']].apply(internal_func, axis='columns')
+    # if 'open' in pivots.columns and 'close' in pivots.columns:
+    #     pivots['nearest_body'] = pivots[['open', 'close']].apply(choose_body_operator, axis='columns')
+    # else:
+    candle_body_source['nearest_body'] = candle_body_source[['open', 'close']] \
+        .apply(choose_body_operator, axis='columns')
+    pivots = pd.merge_asof(pivots, candle_body_source, left_index=True, right_index=True, direction='backward',
+                           suffixes=('_x', ''))
+    # if 'atr' in pivots.columns:
+    #     pivots['internal_margin_atr'] = pivots['atr']
+    # else:
+    #     # internal_margin = min/max( level -/+ internal_margin_atr ) of mapped time
+    #     internal_margin_atr = internal_margin_atr.rename(columns={'atr': 'internal_margin_atr'}) \
+    #         [['internal_margin_atr']]
+    #     pivots = pd.merge_asof(pivots, internal_margin_atr, left_index=True, right_index=True, direction='backward',
+    #                            suffixes=('_x', ''))
+    #     if any([str(column).endswith('_x') for column in pivots.columns]):
+    #         raise AssertionError("any([str(column).endswith('_x') for column in pivots.columns])")
+    #     log_w("Remove 'suffixes=('_x', '')'")
+    # if _type.value == TopTYPE.PEAK.value:
+    #     pivots.loc[pivot_times, 'atr_margin'] = \
+    #         pivots.loc[pivot_times, 'level'] - pivots.loc[pivot_times, 'internal_margin_atr']
+    # else:
+    #     pivots.loc[pivot_times, 'atr_margin'] = \
+    #         pivots.loc[pivot_times, 'level'] + pivots.loc[pivot_times, 'internal_margin_atr']
+    # pivots.loc[pivot_times, 'internal_margin'] = \
+    #     pivots.loc[pivot_times, ['nearest_body', 'atr_margin']].apply(internal_func, axis='columns')
+    # atr_margin not used for internal_margin
+    pivots.loc[pivot_times, 'internal_margin'] = pivots.loc[pivot_times, 'nearest_body']
     # external_margin = level +/- breakout_margin_atr of mapped time
     breakout_margin_atr = breakout_margin_atr.rename(columns={'atr': 'breakout_margin_atr'})[['breakout_margin_atr']]
     pivots.drop(columns=['breakout_margin_atr', ], errors='ignore', inplace=True)

@@ -1,3 +1,4 @@
+import sys
 from datetime import datetime
 
 from BasePattern import read_multi_timeframe_base_patterns
@@ -55,5 +56,5 @@ if __name__ == "__main__":
     # #     os.path.join(config.path_of_data,
     # #                  f'BasePatternStrategy.orders.0Rzb5KJmWrXfRsnjTE1t9g.24-01-11.00-00T24-01-12.23-59.csv'))
     # plot_multi_timeframe_base_pattern(_base_patterns, ohlcva)  # , orders_df=orders_df)
-    exit(0)
+    sys.exit(0)
     test_strategy(cash=100000)
