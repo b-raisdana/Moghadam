@@ -294,9 +294,9 @@ def insert_crossing2(base: pt.DataFrame[PeakValley], target: pd.DataFrame,
         no_repeat_base_indexes = ~remained_bases.index.duplicated(keep='first')
         no_repeat_bases = remained_bases[no_repeat_base_indexes]
         remained_bases = remained_bases[~no_repeat_base_indexes]
-        if f'{direction}_crossing_time' not in base.columns:
+        if f'{direction}_crossing_time' not in no_repeat_bases.columns:
             no_repeat_bases[f'{direction}_crossing_time'] = pd.Series(dtype='datetime64[ns, UTC]')
-        if f'{direction}_crossing_value' not in base.columns:
+        if f'{direction}_crossing_value' not in no_repeat_bases.columns:
             no_repeat_bases[f'{direction}_crossing_value'] = pd.Series(dtype=float)
         bases_to_compare = no_repeat_bases.copy()
         bases_to_compare['target_index'] = nearest_match(bases_to_compare.index.get_level_values('date'), target.index,
@@ -328,8 +328,8 @@ def insert_crossing2(base: pt.DataFrame[PeakValley], target: pd.DataFrame,
             pass
         base.reset_index(level='date', inplace=True)
         base[[f'{direction}_crossing_time', f'{direction}_crossing_value']] = \
-        base.merge(no_repeat_bases, left_on='iloc', right_on='iloc', how="left", )[
-            [f'{direction}_crossing_time', f'{direction}_crossing_value']]
+            base.merge(no_repeat_bases, left_on='iloc', right_on='iloc', how="left", )[
+                [f'{direction}_crossing_time', f'{direction}_crossing_value']]
         base.set_index('date', inplace=True)
     return base
 
