@@ -15,7 +15,7 @@ from PeakValley import insert_crossing2
 from PeakValleyPivots import read_multi_timeframe_major_times_top_pivots
 from PivotsHelper import pivot_margins, level_ttl
 from helper.data_preparation import concat, nearest_match
-from helper.helper import log_w, measure_time
+from helper.helper import log_w
 
 
 class LevelDirection(Enum):
@@ -72,9 +72,9 @@ def insert_passing_time(pivots: pt.DataFrame[PivotDFM], ohlcv: pt.DataFrame[OHLC
             "any(pivots.loc[support_pivots.index, 'external_margin'] > pivots.loc[support_pivots.index, 'internal_margin'])")
     pivots.loc[support_pivots.index, 'passing_time'] = \
         insert_crossing2(base=support_pivots, base_target_column='external_margin',
-                        target=ohlcv, target_compare_column='high', direction='right',
-                        more_significant=lambda target, base: target < base,
-                        )['right_crossing_time']
+                         target=ohlcv, target_compare_column='high', direction='right',
+                         more_significant=lambda target, base: target < base,
+                         )['right_crossing_time']
     # pivots.loc[support_pivots.index, 'passing_time'] = \
     #     find_crossing_single_iteration(support_pivots, 'external_margin',
     #                                    base_timeframe_ohlcv, 'high', 'right', lambda target, base: target < base,
@@ -88,9 +88,9 @@ def insert_passing_time(pivots: pt.DataFrame[PivotDFM], ohlcv: pt.DataFrame[OHLC
                              "pivots.loc[resistance_pivots.index, 'internal_margin'])")
     pivots.loc[resistance_pivots.index, 'passing_time'] = \
         insert_crossing2(base=resistance_pivots, base_target_column='external_margin',
-                        target=ohlcv, target_compare_column='low', direction='right',
-                        more_significant=lambda target, base: target > base,
-                        )['right_crossing_time']
+                         target=ohlcv, target_compare_column='low', direction='right',
+                         more_significant=lambda target, base: target > base,
+                         )['right_crossing_time']
     # pivots.loc[resistance_pivots.index, 'passing_time'] = \
     #     find_crossing(resistance_pivots, 'external_margin',
     #                   base_timeframe_ohlcv, 'low', 'right', lambda target, base: target > base,
@@ -188,9 +188,9 @@ def duplicate_on_passing_times(pivots: pt.DataFrame['PivotDFM'], ohlcv: pt.DataF
 
 def inactivate_3rd_hit(pivots: pt.DataFrame['PivotDFM'], ohlcv: pt.DataFrame[OHLCV]):
     pivots = update_hit(pivots, ohlcv)
-    deactivate_by_hit = pivots[pivots[f'hit_end_{config.pivot_number_of_active_hits - 1}'].notna()].index
+    deactivate_by_hit = pivots[pivots[f'hit_end_{config.pivot_number_of_active_hits}'].notna()].index
     pivots.loc[deactivate_by_hit, 'deactivated_at'] = \
-        pivots.loc[deactivate_by_hit, f'hit_end_{config.pivot_number_of_active_hits - 1}']
+        pivots.loc[deactivate_by_hit, f'hit_end_{config.pivot_number_of_active_hits}']
 
 
 def update_pivot_deactivation(timeframe_pivots: pt.DataFrame['PivotDFM'], timeframe: str, ohlcv: pt.DataFrame[OHLCV]):
@@ -417,7 +417,7 @@ def update_hit(timeframe_pivots: pt.DataFrame[PivotDFM], ohlcv) -> pt.DataFrame[
         timeframe_pivots[f'boundary_of_hit_start_{n}'] = pd.Series(dtype='datetime64[ns, UTC]')
         timeframe_pivots[f'boundary_of_hit_end_{n}'] = pd.Series(dtype='datetime64[ns, UTC]')
         # filter for next iteration
-        may_have_hit = timeframe_pivots[timeframe_pivots[f'hit_end_{n-1}'].notna()].index
+        may_have_hit = timeframe_pivots[timeframe_pivots[f'hit_end_{n - 1}'].notna()].index
         # if len(may_have_hit)>0:
         # finding hit n start
         timeframe_pivots.loc[may_have_hit, f'boundary_of_hit_start_{n}'] = \
@@ -426,6 +426,9 @@ def update_hit(timeframe_pivots: pt.DataFrame[PivotDFM], ohlcv) -> pt.DataFrame[
         timeframe_pivots.loc[may_have_hit, f'hit_start_{n}'] = (
             insert_hits(timeframe_pivots.loc[may_have_hit], f'boundary_of_hit_start_{n}', n,
                         ohlcv, 'start'))[f'hit_start_{n}']
+        invalid_hit_starts = timeframe_pivots[timeframe_pivots[f'hit_start_{n}'] >
+                                              timeframe_pivots['passing_time']].index
+        timeframe_pivots.loc[invalid_hit_starts, f'hit_start_{n}'] = pd.NaT
         # finding hit n end
         started_pivots = timeframe_pivots[timeframe_pivots[f'hit_start_{n}'].notna()].index
         timeframe_pivots.loc[started_pivots, f'boundary_of_hit_end_{n}'] = \
@@ -434,34 +437,38 @@ def update_hit(timeframe_pivots: pt.DataFrame[PivotDFM], ohlcv) -> pt.DataFrame[
         timeframe_pivots.loc[started_pivots, f'hit_end_{n}'] = (
             insert_hits(timeframe_pivots.loc[started_pivots], f'boundary_of_hit_end_{n}', n,
                         ohlcv, 'end'))[f'hit_end_{n}']
-        invalid_hit_ends = timeframe_pivots[timeframe_pivots[f'hit_end_{n}'] <
+        invalid_hit_ends = timeframe_pivots[timeframe_pivots[f'hit_end_{n}'] >
                                             timeframe_pivots['passing_time']].index
         timeframe_pivots.loc[invalid_hit_ends, f'hit_end_{n}'] = pd.NaT
         timeframe_pivots.loc[timeframe_pivots[f'hit_end_{n}'].notna(), 'hit'] = n + 1
     return timeframe_pivots
 
 
-@measure_time
+# @measure_time
 def insert_hits(active_timeframe_pivots: pt.DataFrame[PivotDFM], hit_boundary_column: str, n: int,
                 ohlcv: pt.DataFrame[OHLCV],
                 side: Literal['start', 'end']):
-    if not active_timeframe_pivots[hit_boundary_column].is_unique:
-        log_w("Repetitive active_timeframe_pivots[hit_boundary_column] may produce inconsistent results.")
-        # raise ValueError("Repetitive active_timeframe_pivots[hit_boundary_column] may produce inconsistent results."
-        #                  "not active_timeframe_pivots[hit_boundary_column].is_unique")
+    # if not active_timeframe_pivots[hit_boundary_column].is_unique:
+    #     log_w("Repetitive active_timeframe_pivots[hit_boundary_column] may produce inconsistent results.")
+    #     # raise ValueError("Repetitive active_timeframe_pivots[hit_boundary_column] may produce inconsistent results."
+    #     #                  "not active_timeframe_pivots[hit_boundary_column].is_unique")
     t_df = active_timeframe_pivots.drop(columns='date', errors='ignore')
     t_df: pd.DataFrame = t_df.reset_index(level='date')
     t_df.rename(columns={'date': 'start_date'}, inplace=True)
     t_df.rename(columns={hit_boundary_column: 'date'}, inplace=True)
     t_df.set_index('date', inplace=True)
-    resistance_indexes = t_df[t_df['is_resistance'] == True].index
-    t_df.loc[resistance_indexes, f'hit_{side}_{n}'] = \
-        insert_hit(t_df.loc[resistance_indexes], n, ohlcv, side, 'Resistance') \
+    if n == 2:
+        pass
+    resistance_start_dates = t_df.loc[t_df['is_resistance'] == True, 'start_date'].tolist()
+    t_df.loc[t_df['start_date'].isin(resistance_start_dates), f'hit_{side}_{n}'] = \
+        insert_hit(t_df[t_df['start_date'].isin(resistance_start_dates)], n, ohlcv, side, 'Resistance') \
             [f'hit_{side}_{n}']
-    t_support_indexes = t_df[t_df['is_resistance'] == False].index
-    t_df.loc[t_support_indexes, f'hit_{side}_{n}'] = \
-        insert_hit(t_df.loc[t_support_indexes], n, ohlcv, side, 'Support') \
+
+    support_start_dates = t_df.loc[t_df['is_resistance'] == False, 'start_date'].tolist()
+    t_df.loc[t_df['start_date'].isin(support_start_dates), f'hit_{side}_{n}'] = \
+        insert_hit(t_df.loc[t_df['start_date'].isin(support_start_dates)], n, ohlcv, side, 'Support') \
             [f'hit_{side}_{n}']
+
     t_df.reset_index(inplace=True)
     t_df.rename(columns={'date': hit_boundary_column}, inplace=True)
     t_df.rename(columns={'start_date': 'date'}, inplace=True)
@@ -487,23 +494,24 @@ def insert_hit(pivots: pt.DataFrame[PivotDFM], n: int, ohlcv: pt.DataFrame[OHLCV
 
         def lt(target, base):
             return target > base
+    pivots = pivots.copy()
     if side == 'start':
         # if not pivots.index.is_unique:
         #     pass
-        pivots.loc[pivots.index, f'hit_start_{n}'] = \
+        pivots.loc[:, f'hit_start_{n}'] = \
             insert_crossing2(base=pivots, base_target_column='internal_margin', target=ohlcv,
-                            target_compare_column=high_low,
-                            direction='right', more_significant=gt, )['right_crossing_time']
+                             target_compare_column=high_low,
+                             direction='right', more_significant=gt, )['right_crossing_time']
         # pivots.loc[pivots.index, f'hit_start_{n}'] = \
         #     find_crossing_single_iteration(pivots, 'internal_margin', base_timeframe_ohlcv, 'high',
         #                                    'right', gt, return_both=False, )
     else:
         # if not pivots.index.is_unique:
         #     pass
-        pivots.loc[pivots.index, f'hit_end_{n}'] = \
+        pivots.loc[:, f'hit_end_{n}'] = \
             insert_crossing2(base=pivots, base_target_column='internal_margin', target=ohlcv,
-                            target_compare_column=high_low,
-                            direction='right', more_significant=lt, )['right_crossing_time']
+                             target_compare_column=high_low,
+                             direction='right', more_significant=lt, )['right_crossing_time']
         # pivots.loc[pivots.index, f'hit_end_{n}'] = \
         #     find_crossing_single_iteration(pivots, 'internal_margin', base_timeframe_ohlcv, 'high',
         #                                    'right', lt, return_both=False, )
