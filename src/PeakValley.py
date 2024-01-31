@@ -302,7 +302,8 @@ def insert_crossing2(base: pt.DataFrame[PeakValley], target: pd.DataFrame,
     base.reset_index(level='date', inplace=True)
     base.set_index('iloc', inplace=True)
     drop_base_without_crossing2(bases_to_compare=remained_bases, base_target_column=base_target_column, target=target,
-                                more_significant=more_significant, direction=direction)
+                                more_significant=more_significant, direction=direction,
+                                target_compare_column=target_compare_column)
     while len(remained_bases) > 0:
         no_repeat_base_indexes = ~remained_bases.index.duplicated(keep='first')
         bases_to_compare = remained_bases[no_repeat_base_indexes]
@@ -318,7 +319,7 @@ def insert_crossing2(base: pt.DataFrame[PeakValley], target: pd.DataFrame,
                                                target_compare_column, direction, more_significant,
                                                bases_shall_have_crossing=config.check_assertions)
             if len(crossed_bases) == 0 and number_of_crossed_bases == 9999999999999:
-                raise AssertionError("Did not found crossing in first iteration")
+                raise AssertionError("Did not found any crossing in first iteration")
             number_of_crossed_bases = len(crossed_bases)
             if number_of_crossed_bases > 0:
                 # add crossing information to base
@@ -329,6 +330,8 @@ def insert_crossing2(base: pt.DataFrame[PeakValley], target: pd.DataFrame,
                     bases_with_known_crossing_target = concat(
                         bases_with_known_crossing_target, bases_to_compare.loc[crossed_bases.index])
                 bases_to_compare = bases_to_compare.drop(crossed_bases.index)
+        if len(bases_to_compare) > 0:
+            raise AssertionError("Expected to find crossing for all bases after drop_base_without_crossing2...")
         if len(bases_with_known_crossing_target) > 0:
             bases_with_known_crossing_target.set_index('iloc', inplace=True)
             base.loc[
@@ -362,28 +365,45 @@ def drop_base_without_crossing(bases_to_compare, target, base_target_column, bas
 
 
 def drop_base_without_crossing2(bases_to_compare, target, base_target_column, more_significant,
-                                direction: Literal['right', 'left']):
+                                direction: Literal['right', 'left'], target_compare_column: Literal['low', 'high']):
     n = len(target)
     if 'target_index' not in bases_to_compare.columns:
         bases_to_compare['target_index'] = nearest_match(bases_to_compare.index.get_level_values('date'), target.index,
                                                          direction='forward', shift=0)
     if more_significant(target=2, base=1):
-        # target_compare_column == 'high':
+        # if target_compare_column != 'high':
+        #     pass
+            # raise AssertionError("target_compare_column != 'high'")
         if direction == 'left':
-            target['max_value'] = target['high'].rolling(window=n, min_periods=0, ).max()
+            target['max_value'] = target[target_compare_column].rolling(window=n, min_periods=0, ).max()
+            target['max_value'] = target['max_value'].shift(1)
         else:  # direction == 'right':
-            target['max_value'] = target['high'].iloc[::-1].rolling(window=n, min_periods=0).max()
-        without_crossings = bases_to_compare[
-            bases_to_compare[base_target_column] > target.loc[bases_to_compare['target_index'], 'max_value']]
-    else:  # more_significant(target=1, base=2)
-        # target_compare_column == 'low':
-        if direction == 'left':
-            target['min_value'] = target['low'].rolling(window=n, min_periods=0).min()
-        else:  # direction == 'right':
-            target['min_value'] = target['low'].iloc[::-1].rolling(window=n, min_periods=0).min()
+            target['max_value'] = target[target_compare_column].iloc[::-1].rolling(window=n, min_periods=0).max()
+            target['max_value'] = target['max_value'].shift(-1)
+        bases_to_compare['target_max_value'] = target.loc[bases_to_compare['target_index'], 'max_value'].tolist()
         without_crossings = bases_to_compare[
             bases_to_compare[base_target_column].isna() |
-            (bases_to_compare[base_target_column] < target.loc[bases_to_compare['target_index'], 'min_value'])]
+            bases_to_compare['target_max_value'].isna() |
+            (bases_to_compare[base_target_column] >= bases_to_compare['target_max_value'])]
+    else:  # more_significant(target=1, base=2)
+        # if target_compare_column != 'low':
+        #     pass
+            # raise AssertionError("target_compare_column != 'low'")
+        if direction == 'left':
+            target['min_value'] = target[target_compare_column].rolling(window=n, min_periods=0).min()
+            target['min_value'] = target['min_value'].shift(1)
+        else:  # direction == 'right':
+            target['min_value'] = target[target_compare_column].iloc[::-1].rolling(window=n, min_periods=0).min()
+            target['min_value'] = target['min_value'].shift(-1)
+        try:
+            bases_to_compare['target_min_value'] = target.loc[bases_to_compare['target_index'], 'min_value'].tolist()
+            without_crossings = bases_to_compare[
+                bases_to_compare[base_target_column].isna() |
+                bases_to_compare['target_min_value'].isna() |
+                (bases_to_compare[base_target_column] <= bases_to_compare['target_min_value'])]
+        except Exception as e:
+            nop = 1
+            raise e
     bases_to_compare.drop(index=without_crossings.index, inplace=True)
     return without_crossings
 

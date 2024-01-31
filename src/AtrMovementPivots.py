@@ -235,7 +235,7 @@ def insert_pivot_movement_times(timeframe_peak_or_valleys: pt.DataFrame[PeakVall
     return timeframe_peak_or_valleys
 
 
-@measure_time
+# @measure_time
 def insert_more_significant_tops(timeframe_tops: pt.DataFrame[PeakValley],
                                  compared_tops: pt.DataFrame[MultiTimeframePeakValley]) \
         -> pt.DataFrame[MultiTimeframePeakValley]:
@@ -258,10 +258,10 @@ def insert_more_significant_top(base_tops: pt.DataFrame[MultiTimeframePeakValley
         -> pt.DataFrame[MultiTimeframePeakValley]:
     if top_type == TopTYPE.PEAK:
         high_low = 'high'
-        cross_direction = 'out'
+        # cross_direction = 'out'
     else:  # top_type == TopTYPE.VALLEY
         high_low = 'low'
-        cross_direction = 'out'
+        # cross_direction = 'out'
 
     no_timeframe_tops = target_tops.reset_index(level='timeframe')
     for direction in ['left', 'right']:
