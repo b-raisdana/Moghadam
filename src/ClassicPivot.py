@@ -97,6 +97,7 @@ def insert_passing_time(pivots: pt.DataFrame[PivotDFM], ohlcv: pt.DataFrame[OHLC
     #                   )
     valid_passing_pivots = pivots[pivots['passing_time'].notna() & (pivots['passing_time'] < pivots['ttl'])].index
     pivots.loc[valid_passing_pivots, 'deactivated_at'] = pivots.loc[valid_passing_pivots, 'passing_time']
+    return pivots
 
 
 def deactivate_by_ttl(pivots: pt.DataFrame[PivotDFM], end: datetime):
@@ -117,7 +118,8 @@ def deactivate_on_passing_times(pivots: pt.DataFrame['PivotDFM'], ohlcv: pt.Data
     if 'passing_time' not in pivots.columns:
         pivots['passing_time'] = pd.Series(dtype='datetime64[ns, UTC]')
     may_have_passing = pivots[pivots['deactivated_at'].isna()]
-    insert_passing_time(may_have_passing, ohlcv)
+    may_have_passing.loc[:, ['passing_time', 'deactivated_at']] = \
+        insert_passing_time(may_have_passing, ohlcv)[['passing_time', 'deactivated_at']]
     passed_pivots = may_have_passing[may_have_passing['passing_time'].notna()]
     pivots.loc[passed_pivots.index, 'passing_time'] = passed_pivots['passing_time']
     pivots.loc[passed_pivots.index, 'deactivated_at'] = passed_pivots['passing_time']

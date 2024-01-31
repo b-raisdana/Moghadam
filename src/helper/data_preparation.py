@@ -877,7 +877,10 @@ def concat(left: pd.DataFrame, right: pd.DataFrame):
             # left_na_column_dtypes = left.dtypes[left_na_columns]
             left = pd.concat([left.dropna(axis=1, how='all'), right.dropna(axis=1, how='all')])
             for column, d_type in left_na_columns.items():
-                left[column] = pd.Series(dtype=d_type)
+                if column not in right.columns:
+                    left[column] = pd.Series(dtype=d_type)
+                else:
+                    left[column] = right[column]
             for column, d_type in right_na_columns.items():
                 if column not in left.columns:
                     left[column] = pd.Series(dtype=d_type)
