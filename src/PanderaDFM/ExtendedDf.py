@@ -70,7 +70,8 @@ class ExtendedDf:
             unused_keys = []
             for key in dictionary_of_data.keys():
                 if not strict or key in cls.schema_data_frame_model.to_schema().columns.keys():  # _column_dtypes.keys():
-                    _new.loc[the_index, key] = dictionary_of_data[key]
+                    if key not in _index_names:
+                        _new.loc[the_index, key] = dictionary_of_data[key]
                 elif key not in _index_names:
                     unused_keys += [key]
             if len(unused_keys) > 0:

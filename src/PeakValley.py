@@ -299,7 +299,11 @@ def insert_crossing2(base: pt.DataFrame[PeakValley], target: pd.DataFrame,
         base.loc[:, f'{direction}_crossing_value'] = pd.Series(dtype=float)
     base.loc[:, 'iloc'] = range(len(base))
     remained_bases = base.copy()
-    base.reset_index(level='date', inplace=True)
+    try:
+        base.reset_index(level='date', inplace=True)
+    except Exception as e:
+        nop = 1
+        raise e
     base.set_index('iloc', inplace=True)
     drop_base_without_crossing2(bases_to_compare=remained_bases, base_target_column=base_target_column, target=target,
                                 more_significant=more_significant, direction=direction,

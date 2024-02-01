@@ -64,37 +64,31 @@ class LevelDirection(Enum):
 def insert_passing_time(pivots: pt.DataFrame[PivotDFM], ohlcv: pt.DataFrame[OHLCV]):
     if 'passing_time' not in pivots.columns:
         pivots['passing_time'] = pd.Series(dtype='datetime64[ns, UTC]')
-
+    pivots['iloc'] = range(len(pivots))
     support_pivots = pivots[~(pivots['is_resistance'].astype(bool))]
-    if any(pivots.loc[support_pivots.index, 'external_margin'] > pivots.loc[support_pivots.index, 'internal_margin']):
+    support_pivots_iloc = pivots.loc[~(pivots['is_resistance'].astype(bool)), 'iloc']
+    if any(pivots.loc[pivots['iloc'].isin(support_pivots_iloc), 'external_margin'] >
+           pivots.loc[pivots['iloc'].isin(support_pivots_iloc), 'internal_margin']):
         raise AssertionError(
             "any(pivots.loc[support_pivots.index, 'external_margin'] > pivots.loc[support_pivots.index, 'internal_margin'])")
-    pivots.loc[support_pivots.index, 'passing_time'] = \
+    pivots.loc[pivots['iloc'].isin(support_pivots_iloc), 'passing_time'] = \
         insert_crossing2(base=support_pivots, base_target_column='external_margin',
                          target=ohlcv, target_compare_column='high', direction='right',
                          more_significant=lambda target, base: target < base,
                          )['right_crossing_time']
-    # pivots.loc[support_pivots.index, 'passing_time'] = \
-    #     find_crossing_single_iteration(support_pivots, 'external_margin',
-    #                                    base_timeframe_ohlcv, 'high', 'right', lambda target, base: target < base,
-    #                                    return_both=False,
-    #                                    )
 
     resistance_pivots = pivots[pivots['is_resistance'].astype(bool)]
-    if any(pivots.loc[resistance_pivots.index, 'external_margin'] <
-           pivots.loc[resistance_pivots.index, 'internal_margin']):
+    resistance_pivots_iloc = pivots.loc[pivots['is_resistance'].astype(bool), 'iloc']
+    if any(pivots.loc[pivots['iloc'].isin(resistance_pivots_iloc), 'external_margin'] <
+           pivots.loc[pivots['iloc'].isin(resistance_pivots_iloc), 'internal_margin']):
         raise AssertionError("any(pivots.loc[resistance_pivots.index, 'external_margin'] < "
                              "pivots.loc[resistance_pivots.index, 'internal_margin'])")
-    pivots.loc[resistance_pivots.index, 'passing_time'] = \
+    pivots.loc[pivots['iloc'].isin(resistance_pivots_iloc), 'passing_time'] = \
         insert_crossing2(base=resistance_pivots, base_target_column='external_margin',
                          target=ohlcv, target_compare_column='low', direction='right',
                          more_significant=lambda target, base: target > base,
                          )['right_crossing_time']
-    # pivots.loc[resistance_pivots.index, 'passing_time'] = \
-    #     find_crossing(resistance_pivots, 'external_margin',
-    #                   base_timeframe_ohlcv, 'low', 'right', lambda target, base: target > base,
-    #                   return_both=False,
-    #                   )
+
     valid_passing_pivots = pivots[pivots['passing_time'].notna() & (pivots['passing_time'] < pivots['ttl'])].index
     pivots.loc[valid_passing_pivots, 'deactivated_at'] = pivots.loc[valid_passing_pivots, 'passing_time']
     return pivots
@@ -128,46 +122,48 @@ def deactivate_on_passing_times(pivots: pt.DataFrame['PivotDFM'], ohlcv: pt.Data
 def duplicate_on_passing_times(pivots: pt.DataFrame['PivotDFM'], ohlcv: pt.DataFrame[OHLCV], ):
     if 'passing_time' in pivots.columns:
         raise AssertionError("'passing_time' in pivots.columns")
-    pivots['passing_time'] = pd.Series(dtype='datetime64[ns, UTC]')
+    if 'passing_time' not in pivots.columns:
+        pivots['passing_time'] = pd.Series(dtype='datetime64[ns, UTC]')
     may_have_passing = pivots[pivots['deactivated_at'].isna()]
     while len(may_have_passing) > 0:  # len(old_pivots_with_passing) < pivots[pivots['passing_time'].notna()]:
         insert_passing_time(may_have_passing, ohlcv)
-        if not may_have_passing['passing_time'].dropna().is_unique:
-            raise AssertionError("not may_have_passing['passing_time'].dropna().is_unique")
+        # if not may_have_passing['passing_time'].dropna().is_unique:
+        #     raise AssertionError("not may_have_passing['passing_time'].dropna().is_unique")
         passed_pivots = may_have_passing[may_have_passing['passing_time'].notna()]
-        pivots.loc[passed_pivots.index, 'passing_time'] = passed_pivots['passing_time']
+        pivots.loc[passed_pivots.index, ['passing_time', 'deactivated_at']] = \
+            passed_pivots[['passing_time', 'deactivated_at']]
         may_have_passing = PivotDf.new()
         for pivot_date, pivot_info in passed_pivots.iterrows():
-            pivots.loc[pivot_date, 'deactivated_at'] = pivot_info['passing_time']
-            pivot_dict = pivot_info.to_dict()
-            pivot_dict.update({
+            # pivots.loc[pivot_date, 'deactivated_at'] = pivot_info['passing_time']
+            new_pivot_dict = pivot_info.to_dict()
+            new_pivot_dict.update({
                 'date': pivot_info['passing_time'],
                 'level': pivot_info['level'],
-                'is_resistance': not pivot_info['is_resistance'],
+                'is_resistance': not bool(pivot_info['is_resistance']),
                 'original_start': pivot_info['original_start'],
                 'internal_margin': pivot_info['external_margin'],
                 'external_margin': pivot_info['internal_margin'],
-                # 'hit': 0,
+                'hit': 0,
                 'ttl': pivot_info['ttl'],
                 'return_end_time': pivot_info['passing_time'],
                 'passing_time': pd.NaT,
                 'deactivated_at': pd.NaT,
             })
-            new_pivot = PivotDf.new(pivot_dict, strict=False)
+            new_pivot = PivotDf.new(new_pivot_dict, strict=False)
             may_have_passing = PivotDf.concat(may_have_passing, new_pivot)
-            if not may_have_passing.index.is_unique:
-                raise AssertionError("not may_have_passing.index.is_unique")
-            if not may_have_passing['passing_time'].dropna().is_unique:
-                raise AssertionError("not may_have_passing['passing_time'].is_unique")
+            # if not may_have_passing.index.is_unique:
+            #     raise AssertionError("not may_have_passing.index.is_unique")
+            # if not may_have_passing['passing_time'].dropna().is_unique:
+            #     raise AssertionError("not may_have_passing['passing_time'].is_unique")
         for t_index, t_pivot in may_have_passing.iterrows():
-            with warnings.catch_warnings():
-                warnings.simplefilter(action='ignore', category=FutureWarning)
-                pivots.loc[t_index] = t_pivot
+            # with warnings.catch_warnings():
+                # warnings.simplefilter(action='ignore', category=FutureWarning)
+            pivots.loc[t_index] = t_pivot.dropna()
         # pivots = MultiTimeframePivotDf.concat(pivots, may_have_passing)
-        if not pivots.index.is_unique:
-            raise AssertionError("not pivots.index.is_unique")
-        if not pivots['passing_time'].dropna().is_unique:
-            raise AssertionError("not pivots['passing_time'].is_unique")
+        # if not pivots.index.is_unique:
+        #     raise AssertionError("not pivots.index.is_unique")
+        # if not pivots['passing_time'].dropna().is_unique:
+        #     raise AssertionError("not pivots['passing_time'].is_unique")
     return pivots.sort_index()
 
 
@@ -200,8 +196,8 @@ def update_pivot_deactivation(timeframe_pivots: pt.DataFrame['PivotDFM'], timefr
             between inner_margin and outer_margin of level
         if hit_count > 2: mark level as inactive.
     """
-    # duplicated_timeframe_pivots = duplicate_on_passing_times(timeframe_pivots, ohlcv)
-    deactivate_on_passing_times(timeframe_pivots, ohlcv)
+    duplicate_on_passing_times(timeframe_pivots, ohlcv)
+    # deactivate_on_passing_times(timeframe_pivots, ohlcv)
     inactivate_3rd_hit(timeframe_pivots, ohlcv)
     end = ohlcv.index.get_level_values(level='date').max()
     deactivate_by_ttl(timeframe_pivots, end)
@@ -581,16 +577,7 @@ def insert_pivot_info(timeframe_pivots: pt.DataFrame['PivotDFM'], ohlcva: pt.Dat
     timeframe_pivots['master_pivot_timeframe'] = pd.Series(dtype='str')
     timeframe_pivots['master_pivot_date'] = pd.Series(dtype='datetime64[ns, UTC]')
     timeframe_pivots['hit'] = 0
-    timeframe_pivots = update_pivot_deactivation(timeframe_pivots, timeframe, ohlcva)  # todo: test
     # insert_ftc(timeframe_pivots, structure_timeframe_shortlist)
-    # timeframe_pivots = AtrMovementPivotDf.cast_and_validate(timeframe_pivots)
-    # timeframe_pivots['timeframe'] = timeframe
-    # timeframe_pivots = timeframe_pivots.set_index('timeframe', append=True)
-    # timeframe_pivots = timeframe_pivots.swaplevel()
-    #     multi_timeframe_pivots: pt.DataFrame[MultiTimeframeAtrMovementPivotDFM] = \
-    #         MultiTimeframeAtrMovementPivotDf.concat(multi_timeframe_pivots, timeframe_pivots)
-    # pivots = MultiTimeframeAtrMovementPivotDf.cast_and_validate(multi_timeframe_pivots)
-
     return timeframe_pivots
 
 

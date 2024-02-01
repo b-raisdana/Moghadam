@@ -3,7 +3,7 @@ from typing import List, Annotated
 import pandas as pd
 from pandera import typing as pt
 
-from ClassicPivot import insert_pivot_info
+from ClassicPivot import insert_pivot_info, update_pivot_deactivation
 from Config import config, TopTYPE
 from PanderaDFM.AtrTopPivot import MultiTimeframeAtrMovementPivotDFM, MultiTimeframeAtrMovementPivotDf, \
     AtrMovementPivotDf
@@ -16,38 +16,8 @@ from helper.data_preparation import to_timeframe, single_timeframe, pattern_time
 from helper.helper import measure_time, date_range, date_range_to_string
 
 
-@measure_time
-def atr_movement_pivots(date_range_str: str = None, structure_timeframe_shortlist: List['str'] = None,
-                        same_time_multiple_timeframes: bool = False) -> pt.DataFrame[MultiTimeframeAtrMovementPivotDFM]:
-    """
-    for peaks:
-        (
-            (find first candle before far >= 3*ATR:
-                if there is not a peak between these 2)
-                and
-            (find first candle after far >= 1*ATR:
-                if there is not a peak between these 2)
-        ):
-            the peak is a pivot
-    :param date_range_str:
-    :param structure_timeframe_shortlist:
-    :return:
-    """
-    if structure_timeframe_shortlist is None:
-        structure_timeframe_shortlist = config.structure_timeframes
-    if date_range_str is None:
-        date_range_str = config.processing_date_range
-    mt_tops: pt.DataFrame[MultiTimeframePeakValley] = read_multi_timeframe_peaks_n_valleys(date_range_str)
-    start, end = date_range(date_range_str)
-    mt_tops_mapped_time = [to_timeframe(date, timeframe, ignore_cached_times=True, do_not_warn=True)
-                           for (timeframe, date), top_data in mt_tops.iterrows()]
-    expanded_atr_start = min(mt_tops_mapped_time)
-    expanded_atr_date_range_str = date_range_to_string(start=min(start, expanded_atr_start), end=end)
-    mt_ohlcva = read_multi_timeframe_ohlcva(expanded_atr_date_range_str)
-    base_timeframe_ohlcva = single_timeframe(mt_ohlcva, config.timeframes[0])
-
-    # filter to tops of structure timeframes
-    mt_tops = mt_tops[mt_tops.index.get_level_values('timeframe').isin(structure_timeframe_shortlist)]
+def find_multi_timeframe_atr_movement_pivots(mt_ohlcva, base_timeframe_ohlcva, mt_tops, structure_timeframe_shortlist,
+                                             same_time_multiple_timeframes):
     all_mt_tops = mt_tops.copy()
     pivots = MultiTimeframeAtrMovementPivotDf.new()
     for timeframe in structure_timeframe_shortlist[::-1]:
@@ -87,6 +57,43 @@ def atr_movement_pivots(date_range_str: str = None, structure_timeframe_shortlis
                     mt_tops = mt_tops.drop(
                         index=mt_tops[mt_tops.index.get_level_values('date') \
                             .isin(timeframe_pivots.index.get_level_values('date'))].index)
+    return pivots
+
+
+@measure_time
+def atr_movement_pivots(date_range_str: str = None, structure_timeframe_shortlist: List['str'] = None,
+                        same_time_multiple_timeframes: bool = False) -> pt.DataFrame[MultiTimeframeAtrMovementPivotDFM]:
+    """
+    for peaks:
+        (
+            (find first candle before far >= 3*ATR:
+                if there is not a peak between these 2)
+                and
+            (find first candle after far >= 1*ATR:
+                if there is not a peak between these 2)
+        ):
+            the peak is a pivot
+    :param date_range_str:
+    :param structure_timeframe_shortlist:
+    :return:
+    """
+    if structure_timeframe_shortlist is None:
+        structure_timeframe_shortlist = config.structure_timeframes
+    if date_range_str is None:
+        date_range_str = config.processing_date_range
+    mt_tops: pt.DataFrame[MultiTimeframePeakValley] = read_multi_timeframe_peaks_n_valleys(date_range_str)
+    start, end = date_range(date_range_str)
+    mt_tops_mapped_time = [to_timeframe(date, timeframe, ignore_cached_times=True, do_not_warn=True)
+                           for (timeframe, date), top_data in mt_tops.iterrows()]
+    expanded_atr_start = min(mt_tops_mapped_time)
+    expanded_atr_date_range_str = date_range_to_string(start=min(start, expanded_atr_start), end=end)
+    mt_ohlcva = read_multi_timeframe_ohlcva(expanded_atr_date_range_str)
+    base_timeframe_ohlcva = single_timeframe(mt_ohlcva, config.timeframes[0])
+
+    # filter to tops of structure timeframes
+    mt_tops = mt_tops[mt_tops.index.get_level_values('timeframe').isin(structure_timeframe_shortlist)]
+    pivots = find_multi_timeframe_atr_movement_pivots(mt_ohlcva, base_timeframe_ohlcva, mt_tops,
+                                                      structure_timeframe_shortlist, same_time_multiple_timeframes)
     insert_major_timeframe(pivots, structure_timeframe_shortlist)
     final_pivots = MultiTimeframeAtrMovementPivotDf.new()
     for timeframe in structure_timeframe_shortlist[::-1]:
@@ -94,13 +101,13 @@ def atr_movement_pivots(date_range_str: str = None, structure_timeframe_shortlis
             ohlcva: pt.DataFrame[OHLCVA] = single_timeframe(mt_ohlcva, timeframe)
             timeframe_pivots = single_timeframe(pivots, timeframe)
             timeframe_pivots = insert_pivot_info(timeframe_pivots, ohlcva, base_timeframe_ohlcva, timeframe)
+            timeframe_pivots = update_pivot_deactivation(timeframe_pivots, timeframe, ohlcva)
             timeframe_pivots = AtrMovementPivotDf.cast_and_validate(timeframe_pivots)
             timeframe_pivots['timeframe'] = timeframe
             timeframe_pivots.set_index('timeframe', append=True, inplace=True)
             timeframe_pivots = timeframe_pivots.swaplevel()
             final_pivots = MultiTimeframeAtrMovementPivotDf.concat(final_pivots, timeframe_pivots)
     final_pivots = MultiTimeframeAtrMovementPivotDf.cast_and_validate(final_pivots)
-    # pivots = insert_pivot_info(pivots, mt_ohlcva, structure_timeframe_shortlist, base_timeframe_ohlcva)
     # pivots = insert_ftc(pivots, mt_ohlcva)
     return final_pivots
 
@@ -274,12 +281,12 @@ def insert_more_significant_top(base_tops: pt.DataFrame[MultiTimeframePeakValley
     base_tops.loc[peak_or_valley_indexes, 'target'] = base_tops.loc[peak_or_valley_indexes, high_low]
     if top_type == TopTYPE.PEAK:
         base_tops.loc[peak_or_valley_indexes, ['left_crossing_time', 'left_crossing_value']] = \
-            insert_crossing2(base= base_tops.loc[peak_or_valley_indexes], target=no_timeframe_tops, direction='left',
+            insert_crossing2(base=base_tops.loc[peak_or_valley_indexes], target=no_timeframe_tops, direction='left',
                              target_compare_column='high',
                              base_target_column='target', more_significant=lambda target, base: target > base
                              )[['left_crossing_time', 'left_crossing_value']]
         base_tops.loc[peak_or_valley_indexes, ['right_crossing_time', 'right_crossing_value']] = \
-            insert_crossing2(base= base_tops.loc[peak_or_valley_indexes], target=no_timeframe_tops, direction='right',
+            insert_crossing2(base=base_tops.loc[peak_or_valley_indexes], target=no_timeframe_tops, direction='right',
                              target_compare_column='high',
                              base_target_column='target', more_significant=lambda target, base: target > base
                              )[['right_crossing_time', 'right_crossing_value']]
@@ -290,7 +297,7 @@ def insert_more_significant_top(base_tops: pt.DataFrame[MultiTimeframePeakValley
                              base_target_column='target', more_significant=lambda target, base: target < base
                              )[['left_crossing_time', 'left_crossing_value']]
         base_tops.loc[peak_or_valley_indexes, ['right_crossing_time', 'right_crossing_value']] = \
-            insert_crossing2(base= base_tops.loc[peak_or_valley_indexes], target=no_timeframe_tops, direction='right',
+            insert_crossing2(base=base_tops.loc[peak_or_valley_indexes], target=no_timeframe_tops, direction='right',
                              target_compare_column='low',
                              base_target_column='target', more_significant=lambda target, base: target < base
                              )[['right_crossing_time', 'right_crossing_value']]
