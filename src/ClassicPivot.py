@@ -22,45 +22,6 @@ class LevelDirection(Enum):
     Resistance = 'resistance'
 
 
-# def first_exited_bar(pivot: pt.DataFrame[PivotDFM], timeframe_ohlcv: pt.DataFrame[OHLCV]) \
-#         -> Tuple[Union[datetime, None], Union[float, None]]:
-#     if all(pivot['direction'] is None) != any(pivot['direction'] is None):
-#         raise Exception("'direction' should not be None for all rows or to be None for all rows.")
-#     t_ohlcv = timeframe_ohlcv.loc[pivot['activation_time']:]
-#     t_ohlcv['is_above'] = False
-#     t_ohlcv['is_below'] = False
-#     if pivot['direction'] != LevelDirection.Support:  # == LevelDirection.Resistance.value or level_direction is None:
-#         t_ohlcv['is_above'] = (
-#                 t_ohlcv['low'] > pivot[['internal_margin', 'external_margin']].min(axis='columns')
-#         )
-#     if pivot['direction'] != LevelDirection.Resistance:  # == LevelDirection.Support.value or level_direction is None:
-#         t_ohlcv['is_below'] = (
-#                 t_ohlcv['high'] < pivot[['internal_margin', 'external_margin']].max(axis='columns')
-#         )
-#     exited_bars = t_ohlcv[(t_ohlcv['is_above'] or t_ohlcv['is_below']) == True]
-#     if len(exited_bars) > 0:
-#         _first_exited_bar_time = exited_bars.index[0]
-#         value_column = 'high' if t_ohlcv.loc[_first_exited_bar_time, 'is_below'] else 'low'
-#         _first_exited_bar_value = t_ohlcv[value_column]
-#         return _first_exited_bar_time, _first_exited_bar_value
-#     else:
-#         return None, None
-#
-
-# def exit_bars(timeframe_active_pivots: pt.DataFrame[PivotDFM], timeframe_ohlcv: pt.DataFrame[OHLCV]) \
-#         -> list[Tuple[datetime, float]]:
-#     exit_bars = [
-#         first_exited_bar(start, pivot, timeframe_ohlcv)
-#         for start, pivot in timeframe_active_pivots.iterrows()
-#     ]
-#     return exit_bars
-
-
-# def passing_time(timeframe_active_pivots: pt.DataFrame[PivotDFM], timeframe_ohlcv: pt.DataFrame[OHLCV]):
-#     _exit_bars = exit_bars(timeframe_active_pivots, timeframe_ohlcv)
-#     return dict(_exit_bars).keys()
-
-
 def insert_passing_time(pivots: pt.DataFrame[PivotDFM], ohlcv: pt.DataFrame[OHLCV]):
     if 'passing_time' not in pivots.columns:
         pivots['passing_time'] = pd.Series(dtype='datetime64[ns, UTC]')
@@ -157,7 +118,7 @@ def duplicate_on_passing_times(pivots: pt.DataFrame['PivotDFM'], ohlcv: pt.DataF
             #     raise AssertionError("not may_have_passing['passing_time'].is_unique")
         for t_index, t_pivot in may_have_passing.iterrows():
             # with warnings.catch_warnings():
-                # warnings.simplefilter(action='ignore', category=FutureWarning)
+            # warnings.simplefilter(action='ignore', category=FutureWarning)
             pivots.loc[t_index] = t_pivot.dropna()
         # pivots = MultiTimeframePivotDf.concat(pivots, may_have_passing)
         # if not pivots.index.is_unique:

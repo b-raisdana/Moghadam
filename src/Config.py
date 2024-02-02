@@ -116,10 +116,10 @@ class Config():
         self.risk_per_order_percent = 0.01  # 1%
         self.capital_max_total_risk_percentage = 0.1  # 10%
 
-        # self.figure_width = 1500
-        # self.figure_height = 800
-        self.figure_width = 1800
-        self.figure_height = 900
+        self.figure_width = 1500
+        self.figure_height = 800
+        # self.figure_width = 1800
+        # self.figure_height = 900
         self.figure_font_size = 7
 
         self.pivot_number_of_active_hits = 2

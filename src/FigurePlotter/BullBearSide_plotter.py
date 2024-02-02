@@ -29,48 +29,34 @@ def plot_single_timeframe_bull_bear_side_trends(single_timeframe_ohlcva: pt.Data
     for _start, _trend in boundaries.iterrows():
         trend_peaks_n_valleys = peaks_valleys_in_range(peaks_n_valleys, _start, _trend['end'])
         included_candles = single_timeframe_ohlcva.loc[_start: _trend['end']].index
-        trend_peaks = peaks_only(trend_peaks_n_valleys)['high'].sort_index(level='date')
-        trend_valleys = valleys_only(trend_peaks_n_valleys)['low'].sort_index(level='date', ascending=False)
+        trend_peaks = peaks_only(trend_peaks_n_valleys)['high'].reset_index(level='timeframe').sort_index(level='date')
+        trend_valleys = valleys_only(trend_peaks_n_valleys)['low'].reset_index(level='timeframe') \
+            .sort_index(level='date', ascending=False)
         fill_color = 'green' if _trend['bull_bear_side'] == TREND.BULLISH.value else \
             'red' if _trend['bull_bear_side'] == TREND.BEARISH.value else 'gray'
         text = bull_bear_side_repr(_start, _trend)
         name = (f'{_trend["bull_bear_side"].replace("_TREND", "")}: '
                 f'{_start.strftime("%H:%M")}-{_trend["end"].strftime("%H:%M")}')
-        legendgroup = (f'{_trend["bull_bear_side"].replace("_TREND", "")}: '
-                       f'{_start.strftime("%H:%M")}-{_trend["end"].strftime("%H:%M")}')
+        legend_group = (f'{_trend["bull_bear_side"].replace("_TREND", "")}: '
+                        f'{_start.strftime("%H:%M")}-{_trend["end"].strftime("%H:%M")}')
         if remained_number_of_scatters > 0:
             # draw boundary
             xs = [_start] + trend_peaks.index.get_level_values('date').tolist() + \
                  [_trend['end']] + trend_valleys.index.get_level_values('date').tolist()
             ys = [single_timeframe_ohlcva.loc[_start, 'open']] + trend_peaks.values.tolist() + \
                  [single_timeframe_ohlcva.loc[_trend['end'], 'close']] + trend_valleys.values.tolist()
-            fig.add_scatter(x=xs, y=ys, fill="toself",  # fillcolor=fill_color,
-                            fillpattern=dict(fgopacity=0.5, shape='.'),
-                            name=name,
-                            text=text,
-                            line=dict(color=fill_color, width=0),
-                            mode='lines',  # +text',
-                            legendgroup=legendgroup,
-                            hoverinfo='text',
-                            )
+            fig.add_scatter(x=xs, y=ys, fill="toself", fillpattern=dict(fgopacity=0.5, shape='.'), name=name, text=text,
+                            line=dict(color=fill_color, width=0), mode='lines', legendgroup=legend_group,
+                            hoverinfo='text', )
             # adds hover info to all candles
-            fig.add_scatter(x=included_candles, y=single_timeframe_ohlcva.loc[included_candles, 'open'],
-                            name=name,
-                            mode='none',
-                            showlegend=False,
-                            text=text,
-                            legendgroup=legendgroup,
-                            hoverinfo='text')
+            fig.add_scatter(x=included_candles, y=single_timeframe_ohlcva.loc[included_candles, 'open'], name=name,
+                            mode='none', showlegend=False, text=text, legendgroup=legend_group, hoverinfo='text')
             # adds movement line
             if 'movement_start_value' in boundaries.columns:
                 fig.add_scatter(x=[_trend['movement_start_time'], _trend['movement_end_time']],
                                 y=[_trend['movement_start_value'], _trend['movement_end_value']],
-                                name=name,
-                                text=text,
-                                line=dict(color=fill_color),
-                                legendgroup=legendgroup,
-                                hoverinfo='text',
-                                )
+                                name=name, text=text, line=dict(color=fill_color), legendgroup=legend_group,
+                                hoverinfo='text', )
             else:
                 log(f'movement not found in boundaries:{boundaries.columns}', stack_trace=False)
             remained_number_of_scatters -= 2

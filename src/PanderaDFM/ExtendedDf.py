@@ -69,8 +69,10 @@ class ExtendedDf:
                         f"Indexes {_index_names} should have value in the dictionary_of_data: {dictionary_of_data}")
             unused_keys = []
             for key in dictionary_of_data.keys():
-                if not strict or key in cls.schema_data_frame_model.to_schema().columns.keys():  # _column_dtypes.keys():
+                if not strict or key in cls.schema_data_frame_model.to_schema().columns.keys():
                     if key not in _index_names:
+                        # _new[key] = pd.Series()
+                        print(f"{key}({type(dictionary_of_data[key])})={dictionary_of_data[key]}")
                         _new.loc[the_index, key] = dictionary_of_data[key]
                 elif key not in _index_names:
                     unused_keys += [key]

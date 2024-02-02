@@ -254,7 +254,7 @@ def insert_distance(base: pt.DataFrame[PeakValley], target: pt.DataFrame[OHLCV],
 #     return base
 
 
-def insert_crossing2(base: pt.DataFrame[PeakValley], target: pd.DataFrame,
+def insert_crossing2(base: pd.DataFrame, target: pd.DataFrame,
                      direction: Literal['right', 'left'],
                      more_significant,
                      target_compare_column,

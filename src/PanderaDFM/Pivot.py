@@ -15,11 +15,12 @@ from PanderaDFM.MultiTimeframe import MultiTimeframe
 class PivotDFM(BaseDFM):
     date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(
         check_name=True)  # the original time of creating pivot
+    original_start: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]  # this part activated at (passing time)
+
     level: pt.Series[float]
     is_resistance: pt.Series[bool]
     internal_margin: pt.Series[float]
     external_margin: pt.Series[float]
-    original_start: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]  # this part activated at (passing time)
     ttl: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]  # = pandera.Field(nullable=True)
     passing_time: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
     deactivated_at: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
