@@ -53,7 +53,7 @@ def plot_multi_timeframe_pivots(multi_timeframe_pivots: pt.DataFrame[MultiTimefr
                             )
 
     multi_timeframe_pivots = multi_timeframe_pivots.sort_index(level='date')
-    for (pivot_timeframe, pivot_start), pivot_info in multi_timeframe_pivots.iterrows():
+    for (pivot_timeframe, pivot_start, pivot_original_start), pivot_info in multi_timeframe_pivots.iterrows():
         pivot_name = f"Piv{pivot_timeframe}R" if pivot_info['is_resistance'] else f"Piv{pivot_timeframe}S"
         pivot_description = PivotDFM.description(pivot_start, pivot_timeframe, pivot_info)
         # add movement and return paths
@@ -74,7 +74,7 @@ def plot_multi_timeframe_pivots(multi_timeframe_pivots: pt.DataFrame[MultiTimefr
                             )
         # add a dotted line from creating time of level to the activation time
         fig.add_scatter(
-            x=[pivot_start, pivot_info['original_start']],
+            x=[pivot_start, pivot_original_start],
             y=[pivot_info['level'], pivot_info['level']],
             name=pivot_name, line=dict(color='blue', dash='dot', width=0.5), mode='lines',  # +text',
             legendgroup=pivot_name, showlegend=False, hoverinfo='none',

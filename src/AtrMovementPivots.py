@@ -54,9 +54,9 @@ def find_multi_timeframe_atr_movement_pivots(mt_ohlcva, base_timeframe_ohlcva, m
                         == len(mt_tops)):
                     AssertionError("not ((len(mt_tops.drop(...")
                 if not same_time_multiple_timeframes:
-                    mt_tops = mt_tops.drop(
+                    mt_tops.drop(
                         index=mt_tops[mt_tops.index.get_level_values('date') \
-                            .isin(timeframe_pivots.index.get_level_values('date'))].index)
+                            .isin(timeframe_pivots.index.get_level_values('date'))].index, inplace=True)
     return pivots
 
 
@@ -100,12 +100,11 @@ def atr_movement_pivots(date_range_str: str = None, structure_timeframe_shortlis
         if timeframe in pivots.index.get_level_values(level='timeframe').unique():
             ohlcva: pt.DataFrame[OHLCVA] = single_timeframe(mt_ohlcva, timeframe)
             timeframe_pivots = single_timeframe(pivots, timeframe)
-            timeframe_pivots = insert_pivot_info(timeframe_pivots, ohlcva, base_timeframe_ohlcva, timeframe)
+            timeframe_pivots = insert_pivot_info(timeframe_pivots, ohlcva, timeframe)
             timeframe_pivots = update_pivot_deactivation(timeframe_pivots, timeframe, ohlcva)
             timeframe_pivots = AtrMovementPivotDf.cast_and_validate(timeframe_pivots)
             timeframe_pivots['timeframe'] = timeframe
-            timeframe_pivots.set_index('timeframe', append=True, inplace=True)
-            timeframe_pivots = timeframe_pivots.swaplevel()
+            timeframe_pivots = timeframe_pivots.reset_index().set_index(['timeframe', 'date', 'original_start'])
             final_pivots = MultiTimeframeAtrMovementPivotDf.concat(final_pivots, timeframe_pivots)
     final_pivots = MultiTimeframeAtrMovementPivotDf.cast_and_validate(final_pivots)
     # pivots = insert_ftc(pivots, mt_ohlcva)

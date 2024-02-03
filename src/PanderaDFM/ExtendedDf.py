@@ -72,7 +72,7 @@ class ExtendedDf:
                 if not strict or key in cls.schema_data_frame_model.to_schema().columns.keys():
                     if key not in _index_names:
                         # _new[key] = pd.Series()
-                        print(f"{key}({type(dictionary_of_data[key])})={dictionary_of_data[key]}")
+                        # print(f"{key}({type(dictionary_of_data[key])})={dictionary_of_data[key]}")
                         _new.loc[the_index, key] = dictionary_of_data[key]
                 elif key not in _index_names:
                     unused_keys += [key]
@@ -83,7 +83,7 @@ class ExtendedDf:
             except pandera.errors.SchemaErrors as e:
                 if ("coerce_dtype('int64')         [nan]".replace(" ", "")
                         in str(e).replace(" ", "")):
-                    raise TypeError("Use pt.Series[pd.Int32Dtype] instead of pt.Series[int]"
+                    raise TypeError("Use pt.Series[pd.Int8Dtype] instead of pt.Series[int]"
                                     " to allow nullable int series: " + str(e))
                 else:
                     raise e

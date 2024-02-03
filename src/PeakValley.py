@@ -299,17 +299,13 @@ def insert_crossing2(base: pd.DataFrame, target: pd.DataFrame,
         base.loc[:, f'{direction}_crossing_value'] = pd.Series(dtype=float)
     base.loc[:, 'iloc'] = range(len(base))
     remained_bases = base.copy()
-    try:
-        base.reset_index(level='date', inplace=True)
-    except Exception as e:
-        nop = 1
-        raise e
+    base.reset_index(inplace=True)
     base.set_index('iloc', inplace=True)
     drop_base_without_crossing2(bases_to_compare=remained_bases, base_target_column=base_target_column, target=target,
                                 more_significant=more_significant, direction=direction,
                                 target_compare_column=target_compare_column)
     while len(remained_bases) > 0:
-        no_repeat_base_indexes = ~remained_bases.index.duplicated(keep='first')
+        no_repeat_base_indexes = ~remained_bases.index.get_level_values('date').duplicated(keep='first')
         bases_to_compare = remained_bases[no_repeat_base_indexes]
         remained_bases = remained_bases[~no_repeat_base_indexes]
         bases_to_compare['target_index'] = nearest_match(bases_to_compare.index.get_level_values('date'), target.index,
@@ -341,7 +337,10 @@ def insert_crossing2(base: pd.DataFrame, target: pd.DataFrame,
             base.loc[
                 bases_with_known_crossing_target.index, [f'{direction}_crossing_time', f'{direction}_crossing_value']] = \
                 bases_with_known_crossing_target[[f'{direction}_crossing_time', f'{direction}_crossing_value']]
-    base.set_index('date', inplace=True)
+    if 'original_start' in base.columns:
+        base.set_index(['date', 'original_start'], inplace=True)
+    else:
+        base.set_index('date', inplace=True)
     return base
 
 
@@ -377,7 +376,7 @@ def drop_base_without_crossing2(bases_to_compare, target, base_target_column, mo
     if more_significant(target=2, base=1):
         # if target_compare_column != 'high':
         #     pass
-            # raise AssertionError("target_compare_column != 'high'")
+        # raise AssertionError("target_compare_column != 'high'")
         if direction == 'left':
             target['max_value'] = target[target_compare_column].rolling(window=n, min_periods=0, ).max()
             target['max_value'] = target['max_value'].shift(1)
@@ -392,7 +391,7 @@ def drop_base_without_crossing2(bases_to_compare, target, base_target_column, mo
     else:  # more_significant(target=1, base=2)
         # if target_compare_column != 'low':
         #     pass
-            # raise AssertionError("target_compare_column != 'low'")
+        # raise AssertionError("target_compare_column != 'low'")
         if direction == 'left':
             target['min_value'] = target[target_compare_column].rolling(window=n, min_periods=0).min()
             target['min_value'] = target['min_value'].shift(1)
@@ -470,16 +469,16 @@ def find_crossing_single_iteration(bases_to_compare, base_compare_column, target
     #     raise AssertionError("len(adjacent_target_dates) != len(base_dates)")
     bases_to_compare['adjacent_target_date'] = adjacent_target_dates
     bases_with_adjacent_target = bases_to_compare[bases_to_compare['adjacent_target_date'].notna()]
-    # adjacent_target_dates = [target_date for target_date in adjacent_target_dates if pd.notna(target_date)]
-    adjacent_target_dates = bases_with_adjacent_target['adjacent_target_date']
+    bases_with_unique_adjacent_target = \
+        bases_with_adjacent_target[~(bases_with_adjacent_target['adjacent_target_date'].duplicated(keep='first'))]
+    adjacent_target_dates = \
+        bases_with_unique_adjacent_target['adjacent_target_date'].tolist()
     if len(adjacent_target_dates) != len(set(adjacent_target_dates)):
         raise ValueError("find_crossings only implemented for unique adjacent_target_index!")
-    # prepare for iteration
-
     # mark the adjacent target with base information
-    target.loc[adjacent_target_dates, f'{reverse}_base_index'] = bases_with_adjacent_target.index
+    target.loc[adjacent_target_dates, f'{reverse}_base_index'] = bases_with_unique_adjacent_target.index
     target.loc[adjacent_target_dates, reverse + '_base_target'] = \
-        bases_with_adjacent_target[base_compare_column].tolist()
+        bases_with_unique_adjacent_target[base_compare_column].tolist()
     # propagate
     if direction == 'right':
         target['left_base_index'] = target['left_base_index'].ffill()
@@ -495,21 +494,14 @@ def find_crossing_single_iteration(bases_to_compare, base_compare_column, target
         date_chooser = 'min'
     else:
         date_chooser = 'max'
-    # if 'target_date' not in target.columns:
     target['target_date'] = target.index
     crossed_bases = target[target[f'{direction}_crossing']] \
         .groupby(by=[f'{reverse}_base_index']).agg({'target_date': date_chooser})
-    # if not crossed_bases.index.is_unique:
-    #     raise AssertionError("not crossed_bases.index.is_unique")
-    # if not crossed_bases['target_date'].is_unique:
-    #     raise AssertionError("not crossed_bases['target_date'].is_unique")
-    # if not target.index.is_unique:
-    #     raise AssertionError("not target.index.is_unique")
     if bases_shall_have_crossing:
         if crossed_bases['target_date'].isna().any().any():
             raise AssertionError("crossed_bases['target_date'].isna().any().any()")
-    target.loc[crossed_bases['target_date'], 'crossed_base_index'] = crossed_bases.index
     if return_both:
+        target.loc[crossed_bases['target_date'], 'crossed_base_index'] = crossed_bases.index
         return crossed_bases, target
     else:
         bases_to_compare.loc[crossed_bases.index, 'target_date'] = crossed_bases['target_date']
