@@ -26,13 +26,14 @@ class Pivot2DFM(BaseDFM):
     # the master pivot which this pivot is overlapping with
     master_pivot_timeframe: pt.Series[str] = pandera.Field(nullable=True)
     master_pivot_date: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
+    major_timeframe: pt.Series[bool]
 
     # ftc_base_pattern_timeframes: pt.Series[List[str]] = pandera.Field(nullable=True)
     # ftc_base_pattern_dates: pt.Series[List[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]] = pandera.Field(nullable=True)
 
     @staticmethod
     def description(start_time: datetime, pivot_timeframe: str, pivot_info) -> str:
-        output = (f"Pivot {pivot_info['level']:.0f}={pivot_timeframe}@{start_time.strftime('%m/%d.%H:%M')}"
+        output = (f"Pivot {'R' if pivot_info['is_resistance'] else 'S'}{pivot_info['level']:.0f}={pivot_timeframe}@{start_time.strftime('%m/%d.%H:%M')}"
                   f"[{pivot_info['internal_margin']:.0f}-{pivot_info['external_margin']:.0f}](")
 
         if hasattr(pivot_info, 'movement_start_value'):

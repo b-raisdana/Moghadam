@@ -15,7 +15,6 @@ class AtrMovementPivotDFM(Pivot2DFM):
     return_end_time: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
     movement_start_value: pt.Series[float]
     return_end_value: pt.Series[float]
-    major_timeframe: pt.Series[bool]
 
 
 class AtrMovementPivotDf(ExtendedDf):
