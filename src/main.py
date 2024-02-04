@@ -47,7 +47,7 @@ if __name__ == "__main__":
     # #
     # # generate_multi_timeframe_bull_bear_side_pivots(config.processing_date_range)
     # # _pivots = read_multi_timeframe_bull_bear_side_pivots(config.processing_date_range)
-    plot_multi_timeframe_pivots(_pivots[_pivots['major_timeframe'].astype(bool)], group_by='original_start')
+    plot_multi_timeframe_pivots(_pivots[_pivots['major_timeframe'].astype(bool)], group_by='timeframe')
     # exit(0)
     # generate_multi_timeframe_base_patterns()
 
