@@ -46,7 +46,7 @@ def calculate_strength(peaks_or_valleys: pt.DataFrame[PeakValley], top_type: Top
 
 
 def insert_distance(base: pt.DataFrame[PeakValley], target: pt.DataFrame[OHLCV], top_type: TopTYPE,
-                    direction: Literal['right', 'left'], base_compare_column: str = None) -> pt.DataFrame[PeakValley]:
+                    direction: Literal['right', 'left']) -> pt.DataFrame[PeakValley]:
     """
     Calculates the distance of OHLCV data points from peaks or valleys in a specified direction.
 
@@ -69,11 +69,11 @@ def insert_distance(base: pt.DataFrame[PeakValley], target: pt.DataFrame[OHLCV],
     - right_crossing_value or left_crossing_value: Value of the OHLCV data at the crossing point in the specified direction.
     """
     if top_type == TopTYPE.PEAK:  # todo: test
-        base = insert_crossing2(base=base, target=target, direction=direction, base_target_column=base_compare_column,
-                                target_compare_column='high')
+        base = insert_crossing2(base=base, target=target, direction=direction, base_target_column='high',
+                                target_compare_column='high', more_significant=lambda target, base: target > base)
     else:
-        base = insert_crossing2(base=base, target=target, direction=direction, base_target_column=base_compare_column,
-                                target_compare_column='low')
+        base = insert_crossing2(base=base, target=target, direction=direction, base_target_column='low',
+                                target_compare_column='low',  more_significant=lambda target, base: target < base)
     valid_crossing_times = base[base[f'{direction}_crossing_time'].notna()].index
     base.loc[valid_crossing_times, direction + '_distance'] = \
         abs(pd.to_datetime(valid_crossing_times) - base.loc[valid_crossing_times, f'{direction}_crossing_time'])
@@ -374,9 +374,6 @@ def drop_base_without_crossing2(bases_to_compare, target, base_target_column, mo
         bases_to_compare['target_index'] = nearest_match(bases_to_compare.index.get_level_values('date'), target.index,
                                                          direction='forward', shift=0)
     if more_significant(target=2, base=1):
-        # if target_compare_column != 'high':
-        #     pass
-        # raise AssertionError("target_compare_column != 'high'")
         if direction == 'left':
             target['max_value'] = target[target_compare_column].rolling(window=n, min_periods=0, ).max()
             target['max_value'] = target['max_value'].shift(1)

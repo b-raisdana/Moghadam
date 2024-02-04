@@ -8,22 +8,10 @@ from pandera import typing as pt
 from Config import config
 from MetaTrader import MT
 from PanderaDFM.OHLCV import MultiTimeframeOHLCV, OHLCV
+from fetch_ohlcv import fetch_ohlcv_by_range
 from helper.data_preparation import read_file, single_timeframe, cast_and_validate, trim_to_date_range, to_timeframe, \
     after_under_process_date, multi_timeframe_times_tester, times_tester, empty_df, concat
-from fetch_ohlcv import fetch_ohlcv_by_range
 from helper.helper import measure_time, date_range, date_range_to_string
-
-
-# # @measure_time
-# def bar_times_in_date_range(date_range_str, timeframe):
-#     start, end = date_range(date_range_str)
-#     first_bar_time = to_timeframe(start, timeframe, ignore_cached_times=True)
-#     if first_bar_time < start:
-#         first_bar_time += pd.to_timedelta(timeframe)
-#     bar_times = []
-#     while first_bar_time <= end:
-#         bar_times.append(first_bar_time)
-#         first_bar_time += pd.to_timedelta(timeframe)
 
 
 def core_generate_multi_timeframe_ohlcv(date_range_str: str, file_path: str = None):
@@ -31,11 +19,12 @@ def core_generate_multi_timeframe_ohlcv(date_range_str: str, file_path: str = No
         file_path = config.path_of_data
     biggest_timeframe = config.timeframes[-1]
     start, end = date_range(date_range_str)
-    round_to_biggest_timeframe_end = to_timeframe(end, biggest_timeframe, ignore_cached_times=True)
+    round_to_biggest_timeframe_end = to_timeframe(end, biggest_timeframe, ignore_cached_times=True, do_not_warn=True)
     if round_to_biggest_timeframe_end >= start:
-        extended_end = (to_timeframe(end, biggest_timeframe, ignore_cached_times=True) + pd.to_timedelta(
-            biggest_timeframe) -
-                        pd.to_timedelta(config.timeframes[0]))
+        extended_end = (
+                    to_timeframe(end, biggest_timeframe, ignore_cached_times=True, do_not_warn=True) + pd.to_timedelta(
+                biggest_timeframe) -
+                    pd.to_timedelta(config.timeframes[0]))
         extended_timerange_str = date_range_to_string(start=start, end=extended_end)
     else:
         extended_timerange_str = date_range_str
@@ -192,7 +181,7 @@ def core_generate_ohlcv(date_range_str: str = None, file_path: str = None, base_
         date_range_str = config.processing_date_range
     if file_path is None:
         file_path = config.path_of_data
-    raw_ohlcv = fetch_ohlcv_by_range(date_range_str,base_timeframe=base_timeframe)
+    raw_ohlcv = fetch_ohlcv_by_range(date_range_str, base_timeframe=base_timeframe)
     df = pd.DataFrame(raw_ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
     df['date'] = pd.to_datetime(df['timestamp'], unit='ms', utc=True)
     df = df.set_index('date')

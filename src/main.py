@@ -19,7 +19,7 @@ from helper.helper import date_range_to_string
 
 if __name__ == "__main__":
     # config.processing_date_range = date_range_to_string(days=5, end=datetime(year=2023, month=11, day=18))
-    config.processing_date_range = date_range_to_string(days=5, end=datetime(year=2023, month=11, day=18))
+    config.processing_date_range = date_range_to_string(days=2)#, end=datetime(year=2023, month=11, day=18))
     #
     #     file_path: str = config.path_of_data
     #     today_morning = today_morning()

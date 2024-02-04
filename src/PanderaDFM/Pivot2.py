@@ -26,7 +26,7 @@ class Pivot2DFM(BaseDFM):
     # the master pivot which this pivot is overlapping with
     master_pivot_timeframe: pt.Series[str] = pandera.Field(nullable=True)
     master_pivot_date: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
-    major_timeframe: pt.Series[bool]
+    major_timeframe: pt.Series[bool] = pandera.Field(nullable=True)
 
     # ftc_base_pattern_timeframes: pt.Series[List[str]] = pandera.Field(nullable=True)
     # ftc_base_pattern_dates: pt.Series[List[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]] = pandera.Field(nullable=True)

@@ -62,8 +62,8 @@ def deactivate_by_ttl(pivots: pt.DataFrame[Pivot2DFM], end: datetime):
         pivots['deactivated_at'].isna()
         & (pivots['ttl'] < end)
         ].index
-    if len(ttl_expired) > 0:
-        pass  # todo: test
+
+
     pivots.loc[ttl_expired, 'deactivated_at'] = pivots.loc[ttl_expired, 'ttl']
 
 
