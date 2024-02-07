@@ -1,19 +1,15 @@
 import sys
 from datetime import datetime
 
+from AtrMovementPivots import atr_movement_pivots, read_multi_timeframe_atr_movement_pivots, \
+    generate_multi_timeframe_atr_movement_pivots
 from BasePattern import read_multi_timeframe_base_patterns
 from BullBearSide import read_multi_timeframe_bull_bear_side_trends
-from BullBearSidePivot import read_multi_timeframe_bull_bear_side_pivots, generate_multi_timeframe_bull_bear_side_pivots
-from ClassicPivot import read_classic_pivots
 from Config import config
-from FigurePlotter.BasePattern_plotter import plot_multi_timeframe_base_pattern
-from FigurePlotter.BullBearSide_plotter import plot_multi_timeframe_bull_bear_side_trends
-from FigurePlotter.PeakValley_plotter import plot_multi_timeframe_peaks_n_valleys
-from FigurePlotter.Pivot_plotter import plot_multi_timeframe_pivots, plot_multi_timeframe_pivots
-from PeakValley import read_multi_timeframe_peaks_n_valleys
-from AtrMovementPivots import atr_movement_pivots
-from atr import read_multi_timeframe_ohlcva
+from FigurePlotter.Pivot_plotter import plot_multi_timeframe_pivots
+from ftc import multi_timeframe_ftc
 from helper.helper import date_range_to_string
+from ohlcv import read_multi_timeframe_ohlcv
 
 # from data_preparation import d_types
 
@@ -36,25 +32,35 @@ if __name__ == "__main__":
     #
     #     exit(0)
 
-
-    # ohlcva = read_multi_timeframe_ohlcva()
+    ohlcv = read_multi_timeframe_ohlcv(config.processing_date_range)
     # _peaks_and_valleys = read_multi_timeframe_peaks_n_valleys()
     # # plot_multi_timeframe_peaks_n_valleys(_peaks_and_valleys, config.processing_date_range)
     # # exit(0)
     # bull_bear_side = read_multi_timeframe_bull_bear_side_trends()
     # plot_multi_timeframe_bull_bear_side_trends(ohlcva, _peaks_and_valleys, bull_bear_side)
-    _pivots = atr_movement_pivots(same_time_multiple_timeframes=True)
+    # generate_multi_timeframe_atr_movement_pivots(config.processing_date_range)
+    pivots = read_multi_timeframe_atr_movement_pivots(config.processing_date_range)
+    major_pivots = pivots[pivots['major_timeframe']]
     # #
     # # generate_multi_timeframe_bull_bear_side_pivots(config.processing_date_range)
     # # _pivots = read_multi_timeframe_bull_bear_side_pivots(config.processing_date_range)
-    plot_multi_timeframe_pivots(_pivots[_pivots['major_timeframe'].astype(bool)], group_by='timeframe')
+    trends = read_multi_timeframe_bull_bear_side_trends(config.processing_date_range)
     # exit(0)
     # generate_multi_timeframe_base_patterns()
 
-    # _base_patterns = read_multi_timeframe_base_patterns()
+    base_patterns = read_multi_timeframe_base_patterns()
     # # orders_df = pd.read_csv(
     # #     os.path.join(config.path_of_data,
     # #                  f'BasePatternStrategy.orders.0Rzb5KJmWrXfRsnjTE1t9g.24-01-11.00-00T24-01-12.23-59.csv'))
     # plot_multi_timeframe_base_pattern(_base_patterns, ohlcva)  # , orders_df=orders_df)
+    multi_timeframe_ftc(
+        mt_pivot=major_pivots,
+        mt_frame_bbs_trend=trends,
+        mt_ohlcv = ohlcv,
+        multi_timeframe_base_patterns = base_patterns,
+        )
+
+    plot_multi_timeframe_pivots(major_pivots[major_pivots['major_timeframe'].astype(bool)], group_by='timeframe')
+
     sys.exit(0)
     test_strategy(cash=100000)

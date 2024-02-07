@@ -92,9 +92,9 @@ def peak_or_valley_pivots_level_n_margins(timeframe_pivots: pd.DataFrame, pivot_
     timeframe_pivots.loc[pivot_time_peaks_or_valleys.index, 'level'] = \
         timeframe_pivots.loc[pivot_time_peaks_or_valleys.index, 'level_y']
     timeframe_pivots = timeframe_pivots.drop('level_y', axis='columns')
-    if 'level' not in timeframe_pivots.columns:
+    if config.check_assertions and 'level' not in timeframe_pivots.columns:
         raise AssertionError("'level' not in timeframe_pivots.columns")
-    if timeframe_pivots[['level']].isna().any().any():
+    if config.check_assertions and timeframe_pivots[['level']].isna().any().any():
         raise AssertionError("timeframe_pivots[['level']].isna().any().any()")
     timeframe_pivots = pivot_margins(timeframe_pivots, _type, pivot_time_peaks_or_valleys, candle_body_source,
                                      breakout_margin_atr)
@@ -147,7 +147,7 @@ def pivot_margins(pivots: pd.DataFrame, _type: TopTYPE, pivot_peaks_or_valleys: 
     else:
         pivots.loc[pivot_times, 'external_margin'] = \
             pivots.loc[pivot_times, 'level'] - pivots.loc[pivot_times, 'breakout_margin_atr']
-    if pivots[['internal_margin', 'external_margin']].isna().any().any():
+    if config.check_assertions and pivots[['internal_margin', 'external_margin']].isna().any().any():
         raise AssertionError("pivots[['internal_margin', 'external_margin']].isna().any().any()")
     return pivots
 
@@ -210,7 +210,7 @@ def zz_pivot_margins(pivots: pd.DataFrame, _type: TopTYPE, pivot_peaks_or_valley
     else:
         pivots.loc[pivot_times, 'external_margin'] = \
             pivots.loc[pivot_times, 'level'] - pivots.loc[pivot_times, 'breakout_margin_atr']
-    if pivots[['internal_margin', 'external_margin']].isna().any().any():
+    if config.check_assertions and pivots[['internal_margin', 'external_margin']].isna().any().any():
         raise AssertionError("pivots[['internal_margin', 'external_margin']].isna().any().any()")
     return pivots
 
@@ -274,7 +274,7 @@ def zz_pivot_margins(pivots: pd.DataFrame, _type: TopTYPE, pivot_peaks_or_valley
     else:
         pivots.loc[pivot_times, 'external_margin'] = \
             pivots.loc[pivot_times, 'level'] - pivots.loc[pivot_times, 'breakout_margin_atr']
-    if pivots[['internal_margin', 'external_margin']].isna().any().any():
+    if config.check_assertions and pivots[['internal_margin', 'external_margin']].isna().any().any():
         raise AssertionError("pivots[['internal_margin', 'external_margin']].isna().any().any()")
     return pivots
 

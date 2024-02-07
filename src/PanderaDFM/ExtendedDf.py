@@ -8,8 +8,8 @@ import pandera
 from pandera import typing as pt, DataType
 
 from Config import config
-from helper.data_preparation import concat, read_with_timeframe, after_under_process_date, datarange_is_not_cachable, \
-    all_annotations
+from helper.data_preparation import concat, after_under_process_date, datarange_is_not_cachable, \
+    all_annotations, read_without_index
 from helper.helper import log_d, log_w
 
 
@@ -42,7 +42,7 @@ class ExtendedDf:
 
     @classmethod
     def new(cls, dictionary_of_data: dict = None, strict: bool = True) -> pt.DataFrame['BasePanderaDFM']:
-        if cls._sample_df is None:
+        if config.check_assertions and cls._sample_df is None:
             raise AssertionError(f"{cls}._sample_obj should be defined before!")
         if cls._empty_df is None:
             _empty = cls._sample_df.drop(cls._sample_df.index)
@@ -97,7 +97,7 @@ class ExtendedDf:
         if not zero_size_allowed:
             if len(df) == 0:
                 raise Exception('Zero size data not allowed in parameters!')
-        if cls.schema_data_frame_model is None:
+        if config.check_assertions and cls.schema_data_frame_model is None:
             raise AssertionError(f"Define cls.schema_data_frame_model in child class:{cls.__name__}")
         try:
             result = cls.schema_data_frame_model.validate(df)
@@ -159,19 +159,26 @@ class ExtendedDf:
             date_range_str = config.processing_date_range
         df = None
         try:
-            df = read_with_timeframe(data_frame_type, date_range_str, file_path, n_rows, skip_rows)
+            df = cls.read_and_index(data_frame_type, date_range_str, file_path, n_rows, skip_rows)
         except FileNotFoundError as e:
             pass
         if zero_size_allowed is None:
             zero_size_allowed = after_under_process_date(date_range_str)
         if df is None or not cls.cast_and_validate(df, return_bool=True, zero_size_allowed=zero_size_allowed):
             generator(date_range_str)
-            df = read_with_timeframe(data_frame_type, date_range_str, file_path, n_rows, skip_rows)
+            df = cls.read_and_index(data_frame_type, date_range_str, file_path, n_rows, skip_rows)
             df = cls.cast_and_validate(df, zero_size_allowed=zero_size_allowed)
         else:
             df = cls.cast_and_validate(df, zero_size_allowed=zero_size_allowed)
         if datarange_is_not_cachable(date_range_str):
             os.remove(os.path.join(file_path, f'{data_frame_type}.{date_range_str}.zip'))
+        return df
+
+    @classmethod
+    def read_and_index(cls, data_frame_type, date_range_str, file_path, n_rows, skip_rows):
+        df = read_without_index(data_frame_type, date_range_str, file_path, n_rows, skip_rows)
+        index_names = cls.index_names()
+        df.set_index(index_names, inplace=True)
         return df
 
     @classmethod

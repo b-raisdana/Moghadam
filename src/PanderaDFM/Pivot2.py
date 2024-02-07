@@ -22,7 +22,7 @@ class Pivot2DFM(BaseDFM):
     ttl: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]  # = pandera.Field(nullable=True)
     passing_time: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
     deactivated_at: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
-    hit: pt.Series[pd.Int8Dtype] = pandera.Field(nullable=True)
+    hit: pt.Series[float] = pandera.Field(nullable=True)
     # the master pivot which this pivot is overlapping with
     master_pivot_timeframe: pt.Series[str] = pandera.Field(nullable=True)
     master_pivot_date: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)

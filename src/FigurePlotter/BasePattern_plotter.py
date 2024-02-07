@@ -86,7 +86,7 @@ def draw_band_orders_df(orders_df: pd.DataFrame, fig: plotly.graph_objs.Figure,
     ), 'info_order_group_id'].unique().tolist()
     for order_group_id in order_group_ids:
         original_order, stop_loss_order, take_profit_order = df_triple_orders_of_group(order_group_id, orders_df)
-        if len(original_order) == 0 or len(stop_loss_order) == 0 or len(take_profit_order) == 0:
+        if config.check_assertions and len(original_order) == 0 or len(stop_loss_order) == 0 or len(take_profit_order) == 0:
             raise AssertionError("original_order.empty or stop_loss_order.empty or take_profit_order.empty")
         start = datetime.strptime(original_order['date'], "%Y-%m-%d %H:%M:%S%z")
         started = (original_order['status'] == "Completed")
@@ -97,12 +97,13 @@ def draw_band_orders_df(orders_df: pd.DataFrame, fig: plotly.graph_objs.Figure,
             end, end_price, ended = order_end_information(end_of_dates, end_of_prices, stop_loss_order,
                                                           take_profit_order)
             side = OrderSide.Buy if float(original_order['created_size']) > 0 else OrderSide.Sell
-            if side == OrderSide.Buy:
-                if not float(original_order['created_size']) > 0:
-                    raise AssertionError("not original_order['created_size'] > 0")
-            else:
-                if not float(original_order['created_size']) < 0:
-                    raise AssertionError("not original_order['created_size'] < 0")
+            if config.check_assertions:
+                if side == OrderSide.Buy:
+                    if not float(original_order['created_size']) > 0:
+                        raise AssertionError("not original_order['created_size'] > 0")
+                else:
+                    if not float(original_order['created_size']) < 0:
+                        raise AssertionError("not original_order['created_size'] < 0")
             draw_base_pattern_orders(fig, legend_group, side, start, end, start_price, end_price, stop_loss_price,
                                      take_profit_price, float(original_order['created_size']),
                                      start.strftime("%m-%d %H:%M"), ended, order_group_id)
@@ -124,7 +125,7 @@ def order_end_information(end_of_dates, end_of_prices, stop_loss_order, take_pro
         end = end_of_dates
         end_price = end_of_prices
         ended = False
-    if not end_price > 0:
+    if config.check_assertions and not end_price > 0:
         raise AssertionError("not end_price > 0")
     return end, end_price, ended
 
@@ -157,7 +158,7 @@ def draw_base_pattern_orders(fig, legend_group: str, side: OrderSide, start: dat
         f"PNL{'???' if not ended else ''}{pnl_value:.1f}",  # /{pnl_percent}"
     ]
     )
-    if abs(pnl_value) < 0.5:
+    if config.check_assertions and abs(pnl_value) < 0.5:
         raise AssertionError("abs(pnl_value)")
     # draw stop-loss box
     xs = [start, end, end, start]

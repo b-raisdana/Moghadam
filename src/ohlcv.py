@@ -86,7 +86,7 @@ def read_daily_multi_timeframe_ohlcv(day: datetime) -> MultiTimeframeOHLCV:
     return core_read_multi_timeframe_ohlcv(day_date_range_str)
 
 
-def read_multi_timeframe_ohlcv(date_range_str: str) -> MultiTimeframeOHLCV:
+def read_multi_timeframe_ohlcv(date_range_str: str) -> pt.DataFrame[MultiTimeframeOHLCV]:
     if date_range_str is None:
         date_range_str = config.processing_date_range
     result = read_file(date_range_str, 'multi_timeframe_ohlcv', generate_multi_timeframe_ohlcv,

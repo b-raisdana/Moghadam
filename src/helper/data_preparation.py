@@ -267,13 +267,36 @@ def read_with_timeframe(data_frame_type: str, date_range_str: str, file_path: st
     """
     if date_range_str is None:
         date_range_str = config.processing_date_range
+    df = read_by_date(data_frame_type, date_range_str, file_path, n_rows, skip_rows)
+    # df.set_index('date', inplace=True)
+
+    if 'multi_timeframe' in data_frame_type:
+        df.set_index('timeframe', append=True, inplace=True)
+        df = df.swaplevel()
+
+    return df
+
+
+def read_without_index(data_frame_type, date_range_str, file_path, n_rows, skip_rows):
     file_name = os.path.join(file_path, f'{data_frame_type}.{date_range_str}.zip')
     try:
         df = pd.read_csv(file_name, sep=',', header=0,
-                         index_col='date', parse_dates=['date'], skiprows=skip_rows, nrows=n_rows)
+                         # index_col='date', parse_dates=['date'],
+                         skiprows=skip_rows, nrows=n_rows)
     except BadZipFile:
         raise Exception(f'{file_name} is not a zip file!')
 
+    return df
+
+
+def read_by_date(data_frame_type, date_range_str, file_path, n_rows, skip_rows):
+    file_name = os.path.join(file_path, f'{data_frame_type}.{date_range_str}.zip')
+    try:
+        df = pd.read_csv(file_name, sep=',', header=0,
+                         index_col='date', parse_dates=['date'],
+                         skiprows=skip_rows, nrows=n_rows)
+    except BadZipFile:
+        raise Exception(f'{file_name} is not a zip file!')
     # Convert the 'date' index to UTC if it's timezone-unaware
     if len(df) > 0:
         if not hasattr(df.index, 'tz'):
@@ -281,14 +304,9 @@ def read_with_timeframe(data_frame_type: str, date_range_str: str, file_path: st
         if df.index.tz is None:
             df.index = df.index.tz_localize('UTC')
 
-    if 'multi_timeframe' in data_frame_type:
-        df = df.set_index('timeframe', append=True, )
-        df = df.swaplevel()
-
     return df
 
 
-# @measure_time
 def single_timeframe(multi_timeframe_data: pt.DataFrame[MultiTimeframe_Type], timeframe) -> pd.DataFrame:
     if 'timeframe' not in multi_timeframe_data.index.names:
         raise Exception(
@@ -785,29 +803,27 @@ def empty_df(model_class: Type[Pandera_DFM_Type]) -> pd.DataFrame:
 
 
 # def nearest_match(needles: Axes, reference: Axes, direction: str, start=None, end=None, shift: int = 1) -> Axes:
-def nearest_match(needles: Axes, reference: Axes, direction: str, shift: int = 1) -> Axes:
+def nearest_match(needles: Axes, reference: Axes, direction: Literal['left', 'right'], shift: int = 1) -> Axes:
     """
-    it will merge the indexes for both forward and backward and return. missing indexes in forward will be filled
-    forward and missing indexes of backward will be filled backward.\n
+    it will merge the indexes for both needles and referance and return. missing indexes in needles will be filled
+    forward and missing indexes of reference will be filled backward.\n
     to find adjacent or nearest PREVIOUS row we can use as:\n
-    mapped_list = shift_over(needles, reference, 'forward')\n
+    mapped_list = shift_over(needles, reference, 'left')\n
     to find adjacent or nearest NEXT row we can use as:\n
-    mapped_list = shift_over(needles, reference, 'backward')
+    mapped_list = shift_over(needles, reference, 'right')
 
     :param shift:
     :param needles: needles list
     :param reference: reference list
-    :param direction: should be either "forward" or "backward". use "forward" to get the PREVIOUS reference for needles and
-    use "backward" to get the NEXT reference for needles
-    :return: Axes indexed as the combination of forward and backward indexes and 2 columns:
-        'forward': forward input mapped to indexes and forward filled.
-        'backward': backward input mapped to indexes and backward filled.
+    :param direction: should be either "left" or "right". use "left" to get the PREVIOUS reference for needles and
+    use "right" to get the NEXT reference for needles
+    :return: ...
 
     Example:\n
     reference.index	    1 2 3 5 10 20       \n
     needles.index    	1 2 3 6 9 15 20     \n
 
-    shift_over(needles, reference, 'forward'):
+    shift_over(needles, reference, 'left'):
     mapped_list.index   1  2 3 5 6 9  10 15 20      \n
     forward(reference)  NA 1 2 3 5 5  5  10 10      \n
     backward(needles)   2  3 6 6 9 15 15 20 NA      \n
@@ -815,7 +831,7 @@ def nearest_match(needles: Axes, reference: Axes, direction: str, shift: int = 1
                         1  2 3 6 9 15 20 \n
                         NA 1 2 5 5 10 10
 
-    shift_over(needles, reference, 'backward'):
+    shift_over(needles, reference, 'right'):
     mapped_list.index   1  2 3  5  6  9 10 15 20
     forward(needles)    NA 1 2  3  3  6  9  9 15
     backward(reference) 2  3 5 10 10 10 20 20 NA
@@ -825,14 +841,14 @@ def nearest_match(needles: Axes, reference: Axes, direction: str, shift: int = 1
     """
     # Todo: replace with pd.merge_asof
     direction = direction.lower()
-    if direction == 'forward':
+    if direction == 'left':
         forward = reference
         backward = needles
-    elif direction == 'backward':
+    elif direction == 'right':
         forward = needles
         backward = reference
     else:
-        raise Exception('side should be either "forward" or "backward".')
+        raise Exception(f'direction:{direction} should be either "left" or "right".')
     if isinstance(needles, DatetimeIndex) and isinstance(reference, DatetimeIndex):
         df = pd.DataFrame(index=forward.append(backward).unique())
     else:
@@ -842,25 +858,21 @@ def nearest_match(needles: Axes, reference: Axes, direction: str, shift: int = 1
         union = list(set(union))
         df = pd.DataFrame(index=union)
     df = df.sort_index()
-    if direction == 'forward':
+    if direction == 'left':
         df.loc[forward, 'forward'] = forward
         if shift != 0:
             df['forward'] = df['forward'].ffill().shift(shift)
         else:
             df['forward'] = df['forward'].ffill()
-    elif direction == 'backward':
+    elif direction == 'right':
         df.loc[backward, 'backward'] = backward
         if shift != 0:
             df['backward'] = df['backward'].bfill().shift(-shift)
         else:
             df['backward'] = df['backward'].bfill()
-    # if start is not None:
-    #     df = df[df.index >= start]
-    # if end is not None:
-    #     df = df[df.index >= end]
-    if direction == 'forward':
+    if direction == 'left':
         return df.loc[needles, 'forward'].to_list()
-    elif direction == 'backward':
+    elif direction == 'right':
         return df.loc[needles, 'backward'].to_list()
 
 

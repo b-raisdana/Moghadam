@@ -1,3 +1,4 @@
+import os
 from typing import List, Annotated
 
 import pandas as pd
@@ -16,6 +17,7 @@ from helper.data_preparation import to_timeframe, single_timeframe, pattern_time
 from helper.helper import measure_time, date_range, date_range_to_string
 
 
+@measure_time
 def find_multi_timeframe_atr_movement_pivots(mt_ohlcva, base_timeframe_ohlcva, mt_tops, structure_timeframe_shortlist,
                                              same_time_multiple_timeframes):
     all_mt_tops = mt_tops.copy()
@@ -48,10 +50,10 @@ def find_multi_timeframe_atr_movement_pivots(mt_ohlcva, base_timeframe_ohlcva, m
                 timeframe_pivots.set_index('timeframe', inplace=True, append=True)
                 timeframe_pivots.swaplevel()
                 pivots = MultiTimeframeAtrMovementPivotDf.concat(pivots, timeframe_pivots)
-                if not ((len(mt_tops.drop(
+                if config.check_assertions and not ((len(mt_tops.drop(
                         index=mt_tops[mt_tops.index.get_level_values('date') \
                                 .isin(timeframe_pivots.index.get_level_values('date'))].index)) + len(timeframe_pivots))
-                        == len(mt_tops)):
+                                                    == len(mt_tops)):
                     AssertionError("not ((len(mt_tops.drop(...")
                 if not same_time_multiple_timeframes:
                     mt_tops.drop(
@@ -60,9 +62,35 @@ def find_multi_timeframe_atr_movement_pivots(mt_ohlcva, base_timeframe_ohlcva, m
     return pivots
 
 
+def generate_multi_timeframe_atr_movement_pivots(date_range_str: str = None, file_path: str = config.path_of_data,
+                                                 timeframe_shortlist: List['str'] = None):
+    if date_range_str is None:
+        date_range_str = config.processing_date_range
+    if timeframe_shortlist is None:
+        timeframe_shortlist = config.structure_timeframes
+    else:
+        # if any([t in timeframe_shortlist for t in config.timeframes[-2:]]):
+        if any([t not in config.structure_timeframes for t in timeframe_shortlist]):
+            raise Exception(f"timeframes {timeframe_shortlist} should be in structure_timeframes:"
+                            f"{config.structure_timeframes}!")
+    t_atr_movement_pivots = atr_movement_pivots(date_range_str=date_range_str,
+                                                structure_timeframe_shortlist=timeframe_shortlist)
+    t_atr_movement_pivots.to_csv(os.path.join(file_path, f'multi_timeframe_atr_movement_pivots.{date_range_str}.zip'),
+                                 compression='zip')
+
+
+def read_multi_timeframe_atr_movement_pivots(date_range_str: str = None) \
+        -> pt.DataFrame[MultiTimeframeAtrMovementPivotDFM]:
+    if date_range_str is None:
+        date_range_str = config.processing_date_range
+    result = MultiTimeframeAtrMovementPivotDf.read_file(date_range_str, 'multi_timeframe_atr_movement_pivots',
+                                                        generate_multi_timeframe_atr_movement_pivots)
+    return result
+
+
 @measure_time
 def atr_movement_pivots(date_range_str: str = None, structure_timeframe_shortlist: List['str'] = None,
-                        same_time_multiple_timeframes: bool = False) -> pt.DataFrame[MultiTimeframeAtrMovementPivotDFM]:
+                        same_time_multiple_timeframes: bool = True) -> pt.DataFrame[MultiTimeframeAtrMovementPivotDFM]:
     """
     for peaks:
         (
@@ -73,6 +101,7 @@ def atr_movement_pivots(date_range_str: str = None, structure_timeframe_shortlis
                 if there is not a peak between these 2)
         ):
             the peak is a pivot
+    :param same_time_multiple_timeframes:
     :param date_range_str:
     :param structure_timeframe_shortlist:
     :return:
@@ -111,6 +140,7 @@ def atr_movement_pivots(date_range_str: str = None, structure_timeframe_shortlis
     return final_pivots
 
 
+@measure_time
 def insert_major_timeframe(pivots, structure_timeframe_shortlist):
     for timeframe in structure_timeframe_shortlist[::-1][:-1]:
         timeframe_pivots = single_timeframe(pivots, timeframe)
@@ -118,20 +148,21 @@ def insert_major_timeframe(pivots, structure_timeframe_shortlist):
             pivots.index.get_level_values(level='date').isin(timeframe_pivots.index.get_level_values(level='date'))
             & (pivots.index.get_level_values(level='timeframe') == pattern_timeframe(timeframe))
             ]
-        if len(timeframe_pivots) != len(same_time_pattern_timeframe_pivots):
+        if config.check_assertions and len(timeframe_pivots) != len(same_time_pattern_timeframe_pivots):
             raise AssertionError("Expected every pivot overlaps with a pivot in pattern time. "
                                  "len(timeframe_pivots) != len(same_time_pattern_timeframe_pivots)")
     pivots['timeframe_timedelta'] = pd.to_timedelta(pivots.index.get_level_values(level='timeframe'))
     unique_date_pivots = pivots.groupby(level='date')['timeframe_timedelta'].idxmax().tolist()
     pivots['major_timeframe'] = False
     pivots.loc[unique_date_pivots, 'major_timeframe'] = True
-    if len(pivots[pivots['major_timeframe']]) != len(pivots.index.get_level_values(level='date').unique()):
+    if config.check_assertions and len(pivots[pivots['major_timeframe']]) != len(
+            pivots.index.get_level_values(level='date').unique()):
         raise AssertionError(
             "For each date/time which is a pivot expected to have one and only one major-timeframe pivot."
             "len(pivots[pivots['major_timeframe'] == True]) != pivots.index.get_level_values(level='date').unique()")
 
 
-# @measure_time
+@measure_time
 def insert_pivot_movements(timeframe_tops: pt.DataFrame[PeakValley],
                            base_ohlcv: pt.DataFrame[OHLCV]) -> pt.DataFrame[PeakValley]:
     """
@@ -177,6 +208,7 @@ def insert_pivot_movements(timeframe_tops: pt.DataFrame[PeakValley],
     return timeframe_tops
 
 
+@measure_time
 def insert_pivot_movement_times(timeframe_peak_or_valleys: pt.DataFrame[PeakValley], base_ohlcv: pt.DataFrame[OHLCV],
                                 top_type: TopTYPE) -> pt.DataFrame[MultiTimeframePeakValley]:
     """
@@ -218,9 +250,6 @@ def insert_pivot_movement_times(timeframe_peak_or_valleys: pt.DataFrame[PeakVall
                              target=base_ohlcv, target_compare_column='high',
                              more_significant=lambda target, base: target > base,
                              )[['left_crossing_time', 'left_crossing_value']]
-    # timeframe_peak_or_valleys.loc[peak_or_valley_indexes, ['left_crossing_time', 'left_crossing_value']] = \
-    #     insert_top_crossing(peak_or_valleys, base_ohlcv, top_type, 'left', 'in',
-    #                         base_target_column='previous_target')[['left_crossing_time', 'left_crossing_value']]
     peak_or_valleys['next_target'] = aggregate(peak_or_valleys[high_low], peak_or_valleys['atr'])
     if top_type == TopTYPE.PEAK:
         timeframe_peak_or_valleys.loc[peak_or_valley_indexes, ['right_crossing_time', 'right_crossing_value']] = \
@@ -234,14 +263,11 @@ def insert_pivot_movement_times(timeframe_peak_or_valleys: pt.DataFrame[PeakVall
                              target=base_ohlcv, target_compare_column='high',
                              more_significant=lambda target, base: target > base,
                              )[['right_crossing_time', 'right_crossing_value']]
-    # timeframe_peak_or_valleys.loc[peak_or_valley_indexes, ['right_crossing_time', 'right_crossing_value']] = \
-    #     insert_top_crossing(peak_or_valleys, base_ohlcv, top_type, 'right', 'in',
-    #                         base_target_column='next_target')[['right_crossing_time', 'right_crossing_value']]
 
     return timeframe_peak_or_valleys
 
 
-# @measure_time
+@measure_time
 def insert_more_significant_tops(timeframe_tops: pt.DataFrame[PeakValley],
                                  compared_tops: pt.DataFrame[MultiTimeframePeakValley]) \
         -> pt.DataFrame[MultiTimeframePeakValley]:
@@ -264,10 +290,8 @@ def insert_more_significant_top(base_tops: pt.DataFrame[MultiTimeframePeakValley
         -> pt.DataFrame[MultiTimeframePeakValley]:
     if top_type == TopTYPE.PEAK:
         high_low = 'high'
-        # cross_direction = 'out'
     else:  # top_type == TopTYPE.VALLEY
         high_low = 'low'
-        # cross_direction = 'out'
 
     no_timeframe_tops = target_tops.reset_index(level='timeframe')
     for direction in ['left', 'right']:
@@ -300,12 +324,4 @@ def insert_more_significant_top(base_tops: pt.DataFrame[MultiTimeframePeakValley
                              target_compare_column='low',
                              base_target_column='target', more_significant=lambda target, base: target < base
                              )[['right_crossing_time', 'right_crossing_value']]
-    # base_tops.loc[peak_or_valley_indexes, ['left_crossing_time', 'left_crossing_value']] = \
-    #     insert_top_crossing(base_tops.loc[peak_or_valley_indexes], no_timeframe_tops, top_type, 'left',
-    #                         base_target_column='target',
-    #                         cross_direction=cross_direction)[['left_crossing_time', 'left_crossing_value']]
-    # base_tops.loc[peak_or_valley_indexes, ['right_crossing_time', 'right_crossing_value']] = \
-    #     insert_top_crossing(base_tops.loc[peak_or_valley_indexes], no_timeframe_tops, top_type, 'right',
-    #                         base_target_column='target',
-    #                         cross_direction=cross_direction)[['right_crossing_time', 'right_crossing_value']]
     return base_tops

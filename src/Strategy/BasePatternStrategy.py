@@ -1,4 +1,3 @@
-import os
 from datetime import datetime
 from typing import Literal
 
@@ -14,7 +13,7 @@ from PanderaDFM.BasePattern import MultiTimeframeBasePattern, BasePattern
 from PanderaDFM.SignalDf import SignalDf
 from Strategy.ExtendedStrategy import ExtendedStrategy
 from atr import read_multi_timeframe_ohlcva
-from helper.helper import log_d, measure_time, log_e
+from helper.helper import log_d, measure_time
 from ohlcv import read_base_timeframe_ohlcv
 
 
@@ -41,8 +40,8 @@ class BasePatternStrategy(ExtendedStrategy):
 
                 # assure closing of the original and profit orders
                 original_order, stop_order, profit_order = self.get_order_group(order)
-                if (not original_order.status == bt.Order.Completed or
-                        not profit_order.status == bt.Order.Canceled):
+                if config.check_assertions and (not original_order.status == bt.Order.Completed or
+                                                not profit_order.status == bt.Order.Canceled):
                     raise AssertionError("(not original_order.status == bt.Order.Completed or "
                                          "not profit_order.status == bt.Order.Canceled)")
                 # repeat the signal
@@ -57,8 +56,7 @@ class BasePatternStrategy(ExtendedStrategy):
                 repeat_signal['stop_loss_order_id'] = pd.NA
                 repeat_signal['take_profit_order_id'] = pd.NA
                 self.signal_df.loc[original_signal_index, 'end'] = self.candle().date
-                # repeat_signal['end'] = pd.NA
-                if str(self.signal_df.index.names) != str(
+                if config.check_assertions and str(self.signal_df.index.names) != str(
                         ['date', 'ref_date', 'ref_timeframe', 'side']):
                     raise AssertionError(
                         f"Order of signal_df indexes "
@@ -158,7 +156,7 @@ class BasePatternStrategy(ExtendedStrategy):
             effective_end = base_pattern['end']
         else:
             effective_end = base_pattern['ttl']
-        if pd.isna(effective_end):
+        if config.check_assertions and pd.isna(effective_end):
             raise AssertionError("pd.isna(effective_end)")
         # todo: optimize and simplify by removing signals and putting orders directly.
 
@@ -196,29 +194,21 @@ class BasePatternStrategy(ExtendedStrategy):
             for (timeframe, start), base_pattern in upper_overlapping_base_patterns.iterrows():
                 # if self.candle_overlaps_base(base_pattern):
                 self.add_signal(timeframe, start, base_pattern, band='upper')
-                if pd.notna(self.base_patterns.loc[(timeframe, start), 'upper_band_signal_generated']):
+                if config.check_assertions and pd.notna(self.base_patterns.loc[(timeframe, start), 'upper_band_signal_generated']):
                     raise AssertionError("pd.notna(self.base_patterns.loc[(timeframe, start), 'upper_band_signa...")
                 self.base_patterns.loc[(timeframe, start), 'upper_band_signal_generated'] = self.candle().date
         below_overlapping_base_patterns = self.overlapping_base_patterns(
             self.no_signal_active_base_patterns(band='below', base_patterns=self.base_patterns))
         if len(below_overlapping_base_patterns) > 0:
             for (timeframe, start), base_pattern in below_overlapping_base_patterns.iterrows():
-                # if self.candle_overlaps_base(base_pattern):
                 self.add_signal(timeframe, start, base_pattern, band='below')
-                if pd.notna(self.base_patterns.loc[(timeframe, start), 'below_band_signal_generated']):
+                if config.check_assertions and pd.notna(self.base_patterns.loc[(timeframe, start), 'below_band_signal_generated']):
                     raise AssertionError("pd.notna(self.base_patterns.loc[(timeframe, start), 'below_band_signa...")
                 self.base_patterns.loc[(timeframe, start), 'below_band_signal_generated'] = \
                     self.candle().date
 
     def stop(self):
         _multi_timeframe_ohlcva = read_multi_timeframe_ohlcva(self.date_range_str)
-        # orders_df = pd.DataFrame()
-        # try:
-        #     orders_df = pd.read_csv(
-        #         os.path.join(config.path_of_data,
-        #                      f"{self.__class__.__name__}.orders.{config.id}.{self.date_range_str}.csv"))
-        # except Exception as e:
-        #     log_e(str(e))
         self.orders_df['date'] = self.orders_df.index
         self.orders_df = self.orders_df.astype({'date': str})
         plot_multi_timeframe_base_pattern(self.base_patterns, _multi_timeframe_ohlcva, orders_df=self.orders_df)

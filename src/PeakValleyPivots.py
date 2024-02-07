@@ -14,28 +14,6 @@ from helper.data_preparation import single_timeframe, anti_trigger_timeframe, ca
 from helper.helper import measure_time
 
 
-# def insert_multi_timeframe_atr(df: pt.DataFrame[MultiTimeframe],
-#                                mt_ohlcva: pt.DataFrame[MultiTimeframeOHLCVA]) -> pt.DataFrame[
-#     MultiTimeframePeakValley]:
-#     timeframe_shortlist = df.index.get_level_values('timeframe').unique()
-#     for timeframe in timeframe_shortlist:
-#         ohlcva = single_timeframe(mt_ohlcva, timeframe)
-#
-#         timeframe_rows = df[df.index.get_level_values('timeframe') == timeframe]
-#         timeframe_indexes = timeframe_rows.index
-#         timeframe_rows = timeframe_rows.reset_index(level='timeframe')
-#
-#         timeframe_rows['atr'] = \
-#             pd.merge_asof(timeframe_rows, ohlcva[['atr']], left_index=True, right_index=True,
-#                           direction='backward', suffixes=('_x', ''))['atr']  # todo: test
-#         timeframe_rows = timeframe_rows.set_index('timeframe', append=True)
-#         timeframe_rows = timeframe_rows.swaplevel()
-#         df.loc[timeframe_indexes, 'atr'] = timeframe_rows['atr']
-#     if df['atr'].isna().any().any():
-#         raise AssertionError("df['atr'].isna().any().any()")
-#     return df
-
-
 def major_times_tops_pivots(date_range_str) -> pt.DataFrame[MultiTimeframePivotDFM]:
     """
 

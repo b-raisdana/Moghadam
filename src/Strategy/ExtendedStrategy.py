@@ -87,7 +87,6 @@ class ExtendedStrategy(bt.Strategy):
         true_risked_money = size * sl_size
 
         if not true_risked_money <= config.initial_cash * config.risk_per_order_percent:
-            # raise AssertionError("True risked money exceeds configured risk percentage")
             log_w("True risked money exceeds configured risk percentage", stack_trace=False)
 
         return size, true_risked_money
@@ -203,39 +202,28 @@ class ExtendedStrategy(bt.Strategy):
          (canceled) also
         :return:
         '''
-        if len(self.original_orders) != len(self.sl_orders):
+        if config.check_assertions and len(self.original_orders) != len(self.sl_orders):
             raise AssertionError("len(self.original_orders) != len(self.stop_orders)")
-        if len(self.original_orders) != len(self.tp_orders):
+        if config.check_assertions and len(self.original_orders) != len(self.tp_orders):
             raise AssertionError("len(self.original_orders) != len(self.profit_orders)")
-        for i in self.original_orders.keys():
-            if order_is_open(self.original_orders[i]):
-                if not order_is_open(self.sl_orders[i]):
-                    raise AssertionError("!order_is_open(self.stop_orders[i])")
-                if not order_is_open(self.tp_orders[i]):
-                    raise AssertionError("!order_is_open(self.profit_orders[i])")
-            elif order_is_closed(self.original_orders[i]):
-                if not order_is_closed(self.sl_orders[i]):
-                    raise AssertionError("!order_is_closed(self.stop_orders[i])")
-                if not order_is_closed(self.tp_orders[i]):
-                    raise AssertionError("!order_is_closed(self.profit_orders[i])")
-
-    # def notify_cashvalue(self, cash, value):
-    #     '''
-    #     Receives the current fund value, value status of the strategy's broker
-    #     '''
-    #     log_d(f"notify_cashvalue cash{cash}, value{value}")
+        if config.check_assertions:
+            for i in self.original_orders.keys():
+                if order_is_open(self.original_orders[i]):
+                    if not order_is_open(self.sl_orders[i]):
+                        raise AssertionError("!order_is_open(self.stop_orders[i])")
+                    if not order_is_open(self.tp_orders[i]):
+                        raise AssertionError("!order_is_open(self.profit_orders[i])")
+                elif order_is_closed(self.original_orders[i]):
+                    if not order_is_closed(self.sl_orders[i]):
+                        raise AssertionError("!order_is_closed(self.stop_orders[i])")
+                    if not order_is_closed(self.tp_orders[i]):
+                        raise AssertionError("!order_is_closed(self.profit_orders[i])")
 
     def notify_trade(self, trade):
         '''
         Receives a trade whenever there has been a change in one
         '''
         log_d("notify_trade trade:" + ", ".join([f"{k}:{v}" for k, v in trade.__dict__.items()]))
-
-    # def notify_fund(self, cash, value, fundvalue, shares):
-    #     '''
-    #     Receives the current cash, value, fundvalue and fund shares
-    #     '''
-    #     log_d(f"notify_fund cash:{cash} value:{value} fundvalue:{fundvalue} shares:{shares}")
 
     def stop(self):
         self.next_log(force=True)
@@ -325,7 +313,7 @@ class ExtendedStrategy(bt.Strategy):
     def notify_order(self, order: bt.Order):
         self.log_order(order)
         self.log_vault()
-        if not (
+        if config.check_assertions and not (
                 order_name(order) in self.signal_df['original_order_id'].dropna().tolist() or
                 order_name(order) in self.signal_df['stop_loss_order_id'].dropna().tolist() or
                 order_name(order) in self.signal_df['take_profit_order_id'].dropna().tolist()

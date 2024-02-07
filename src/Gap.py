@@ -15,7 +15,7 @@ def generate_multi_timeframe_gap_levels():
             for long candles passing or forming a level:
                 the most significant tie inside long candle is a gap:
                     most significant tie:
-                        switch time to pattern recursively to find SIDE trends inside candle time boundary:
+                        switch time to pattern recursively to find SIDE trends inside candle time trend:
                             the SIDE with maximum movement is the Tie???
         todo: algorithm of SO4 gpas
         todo: algorithm of ISLAND gaps

@@ -48,7 +48,6 @@ class MultiTimeframeAtrMovementPivotDFM(AtrMovementPivotDFM, MultiTimeframePivot
 class MultiTimeframeAtrMovementPivotDf(ExtendedDf):
     schema_data_frame_model = MultiTimeframeAtrMovementPivotDFM
 
-
 _sample_df = pd.DataFrame({
     'date': [Timestamp(datetime(year=1980, month=1, day=1, hour=1, minute=1, second=1).replace(tzinfo=pytz.UTC))],
     'timeframe': ['sample'],

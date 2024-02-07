@@ -14,7 +14,7 @@ from PanderaDFM.Pivot2 import Pivot2DFM, Pivot2Df
 from PeakValley import insert_crossing2
 from PeakValleyPivots import read_multi_timeframe_major_times_top_pivots
 from PivotsHelper import pivot_margins, level_ttl
-from helper.data_preparation import concat, nearest_match
+from helper.data_preparation import concat, nearest_match, index_names
 
 
 class LevelDirection(Enum):
@@ -26,8 +26,8 @@ def insert_passing_time(pivots: pt.DataFrame[Pivot2DFM], ohlcv: pt.DataFrame[OHL
     if 'passing_time' not in pivots.columns:
         pivots['passing_time'] = pd.Series(dtype='datetime64[ns, UTC]')
     support_pivots = pivots[~(pivots['is_resistance'].astype(bool))]
-    if any(pivots.loc[support_pivots.index, 'external_margin'] >
-           pivots.loc[support_pivots.index, 'internal_margin']):
+    if config.check_assertions and any(pivots.loc[support_pivots.index, 'external_margin'] >
+                                       pivots.loc[support_pivots.index, 'internal_margin']):
         raise AssertionError(
             "any(pivots.loc[support_pivots.index, 'external_margin'] > pivots.loc[support_pivots.index, "
             "'internal_margin'])")
@@ -38,8 +38,8 @@ def insert_passing_time(pivots: pt.DataFrame[Pivot2DFM], ohlcv: pt.DataFrame[OHL
                          )['right_crossing_time']
 
     resistance_pivots = pivots[pivots['is_resistance'].astype(bool)]
-    if any(pivots.loc[resistance_pivots.index, 'external_margin'] <
-           pivots.loc[resistance_pivots.index, 'internal_margin']):
+    if config.check_assertions and any(pivots.loc[resistance_pivots.index, 'external_margin'] <
+                                       pivots.loc[resistance_pivots.index, 'internal_margin']):
         raise AssertionError("any(pivots.loc[resistance_pivots.index, 'external_margin'] < "
                              "pivots.loc[resistance_pivots.index, 'internal_margin'])")
     pivots.loc[resistance_pivots.index, 'passing_time'] = \
@@ -53,16 +53,14 @@ def insert_passing_time(pivots: pt.DataFrame[Pivot2DFM], ohlcv: pt.DataFrame[OHL
     return pivots
 
 
+# @measure_time
 def deactivate_by_ttl(pivots: pt.DataFrame[Pivot2DFM], end: datetime):
     deactivated_after_ttl = pivots[pivots['deactivated_at'].notna() & (pivots['deactivated_at'] > pivots['ttl'])].index
-    if len(deactivated_after_ttl) > 0:
-        pass  # todo: test
     pivots.loc[deactivated_after_ttl, 'deactivated_at'] = pivots.loc[deactivated_after_ttl, 'ttl']
     ttl_expired = pivots[
         pivots['deactivated_at'].isna()
         & (pivots['ttl'] < end)
         ].index
-
 
     pivots.loc[ttl_expired, 'deactivated_at'] = pivots.loc[ttl_expired, 'ttl']
 
@@ -78,8 +76,10 @@ def deactivate_on_passing_times(pivots: pt.DataFrame['Pivot2DFM'], ohlcv: pt.Dat
     pivots.loc[passed_pivots.index, 'deactivated_at'] = passed_pivots['passing_time']
 
 
+# @measure_time
 def duplicate_on_passing_times(pivots: pt.DataFrame['Pivot2DFM'], ohlcv: pt.DataFrame[OHLCV], ):
-    if 'passing_time' in pivots.columns:
+    # todo: it is too slow!
+    if config.check_assertions and 'passing_time' in pivots.columns:
         raise AssertionError("'passing_time' in pivots.columns")
     if 'passing_time' not in pivots.columns:
         pivots['passing_time'] = pd.Series(dtype='datetime64[ns, UTC]')
@@ -106,17 +106,12 @@ def duplicate_on_passing_times(pivots: pt.DataFrame['Pivot2DFM'], ohlcv: pt.Data
                 'deactivated_at': pd.NaT,
             })
             new_pivot = Pivot2Df.new(new_pivot_dict, strict=False)
-            # pivots.at[new_pivot.index] = new_pivot.iloc[0]
             may_have_passing = Pivot2Df.concat(may_have_passing, new_pivot)
             pivots = Pivot2Df.concat(pivots, new_pivot)
-        # for t_index, t_pivot in may_have_passing.iterrows():
-        #     # with warnings.catch_warnings():
-        #     # warnings.simplefilter(action='ignore', category=FutureWarning)
-        #     pivots.loc[t_index] = t_pivot.dropna()
-        #     pass
     return pivots.sort_index()
 
 
+# @measure_time
 def inactivate_3rd_hit(pivots: pt.DataFrame['Pivot2DFM'], ohlcv: pt.DataFrame[OHLCV]):
     pivots = update_hit(pivots, ohlcv)
     deactivate_by_hit = pivots[pivots[f'hit_end_{config.pivot_number_of_active_hits}'].notna()].index
@@ -124,6 +119,7 @@ def inactivate_3rd_hit(pivots: pt.DataFrame['Pivot2DFM'], ohlcv: pt.DataFrame[OH
         pivots.loc[deactivate_by_hit, f'hit_end_{config.pivot_number_of_active_hits}']
 
 
+# @measure_time
 def update_pivot_deactivation(timeframe_pivots: pt.DataFrame['Pivot2DFM'], timeframe: str, ohlcv: pt.DataFrame[OHLCV]):
     """
         hit_count = number of pivots:
@@ -173,25 +169,26 @@ def insert_is_overlap_of(multi_timeframe_pivots: pt.DataFrame[MultiTimeframePivo
             multi_timeframe_pivots.loc[mt_index, 'master_pivot_date'] = master_pivot_date
 
 
+# @measure_time
 def update_hit(timeframe_pivots: pt.DataFrame[Pivot2DFM], ohlcv) -> pt.DataFrame[Pivot2DFM]:
-    if 'passing_time' not in timeframe_pivots.columns:  # todo: test
+    if config.check_assertions and 'passing_time' not in timeframe_pivots.columns:  # todo: test
         AssertionError("Expected passing_time be calculated before: "
                        "'passing_time' not in active_timeframe_pivots.columns")
     may_have_hit = timeframe_pivots.index
     if 'date' not in timeframe_pivots.columns:
         timeframe_pivots['start_date'] = timeframe_pivots.index.get_level_values(level='date')
     # finding the first exit from pivot margins = hit_end_0
+    # timeframe_pivots[f'boundary_of_hit_end_0'] = \
+    #     nearest_match(needles=timeframe_pivots.loc[may_have_hit, ['return_end_time', 'start_date']].max(axis='columns') \
+    #                   .tolist(), reference=ohlcv.index, direction='backward', shift=1)
     timeframe_pivots[f'boundary_of_hit_end_0'] = \
         nearest_match(needles=timeframe_pivots.loc[may_have_hit, ['return_end_time', 'start_date']].max(axis='columns') \
-                      .tolist(), reference=ohlcv.index, direction='backward', shift=1)
+                      .tolist(), reference=ohlcv.index, direction='right', shift=1)
     timeframe_pivots.drop(columns='start_date', inplace=True)
-    try:
-        timeframe_pivots[f'hit_end_0'] = (
-            insert_hits(timeframe_pivots, f'boundary_of_hit_end_0', 0,
-                        ohlcv, 'end'))[f'hit_end_0']
-    except Exception as e:
-        nop = 1
-        raise e
+    timeframe_pivots[f'hit_end_0'] = (
+        insert_hits(timeframe_pivots, f'boundary_of_hit_end_0', 0,
+                    ohlcv, 'end'))[f'hit_end_0']
+
     for n in range(1, config.pivot_number_of_active_hits + 1):
         timeframe_pivots[f'boundary_of_hit_start_{n}'] = pd.Series(dtype='datetime64[ns, UTC]')
         timeframe_pivots[f'boundary_of_hit_end_{n}'] = pd.Series(dtype='datetime64[ns, UTC]')
@@ -200,24 +197,30 @@ def update_hit(timeframe_pivots: pt.DataFrame[Pivot2DFM], ohlcv) -> pt.DataFrame
         # finding hit n start
         timeframe_pivots.loc[may_have_hit, f'boundary_of_hit_start_{n}'] = \
             nearest_match(needles=timeframe_pivots.loc[may_have_hit, f'hit_end_{n - 1}'],
-                          reference=ohlcv.index, direction='backward', shift=1)
+                          reference=ohlcv.index, direction='right', shift=1)
         timeframe_pivots.loc[may_have_hit, f'hit_start_{n}'] = (
             insert_hits(timeframe_pivots.loc[may_have_hit], f'boundary_of_hit_start_{n}', n,
                         ohlcv, 'start'))[f'hit_start_{n}']
         invalid_hit_starts = timeframe_pivots[timeframe_pivots[f'hit_start_{n}'] >
                                               timeframe_pivots['passing_time']].index
         timeframe_pivots.loc[invalid_hit_starts, f'hit_start_{n}'] = pd.NaT
-        # finding hit n end
+
         started_pivots = timeframe_pivots[timeframe_pivots[f'hit_start_{n}'].notna()].index
+        # finding hit n end
         timeframe_pivots.loc[started_pivots, f'boundary_of_hit_end_{n}'] = \
             nearest_match(needles=timeframe_pivots.loc[started_pivots, f'hit_start_{n}'],
-                          reference=ohlcv.index, direction='backward', shift=1)
+                          reference=ohlcv.index, direction='right', shift=1)
         timeframe_pivots.loc[started_pivots, f'hit_end_{n}'] = (
             insert_hits(timeframe_pivots.loc[started_pivots], f'boundary_of_hit_end_{n}', n,
                         ohlcv, 'end'))[f'hit_end_{n}']
         invalid_hit_ends = timeframe_pivots[timeframe_pivots[f'hit_end_{n}'] >
                                             timeframe_pivots['passing_time']].index
         timeframe_pivots.loc[invalid_hit_ends, f'hit_end_{n}'] = pd.NaT
+        try:
+            timeframe_pivots[f'hit_end_{n}'].notna()
+        except Exception as e:
+            nop = 1
+            raise e
         timeframe_pivots.loc[timeframe_pivots[f'hit_end_{n}'].notna(), 'hit'] = n + 1
     return timeframe_pivots
 
@@ -227,12 +230,12 @@ def insert_hits(active_timeframe_pivots: pt.DataFrame[Pivot2DFM], hit_boundary_c
                 ohlcv: pt.DataFrame[OHLCV],
                 side: Literal['start', 'end']):
     t_df = active_timeframe_pivots.drop(columns=['date', 'start_date'], errors='ignore')
+    index_backup = index_names(t_df)
     t_df: pd.DataFrame = t_df.reset_index()
     t_df.rename(columns={'date': 'start_date'}, inplace=True)
     t_df.rename(columns={hit_boundary_column: 'date'}, inplace=True)
     t_df.set_index('date', inplace=True)
-    if n == 2:
-        pass
+
     resistance_start_dates = t_df.loc[t_df['is_resistance'], 'start_date'].tolist()
     t_df.loc[t_df['start_date'].isin(resistance_start_dates), f'hit_{side}_{n}'] = \
         insert_hit(t_df[t_df['start_date'].isin(resistance_start_dates)], n, ohlcv, side, 'Resistance') \
@@ -246,10 +249,11 @@ def insert_hits(active_timeframe_pivots: pt.DataFrame[Pivot2DFM], hit_boundary_c
     t_df.reset_index(inplace=True)
     t_df.rename(columns={'date': hit_boundary_column}, inplace=True)
     t_df.rename(columns={'start_date': 'date'}, inplace=True)
-    if 'original_start' in t_df.columns:
-        t_df.set_index(['date', 'original_start'], inplace=True)
-    else:
-        t_df.set_index('date', inplace=True)
+    # if 'original_start' in t_df.columns:
+    #     t_df.set_index(['date', 'original_start'], inplace=True)
+    # else:
+    #     t_df.set_index('date', inplace=True)
+    t_df.set_index(index_backup, inplace=True)
     return t_df
 
 
