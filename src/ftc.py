@@ -3,7 +3,7 @@ from typing import List
 import pandas as pd
 from pandera import typing as pt
 
-from Config import config
+from Config import config, TREND
 from PanderaDFM.BasePattern import MultiTimeframeBasePattern
 from PanderaDFM.BullBearSide import BullBearSide, MultiTimeframeBullBearSide
 from PanderaDFM.OHLCV import OHLCV, MultiTimeframeOHLCV
@@ -28,75 +28,94 @@ def merge_bbs_overlap(time_frame_bbs: pt.DataFrame[BullBearSide]):
     if len(time_frame_bbs) <= 1:
         return
     next_movements = time_frame_bbs.copy()[['movement_start_time', 'movement_end_time']] \
-        .rename(columns={'movement_end_time': 'next_movement_end_time'})  # todo: test
+        .rename(columns={'movement_start_time': 'next_movement_start_time',
+                         'movement_end_time': 'next_movement_end_time'})
     next_movements['shifted_movement_start_time'] = \
-        next_movements['movement_start_time'].shift(-1, freq=config.timeframes[0])
+        next_movements['next_movement_start_time'] - pd.to_timedelta(config.timeframes[0])
     next_movements['next_movement_index'] = next_movements.index
-    next_movements.sort_values(by='movement_start_time', inplace=True)
+    next_movements.sort_values(by='next_movement_start_time', inplace=True)
+    time_frame_bbs['date_backup'] = time_frame_bbs.index
     # drop overlaps with the same start
-    time_frame_bbs[['same_start_movement_index', 'same_start_movement_end_time']] = \
-        time_frame_bbs.merge(next_movements, left_on='movement_start_time', right_on='movement_start_time', how='left') \
-            [['next_movement_index', 'next_movement_end_time']]
-    invalid_same_start_indexes = time_frame_bbs[
-        time_frame_bbs['same_start_movement_index'].isna()
-        | (time_frame_bbs['same_start_movement_index'] == time_frame_bbs.index)
-        | (time_frame_bbs['same_start_movement_end_time'] < time_frame_bbs['movement_end_time'])
+    merged_to_find_same_start = \
+        time_frame_bbs.merge(next_movements, left_on='movement_start_time', right_on='next_movement_start_time',
+                             how='left')
+    valid_same_start_overlaps = merged_to_find_same_start[
+        merged_to_find_same_start['next_movement_index'].notna()
+        & (merged_to_find_same_start['next_movement_index'] != merged_to_find_same_start.index)
+        & (merged_to_find_same_start['next_movement_end_time'] < merged_to_find_same_start['movement_end_time'])
         ]
-    time_frame_bbs.loc[
-        invalid_same_start_indexes.index, ['same_start_movement_index', 'same_start_movement_end_time']] = pd.NA
-    time_frame_bbs.drop(labels=time_frame_bbs['same_start_movement_index'].dropna().unique(), inplace=True)
+    time_frame_bbs.drop(labels=valid_same_start_overlaps['next_movement_index'].dropna().unique(),
+                        inplace=True)
 
     # find overlaps which does not have the same start
-    time_frame_bbs[['next_movement_start_time', 'next_movement_index']] = \
+    merged_to_find_overlap = \
         pd.merge_asof(left=time_frame_bbs.sort_values(by='movement_start_time'), right=next_movements,
-                      left_on='movement_start_time', right_on='shifted_movement_start_time', direction='forward') \
-            [['next_movement_start_time', 'next_movement_index']]
-    invalid_overlap_movements = time_frame_bbs[
-        time_frame_bbs['next_movement_start_time'].isna()
-        | (time_frame_bbs['next_movement_index'] == time_frame_bbs.index)
-        | (time_frame_bbs['next_movement_start_time'] >= time_frame_bbs['movement_end'])
+                      left_on='movement_start_time', right_on='shifted_movement_start_time', direction='forward')
+    overlapped_movements = merged_to_find_overlap[
+        merged_to_find_overlap['next_movement_start_time'].notna()
+        & (merged_to_find_overlap['next_movement_index'] != time_frame_bbs.index)
+        & (merged_to_find_overlap['next_movement_start_time'] < merged_to_find_overlap['movement_end_time'])
         ]
-    time_frame_bbs.loc[invalid_overlap_movements.index, ['next_movement_start_time', 'next_movement_index']] = pd.NA
+    # time_frame_bbs.loc[invalid_overlap_movements.index, ['next_movement_start_time', 'next_movement_index']] = pd.NA
     # drop overlap_movements which does not need merging. These overlaps are inside the original trend boundaries.
-    no_merge_overlap_movements = time_frame_bbs[
-        time_frame_bbs['next_movement_index'].notna()
-        & ~(time_frame_bbs['next_movement_end_time'] > time_frame_bbs['movement_end_time'])
+    if any(overlapped_movements['next_movement_index'].isna()):
+        raise AssertionError("any(overlapped_movements['next_movement_index'].isna())")
+    if len(overlapped_movements) > 0:
+        pass  # todo: test
+    no_merge_overlap_movements = overlapped_movements[
+        overlapped_movements['next_movement_end_time'] <= overlapped_movements['movement_end_time']
         ]
-    time_frame_bbs.drop(labels=no_merge_overlap_movements.index)
+    if len(no_merge_overlap_movements) > 0:
+        time_frame_bbs.drop(labels=no_merge_overlap_movements['next_movement_index'].dropna().unique(),
+                            inplace=True)  # todo: test
     # expand merge trend to cover overlap_movements which need merging.
     # These overlaps start after original trend start and end after original trends end.
-    to_merge_overlap_movements = time_frame_bbs[
-        time_frame_bbs['next_movement_index'].notna()
-        # & (time_frame_bbs['next_movement_end_time'] > time_frame_bbs['movement_end_time'])
-    ]
-    time_frame_bbs.loc[to_merge_overlap_movements, 'movement_end_time'] = \
-        time_frame_bbs.loc[to_merge_overlap_movements, 'next_movement_end_time']
-    # drop trends which covered by the original after expansion.
-    time_frame_bbs.drop(
-        labels=time_frame_bbs.loc[to_merge_overlap_movements, 'next_movement_index'].dropna().unique(), inplace=True)
+    # to_merge_overlap_movements = time_frame_bbs[
+    #     time_frame_bbs['next_movement_index'].notna()
+    #     # & (time_frame_bbs['next_movement_end_time'] > time_frame_bbs['movement_end_time'])
+    # ]
+    to_merge_overlap_movements = overlapped_movements[
+        overlapped_movements.index.difference(no_merge_overlap_movements.index)]
+    if len(to_merge_overlap_movements) > 0:
+        time_frame_bbs.loc[to_merge_overlap_movements.index, 'movement_end_time'] = \
+            time_frame_bbs.loc[to_merge_overlap_movements.index, 'next_movement_end_time']  # todo: test
+        # drop trends which covered by the original after expansion.
+        time_frame_bbs.drop(
+            labels=to_merge_overlap_movements['next_movement_index'].dropna().unique(), inplace=True)
 
 
-def pivot_bbs_movement_start(timeframe_pivots: pt.DataFrame[PivotDFM],
-                             time_frame_bbs_trends: pt.DataFrame[BullBearSide]):
+def pivot_bull_bear_movement_start(timeframe_pivots: pt.DataFrame[PivotDFM],
+                                   time_frame_bbs_trends: pt.DataFrame[BullBearSide]):
     """
     Find the time_frame_bbs_boundary which matches with each pivot:
-        find all the time_frame_bbs_boundaries which the pivot is between its 'movement_start' and its 'movement_end'
-        the boundary with the longest 'movement' is the best match
+    Remove overlapped boundaries to prevent finding multiple bbs_trends for each pivot.
+    :param time_frame_bbs_trends:
+    :param bull_bear_trends:
+    :param timeframe_pivots:
     :param pivots:
     :param bbs_boundaries:
     :return:
     """
-    merge_bbs_overlap(time_frame_bbs=time_frame_bbs_trends)  # todo: test
-    timeframe_pivots['bbs_movement_start'] = pd.Series(dtype='datetime64[ns, UTC]')
-    timeframe_pivots['bbs_movement_start'] = pd.merge_asof(
-        left=timeframe_pivots, right=time_frame_bbs_trends, left_index=True, right_on='movement_start_time',
+    bull_bear_trends = \
+        time_frame_bbs_trends[time_frame_bbs_trends['bull_bear_side'].isin([TREND.BULLISH.value, TREND.BEARISH.value])]
+    merge_bbs_overlap(time_frame_bbs=bull_bear_trends)
+    bull_bear_trends = \
+        bull_bear_trends.rename(columns={
+            'movement_start_time': 'bbs_movement_start_time',
+            'movement_start_value': 'bbs_movement_start_value',
+        })[['bbs_movement_start_time', 'bbs_movement_start_value', ]]
+    timeframe_pivots.loc[:, ['bbs_movement_start_time', 'bbs_movement_start_value']] = pd.merge_asof(
+        left=timeframe_pivots, right=bull_bear_trends.dropna(), left_index=True,
+        right_on='bbs_movement_start_time',
         direction='forward'
-    )[['movement_start_time']]
+    )[['bbs_movement_start_time', 'bbs_movement_start_value']]
 
 
-def ftc_of_range(timeframe_pivots, multi_timeframe_base_patterns, pivots_timeframe):
+def ftc_of_range(pivots_with_ftc_range_start_time, multi_timeframe_base_patterns, pivots_timeframe):
+    if len(pivots_with_ftc_range_start_time) > 0:
+        pass
     pivot_lower_timeframes = config.timeframes[config.timeframes.index(pivots_timeframe):0:-1]  # todo: test
-    remained_pivots = timeframe_pivots
+    remained_pivots = pivots_with_ftc_range_start_time
     for timeframe in pivot_lower_timeframes:
         if len(remained_pivots) > 0:
             timeframe_base_patterns = single_timeframe(multi_timeframe_base_patterns, timeframe)
@@ -115,7 +134,7 @@ def multi_timeframe_ftc(
         mt_ohlcv: pt.DataFrame[MultiTimeframeOHLCV],
         multi_timeframe_base_patterns: pt.DataFrame[MultiTimeframeBasePattern],
         timeframe_shortlist: List[str] = None):
-    if timeframe_shortlist is None:  # todo: test
+    if timeframe_shortlist is None:
         timeframe_shortlist = config.structure_timeframes[::-1]
     else:  # filter and order
         timeframe_shortlist = [timeframe for timeframe in config.structure_timeframes[::-1]
@@ -136,26 +155,34 @@ def multi_timeframe_ftc(
 def find_ftc(timeframe_pivots: pt.DataFrame[PivotDFM], time_frame_bbs_boundaries: pt.DataFrame[BullBearSide],
              ohlcv: pt.DataFrame[OHLCV], multi_timeframe_base_patterns: pt.DataFrame[MultiTimeframeBasePattern],
              timeframe):
-    timeframe_pivots['bbs_movement_start'] = \
-        pivot_bbs_movement_start(timeframe_pivots, time_frame_bbs_boundaries)['bbs_movement_start']  # todo: test
-    pivots_with_bbs_movement = timeframe_pivots[timeframe_pivots['bbs_movement_start'].notna()]
+    # todo: limit the process to original_start pivots. we can duplicate the result to duplicated on passing pivots.
+    original_pivots = timeframe_pivots[
+        timeframe_pivots.index.get_level_values(level='date')
+        == timeframe_pivots.index.get_level_values(level='original_start')] \
+        .copy().reset_index().set_index('date')
+    pivot_bull_bear_movement_start(original_pivots, time_frame_bbs_boundaries)
+    pivots_with_bbs_movement = original_pivots[original_pivots['bbs_movement_start_value'].notna()]
+    if len(pivots_with_bbs_movement) > 0:
+        pass  # todo: test
     pivot_movement = \
-        pivots_with_bbs_movement['bbs_movement_start'] - pivots_with_bbs_movement.index.get_level_values('date')
+        pivots_with_bbs_movement['bbs_movement_start_value'] - pivots_with_bbs_movement['level']
     pivots_with_bbs_movement['ftc_range_start_value'] = \
-        pivots_with_bbs_movement.index.get_level_values('date') - pivot_movement * config.ftc_price_range_percentage
-    ftc_range_start_time(ohlcv, pivots_with_bbs_movement)
+        pivots_with_bbs_movement['level'] - pivot_movement * config.ftc_price_range_percentage
+    ftc_range_start_time(pivots_with_bbs_movement, ohlcv)
     ftc_of_range(pivots_with_bbs_movement, multi_timeframe_base_patterns, timeframe)
 
 
-def ftc_range_start_time(ohlcv, timeframe_pivots):
-    resistance_pivots = timeframe_pivots[timeframe_pivots['is_resistance']]  # todo: test
-    timeframe_pivots.loc[resistance_pivots.index, 'ftc_range_start_time'] = (
+def ftc_range_start_time(pivots_with_bbs_movement, ohlcv):
+    if len(pivots_with_bbs_movement) > 0:
+        pass
+    resistance_pivots = pivots_with_bbs_movement[pivots_with_bbs_movement['is_resistance']]  # todo: test
+    pivots_with_bbs_movement.loc[resistance_pivots.index, 'ftc_range_start_time'] = (
         insert_crossing2(base=resistance_pivots, base_target_column='ftc_range_start_value',
                          target=ohlcv, target_compare_column='low', direction='left',
                          more_significant=lambda target, base: target < base,
                          ))['left_crossing_time']
-    support_pivots = timeframe_pivots[~timeframe_pivots['is_resistance']]
-    timeframe_pivots.loc[support_pivots.index, 'ftc_range_start_time'] = (
+    support_pivots = pivots_with_bbs_movement[~pivots_with_bbs_movement['is_resistance']]
+    pivots_with_bbs_movement.loc[support_pivots.index, 'ftc_range_start_time'] = (
         insert_crossing2(base=support_pivots, base_target_column='ftc_range_start_value',
                          target=ohlcv, target_compare_column='high', direction='left',
                          more_significant=lambda target, base: target > base,
