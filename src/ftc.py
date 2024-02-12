@@ -57,6 +57,7 @@ def merge_bbs_overlap(time_frame_bbs: pt.DataFrame[BullBearSide]):
         & (merged_to_find_overlap['next_movement_start_time'] < merged_to_find_overlap['movement_end_time'])
         ]
     # time_frame_bbs.loc[invalid_overlap_movements.index, ['next_movement_start_time', 'next_movement_index']] = pd.NA
+
     # drop overlap_movements which does not need merging. These overlaps are inside the original trend boundaries.
     if any(overlapped_movements['next_movement_index'].isna()):
         raise AssertionError("any(overlapped_movements['next_movement_index'].isna())")
@@ -68,8 +69,8 @@ def merge_bbs_overlap(time_frame_bbs: pt.DataFrame[BullBearSide]):
     if len(no_merge_overlap_movements) > 0:
         time_frame_bbs.drop(labels=no_merge_overlap_movements['next_movement_index'].dropna().unique(),
                             inplace=True)  # todo: test
-    # expand merge trend to cover overlap_movements which need merging.
-    # These overlaps start after original trend start and end after original trends end.
+    # expand the end of first overlapping movement, to the end of second one to cover both
+
     # to_merge_overlap_movements = time_frame_bbs[
     #     time_frame_bbs['next_movement_index'].notna()
     #     # & (time_frame_bbs['next_movement_end_time'] > time_frame_bbs['movement_end_time'])
@@ -113,16 +114,17 @@ def pivot_bull_bear_movement_start(timeframe_pivots: pt.DataFrame[PivotDFM],
 
 def ftc_of_range(pivots_with_ftc_range_start_time, multi_timeframe_base_patterns, pivots_timeframe):
     if len(pivots_with_ftc_range_start_time) > 0:
-        pass
-    pivot_lower_timeframes = config.timeframes[config.timeframes.index(pivots_timeframe):0:-1]  # todo: test
+        pass  # todo: test
+    pivot_lower_timeframes = config.timeframes[config.timeframes.index(pivots_timeframe):0:-1]
     remained_pivots = pivots_with_ftc_range_start_time
     for timeframe in pivot_lower_timeframes:
         if len(remained_pivots) > 0:
             timeframe_base_patterns = single_timeframe(multi_timeframe_base_patterns, timeframe)
-            remained_pivots['ftc_list'] = remained_pivots[
-                (timeframe_base_patterns.index < remained_pivots.index)
-                & (timeframe_base_patterns.index > remained_pivots['ftc_range_start_time'])
-                ]
+            for pivot_start, pivot in remained_pivots.iterrows():
+                remained_pivots.loc[pivot_start, 'ftc_list'] = timeframe_base_patterns[
+                    (timeframe_base_patterns.index < pivot_start)
+                    & (timeframe_base_patterns.index > pivot['ftc_range_start_time'])
+                    ]
             remained_pivots = remained_pivots[remained_pivots['ftc_list'].isna()]
         else:
             break
@@ -155,7 +157,7 @@ def multi_timeframe_ftc(
 def find_ftc(timeframe_pivots: pt.DataFrame[PivotDFM], time_frame_bbs_boundaries: pt.DataFrame[BullBearSide],
              ohlcv: pt.DataFrame[OHLCV], multi_timeframe_base_patterns: pt.DataFrame[MultiTimeframeBasePattern],
              timeframe):
-    # todo: limit the process to original_start pivots. we can duplicate the result to duplicated on passing pivots.
+    # todo: after testing properly, extend the operation to support duplicated pivots.
     original_pivots = timeframe_pivots[
         timeframe_pivots.index.get_level_values(level='date')
         == timeframe_pivots.index.get_level_values(level='original_start')] \
@@ -164,10 +166,10 @@ def find_ftc(timeframe_pivots: pt.DataFrame[PivotDFM], time_frame_bbs_boundaries
     pivots_with_bbs_movement = original_pivots[original_pivots['bbs_movement_start_value'].notna()]
     if len(pivots_with_bbs_movement) > 0:
         pass  # todo: test
-    pivot_movement = \
+    pivots_with_bbs_movement['bbs_movement'] = \
         pivots_with_bbs_movement['bbs_movement_start_value'] - pivots_with_bbs_movement['level']
     pivots_with_bbs_movement['ftc_range_start_value'] = \
-        pivots_with_bbs_movement['level'] - pivot_movement * config.ftc_price_range_percentage
+        pivots_with_bbs_movement['level'] - pivots_with_bbs_movement['bbs_movement'] * config.ftc_price_range_percentage
     ftc_range_start_time(pivots_with_bbs_movement, ohlcv)
     ftc_of_range(pivots_with_bbs_movement, multi_timeframe_base_patterns, timeframe)
 
