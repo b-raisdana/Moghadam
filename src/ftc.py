@@ -27,6 +27,8 @@ def merge_bbs_overlap(time_frame_bbs: pt.DataFrame[BullBearSide]):
     """
     if len(time_frame_bbs) <= 1:
         return
+    if len(time_frame_bbs == 18):
+        pass # todo: test
     next_movements = time_frame_bbs.copy()[['movement_start_time', 'movement_end_time']] \
         .rename(columns={'movement_start_time': 'next_movement_start_time',
                          'movement_end_time': 'next_movement_end_time'})

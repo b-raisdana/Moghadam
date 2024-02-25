@@ -43,8 +43,8 @@ def plot_single_timeframe_bull_bear_side_trends(single_timeframe_ohlcva: pt.Data
             # draw boundary
             xs = [_start] + trend_peaks.index.get_level_values('date').tolist() + \
                  [_trend['end']] + trend_valleys.index.get_level_values('date').tolist()
-            ys = [single_timeframe_ohlcva.loc[_start, 'open']] + trend_peaks.values.tolist() + \
-                 [single_timeframe_ohlcva.loc[_trend['end'], 'close']] + trend_valleys.values.tolist()
+            ys = [single_timeframe_ohlcva.loc[_start, 'open']] + trend_peaks['high'].tolist() + \
+                 [single_timeframe_ohlcva.loc[_trend['end'], 'close']] + trend_valleys['low'].tolist()
             fig.add_scatter(x=xs, y=ys, fill="toself", fillpattern=dict(fgopacity=0.5, shape='.'), name=name, text=text,
                             line=dict(color=fill_color, width=0), mode='lines', legendgroup=legend_group,
                             hoverinfo='text', )
