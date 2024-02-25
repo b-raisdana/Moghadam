@@ -47,7 +47,7 @@ if __name__ == "__main__":
     # # generate_multi_timeframe_bull_bear_side_pivots(config.processing_date_range)
     # # _pivots = read_multi_timeframe_bull_bear_side_pivots(config.processing_date_range)
     trends = read_multi_timeframe_bull_bear_side_trends(config.processing_date_range)
-    plot_multi_timeframe_bull_bear_side_trends(ohlcva, peaks_and_valleys, trends)
+    # plot_multi_timeframe_bull_bear_side_trends(ohlcva, peaks_and_valleys, trends)
     # exit(0)
     # generate_multi_timeframe_base_patterns()
     base_patterns = read_multi_timeframe_base_patterns()
