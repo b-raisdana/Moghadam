@@ -148,7 +148,7 @@ def multi_timeframe_ftc(
     else:  # filter and order
         timeframe_shortlist = [timeframe for timeframe in config.structure_timeframes[::-1]
                                if timeframe in timeframe_shortlist]
-    mt_pivot['ftc_list'] = pd.NA
+    mt_pivot.loc[:, 'ftc_list'] = pd.NA
     timeframe_shortlist = [timeframe for timeframe in timeframe_shortlist
                            if timeframe in mt_pivot.index.get_level_values(level='timeframe')]
     for timeframe in timeframe_shortlist:
@@ -160,7 +160,9 @@ def multi_timeframe_ftc(
             time_frame_bbs_boundaries=timeframe_bbs,
             ohlcv=ohlcv, multi_timeframe_base_patterns=multi_timeframe_base_patterns,
             timeframe=timeframe)
-        mt_pivot.loc[pivots_with_ftc.index, 'ftc_list'] = pivots_with_ftc['ftc_list'] # todo: index required to add timeframe
+        pivots_with_ftc['timeframe'] = timeframe
+        pivots_with_ftc = pivots_with_ftc.reset_index().set_index(['timeframe', 'date', 'original_start'])
+        mt_pivot.loc[pivots_with_ftc.index, 'ftc_list'] = pivots_with_ftc['ftc_list']
         pass
 
 

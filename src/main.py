@@ -6,6 +6,7 @@ from AtrMovementPivots import atr_movement_pivots, read_multi_timeframe_atr_move
 from BasePattern import read_multi_timeframe_base_patterns
 from BullBearSide import read_multi_timeframe_bull_bear_side_trends
 from Config import config
+from FigurePlotter.BBS_BasePattern_plotter import plot_multi_timeframe_bbs_n_base_pattern
 from FigurePlotter.BasePattern_plotter import plot_multi_timeframe_base_pattern
 from FigurePlotter.BullBearSide_plotter import plot_multi_timeframe_bull_bear_side_trends
 from FigurePlotter.Pivot_plotter import plot_multi_timeframe_pivots
@@ -42,11 +43,11 @@ if __name__ == "__main__":
     # # exit(0)
     # generate_multi_timeframe_atr_movement_pivots(config.processing_date_range)
     pivots = read_multi_timeframe_atr_movement_pivots(config.processing_date_range)
-    major_pivots = pivots[pivots['major_timeframe']]
+    major_pivots = pivots[pivots['major_timeframe']].copy()
     # #
     # # generate_multi_timeframe_bull_bear_side_pivots(config.processing_date_range)
     # # _pivots = read_multi_timeframe_bull_bear_side_pivots(config.processing_date_range)
-    trends = read_multi_timeframe_bull_bear_side_trends(config.processing_date_range)
+    bbs_trends = read_multi_timeframe_bull_bear_side_trends(config.processing_date_range)
     # plot_multi_timeframe_bull_bear_side_trends(ohlcva, peaks_and_valleys, trends)
     # exit(0)
     # generate_multi_timeframe_base_patterns()
@@ -58,9 +59,14 @@ if __name__ == "__main__":
     # plot_multi_timeframe_pivots(major_pivots[major_pivots['major_timeframe'].astype(bool)], group_by='timeframe')
     multi_timeframe_ftc(
         mt_pivot=major_pivots,
-        mt_frame_bbs_trend=trends,
-        mt_ohlcv = ohlcva,
-        multi_timeframe_base_patterns = base_patterns,
-        )
+        mt_frame_bbs_trend=bbs_trends,
+        mt_ohlcv=ohlcva,
+        multi_timeframe_base_patterns=base_patterns,
+    )
+    plot_multi_timeframe_bbs_n_base_pattern(multi_timeframe_base_pattern=base_patterns,
+                                            multi_timeframe_ohlcva=ohlcva,
+                                            multi_timeframe_bull_bear_side_trends=bbs_trends,
+                                            multi_timeframe_peaks_n_valleys=peaks_and_valleys,
+                                            orders_df=None, timeframe_shortlist=None, )
     sys.exit(0)
     test_strategy(cash=100000)
