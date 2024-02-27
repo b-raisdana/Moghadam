@@ -69,7 +69,7 @@ def merge_bbs_overlap(time_frame_bbs: pt.DataFrame[BullBearSide]):
         ]
     if len(no_merge_overlap_movements) > 0:
         time_frame_bbs.drop(labels=no_merge_overlap_movements['next_movement_index'].dropna().unique(),
-                            inplace=True)  # todo: test
+                            inplace=True)
     # expand the end of first overlapping movement, to the end of second one to cover both
 
     # to_merge_overlap_movements = time_frame_bbs[

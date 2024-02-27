@@ -31,10 +31,10 @@ class BullBearSide(pandera.DataFrameModel):
 
 
 def bull_bear_side_repr(_start: datetime, _trend):
-    text = f'{_trend["bull_bear_side"].replace("_TREND", "")}: ' \
+    text = f'{_trend["bull_bear_side"].replace("_TREND", "")} ' \
            f'{_start.strftime("%H:%M")}-{_trend["end"].strftime("%H:%M")}:'
     if hasattr(_trend, "movement"):
-        text += f'\nM:{_trend["movement"]:.2f}'
+        text += f'M:{_trend["movement"]:.2f}'
     if hasattr(_trend, "duration"):
         text += f'D:{_trend["duration"] / timedelta(hours=1):.2f}h'
     if hasattr(_trend, "strength"):

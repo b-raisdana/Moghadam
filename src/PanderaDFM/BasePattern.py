@@ -10,7 +10,8 @@ from PanderaDFM.MultiTimeframe import MultiTimeframe
 
 
 class BasePattern(pandera.DataFrameModel):
-    date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(check_name=True) # the last candle in the sequence
+    date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(
+        check_name=True)  # the last candle in the sequence
     # start: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(check_name=True) # the first candle in which the pattern is valid
     end: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]] = pandera.Field(nullable=True)
     ttl: pt.Series[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]
@@ -48,10 +49,10 @@ class MultiTimeframeBasePattern(BasePattern, MultiTimeframe):
 
     @classmethod
     def str(cls, _start: datetime, timeframe: str, pattern):
-        effective_end = ''.join([
-            f'E{pattern["end"].strftime("%y%m/%d-%H:%M")}'  if pd.notna(pattern["end"]) else "",
-            f'T{pattern["ttl"].strftime("%y%m/%d-%H:%M")}'  if pd.notna(pattern["ttl"]) else ""
-        ])
+        # effective_end = ''.join([
+        #     f'E{pattern["end"].strftime("%y%m/%d-%H:%M")}'  if pd.notna(pattern["end"]) else "",
+        #     f'T{pattern["ttl"].strftime("%y%m/%d-%H:%M")}'  if pd.notna(pattern["ttl"]) else ""
+        # ])
         text = f'BASE{timeframe}@' \
-               f'{_start.strftime("%y%m/%d-%H:%M")}-{effective_end} '
+               f'{_start.strftime("%y/%m/%d-%H:%M")}'  # ' {effective_end} '
         return text

@@ -1,6 +1,7 @@
 from typing import List
 
 import pandas as pd
+from pandera import typing as pt
 from plotly import graph_objects as plgo
 
 import PeakValley
@@ -13,7 +14,6 @@ from PanderaDFM.OHLCV import OHLCV
 from PeakValley import peaks_only, valleys_only, major_peaks_n_valleys
 from helper.data_preparation import single_timeframe
 from helper.helper import measure_time, log, log_w
-from pandera import typing as pt
 
 MAX_NUMBER_OF_PLOT_SCATTERS = 5000
 
@@ -45,18 +45,20 @@ def plot_single_timeframe_bull_bear_side_trends(single_timeframe_ohlcva: pt.Data
                  [_trend['end']] + trend_valleys.index.get_level_values('date').tolist()
             ys = [single_timeframe_ohlcva.loc[_start, 'open']] + trend_peaks['high'].tolist() + \
                  [single_timeframe_ohlcva.loc[_trend['end'], 'close']] + trend_valleys['low'].tolist()
-            fig.add_scatter(x=xs, y=ys, fill="toself", fillpattern=dict(fgopacity=0.5, shape='.'), name=name, text=text,
-                            line=dict(color=fill_color, width=0), mode='lines', legendgroup=legend_group,
+            fig.add_scatter(x=xs, y=ys, fill="toself", fillpattern=dict(fgopacity=0.5, shape='.'), name=name,
+                            hovertext= [text] * len(xs),
+                            line=dict(color=fill_color, width=0), mode='lines',
+                            legendgroup=legend_group,
                             hoverinfo='text', )
             # adds hover info to all candles
-            fig.add_scatter(x=included_candles, y=single_timeframe_ohlcva.loc[included_candles, 'open'], name=name,
-                            mode='none', showlegend=False, text=text, legendgroup=legend_group, hoverinfo='text')
+            # fig.add_scatter(x=included_candles, y=single_timeframe_ohlcva.loc[included_candles, 'open'], name=name,
+            #                 mode='none', showlegend=False, text=text, legendgroup=legend_group, hoverinfo='text')
             # adds movement line
             if 'movement_start_value' in boundaries.columns:
                 fig.add_scatter(x=[_trend['movement_start_time'], _trend['movement_end_time']],
                                 y=[_trend['movement_start_value'], _trend['movement_end_value']],
-                                name=name, text=text, line=dict(color=fill_color), legendgroup=legend_group,
-                                hoverinfo='text', )
+                                name=name, line=dict(color=fill_color), legendgroup=legend_group,  text=text,
+                                hoverinfo='text', showlegend=False)
             else:
                 log(f'movement not found in boundaries:{boundaries.columns}', stack_trace=False)
             remained_number_of_scatters -= 2

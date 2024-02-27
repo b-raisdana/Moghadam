@@ -1,17 +1,14 @@
-import os
-import webbrowser
+from datetime import datetime
 from datetime import datetime
 from typing import List
 
 import pandas as pd
 import plotly.graph_objs
 from pandera import typing as pt
-from plotly import graph_objects as plgo
 
 from Config import config
 from FigurePlotter.BullBearSide_plotter import plot_single_timeframe_bull_bear_side_trends
-from FigurePlotter.OHLVC_plotter import plot_merged_timeframe_ohlcva
-from FigurePlotter.plotter import file_id, show_and_save_plot, plot_multiple_figures
+from FigurePlotter.plotter import plot_multiple_figures
 from Model.Order import OrderSide, BracketOrderType
 from PanderaDFM.BasePattern import MultiTimeframeBasePattern
 from PanderaDFM.BullBearSide import MultiTimeframeBullBearSide
@@ -27,7 +24,8 @@ MAX_NUMBER_OF_PLOT_SCATTERS = 5000
 @measure_time
 def plot_multi_timeframe_bbs_n_base_pattern(multi_timeframe_base_pattern: pt.DataFrame[MultiTimeframeBasePattern],
                                             multi_timeframe_ohlcva: pt.DataFrame[MultiTimeframeOHLCVA],
-                                            multi_timeframe_bull_bear_side_trends: pt.DataFrame[MultiTimeframeBullBearSide],
+                                            multi_timeframe_bull_bear_side_trends: pt.DataFrame[
+                                                MultiTimeframeBullBearSide],
                                             multi_timeframe_peaks_n_valleys: pt.DataFrame[MultiTimeframePeakValley],
                                             orders_df: pd.DataFrame = None, timeframe_shortlist: List['str'] = None,
                                             show: bool = True, save: bool = True) \
@@ -81,12 +79,13 @@ def draw_band_activators(base_pattern, fig, legend_group, start, text):
         ys = [base_pattern['internal_low'], base_pattern['internal_high'] + base_pattern['atr']]
         fig.add_scatter(x=xs, y=ys,
                         name=legend_group,
-                        text=text,
+                        # text=text,
                         line=dict(color='yellow', width=1),
                         mode='lines',  # +text',
                         showlegend=False,
                         legendgroup=legend_group,
-                        hovertemplate="%{text}",
+                        hoverinfo='none',
+                        # hovertemplate="%{text}",
                         )
     if base_pattern['upper_band_activated'] is not None:
         # add a vertical line equal to atr of BasePattern at the time price chart goes 1 atr above upper edge.
@@ -94,12 +93,13 @@ def draw_band_activators(base_pattern, fig, legend_group, start, text):
         ys = [base_pattern['internal_high'], base_pattern['internal_low'] - base_pattern['atr']]
         fig.add_scatter(x=xs, y=ys,
                         name=legend_group,
-                        text=text,
+                        # text=text,
                         line=dict(color='yellow', width=1),
                         mode='lines',  # +text',
                         showlegend=False,
                         legendgroup=legend_group,
-                        hovertemplate="%{text}",
+                        hoverinfo='none',
+                        # hovertemplate="%{text}",
                         )
 
 
