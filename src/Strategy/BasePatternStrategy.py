@@ -117,7 +117,7 @@ class BasePatternStrategy(ExtendedStrategy):
         return result
 
     def is_trading_fee_reasonable(self, limit_price, take_profit):
-        commission_rate = self.broker.getcommissioninfo()['commission']  # todo: test
+        commission_rate = self.broker.getcommissioninfo()['commission']
         average_cost_of_trade = ((config.base_pattern_risk_reward_rate + 1) * commission_rate) * limit_price
         if abs(take_profit - limit_price) < (average_cost_of_trade * config.trading_fee_safe_side_multiplier):
             return False
@@ -148,7 +148,7 @@ class BasePatternStrategy(ExtendedStrategy):
         take_profit = opr(base_pattern[f'internal_{high_low}'], base_length * config.base_pattern_risk_reward_rate)
         trigger_price = base_pattern[f'internal_{high_low}']
         if not self.is_trading_fee_reasonable(limit_price, take_profit):
-            return self.signal_df  # todo: test
+            return self.signal_df
 
         # todo: ref_date and ref_timeframe never been used.
         # todo: use .loc to generate and assign signal in one step.

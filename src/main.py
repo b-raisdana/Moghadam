@@ -41,6 +41,8 @@ if __name__ == "__main__":
     peaks_and_valleys = read_multi_timeframe_peaks_n_valleys()
     # # plot_multi_timeframe_peaks_n_valleys(_peaks_and_valleys, config.processing_date_range)
     # # exit(0)
+    # bull_bear_side = read_multi_timeframe_bull_bear_side_trends()
+    # plot_multi_timeframe_bull_bear_side_trends(ohlcva, _peaks_and_valleys, bull_bear_side)
     # generate_multi_timeframe_atr_movement_pivots(config.processing_date_range)
     pivots = read_multi_timeframe_atr_movement_pivots(config.processing_date_range)
     major_pivots = pivots[pivots['major_timeframe']].copy()

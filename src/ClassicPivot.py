@@ -171,7 +171,7 @@ def insert_is_overlap_of(multi_timeframe_pivots: pt.DataFrame[MultiTimeframePivo
 
 # @measure_time
 def update_hit(timeframe_pivots: pt.DataFrame[Pivot2DFM], ohlcv) -> pt.DataFrame[Pivot2DFM]:
-    if config.check_assertions and 'passing_time' not in timeframe_pivots.columns:  # todo: test
+    if config.check_assertions and 'passing_time' not in timeframe_pivots.columns:
         AssertionError("Expected passing_time be calculated before: "
                        "'passing_time' not in active_timeframe_pivots.columns")
     may_have_hit = timeframe_pivots.index
@@ -216,11 +216,7 @@ def update_hit(timeframe_pivots: pt.DataFrame[Pivot2DFM], ohlcv) -> pt.DataFrame
         invalid_hit_ends = timeframe_pivots[timeframe_pivots[f'hit_end_{n}'] >
                                             timeframe_pivots['passing_time']].index
         timeframe_pivots.loc[invalid_hit_ends, f'hit_end_{n}'] = pd.NaT
-        try:
-            timeframe_pivots[f'hit_end_{n}'].notna()
-        except Exception as e:
-            nop = 1
-            raise e
+        timeframe_pivots[f'hit_end_{n}'].notna()
         timeframe_pivots.loc[timeframe_pivots[f'hit_end_{n}'].notna(), 'hit'] = n + 1
     return timeframe_pivots
 

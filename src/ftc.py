@@ -108,7 +108,6 @@ def pivot_bull_bear_movement_start(timeframe_pivots: pt.DataFrame[PivotDFM],
             'movement_start_time': 'bbs_movement_start_time',
             'movement_start_value': 'bbs_movement_start_value',
         })[['bbs_movement_start_time', 'bbs_movement_start_value', ]]
-
     timeframe_pivots.loc[:, ['bbs_movement_start_time', 'bbs_movement_start_value']] = pd.merge_asof(
         left=timeframe_pivots, right=no_overlap_bull_bear_trends.dropna(), left_index=True,
         right_on='bbs_movement_start_time',

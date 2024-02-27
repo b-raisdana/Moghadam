@@ -135,12 +135,6 @@ def insert_crossing2(base: pd.DataFrame, target: pd.DataFrame,
         no_repeat_base_indexes = ~remained_bases.index.get_level_values('date').duplicated(keep='first')
         bases_to_compare = remained_bases[no_repeat_base_indexes]
         remained_bases = remained_bases[~no_repeat_base_indexes]
-        # bases_to_compare['target_index'] = nearest_match(bases_to_compare.index.get_level_values('date'), target.index,
-        #                                                  direction='forward', shift=0)
-        # if direction == 'left':
-        #     pass
-        # else:
-        #     pass # todo: test
         bases_to_compare['target_index'] = nearest_match(bases_to_compare.index.get_level_values('date'), target.index,
                                                          direction=direction, shift=0)
         bases_with_known_crossing_target = empty_df(PeakValley)

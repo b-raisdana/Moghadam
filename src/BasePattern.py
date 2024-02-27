@@ -184,12 +184,12 @@ def timeframe_base_pattern(ohlcva: pt.DataFrame[OHLCVA], a_pattern_ohlcva: pt.Da
     timeframe_base_patterns['atr'] = ohlcva.loc[timeframe_base_patterns.index, 'atr'].tolist()
     # a_pattern_times = to_timeframe(timeframe_base_patterns.index, anti_pattern_timeframe(timeframe))
     # timeframe_base_patterns['a_pattern_atr'] = a_pattern_ohlcva.loc[a_pattern_times, 'atr'].tolist()
-    a_pattern_ohlcva['a_pattern_atr'] = a_pattern_ohlcva['atr'] # todo: test
+    a_pattern_ohlcva['a_pattern_atr'] = a_pattern_ohlcva['atr']
     timeframe_base_patterns = pd.merge_asof(left=timeframe_base_patterns, right=a_pattern_ohlcva[['a_pattern_atr']],
                   left_index=True, right_index=True, direction='backward')
     # a_trigger_times = to_timeframe(timeframe_base_patterns.index, anti_trigger_timeframe(timeframe))
     # timeframe_base_patterns['a_trigger_atr'] = a_trigger_ohlcva.loc[a_trigger_times, 'atr'].tolist()
-    a_trigger_ohlcva['a_trigger_atr'] = a_trigger_ohlcva['atr'] # todo: test
+    a_trigger_ohlcva['a_trigger_atr'] = a_trigger_ohlcva['atr']
     timeframe_base_patterns = pd.merge_asof(left=timeframe_base_patterns, right=a_trigger_ohlcva[['a_trigger_atr']],
                                             left_index=True, right_index=True, direction='backward')
     update_band_status(timeframe_base_patterns, base_timeframe_ohlcva, timeframe, direction='upper')
