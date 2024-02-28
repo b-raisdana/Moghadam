@@ -12,7 +12,7 @@ from FigurePlotter.BullBearSide_plotter import plot_multi_timeframe_bull_bear_si
 from FigurePlotter.Pivot_plotter import plot_multi_timeframe_pivots
 from PeakValley import read_multi_timeframe_peaks_n_valleys
 from atr import read_multi_timeframe_ohlcva
-from ftc import multi_timeframe_ftc
+from ftc import multi_timeframe_ftc, insert_multi_timeframe_pivots_real_start
 from helper.helper import date_range_to_string
 from ohlcv import read_multi_timeframe_ohlcv
 
@@ -46,6 +46,12 @@ if __name__ == "__main__":
     # generate_multi_timeframe_atr_movement_pivots(config.processing_date_range)
     pivots = read_multi_timeframe_atr_movement_pivots(config.processing_date_range)
     major_pivots = pivots[pivots['major_timeframe']].copy()
+    insert_multi_timeframe_pivots_real_start(major_pivots, peaks_and_valleys)
+    if 'real_start_time' not in major_pivots.columns:
+        raise AssertionError("'real_start_time' not in major_pivots.columns")
+    if 'real_start_value' not in major_pivots.columns:
+        raise AssertionError("'real_start_value' not in major_pivots.columns")
+    plot_multi_timeframe_pivots(major_pivots, group_by='timeframe')
     # #
     # # generate_multi_timeframe_bull_bear_side_pivots(config.processing_date_range)
     # # _pivots = read_multi_timeframe_bull_bear_side_pivots(config.processing_date_range)
@@ -58,7 +64,6 @@ if __name__ == "__main__":
     # #     os.path.join(config.path_of_data,
     # #                  f'BasePatternStrategy.orders.0Rzb5KJmWrXfRsnjTE1t9g.24-01-11.00-00T24-01-12.23-59.csv'))
     # plot_multi_timeframe_base_pattern(base_patterns, ohlcva)  # , orders_df=orders_df)
-    # plot_multi_timeframe_pivots(major_pivots[major_pivots['major_timeframe'].astype(bool)], group_by='timeframe')
     multi_timeframe_ftc(
         mt_pivot=major_pivots,
         mt_bbs_trend=bbs_trends,

@@ -10,7 +10,7 @@ from PanderaDFM.OHLCV import OHLCV, MultiTimeframeOHLCV
 from PanderaDFM.PeakValley import PeakValley, MultiTimeframePeakValley
 from PanderaDFM.Pivot import PivotDFM
 from PanderaDFM.Pivot2 import MultiTimeframePivot2DFM
-from PeakValley import insert_crossing2, peaks_only, valleys_only
+from PeakValley import insert_crossing2, peaks_only, valleys_only, major_peaks_n_valleys
 from helper.data_preparation import single_timeframe
 
 
@@ -169,6 +169,19 @@ def ftc_of_range_by_price(pivots_with_bbs_movement: pt.DataFrame[MultiTimeframeP
             break
 
 
+def insert_multi_timeframe_pivots_real_start(mt_pivot: pt.DataFrame[MultiTimeframePivot2DFM],
+                                             mt_peaks_n_valleys: pt.DataFrame[MultiTimeframePeakValley], ):
+    original_pivots = mt_pivot[mt_pivot.index.get_level_values('original_start') == mt_pivot.index.get_level_values('date')]
+    for timeframe in original_pivots.index.get_level_values('timeframe').unique():
+        timeframe_pivots = single_timeframe(original_pivots, timeframe)
+        time_frame_peaks_n_valleys = major_peaks_n_valleys(mt_peaks_n_valleys, timeframe)
+        insert_pivots_real_start(timeframe_pivots, time_frame_peaks_n_valleys)
+        timeframe_pivots['timeframe'] = timeframe
+        timeframe_pivots = timeframe_pivots.reset_index().set_index(['timeframe', 'date', 'original_start'])
+        original_pivots.loc[timeframe_pivots.index, ['real_start_time', 'real_start_value']] = \
+            timeframe_pivots[['real_start_time', 'real_start_value']]
+
+
 def multi_timeframe_ftc(
         mt_pivot: pt.DataFrame[MultiTimeframePivot2DFM],
         mt_bbs_trend: pt.DataFrame[MultiTimeframeBullBearSide],
@@ -187,7 +200,7 @@ def multi_timeframe_ftc(
     for timeframe in timeframe_shortlist:
         timeframe_pivots = single_timeframe(mt_pivot, timeframe)
         timeframe_bbs = single_timeframe(mt_bbs_trend, timeframe)
-        time_frame_peaks_n_valleys = single_timeframe(mt_peaks_n_valleys)
+        time_frame_peaks_n_valleys = single_timeframe(mt_peaks_n_valleys, timeframe)
         ohlcv = single_timeframe(mt_ohlcv, timeframe)
         pivots_with_ftc = insert_ftc(
             timeframe_pivots=timeframe_pivots,
@@ -217,23 +230,33 @@ def insert_pivot_movement(support_resistance: pt.DataFrame[PivotDFM], peaks_or_v
     else:  # top_type == TopTYPE.VALLEY: #Support
         more_significant = lambda top, previous_top: top < previous_top
         high_low = 'low'
-    for pivot_time, pivot in support_resistance.iterrows():
-        passed_tops = peaks_or_valleys[peaks_or_valleys.index.get_level_values('date') < pivot_time]
-        passed_tops['previous_top_value'] = passed_tops[high_low].shift(1)  # todo: test
-        movement_start = passed_tops[more_significant(passed_tops[high_low], passed_tops['previous_top_value'])]
-        support_resistance.loc[pivot_time, 'real_start'] = movement_start.iloc[-1][high_low]
+    support_resistance['real_start_time'] = pd.Series(dtype='datetime64[ns, UTC]')
+    support_resistance['real_start_value'] = pd.Series(dtype=float)
+    for (pivot_time, original_start), pivot in support_resistance.iterrows():
+        passed_tops = peaks_or_valleys[peaks_or_valleys.index.get_level_values('date') < pivot['movement_start_time']]\
+            .sort_index(level='date', ascending=False)
+        if len(passed_tops) > 0:
+            passed_tops['previous_top_value'] = passed_tops[high_low].shift(-1)  # todo: test
+            movement_start = passed_tops[more_significant(passed_tops[high_low], passed_tops['previous_top_value'])]
+            support_resistance.loc[pivot_time, 'real_start_time'] = movement_start.index.get_level_values('date')[0]
+            support_resistance.loc[pivot_time, 'real_start_value'] = movement_start.iloc[0][high_low]
     return support_resistance
 
 
-def insert_pivots_movement(original_pivots: pt.DataFrame[PivotDFM], peaks_n_valleys: pt.DataFrame[PeakValley]):
+def insert_pivots_real_start(original_pivots: pt.DataFrame[PivotDFM], peaks_n_valleys: pt.DataFrame[PeakValley]):
     resistance_pivots = original_pivots[original_pivots['is_resistance'].astype(bool)]
-    peaks = peaks_only(peaks_n_valleys)
-    resistance_pivots.loc[:, 'real_start'] = insert_pivot_movement(resistance_pivots, peaks)
-    if 'real_start' not in original_pivots.columns:
-        raise AssertionError("'real_start' not in original_pivots.columns")  # todo: test
-    support_pivots = original_pivots[~original_pivots['is_resistance'].astype(bool)]
     valleys = valleys_only(peaks_n_valleys)
-    support_pivots.loc[:, 'real_start'] = insert_pivot_movement(support_pivots, valleys)
+    original_pivots.loc[resistance_pivots.index, ['real_start_time', 'real_start_value']] = \
+        insert_pivot_movement(resistance_pivots, valleys, top_type=TopTYPE.VALLEY)[
+            ['real_start_time', 'real_start_value']]
+    if 'real_start_time' not in original_pivots.columns:
+        raise AssertionError("'real_start_time' not in original_pivots.columns")  # todo: test
+    if 'real_start_value' not in original_pivots.columns:
+        raise AssertionError("'real_start_value' not in original_pivots.columns")  # todo: test
+    support_pivots = original_pivots[~original_pivots['is_resistance'].astype(bool)]
+    peaks = peaks_only(peaks_n_valleys)
+    original_pivots.loc[support_pivots.index, ['real_start_time', 'real_start_value']] = \
+        insert_pivot_movement(support_pivots, peaks, top_type=TopTYPE.PEAK)[['real_start_time', 'real_start_value']]
 
 
 def insert_ftc(timeframe_pivots: pt.DataFrame[PivotDFM], time_frame_bbs_boundaries: pt.DataFrame[BullBearSide],
@@ -246,8 +269,10 @@ def insert_ftc(timeframe_pivots: pt.DataFrame[PivotDFM], time_frame_bbs_boundari
         == timeframe_pivots.index.get_level_values(level='original_start')] \
         .copy().reset_index().set_index('date')
     # pivot_bull_bear_movement(original_pivots, time_frame_bbs_boundaries)
-    insert_pivots_movement(original_pivots, time_frame_peaks_n_valleys)
-    if 'real_start' not in original_pivots.columns:
+    insert_pivots_real_start(original_pivots, time_frame_peaks_n_valleys)
+    if 'real_start_time' not in original_pivots.columns:
+        raise AssertionError("'real_start' not in original_pivots.columns")  # todo: test
+    if 'real_start_value' not in original_pivots.columns:
         raise AssertionError("'real_start' not in original_pivots.columns")  # todo: test
     # #
     # # if 'bbs_movement' not in original_pivots.columns:

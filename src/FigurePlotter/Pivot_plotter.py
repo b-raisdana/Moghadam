@@ -46,14 +46,12 @@ def plot_multi_timeframe_pivots(multi_timeframe_pivots: pt.DataFrame[MultiTimefr
             legend_group = f"Piv{timeframe}R"
             fig.add_scatter(x=[base_ohlcv.index[0]], y=[base_ohlcv['open']],
                             name=legend_group, line=dict(color='red', width=0), mode='lines',
-                            legendgroup=legend_group, showlegend=True, hoverinfo='none',
-                            )
+                            legendgroup=legend_group, showlegend=True, hoverinfo='none', )
         if timeframe in support_timeframes:
             legend_group = f"Piv{timeframe}S"
             fig.add_scatter(x=[base_ohlcv.index[0]], y=[base_ohlcv['open']],
                             name=legend_group, line=dict(color='red', width=0), mode='lines',
-                            legendgroup=legend_group, showlegend=True, hoverinfo='none',
-                            )
+                            legendgroup=legend_group, showlegend=True, hoverinfo='none', )
 
     multi_timeframe_pivots = multi_timeframe_pivots.sort_index(level='date')
     for (pivot_timeframe, pivot_start, pivot_original_start), pivot_info in multi_timeframe_pivots.iterrows():
@@ -80,6 +78,13 @@ def plot_multi_timeframe_pivots(multi_timeframe_pivots: pt.DataFrame[MultiTimefr
             fig.add_scatter(x=[pivot_start, pivot_info['return_end_time']],
                             y=[pivot_info['level'], pivot_info['return_end_value']],
                             name=legend_group, line=dict(color='red', width=0.5), mode='lines',  # +text',
+                            legendgroup=legend_group, showlegend=False, hoverinfo='none',
+                            )
+        # add real start
+        if (hasattr(pivot_info, 'real_start_time') and hasattr(pivot_info, 'real_start_value')):
+            fig.add_scatter(x=[pivot_info['real_start_time'], pivot_start, ],
+                            y=[pivot_info['real_start_value'], pivot_info['level'], ],
+                            name=legend_group, line=dict(color='gray', width=0.5), mode='lines',  # +text',
                             legendgroup=legend_group, showlegend=False, hoverinfo='none',
                             )
         # add a dotted line from creating time of level to the activation time
