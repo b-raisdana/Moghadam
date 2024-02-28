@@ -3,8 +3,6 @@ from typing import List
 import pandas as pd
 from pandera import typing as pt
 
-import SupportResistance
-from ClassicPivot import LevelDirection
 from Config import config, TREND, TopTYPE
 from PanderaDFM.BasePattern import MultiTimeframeBasePattern
 from PanderaDFM.BullBearSide import BullBearSide, MultiTimeframeBullBearSide
@@ -202,26 +200,29 @@ def multi_timeframe_ftc(
         mt_pivot.loc[pivots_with_ftc.index, 'ftc_list'] = pivots_with_ftc['ftc_list']
         pass
 
+
 def insert_pivot_movement(support_resistance: pt.DataFrame[PivotDFM], peaks_or_valleys: pt.DataFrame[PeakValley],
                           top_type: TopTYPE):
-    '''
+    """
     real_start of support/resistance pivot is the first valley/peak which in compare with previous valley/peak is
     less_significant: (valley < previous / peak > previous)
-    :param original_pivots:
-    :param peaks_n_valleys:
+    :param top_type:
+    :param support_resistance:
+    :param peaks_or_valleys:
     :return:
-    '''
-    if top_type == TopTYPE.PEAK: #Resistance:  # todo: test
+    """
+    if top_type == TopTYPE.PEAK:  # Resistance:  # todo: test
         more_significant = lambda top, previous_top: top > previous_top
         high_low = 'high'
-    else: # top_type == TopTYPE.VALLEY: #Support
+    else:  # top_type == TopTYPE.VALLEY: #Support
         more_significant = lambda top, previous_top: top < previous_top
         high_low = 'low'
     for pivot_time, pivot in support_resistance.iterrows():
         passed_tops = peaks_or_valleys[peaks_or_valleys.index.get_level_values('date') < pivot_time]
-        passed_tops['previous_top_value'] = passed_tops[high_low].shift(1) # todo: test
+        passed_tops['previous_top_value'] = passed_tops[high_low].shift(1)  # todo: test
         movement_start = passed_tops[more_significant(passed_tops[high_low], passed_tops['previous_top_value'])]
         support_resistance.loc[pivot_time, 'real_start'] = movement_start.iloc[-1][high_low]
+    return support_resistance
 
 
 def insert_pivots_movement(original_pivots: pt.DataFrame[PivotDFM], peaks_n_valleys: pt.DataFrame[PeakValley]):
@@ -229,7 +230,7 @@ def insert_pivots_movement(original_pivots: pt.DataFrame[PivotDFM], peaks_n_vall
     peaks = peaks_only(peaks_n_valleys)
     resistance_pivots.loc[:, 'real_start'] = insert_pivot_movement(resistance_pivots, peaks)
     if 'real_start' not in original_pivots.columns:
-        raise AssertionError("'real_start' not in original_pivots.columns") # todo: test
+        raise AssertionError("'real_start' not in original_pivots.columns")  # todo: test
     support_pivots = original_pivots[~original_pivots['is_resistance'].astype(bool)]
     valleys = valleys_only(peaks_n_valleys)
     support_pivots.loc[:, 'real_start'] = insert_pivot_movement(support_pivots, valleys)
