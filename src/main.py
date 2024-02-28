@@ -61,7 +61,8 @@ if __name__ == "__main__":
     # plot_multi_timeframe_pivots(major_pivots[major_pivots['major_timeframe'].astype(bool)], group_by='timeframe')
     multi_timeframe_ftc(
         mt_pivot=major_pivots,
-        mt_frame_bbs_trend=bbs_trends,
+        mt_bbs_trend=bbs_trends,
+        mt_peaks_n_valleys=peaks_and_valleys,
         mt_ohlcv=ohlcva,
         multi_timeframe_base_patterns=base_patterns,
     )

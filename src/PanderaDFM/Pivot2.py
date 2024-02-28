@@ -10,6 +10,7 @@ from pandera import typing as pt
 from PanderaDFM.ExtendedDf import ExtendedDf, BaseDFM
 from PanderaDFM.MultiTimeframe import MultiTimeframe
 
+# todo: replace Pivot... with Pivot2... then rename Pivot2... to Pivot...
 
 class Pivot2DFM(BaseDFM):
     date: pt.Index[Annotated[pd.DatetimeTZDtype, "ns", "UTC"]]  # = pandera.Field(check_name=True)  # start of effect
