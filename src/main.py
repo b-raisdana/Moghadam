@@ -51,11 +51,11 @@ if __name__ == "__main__":
         raise AssertionError("'real_start_time' not in major_pivots.columns")
     if 'real_start_value' not in major_pivots.columns:
         raise AssertionError("'real_start_value' not in major_pivots.columns")
-    plot_multi_timeframe_pivots(major_pivots, group_by='timeframe')
+    # plot_multi_timeframe_pivots(major_pivots, group_by='timeframe')
     # #
     # # generate_multi_timeframe_bull_bear_side_pivots(config.processing_date_range)
     # # _pivots = read_multi_timeframe_bull_bear_side_pivots(config.processing_date_range)
-    bbs_trends = read_multi_timeframe_bull_bear_side_trends(config.processing_date_range)
+    # bbs_trends = read_multi_timeframe_bull_bear_side_trends(config.processing_date_range)
     # plot_multi_timeframe_bull_bear_side_trends(ohlcva, peaks_and_valleys, trends)
     # exit(0)
     # generate_multi_timeframe_base_patterns()
@@ -66,7 +66,7 @@ if __name__ == "__main__":
     # plot_multi_timeframe_base_pattern(base_patterns, ohlcva)  # , orders_df=orders_df)
     multi_timeframe_ftc(
         mt_pivot=major_pivots,
-        mt_bbs_trend=bbs_trends,
+        # mt_bbs_trend=bbs_trends,
         mt_peaks_n_valleys=peaks_and_valleys,
         mt_ohlcv=ohlcva,
         multi_timeframe_base_patterns=base_patterns,
