@@ -12,6 +12,7 @@ from PanderaDFM.Pivot import PivotDFM
 from PanderaDFM.Pivot2 import MultiTimeframePivot2DFM, Pivot2DFM
 from PeakValley import insert_crossing2, peaks_only, valleys_only, major_peaks_n_valleys
 from helper.data_preparation import single_timeframe
+from helper.helper import log_w
 
 
 def merge_bbs_overlap(time_frame_bbs: pt.DataFrame[BullBearSide]):
@@ -140,10 +141,10 @@ def ftc_of_range_by_time(pivots_with_ftc_range_start_time, multi_timeframe_base_
 
 
 def ftc_of_range_by_price(pivots: pt.DataFrame[Pivot2DFM],
-                          multi_timeframe_base_patterns: pt.DataFrame[MultiTimeframeBasePattern], pivots_timeframe):
+                          mt_base_patterns: pt.DataFrame[MultiTimeframeBasePattern], pivots_timeframe):
     if len(pivots['real_movement'].dropna()) > 0:
         pass
-    pivot_lower_timeframes = config.timeframes[config.timeframes.index(pivots_timeframe):0:-1]
+    pivot_lower_timeframes = config.timeframes[config.timeframes.index(pivots_timeframe)::-1]
     # todo: test
     if 'real_movement' not in pivots.columns:
         raise ValueError("'real_movement' not in pivots.columns")
@@ -156,16 +157,21 @@ def ftc_of_range_by_price(pivots: pt.DataFrame[Pivot2DFM],
     remained_pivots = pivots.copy()
     for timeframe in pivot_lower_timeframes:
         if len(remained_pivots) > 0:
-            timeframe_base_patterns = single_timeframe(multi_timeframe_base_patterns, timeframe)
-            for pivot_start, pivot in remained_pivots.iterrows():
-                remained_pivots.loc[pivot_start, 'ftc_list'] = timeframe_base_patterns[
-                    (timeframe_base_patterns['internal_low'] < pivot['ftc_range_high'])
-                    & (timeframe_base_patterns['internal_high'] > pivot['ftc_range_low'])
+            timeframe_base_patterns = single_timeframe(mt_base_patterns, timeframe, keep_timeframe=True)
+            """
+            in following code I receive ValueError: Incompatible indexer with Series for last line. 
+            """
+            for pivot_start, pivot_info in remained_pivots.iterrows():
+                matched_bases = timeframe_base_patterns[
+                    (timeframe_base_patterns['internal_low'] < pivot_info['ftc_range_high'])
+                    & (timeframe_base_patterns['internal_high'] > pivot_info['ftc_range_low'])
                     & (timeframe_base_patterns.index.get_level_values('date') <= pivot_start)
-                    & (timeframe_base_patterns['ttl'] <= pivot_start)
-                    ]
-                pivots.loc[pivot_start, 'ftc_list'] = \
-                    remained_pivots.loc[pivot_start, 'ftc_list']
+                    & (timeframe_base_patterns['ttl'] >= pivot_start)
+                    ].copy().reset_index()
+                if len(matched_bases) > 0:
+                    remained_pivots.at[pivot_start, 'ftc_list'] = matched_bases.to_dict(orient='records')
+                    pivots.at[pivot_start, 'ftc_list'] = \
+                        remained_pivots.loc[pivot_start, 'ftc_list']
             remained_pivots = remained_pivots[remained_pivots['ftc_list'].isna()]
         else:
             break
@@ -173,27 +179,32 @@ def ftc_of_range_by_price(pivots: pt.DataFrame[Pivot2DFM],
 
 def insert_multi_timeframe_pivots_real_start(mt_pivot: pt.DataFrame[MultiTimeframePivot2DFM],
                                              mt_peaks_n_valleys: pt.DataFrame[MultiTimeframePeakValley], ):
-    original_pivots = mt_pivot[
-        mt_pivot.index.get_level_values('original_start') == mt_pivot.index.get_level_values('date')]
+    log_w("do insert_multi_timeframe_pivots_real_start before duplicating pivots.")
+    # original_pivots = mt_pivot[
+    #     mt_pivot.index.get_level_values('original_start') == mt_pivot.index.get_level_values('date')]
     mt_pivot['real_start_time'] = pd.Series(dtype='datetime64[ns, UTC]')
     mt_pivot['real_start_value'] = pd.Series(dtype=float)
     mt_pivot['real_start_permanent'] = pd.Series(dtype=bool)
-    for timeframe in original_pivots.index.get_level_values('timeframe').unique():
-        timeframe_pivots = single_timeframe(original_pivots, timeframe).copy()
+    for timeframe in mt_pivot.index.get_level_values('timeframe').unique():
+        timeframe_pivots = single_timeframe(mt_pivot, timeframe).copy()
         time_frame_peaks_n_valleys = major_peaks_n_valleys(mt_peaks_n_valleys, timeframe)
         insert_pivots_real_start(timeframe_pivots, time_frame_peaks_n_valleys)
+
         timeframe_pivots['timeframe'] = timeframe
-        timeframe_pivots = timeframe_pivots.reset_index().set_index(['timeframe', 'date', 'original_start'])
-        mt_pivot.loc[timeframe_pivots.index, ['real_start_time', 'real_start_value']] = \
-            timeframe_pivots[['real_start_time', 'real_start_value']]
+        timeframe_pivots = timeframe_pivots.reset_index().set_index(['timeframe', 'date']) #, 'original_start'])
+        mt_pivot.loc[timeframe_pivots.index, ['real_start_time', 'real_start_value', 'real_start_permanent']] = \
+            timeframe_pivots[['real_start_time', 'real_start_value', 'real_start_permanent']]
     mt_pivot['real_movement'] = mt_pivot['level'] - mt_pivot['real_start_value']
+    if mt_pivot[['real_start_time', 'real_start_value', 'real_start_permanent']].isna().any().any():
+        raise AssertionError(
+            "mt_pivot[['real_start_time', 'real_start_value', 'real_start_permanent']].isna().any().any('")
 
 
 def multi_timeframe_ftc(
         mt_pivot: pt.DataFrame[MultiTimeframePivot2DFM],
         # mt_bbs_trend: pt.DataFrame[MultiTimeframeBullBearSide],
-        mt_peaks_n_valleys: pt.DataFrame[MultiTimeframePeakValley],
-        mt_ohlcv: pt.DataFrame[MultiTimeframeOHLCV],
+        # mt_peaks_n_valleys: pt.DataFrame[MultiTimeframePeakValley],
+        # mt_ohlcv: pt.DataFrame[MultiTimeframeOHLCV],
         multi_timeframe_base_patterns: pt.DataFrame[MultiTimeframeBasePattern],
         timeframe_shortlist: List[str] = None):
     if timeframe_shortlist is None:
@@ -207,13 +218,14 @@ def multi_timeframe_ftc(
     for timeframe in timeframe_shortlist:
         timeframe_pivots = single_timeframe(mt_pivot, timeframe)
         # timeframe_bbs = single_timeframe(mt_bbs_trend, timeframe)
-        time_frame_peaks_n_valleys = single_timeframe(mt_peaks_n_valleys, timeframe)
-        ohlcv = single_timeframe(mt_ohlcv, timeframe)
+        # time_frame_peaks_n_valleys = single_timeframe(mt_peaks_n_valleys, timeframe)
+        # ohlcv = single_timeframe(mt_ohlcv, timeframe)
         pivots_with_ftc = insert_ftc(
             timeframe_pivots=timeframe_pivots,
             # time_frame_bbs_boundaries=timeframe_bbs,
-            time_frame_peaks_n_valleys=time_frame_peaks_n_valleys,
-            ohlcv=ohlcv, multi_timeframe_base_patterns=multi_timeframe_base_patterns,
+            # time_frame_peaks_n_valleys=time_frame_peaks_n_valleys,
+            # ohlcv=ohlcv,
+            multi_timeframe_base_patterns=multi_timeframe_base_patterns,
             timeframe=timeframe)
         pivots_with_ftc['timeframe'] = timeframe
         pivots_with_ftc = pivots_with_ftc.reset_index().set_index(['timeframe', 'date', 'original_start'])
@@ -240,13 +252,14 @@ def insert_pivot_real_start(support_resistance: pt.DataFrame[PivotDFM], peaks_or
     support_resistance['real_start_time'] = pd.Series(dtype='datetime64[ns, UTC]')
     support_resistance['real_start_value'] = pd.Series(dtype=float)
     support_resistance['real_start_permanent'] = pd.Series(dtype=bool)
-    if support_resistance.index.names != ['date', 'original_start']:
-        raise AssertionError("support_resistance.index.names != ['date', 'original_start']")
-    for (pivot_time, original_start), pivot in support_resistance.iterrows():
+    if support_resistance.index.names != ['date']: #, 'original_start']:
+        raise AssertionError("support_resistance.index.names != ['date']")
+        # raise AssertionError("support_resistance.index.names != ['date', 'original_start']")
+    for pivot_time, pivot in support_resistance.iterrows():
         passed_tops = peaks_or_valleys[peaks_or_valleys.index.get_level_values('date') <= pivot['movement_start_time']] \
             .sort_index(level='date', ascending=False)
         if len(passed_tops) > 0:
-            passed_tops['previous_top_value'] = passed_tops[high_low].shift(-1)  # todo: test
+            passed_tops['previous_top_value'] = passed_tops[high_low].shift(-1)
             movement_start = passed_tops[more_significant(passed_tops[high_low], passed_tops['previous_top_value'])]
             if len(movement_start) > 0:
                 support_resistance.loc[pivot_time, 'real_start_time'] = movement_start.index.get_level_values('date')[0]
@@ -265,29 +278,44 @@ def insert_pivots_real_start(original_pivots: pt.DataFrame[PivotDFM], peaks_n_va
     original_pivots['real_start_time'] = pd.Series(dtype='datetime64[ns, UTC]')
     original_pivots['real_start_value'] = pd.Series(dtype=float)
     original_pivots['real_start_permanent'] = pd.Series(dtype=bool)
-    original_pivots.loc[resistance_pivots.index, ['real_start_time', 'real_start_value']] = \
+    original_pivots.loc[resistance_pivots.index, ['real_start_time', 'real_start_value', 'real_start_permanent']] = \
         insert_pivot_real_start(resistance_pivots, valleys, top_type=TopTYPE.VALLEY)[
-            ['real_start_time', 'real_start_value']]
+            ['real_start_time', 'real_start_value', 'real_start_permanent']]
     if 'real_start_time' not in original_pivots.columns:
         raise AssertionError("'real_start_time' not in original_pivots.columns")  # todo: test
     if 'real_start_value' not in original_pivots.columns:
         raise AssertionError("'real_start_value' not in original_pivots.columns")  # todo: test
     support_pivots = original_pivots[~original_pivots['is_resistance'].astype(bool)].copy()
     peaks = peaks_only(peaks_n_valleys)
-    original_pivots.loc[support_pivots.index, ['real_start_time', 'real_start_value']] = \
-        insert_pivot_real_start(support_pivots, peaks, top_type=TopTYPE.PEAK)[['real_start_time', 'real_start_value']]
-    pass
+    original_pivots.loc[support_pivots.index, ['real_start_time', 'real_start_value', 'real_start_permanent']] = \
+        insert_pivot_real_start(support_pivots, peaks, top_type=TopTYPE.PEAK)[
+            ['real_start_time', 'real_start_value', 'real_start_permanent']]
+    """
+    after following line the 'real_start_time' and 'real_start_value'are NA 
+    but 'movement_start_time' and 'movement_start_value' have values. why?
+    original_pivots['real_start_time'].isna()=((Timestamp('2023-11-16 19:40:00+0000', tz='UTC'), Timestamp('2023-11-16 19:40:00+0000', tz='UTC')), True)
+    original_pivots[['real_start_time', 'real_start_value', 'movement_start_time', 'movement_start_value']].dtypes = ('real_start_time', datetime64[ns, UTC]) ('real_start_value', dtype('float64')) ('movement_start_time', datetime64[ns, UTC]) ('movement_start_value', dtype('float64'))
+    """
+    na_real_starts = original_pivots['real_start_time'].isna()
+    original_pivots.loc[na_real_starts, 'real_start_time'] = original_pivots.loc[na_real_starts, 'movement_start_time']
+    original_pivots.loc[na_real_starts, 'real_start_value'] = original_pivots.loc[
+        na_real_starts, 'movement_start_value']
+    original_pivots.loc[na_real_starts, 'real_start_permanent'] = False
+    if original_pivots[['real_start_time', 'real_start_value', 'real_start_permanent']].isna().any().any():
+        raise AssertionError(
+            "original_pivots[['real_start_time', 'real_start_value', 'real_start_permanent']].isna().any().any('")
 
 
 def insert_ftc(timeframe_pivots: pt.DataFrame[Pivot2DFM],  # time_frame_bbs_boundaries: pt.DataFrame[BullBearSide],
-               time_frame_peaks_n_valleys: pt.DataFrame[PeakValley],
-               ohlcv: pt.DataFrame[OHLCV], multi_timeframe_base_patterns: pt.DataFrame[MultiTimeframeBasePattern],
+               # time_frame_peaks_n_valleys: pt.DataFrame[PeakValley],
+               # ohlcv: pt.DataFrame[OHLCV],
+               multi_timeframe_base_patterns: pt.DataFrame[MultiTimeframeBasePattern],
                timeframe):
     if 'real_start_time' not in timeframe_pivots.columns:
         raise ValueError("'real_start' not in original_pivots.columns")  # todo: test
     if 'real_start_value' not in timeframe_pivots.columns:
         raise ValueError("'real_start' not in original_pivots.columns")  # todo: test
-    # todo: after testing properly, extend the operation to support duplicated pivots.
+    log_w("after testing properly, extend the operation to support duplicated pivots.")
     original_pivots = timeframe_pivots[
         timeframe_pivots.index.get_level_values(level='date')
         == timeframe_pivots.index.get_level_values(level='original_start')] \
@@ -306,11 +334,14 @@ def insert_ftc(timeframe_pivots: pt.DataFrame[Pivot2DFM],  # time_frame_bbs_boun
     # # ftc_of_range_by_time(pivots_with_bbs_movement, multi_timeframe_base_patterns, timeframe)
     ftc_of_range_by_price(original_pivots, multi_timeframe_base_patterns, timeframe)
     if 'ftc_range_start_value' not in original_pivots.columns:
-        raise AssertionError("'ftc_range_start_value' not in pivots_with_bbs_movement.columns")  # todo: test
+        raise AssertionError("'ftc_range_start_value' not in pivots_with_bbs_movement.columns")
     if 'ftc_range_low' not in original_pivots.columns:
-        raise AssertionError("'ftc_range_low' not in pivots_with_bbs_movement.columns")  # todo: test
+        raise AssertionError("'ftc_range_low' not in pivots_with_bbs_movement.columns")
     if 'ftc_range_high' not in original_pivots.columns:
-        raise AssertionError("'ftc_range_high' not in pivots_with_bbs_movement.columns")  # todo: test
+        raise AssertionError("'ftc_range_high' not in pivots_with_bbs_movement.columns")
+    if original_pivots[['ftc_range_start_value', 'ftc_range_low', 'ftc_range_high']].isna().any().any():
+        raise AssertionError(
+            "original_pivots[['ftc_range_start_value', 'ftc_range_low', 'ftc_range_high']].isna().any().any()")
     return original_pivots
 
 

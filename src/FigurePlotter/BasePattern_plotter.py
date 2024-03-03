@@ -214,16 +214,18 @@ def draw_base_pattern_orders(fig, legend_group: str, side: OrderSide, start: dat
                     legendgroup=legend_group, )
 
 
-def draw_base(base_pattern, fig, index_date, start, timeframe):
-    xs = [start, base_pattern['effective_end'], base_pattern['effective_end'], start]
-    ys = [base_pattern['internal_low'], base_pattern['internal_low'],
-          base_pattern['internal_high'], base_pattern['internal_high']]
+def draw_base(base_info, fig, index_date, real_start, timeframe, legendgroup=None):
+    xs = [real_start, base_info['effective_end'], base_info['effective_end'], real_start]
+    ys = [base_info['internal_low'], base_info['internal_low'],
+          base_info['internal_high'], base_info['internal_high']]
     fill_color = 'blue'
-    legendgroup = MultiTimeframeBasePattern.str(index_date, timeframe, base_pattern)
-    text = MultiTimeframeBasePattern.repr(index_date, timeframe, base_pattern)
+    if legendgroup is None:
+        legendgroup = MultiTimeframeBasePattern.str(index_date, timeframe, base_info)
+    name = MultiTimeframeBasePattern.str(index_date, timeframe, base_info)
+    text = MultiTimeframeBasePattern.repr(index_date, timeframe, base_info)
     fig.add_scatter(x=xs, y=ys, fill="toself",  # fillcolor=fill_color,
                     fillpattern=dict(fgopacity=0.5),
-                    name=legendgroup,
+                    name=name,
                     text=text,
                     line=dict(color=fill_color, width=0),
                     mode='lines',

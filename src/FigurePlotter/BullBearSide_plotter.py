@@ -28,7 +28,7 @@ def plot_single_timeframe_bull_bear_side_trends(single_timeframe_ohlcva: pt.Data
     remained_number_of_scatters = MAX_NUMBER_OF_PLOT_SCATTERS
     for _start, _trend in boundaries.iterrows():
         trend_peaks_n_valleys = peaks_valleys_in_range(peaks_n_valleys, _start, _trend['end'])
-        included_candles = single_timeframe_ohlcva.loc[_start: _trend['end']].index
+        # included_candles = single_timeframe_ohlcva.loc[_start: _trend['end']].index
         trend_peaks = peaks_only(trend_peaks_n_valleys)['high'].reset_index(level='timeframe').sort_index(level='date')
         trend_valleys = valleys_only(trend_peaks_n_valleys)['low'].reset_index(level='timeframe') \
             .sort_index(level='date', ascending=False)

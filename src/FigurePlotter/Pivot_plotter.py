@@ -1,12 +1,15 @@
 from typing import Literal
 
+import numpy as np
 import pandas as pd
 from pandera import typing as pt
 from plotly import graph_objects as plgo
 
 from Config import config
+from FigurePlotter.BasePattern_plotter import draw_base
 from FigurePlotter.OHLVC_plotter import plot_ohlcv, add_atr_scatter
 from FigurePlotter.plotter import show_and_save_plot
+from PanderaDFM.OHLCVA import MultiTimeframeOHLCVA
 from PanderaDFM.Pivot2 import Pivot2DFM, MultiTimeframePivot2DFM
 from atr import read_multi_timeframe_ohlcva
 from helper.data_preparation import single_timeframe
@@ -14,20 +17,22 @@ from helper.helper import measure_time
 
 
 @measure_time
-def plot_multi_timeframe_pivots(multi_timeframe_pivots: pt.DataFrame[MultiTimeframePivot2DFM],
+def plot_multi_timeframe_pivots(mt_pivots: pt.DataFrame[MultiTimeframePivot2DFM],
                                 group_by: Literal['timeframe', 'original_start'],
+                                multi_timeframe_ohlcva: pt.DataFrame[MultiTimeframeOHLCVA] = None,
                                 date_range_str: str = None, show: bool = True, save: bool = True) -> plgo.Figure:
     if date_range_str is None:
         date_range_str = config.processing_date_range
     # Create the figure using plot_peaks_n_valleys function
-    multi_timeframe_ohlcva = read_multi_timeframe_ohlcva(date_range_str)
+    if multi_timeframe_ohlcva is None:
+        multi_timeframe_ohlcva = read_multi_timeframe_ohlcva(date_range_str)
     end_time = max(multi_timeframe_ohlcva.index.get_level_values('date'))
     base_ohlcv = single_timeframe(multi_timeframe_ohlcva, config.timeframes[0])
 
     # plot multiple timeframes candle chart all together.
-    resistance_timeframes = multi_timeframe_pivots[multi_timeframe_pivots['is_resistance']] \
+    resistance_timeframes = mt_pivots[mt_pivots['is_resistance']] \
         .index.get_level_values(level='timeframe').unique()
-    support_timeframes = multi_timeframe_pivots[~multi_timeframe_pivots['is_resistance']] \
+    support_timeframes = mt_pivots[~mt_pivots['is_resistance']] \
         .index.get_level_values(level='timeframe').unique()
     fig = plot_ohlcv(ohlcv=base_ohlcv, show=False, save=False, name=config.timeframes[0])
     for timeframe in config.timeframes[1:]:
@@ -53,8 +58,9 @@ def plot_multi_timeframe_pivots(multi_timeframe_pivots: pt.DataFrame[MultiTimefr
                             name=legend_group, line=dict(color='red', width=0), mode='lines',
                             legendgroup=legend_group, showlegend=True, hoverinfo='none', )
 
-    multi_timeframe_pivots = multi_timeframe_pivots.sort_index(level='date')
-    for (pivot_timeframe, pivot_start, pivot_original_start), pivot_info in multi_timeframe_pivots.iterrows():
+    mt_pivots = mt_pivots.sort_index(level='date')
+    pivots_have_ftc = 'ftc_list' in mt_pivots.columns
+    for (pivot_timeframe, pivot_start, pivot_original_start), pivot_info in mt_pivots.iterrows():
         if group_by == 'timeframe':
             legend_group = f"Piv{pivot_timeframe}R" if pivot_info['is_resistance'] else f"Piv{pivot_timeframe}S"
             show_legend = False
@@ -120,5 +126,18 @@ def plot_multi_timeframe_pivots(multi_timeframe_pivots: pt.DataFrame[MultiTimefr
             name=legend_group, line=dict(color=boundary_color, width=0), mode='lines',  # +text',
             legendgroup=legend_group, showlegend=show_legend, hoverinfo='text',  # text=pivot_description,
         )
+        #draw pivot FTC base patterns
+        if pivots_have_ftc:
+            if isinstance(pivot_info['ftc_list'], list):
+                for ftc in pivot_info['ftc_list']:
+                    real_start = ftc['date'] + \
+                                 pd.to_timedelta(
+                                     ftc['timeframe']) * config.base_pattern_index_shift_after_last_candle_in_the_sequence
+                    ftc['effective_end'] = min(
+                        ftc['end'] if pd.notna(ftc['end']) else ftc['ttl'],
+                        ftc['ttl'] if pd.notna(ftc['ttl']) else ftc['end'],
+                        end_time
+                    )
+                    draw_base(ftc, fig, ftc['date'], real_start, ftc['timeframe'], legend_group)
     show_and_save_plot(fig, save, show, name_without_prefix=f'multi_timeframe_classic_pivots.{date_range_str}')
     return fig

@@ -307,7 +307,8 @@ def read_by_date(data_frame_type, date_range_str, file_path, n_rows, skip_rows):
     return df
 
 
-def single_timeframe(multi_timeframe_data: pt.DataFrame[MultiTimeframe_Type], timeframe) -> pd.DataFrame:
+def single_timeframe(multi_timeframe_data: pt.DataFrame[MultiTimeframe_Type], timeframe, keep_timeframe: bool = False)\
+        -> pd.DataFrame:
     if 'timeframe' not in multi_timeframe_data.index.names:
         raise Exception(
             f'multi_timeframe_data expected to have "timeframe" in indexes:[{multi_timeframe_data.index.names}]')
@@ -316,7 +317,10 @@ def single_timeframe(multi_timeframe_data: pt.DataFrame[MultiTimeframe_Type], ti
             f'timeframe:{timeframe} is not in supported timeframes:{config.timeframes}')
     single_timeframe_data: pd.DataFrame = multi_timeframe_data.loc[
         multi_timeframe_data.index.get_level_values('timeframe') == timeframe]
-    return validate_no_timeframe(single_timeframe_data.droplevel('timeframe'))
+    if keep_timeframe:
+        return validate_no_timeframe(single_timeframe_data.reset_index(level='timeframe'))
+    else:
+        return validate_no_timeframe(single_timeframe_data.droplevel('timeframe'))
 
 
 def to_timeframe(time: Union[DatetimeIndex, datetime, Timestamp], timeframe: str, ignore_cached_times: bool = False,

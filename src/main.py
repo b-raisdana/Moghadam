@@ -1,26 +1,20 @@
 import sys
 from datetime import datetime
 
-from AtrMovementPivots import atr_movement_pivots, read_multi_timeframe_atr_movement_pivots, \
-    generate_multi_timeframe_atr_movement_pivots
+from AtrMovementPivots import read_multi_timeframe_atr_movement_pivots
 from BasePattern import read_multi_timeframe_base_patterns
-from BullBearSide import read_multi_timeframe_bull_bear_side_trends
 from Config import config
-from FigurePlotter.BBS_BasePattern_plotter import plot_multi_timeframe_bbs_n_base_pattern
-from FigurePlotter.BasePattern_plotter import plot_multi_timeframe_base_pattern
-from FigurePlotter.BullBearSide_plotter import plot_multi_timeframe_bull_bear_side_trends
 from FigurePlotter.Pivot_plotter import plot_multi_timeframe_pivots
 from PeakValley import read_multi_timeframe_peaks_n_valleys
 from atr import read_multi_timeframe_ohlcva
 from ftc import multi_timeframe_ftc, insert_multi_timeframe_pivots_real_start
 from helper.helper import date_range_to_string
-from ohlcv import read_multi_timeframe_ohlcv
 
 # from data_preparation import d_types
 
 if __name__ == "__main__":
     # config.processing_date_range = date_range_to_string(days=5, end=datetime(year=2023, month=11, day=18))
-    config.processing_date_range = date_range_to_string(days=2, end=datetime(year=2023, month=11, day=18))
+    config.processing_date_range = date_range_to_string(days=5, end=datetime(year=2023, month=11, day=18))
     #
     #     file_path: str = config.path_of_data
     #     today_morning = today_morning()
@@ -46,7 +40,8 @@ if __name__ == "__main__":
     # generate_multi_timeframe_atr_movement_pivots(config.processing_date_range)
     pivots = read_multi_timeframe_atr_movement_pivots(config.processing_date_range)
     major_pivots = pivots[pivots['major_timeframe']].copy()
-    insert_multi_timeframe_pivots_real_start(major_pivots, peaks_and_valleys)
+    # if 'real_start_time' not in major_pivots.columns:
+    #     insert_multi_timeframe_pivots_real_start(major_pivots, peaks_and_valleys)
     if 'real_start_time' not in major_pivots.columns:
         raise AssertionError("'real_start_time' not in major_pivots.columns")
     if 'real_start_value' not in major_pivots.columns:
@@ -67,14 +62,14 @@ if __name__ == "__main__":
     multi_timeframe_ftc(
         mt_pivot=major_pivots,
         # mt_bbs_trend=bbs_trends,
-        mt_peaks_n_valleys=peaks_and_valleys,
-        mt_ohlcv=ohlcva,
+        # mt_peaks_n_valleys=peaks_and_valleys,
+        # mt_ohlcv=ohlcva,
         multi_timeframe_base_patterns=base_patterns,
     )
-    plot_multi_timeframe_bbs_n_base_pattern(multi_timeframe_base_pattern=base_patterns,
-                                            multi_timeframe_ohlcva=ohlcva,
-                                            multi_timeframe_bull_bear_side_trends=bbs_trends,
-                                            multi_timeframe_peaks_n_valleys=peaks_and_valleys,
-                                            orders_df=None, timeframe_shortlist=None, )
+
+    plot_multi_timeframe_pivots(mt_pivots=major_pivots,
+                                multi_timeframe_ohlcva=ohlcva,
+                                group_by='original_start'
+                                )
     sys.exit(0)
     test_strategy(cash=100000)

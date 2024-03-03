@@ -9,6 +9,7 @@ from BullBearSidePivot import read_multi_timeframe_bull_bear_side_pivots
 from Config import config, TopTYPE
 from PanderaDFM.OHLCV import OHLCV
 from PanderaDFM.OHLCVA import OHLCVA
+from PanderaDFM.PeakValley import MultiTimeframePeakValley
 from PanderaDFM.Pivot import MultiTimeframePivotDFM
 from PanderaDFM.Pivot2 import Pivot2DFM, Pivot2Df
 from PeakValley import insert_crossing2
@@ -287,8 +288,6 @@ def insert_hit(pivots: pt.DataFrame[Pivot2DFM], n: int, ohlcv: pt.DataFrame[OHLC
 
 # @measure_time
 def insert_pivot_info(timeframe_pivots: pt.DataFrame['Pivot2DFM'], ohlcva: pt.DataFrame[OHLCVA], timeframe: str):
-    insert_pivot_type_n_level(timeframe_pivots)
-
     timeframe_pivots['original_start'] = timeframe_pivots.index
     timeframe_pivots.set_index('original_start', append=True, inplace=True)
 

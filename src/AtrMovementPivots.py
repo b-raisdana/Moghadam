@@ -4,7 +4,7 @@ from typing import List, Annotated
 import pandas as pd
 from pandera import typing as pt
 
-from ClassicPivot import insert_pivot_info, update_pivot_deactivation
+from ClassicPivot import insert_pivot_info, update_pivot_deactivation, insert_pivot_type_n_level
 from Config import config, TopTYPE
 from PanderaDFM.AtrTopPivot import MultiTimeframeAtrMovementPivotDFM, MultiTimeframeAtrMovementPivotDf, \
     AtrMovementPivotDf
@@ -13,6 +13,7 @@ from PanderaDFM.OHLCVA import OHLCVA
 from PanderaDFM.PeakValley import MultiTimeframePeakValley, PeakValley
 from PeakValley import read_multi_timeframe_peaks_n_valleys, peaks_only, valleys_only, insert_crossing2
 from atr import read_multi_timeframe_ohlcva
+from ftc import insert_multi_timeframe_pivots_real_start
 from helper.data_preparation import to_timeframe, single_timeframe, pattern_timeframe
 from helper.helper import measure_time, date_range, date_range_to_string
 
@@ -48,7 +49,7 @@ def find_multi_timeframe_atr_movement_pivots(mt_ohlcva, base_timeframe_ohlcva, m
 
                 timeframe_pivots['timeframe'] = timeframe
                 timeframe_pivots.set_index('timeframe', inplace=True, append=True)
-                timeframe_pivots.swaplevel()
+                timeframe_pivots = timeframe_pivots.swaplevel()
                 pivots = MultiTimeframeAtrMovementPivotDf.concat(pivots, timeframe_pivots)
                 if config.check_assertions and not ((len(mt_tops.drop(
                         index=mt_tops[mt_tops.index.get_level_values('date') \
@@ -118,12 +119,14 @@ def atr_movement_pivots(date_range_str: str = None, structure_timeframe_shortlis
     expanded_atr_date_range_str = date_range_to_string(start=min(start, expanded_atr_start), end=end)
     mt_ohlcva = read_multi_timeframe_ohlcva(expanded_atr_date_range_str)
     base_timeframe_ohlcva = single_timeframe(mt_ohlcva, config.timeframes[0])
-
+    peaks_and_valleys = read_multi_timeframe_peaks_n_valleys(date_range_str)
     # filter to tops of structure timeframes
     mt_tops = mt_tops[mt_tops.index.get_level_values('timeframe').isin(structure_timeframe_shortlist)]
     pivots = find_multi_timeframe_atr_movement_pivots(mt_ohlcva, base_timeframe_ohlcva, mt_tops,
                                                       structure_timeframe_shortlist, same_time_multiple_timeframes)
     insert_major_timeframe(pivots, structure_timeframe_shortlist)
+    insert_pivot_type_n_level(pivots)
+    insert_multi_timeframe_pivots_real_start(pivots, peaks_and_valleys)
     final_pivots = MultiTimeframeAtrMovementPivotDf.new()
     for timeframe in structure_timeframe_shortlist[::-1]:
         if timeframe in pivots.index.get_level_values(level='timeframe').unique():

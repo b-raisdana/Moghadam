@@ -1,15 +1,12 @@
-from datetime import datetime
 from typing import List
 
 import pandas as pd
-import plotly.graph_objs
 from pandera import typing as pt
 
 from Config import config
 from FigurePlotter.BasePattern_plotter import draw_band_activators, draw_base, draw_band_orders_df
 from FigurePlotter.BullBearSide_plotter import plot_single_timeframe_bull_bear_side_trends
 from FigurePlotter.plotter import plot_multiple_figures
-from Model.Order import OrderSide, BracketOrderType
 from PanderaDFM.BasePattern import MultiTimeframeBasePattern
 from PanderaDFM.BullBearSide import MultiTimeframeBullBearSide
 from PanderaDFM.OHLCVA import MultiTimeframeOHLCVA
@@ -54,23 +51,24 @@ def plot_multi_timeframe_bbs_n_base_pattern(multi_timeframe_base_pattern: pt.Dat
         # draw Base Pattern for lower timeframes.
         lower_timeframe_base_pattern = multi_timeframe_base_pattern[multi_timeframe_base_pattern.index \
             .get_level_values(level='timeframe').isin(config.timeframes[:config.timeframes.index(timeframe)])]
-        for (base_timeframe, index_date), base_pattern in lower_timeframe_base_pattern.iterrows():
+        for (base_timeframe, base_date), base_info in lower_timeframe_base_pattern.iterrows():
             if base_timeframe not in config.timeframes[:-2]:
                 raise AssertionError(f'timeframe({timeframe}) not in config.timeframes[:-2]')
-            start = index_date + \
-                    pd.to_timedelta(base_timeframe) * config.base_pattern_index_shift_after_last_candle_in_the_sequence
-            legend_group, text = draw_base(base_pattern, fig, index_date, start, base_timeframe)
-            draw_band_activators(base_pattern, fig, legend_group, start, text)
+            real_start = base_date + \
+                         pd.to_timedelta(
+                             base_timeframe) * config.base_pattern_index_shift_after_last_candle_in_the_sequence
+            legend_group, text = draw_base(base_info=base_info, fig=fig, index_date=base_date, real_start=real_start,
+                                           base_timeframe=base_timeframe)
+            draw_band_activators(base_info, fig, legend_group, real_start, text)
             if (orders_df is not None) and (not orders_df.empty):
                 draw_band_orders_df(orders_df, fig, end_of_dates, end_of_prices,
-                                    index_date, base_timeframe, legend_group)
+                                    base_date, base_timeframe, legend_group)
 
         figures.append(fig)
     plot_multiple_figures(figures, name=f'multi_timeframe_bull_bear_side_trends.'
                                         f'{multi_timeframe_ohlcva.index[0][1].strftime("%y-%m-%d.%H-%M")}T'
                                         f'{multi_timeframe_ohlcva.index[-1][1].strftime("%y-%m-%d.%H-%M")}',
                           show=show, save=save)
-
 
 # def draw_band_activators(base_pattern, fig, legend_group, start, text):
 #     if base_pattern['below_band_activated'] is not None:
