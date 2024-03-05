@@ -226,6 +226,12 @@ def drop_base_without_crossing2(bases_to_compare, target, base_target_column, mo
         else:  # direction == 'right':
             target['min_value'] = target[target_compare_column].iloc[::-1].rolling(window=n, min_periods=0).min()
             target['min_value'] = target['min_value'].shift(-1)
+        try:
+            len(bases_to_compare['target_index'])
+            nop = target.loc[bases_to_compare['target_index']]
+        except:
+            nop = 1
+            pass
         bases_to_compare['target_min_value'] = target.loc[bases_to_compare['target_index'], 'min_value'].tolist()
         without_crossings = bases_to_compare[
             bases_to_compare[base_target_column].isna() |

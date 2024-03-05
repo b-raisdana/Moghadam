@@ -179,7 +179,7 @@ def ftc_of_range_by_price(pivots: pt.DataFrame[Pivot2DFM],
 
 def insert_multi_timeframe_pivots_real_start(mt_pivot: pt.DataFrame[MultiTimeframePivot2DFM],
                                              mt_peaks_n_valleys: pt.DataFrame[MultiTimeframePeakValley], ):
-    log_w("do insert_multi_timeframe_pivots_real_start before duplicating pivots.")
+    # log_w("do insert_multi_timeframe_pivots_real_start before duplicating pivots.")
     # original_pivots = mt_pivot[
     #     mt_pivot.index.get_level_values('original_start') == mt_pivot.index.get_level_values('date')]
     mt_pivot['real_start_time'] = pd.Series(dtype='datetime64[ns, UTC]')
