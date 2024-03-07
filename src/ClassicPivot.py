@@ -172,6 +172,8 @@ def insert_is_overlap_of(multi_timeframe_pivots: pt.DataFrame[MultiTimeframePivo
 
 # @measure_time
 def update_hit(timeframe_pivots: pt.DataFrame[Pivot2DFM], ohlcv) -> pt.DataFrame[Pivot2DFM]:
+    if timeframe_pivots.index.get_level_values('date').isna().any():
+        pass # todo: test
     if config.check_assertions and 'passing_time' not in timeframe_pivots.columns:
         AssertionError("Expected passing_time be calculated before: "
                        "'passing_time' not in active_timeframe_pivots.columns")
@@ -226,13 +228,16 @@ def update_hit(timeframe_pivots: pt.DataFrame[Pivot2DFM], ohlcv) -> pt.DataFrame
 def insert_hits(active_timeframe_pivots: pt.DataFrame[Pivot2DFM], hit_boundary_column: str, n: int,
                 ohlcv: pt.DataFrame[OHLCV],
                 side: Literal['start', 'end']):
+    if active_timeframe_pivots.index.get_level_values('date').isna().any():
+        pass # todo: test
     t_df = active_timeframe_pivots.drop(columns=['date', 'start_date'], errors='ignore')
     index_backup = index_names(t_df)
     t_df: pd.DataFrame = t_df.reset_index()
     t_df.rename(columns={'date': 'start_date'}, inplace=True)
     t_df.rename(columns={hit_boundary_column: 'date'}, inplace=True)
     t_df.set_index('date', inplace=True)
-
+    if t_df.index.get_level_values('date').isna().any():
+        pass # todo: test
     resistance_start_dates = t_df.loc[t_df['is_resistance'], 'start_date'].tolist()
     t_df.loc[t_df['start_date'].isin(resistance_start_dates), f'hit_{side}_{n}'] = \
         insert_hit(t_df[t_df['start_date'].isin(resistance_start_dates)], n, ohlcv, side, 'Resistance') \
@@ -256,6 +261,8 @@ def insert_hits(active_timeframe_pivots: pt.DataFrame[Pivot2DFM], hit_boundary_c
 
 def insert_hit(pivots: pt.DataFrame[Pivot2DFM], n: int, ohlcv: pt.DataFrame[OHLCV],
                side: Literal['start', 'end'], pivot_type: Literal['Resistance', 'Support']):
+    if pivots.index.isna().any():
+        pass # todo: test
     if pivot_type == 'Resistance':
         high_low = 'high'
 
