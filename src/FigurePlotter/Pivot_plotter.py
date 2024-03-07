@@ -16,7 +16,7 @@ from helper.data_preparation import single_timeframe
 from helper.helper import measure_time
 
 
-@measure_time
+# @measure_time
 def plot_multi_timeframe_pivots(mt_pivots: pt.DataFrame[MultiTimeframePivot2DFM],
                                 group_by: Literal['timeframe', 'original_start'],
                                 multi_timeframe_ohlcva: pt.DataFrame[MultiTimeframeOHLCVA] = None,

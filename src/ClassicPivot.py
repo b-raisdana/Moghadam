@@ -9,7 +9,6 @@ from BullBearSidePivot import read_multi_timeframe_bull_bear_side_pivots
 from Config import config, TopTYPE
 from PanderaDFM.OHLCV import OHLCV
 from PanderaDFM.OHLCVA import OHLCVA
-from PanderaDFM.PeakValley import MultiTimeframePeakValley
 from PanderaDFM.Pivot import MultiTimeframePivotDFM
 from PanderaDFM.Pivot2 import Pivot2DFM, Pivot2Df
 from PeakValley import insert_crossing2
@@ -173,7 +172,7 @@ def insert_is_overlap_of(multi_timeframe_pivots: pt.DataFrame[MultiTimeframePivo
 # @measure_time
 def update_hit(timeframe_pivots: pt.DataFrame[Pivot2DFM], ohlcv) -> pt.DataFrame[Pivot2DFM]:
     if timeframe_pivots.index.get_level_values('date').isna().any():
-        pass # todo: test
+        pass  # todo: test
     if config.check_assertions and 'passing_time' not in timeframe_pivots.columns:
         AssertionError("Expected passing_time be calculated before: "
                        "'passing_time' not in active_timeframe_pivots.columns")
@@ -229,23 +228,41 @@ def insert_hits(active_timeframe_pivots: pt.DataFrame[Pivot2DFM], hit_boundary_c
                 ohlcv: pt.DataFrame[OHLCV],
                 side: Literal['start', 'end']):
     if active_timeframe_pivots.index.get_level_values('date').isna().any():
-        pass # todo: test
-    t_df = active_timeframe_pivots.drop(columns=['date', 'start_date'], errors='ignore')
+        pass
+    t_df = active_timeframe_pivots.drop(columns=['date', 'start_date'], errors='ignore').copy()
     index_backup = index_names(t_df)
     t_df: pd.DataFrame = t_df.reset_index()
     t_df.rename(columns={'date': 'start_date'}, inplace=True)
     t_df.rename(columns={hit_boundary_column: 'date'}, inplace=True)
     t_df.set_index('date', inplace=True)
-    if t_df.index.get_level_values('date').isna().any():
-        pass # todo: test
-    resistance_start_dates = t_df.loc[t_df['is_resistance'], 'start_date'].tolist()
-    t_df.loc[t_df['start_date'].isin(resistance_start_dates), f'hit_{side}_{n}'] = \
-        insert_hit(t_df[t_df['start_date'].isin(resistance_start_dates)], n, ohlcv, side, 'Resistance') \
-            [f'hit_{side}_{n}']
+    # resistance_start_dates = t_df.loc[
+    #     t_df['is_resistance'].astype(bool) & t_df.index.get_level_values('date').notna(), 'start_date'].tolist()
+    # if t_df[t_df['start_date'].isin(resistance_start_dates)].index.get_level_values('date').isna().any():
+    #     pass  # todo: test
+    # t_df.loc[t_df['start_date'].isin(resistance_start_dates), f'hit_{side}_{n}'] = \
+    #     insert_hit(t_df[t_df['start_date'].isin(resistance_start_dates)], n, ohlcv, side, 'Resistance') \
+    #         [f'hit_{side}_{n}']
+    t_df['iloc'] = range(len(t_df))
+    resistance_ilocs = t_df.loc[
+        t_df['is_resistance'].astype(bool) & t_df.index.get_level_values('date').notna(), 'iloc'].tolist()
+    if t_df[t_df['iloc'].isin(resistance_ilocs)].index.get_level_values('date').isna().any():
+        pass  # todo: test
+    t_df.loc[t_df['iloc'].isin(resistance_ilocs), f'hit_{side}_{n}'] = \
+        insert_hit(t_df[t_df['iloc'].isin(resistance_ilocs)], n, ohlcv, side, 'Resistance')[f'hit_{side}_{n}']
 
-    support_start_dates = t_df.loc[t_df['is_resistance'] == False, 'start_date'].tolist()
-    t_df.loc[t_df['start_date'].isin(support_start_dates), f'hit_{side}_{n}'] = \
-        insert_hit(t_df.loc[t_df['start_date'].isin(support_start_dates)], n, ohlcv, side, 'Support') \
+    # support_start_dates = t_df.loc[
+    #     ~t_df['is_resistance'].astype(bool), 'start_date'].tolist()
+    # if t_df[t_df['start_date'].isin(support_start_dates)].index.get_level_values('date').isna().any():
+    #     pass  # todo: test
+    # t_df.loc[t_df['start_date'].isin(support_start_dates), f'hit_{side}_{n}'] = \
+    #     insert_hit(t_df.loc[t_df['start_date'].isin(support_start_dates)], n, ohlcv, side, 'Support') \
+    #         [f'hit_{side}_{n}']
+    support_start_ilocs = t_df.loc[
+        ~t_df['is_resistance'].astype(bool) & t_df.index.get_level_values('date').notna(), 'iloc'].tolist()
+    if t_df[t_df['iloc'].isin(support_start_ilocs)].index.get_level_values('date').isna().any():
+        pass  # todo: test
+    t_df.loc[t_df['iloc'].isin(support_start_ilocs), f'hit_{side}_{n}'] = \
+        insert_hit(t_df.loc[t_df['iloc'].isin(support_start_ilocs)], n, ohlcv, side, 'Support') \
             [f'hit_{side}_{n}']
 
     t_df.reset_index(inplace=True)
@@ -262,7 +279,7 @@ def insert_hits(active_timeframe_pivots: pt.DataFrame[Pivot2DFM], hit_boundary_c
 def insert_hit(pivots: pt.DataFrame[Pivot2DFM], n: int, ohlcv: pt.DataFrame[OHLCV],
                side: Literal['start', 'end'], pivot_type: Literal['Resistance', 'Support']):
     if pivots.index.isna().any():
-        pass # todo: test
+        pass  # todo: test
     if pivot_type == 'Resistance':
         high_low = 'high'
 
