@@ -38,42 +38,6 @@ def insert_passing_time(pivots: pt.DataFrame[Pivot2DFM], ohlcv: pt.DataFrame[OHL
                          )['right_crossing_time']
 
     resistance_pivots = pivots[pivots['is_resistance'].astype(bool)]
-    # todo: test
-    """
-INFO@03-07.15:42:55:Error in atr_movement_pivots(date_range_str:24-02-21.00-00T24-03-06.23-59, structure_timeframe_shortlist:list...): any(pivots.loc[resistance_pivots.index, 'external_margin'] < pivots.loc[resistance_pivots.index, 'internal_margin'])
-  File "C:\CT\Moghadam\src\AtrMovementPivots.py", line 77, in generate_multi_timeframe_atr_movement_pivots
-    t_atr_movement_pivots = atr_movement_pivots(date_range_str=date_range_str,
-  File "C:\CT\Moghadam\src\helper\helper.py", line 100, in _measure_time
-    log(f"Error in {func.__name__}({function_parameters}): {str(e)}", stack_trace=True)
-Traceback (most recent call last):
-  File "C:\Users\Behrooz.KARGAH1\AppData\Roaming\Python\Python310\site-packages\IPython\core\interactiveshell.py", line 3505, in run_code
-    exec(code_obj, self.user_global_ns, self.user_ns)
-  File "<ipython-input-2-712f14710e99>", line 1, in <module>
-    runfile('C:\\CT\\Moghadam\\src\\main.py', wdir='C:\\CT\\Moghadam')
-  File "C:\Program Files\JetBrains\PyCharm 2023.2.1\plugins\python\helpers\pydev\_pydev_bundle\pydev_umd.py", line 197, in runfile
-    pydev_imports.execfile(filename, global_vars, local_vars)  # execute the script
-  File "C:\Program Files\JetBrains\PyCharm 2023.2.1\plugins\python\helpers\pydev\_pydev_imps\_pydev_execfile.py", line 18, in execfile
-    exec(compile(contents+"\n", file, 'exec'), glob, loc)
-  File "C:\CT\Moghadam\src\main.py", line 41, in <module>
-    pivots = read_multi_timeframe_atr_movement_pivots(config.processing_date_range)
-  File "C:\CT\Moghadam\src\AtrMovementPivots.py", line 87, in read_multi_timeframe_atr_movement_pivots
-    result = MultiTimeframeAtrMovementPivotDf.read_file(date_range_str, 'multi_timeframe_atr_movement_pivots',
-  File "C:\CT\Moghadam\src\PanderaDFM\ExtendedDf.py", line 168, in read_file
-    generator(date_range_str)
-  File "C:\CT\Moghadam\src\AtrMovementPivots.py", line 77, in generate_multi_timeframe_atr_movement_pivots
-    t_atr_movement_pivots = atr_movement_pivots(date_range_str=date_range_str,
-  File "C:\CT\Moghadam\src\helper\helper.py", line 94, in _measure_time
-    result = func(*args, **kwargs)
-  File "C:\CT\Moghadam\src\AtrMovementPivots.py", line 136, in atr_movement_pivots
-    timeframe_pivots = update_pivot_deactivation(timeframe_pivots, timeframe, ohlcva)
-  File "C:\CT\Moghadam\src\ClassicPivot.py", line 130, in update_pivot_deactivation
-    timeframe_pivots = duplicate_on_passing_times(timeframe_pivots, ohlcv)
-  File "C:\CT\Moghadam\src\ClassicPivot.py", line 88, in duplicate_on_passing_times
-    insert_passing_time(may_have_passing, ohlcv)
-  File "C:\CT\Moghadam\src\ClassicPivot.py", line 43, in insert_passing_time
-    raise AssertionError("any(pivots.loc[resistance_pivots.index, 'external_margin'] < "
-AssertionError: any(pivots.loc[resistance_pivots.index, 'external_margin'] < pivots.loc[resistance_pivots.index, 'internal_margin'])
-    """
     if config.check_assertions and any(pivots.loc[resistance_pivots.index, 'external_margin'] <
                                        pivots.loc[resistance_pivots.index, 'internal_margin']):
         raise AssertionError("any(pivots.loc[resistance_pivots.index, 'external_margin'] < "

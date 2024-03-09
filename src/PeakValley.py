@@ -137,6 +137,8 @@ def insert_crossing2(base: pd.DataFrame, target: pd.DataFrame,
         remained_bases = remained_bases[~no_repeat_base_indexes]
         bases_to_compare['target_index'] = nearest_match(bases_to_compare.index.get_level_values('date'), target.index,
                                                          direction=direction, shift=0)
+        if bases_to_compare['target_index'].isna().any():
+            raise AssertionError("bases_to_compare['target_index'].isna().any()")  # todo: test
         bases_with_known_crossing_target = empty_df(PeakValley)
         number_of_crossed_bases = 9999999999999
         while number_of_crossed_bases > 0 and len(bases_to_compare) > 0:
@@ -207,6 +209,8 @@ def drop_base_without_crossing2(bases_to_compare, target, base_target_column, mo
         #     pass
         bases_to_compare['target_index'] = nearest_match(bases_to_compare.index.get_level_values('date'), target.index,
                                                          direction=direction, shift=0)
+    if bases_to_compare['target_index'].isna().any():
+        pass
     if more_significant(target=2, base=1):
         if direction == 'left':
             target['max_value'] = target[target_compare_column].rolling(window=n, min_periods=0, ).max()
@@ -214,8 +218,10 @@ def drop_base_without_crossing2(bases_to_compare, target, base_target_column, mo
         else:  # direction == 'right':
             target['max_value'] = target[target_compare_column].iloc[::-1].rolling(window=n, min_periods=0).max()
             target['max_value'] = target['max_value'].shift(-1)
-        bases_to_compare['target_max_value'] = target.loc[bases_to_compare['target_index'], 'max_value'].tolist()
+        bases_to_compare.loc[bases_to_compare['target_index'].notna(), 'target_max_value'] = \
+            target.loc[bases_to_compare['target_index'].dropna(), 'max_value'].tolist()
         without_crossings = bases_to_compare[
+            bases_to_compare['target_index'].isna() |
             bases_to_compare[base_target_column].isna() |
             bases_to_compare['target_max_value'].isna() |
             (bases_to_compare[base_target_column] >= bases_to_compare['target_max_value'])]
