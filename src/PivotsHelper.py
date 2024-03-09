@@ -148,7 +148,7 @@ def pivot_margins(pivots: pd.DataFrame, _type: TopTYPE, pivot_peaks_or_valleys: 
             pivots.loc[pivot_times, 'level'] + pivots.loc[pivot_times, 'breakout_margin_atr']
         if config.check_assertions and any(pivots.loc[pivot_times, 'external_margin'] <
                                            pivots.loc[pivot_times, 'internal_margin']):
-            """ in 02-28 08:04 nearest_body of candle_body_source is higher than level + breakout_margin_atr!!!""" # todo: test
+            """ AAA in 02-28 08:04 nearest_body of candle_body_source is higher than level + breakout_margin_atr!!!""" # todo: test
             raise AssertionError(
                 "any(pivots.loc[pivot_times, 'external_margin'] < pivots.loc[pivot_times, 'internal_margin'])")
     else:
