@@ -98,6 +98,8 @@ def base_from_sequence(_sequence_of_spinning: pt.DataFrame[OHLCVA], ohlcva: pt.D
     Returns:
     - Index[Timestamp]: Index of rows that satisfy the condition.
     """
+    # todo: compare coverage with candle before previous one also.
+    #  may not to have enough coverage with previous candle but have enough coverage with the candle before the previous
     overlap_columns, _sequence_of_spinning = add_previous_candle_overlap(_sequence_of_spinning, ohlcva,
                                                                          number_of_base_spinning_candles, timeframe)
 
@@ -157,6 +159,7 @@ def base_lowest_high(timeframe_base_patterns: pt.DataFrame[BasePattern]) -> pt.S
 
 def add_high_and_low(timeframe_base_patterns: pt.DataFrame['BasePattern'], ohlcva: pt.DataFrame['OHLCVA'],
                      number_of_base_spinning_candles: int) -> pt.DataFrame['BasePattern']:
+    # todo: use the average of highest_low and lowest_high of base candle
     timeframe_base_patterns['internal_low'] = base_highest_low(timeframe_base_patterns)
     timeframe_base_patterns['internal_high'] = base_lowest_high(timeframe_base_patterns)
     timeframe_base_patterns = update_zero_trigger_candles(timeframe_base_patterns, number_of_base_spinning_candles)

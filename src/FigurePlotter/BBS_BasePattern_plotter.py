@@ -11,7 +11,7 @@ from PanderaDFM.BasePattern import MultiTimeframeBasePattern
 from PanderaDFM.BullBearSide import MultiTimeframeBullBearSide
 from PanderaDFM.OHLCVA import MultiTimeframeOHLCVA
 from PanderaDFM.PeakValley import MultiTimeframePeakValley
-from PeakValley import major_peaks_n_valleys
+from PeakValley import major_timeframe
 from helper.data_preparation import single_timeframe
 from helper.helper import measure_time
 
@@ -44,7 +44,7 @@ def plot_multi_timeframe_bbs_n_base_pattern(multi_timeframe_base_pattern: pt.Dat
         # draw BBS
         fig = plot_single_timeframe_bull_bear_side_trends(
             single_timeframe_ohlcva=single_timeframe(multi_timeframe_ohlcva, timeframe),
-            peaks_n_valleys=major_peaks_n_valleys(multi_timeframe_peaks_n_valleys, timeframe).sort_index(level='date'),
+            peaks_n_valleys=major_timeframe(multi_timeframe_peaks_n_valleys, timeframe).sort_index(level='date'),
             boundaries=single_timeframe(multi_timeframe_bull_bear_side_trends, timeframe).sort_index(level='date'),
             show=False, save=False,
             name=f'{timeframe} boundaries')

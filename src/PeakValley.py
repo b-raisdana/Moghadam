@@ -526,29 +526,29 @@ def find_peaks_n_valleys(base_ohlcv: pd.DataFrame,
 
 
 @measure_time
-def major_peaks_n_valleys(_multi_timeframe_peaks_n_valleys: pd.DataFrame, timeframe: str) \
+def major_timeframe(multi_timeframe_df: pd.DataFrame, timeframe: str) \
         -> pt.DataFrame[MultiTimeframePeakValley]:
     """
     Filter rows from multi_timeframe_peaks_n_valleys with a timeframe equal to or greater than the specified timeframe.
 
     Parameters:
-        _multi_timeframe_peaks_n_valleys (pd.DataFrame): DataFrame containing peaks and valleys data with 'timeframe' index.
+        multi_timeframe_df (pd.DataFrame): DataFrame containing peaks and valleys data with 'timeframe' index.
         timeframe (str): The timeframe to filter rows.
 
     Returns:
         pd.DataFrame: DataFrame containing rows with timeframe equal to or greater than the specified timeframe.
     """
-    result = higher_or_eq_timeframe_peaks_n_valleys(_multi_timeframe_peaks_n_valleys, timeframe)
+    result = higher_or_eq_timeframe(multi_timeframe_df, timeframe)
     return result
 
 
-def higher_or_eq_timeframe_peaks_n_valleys(peaks_n_valleys: pd.DataFrame, timeframe: str):
+def higher_or_eq_timeframe(multi_timeframe_df: pd.DataFrame, timeframe: str):
     try:
         index = config.timeframes.index(timeframe)
     except ValueError:
         raise Exception(f'timeframe:{timeframe} should be in [{config.timeframes}]!')
     # result = peaks_n_valleys.loc[peaks_n_valleys.index.isin(config.timeframes[index:], level='timeframe')]
-    result = peaks_n_valleys.loc[peaks_n_valleys.index.get_level_values('timeframe').isin(config.timeframes[index:])]
+    result = multi_timeframe_df.loc[multi_timeframe_df.index.get_level_values('timeframe').isin(config.timeframes[index:])]
     return result
 
 

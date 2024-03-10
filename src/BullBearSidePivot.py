@@ -10,7 +10,7 @@ from MetaTrader import MT
 from PanderaDFM.BullBearSide import BullBearSide
 from PanderaDFM.BullBearSidePivot import BullBearSidePivot
 from PanderaDFM.Pivot import MultiTimeframePivotDFM
-from PeakValley import read_multi_timeframe_peaks_n_valleys, major_peaks_n_valleys
+from PeakValley import read_multi_timeframe_peaks_n_valleys, major_timeframe
 from PivotsHelper import pivots_level_n_margins, level_ttl
 from atr import read_multi_timeframe_ohlcva
 from helper.data_preparation import single_timeframe, trigger_timeframe, read_file, \
@@ -68,7 +68,7 @@ def multi_timeframe_bull_bear_side_pivots(date_range_str: str = None, structure_
     if structure_timeframe_shortlist is None:
         structure_timeframe_shortlist = config.structure_timeframes[::-1]
     for timeframe in structure_timeframe_shortlist:
-        timeframe_peaks_n_valleys = major_peaks_n_valleys(multi_timeframe_peaks_n_valleys, timeframe)
+        timeframe_peaks_n_valleys = major_timeframe(multi_timeframe_peaks_n_valleys, timeframe)
         timeframe_ohlcva = single_timeframe(multi_timeframe_ohlcva, timeframe)
         trigger_timeframe_ohlcva = single_timeframe(multi_timeframe_ohlcva, trigger_timeframe(timeframe))
         timeframe_trends = single_timeframe(multi_timeframe_trends, timeframe)

@@ -10,7 +10,7 @@ from PanderaDFM.OHLCV import OHLCV, MultiTimeframeOHLCV
 from PanderaDFM.PeakValley import PeakValley, MultiTimeframePeakValley
 from PanderaDFM.Pivot import PivotDFM
 from PanderaDFM.Pivot2 import MultiTimeframePivot2DFM, Pivot2DFM
-from PeakValley import insert_crossing2, peaks_only, valleys_only, major_peaks_n_valleys
+from PeakValley import insert_crossing2, peaks_only, valleys_only, major_timeframe
 from helper.data_preparation import single_timeframe
 from helper.helper import log_w
 
@@ -89,34 +89,239 @@ def merge_bbs_overlap(time_frame_bbs: pt.DataFrame[BullBearSide]):
     return time_frame_bbs
 
 
-def zz_pivot_bull_bear_movement(timeframe_pivots: pt.DataFrame[PivotDFM],
-                                time_frame_bbs_trends: pt.DataFrame[BullBearSide]):
-    """
-    Find the time_frame_bbs_boundary which matches with each pivot:
-    Remove overlapped boundaries to prevent finding multiple bbs_trends for each pivot.
-    :param time_frame_bbs_trends:
-    :param bull_bear_trends:
-    :param timeframe_pivots:
-    :param pivots:
-    :param bbs_boundaries:
-    :return:
-    """
-    bull_bear_trends = (
-        time_frame_bbs_trends[time_frame_bbs_trends['bull_bear_side'].isin([TREND.BULLISH.value, TREND.BEARISH.value])]
-        .copy())
-    no_overlap_bull_bear_trends = merge_bbs_overlap(time_frame_bbs=bull_bear_trends)
-    no_overlap_bull_bear_trends = \
-        no_overlap_bull_bear_trends.rename(columns={
-            'movement_start_time': 'bbs_movement_start_time',
-            'movement_start_value': 'bbs_movement_start_value',
-        })[['bbs_movement_start_time', 'bbs_movement_start_value', ]]
-    timeframe_pivots.loc[:, ['bbs_movement_start_time', 'bbs_movement_start_value']] = pd.merge_asof(
-        left=timeframe_pivots, right=no_overlap_bull_bear_trends.dropna(), left_index=True,
-        right_on='bbs_movement_start_time',
-        direction='forward'
-    )[['bbs_movement_start_time', 'bbs_movement_start_value']]
-    timeframe_pivots['bbs_movement'] = \
-        timeframe_pivots['bbs_movement_start_value'] - timeframe_pivots['level']  # todo: test
+# def zz_var codePasteTime = new Date();
+# var runAt = new Date(codePasteTime.getFullYear(), codePasteTime.getMonth(), codePasteTime.getDate(), 8, 44, 45, 0); // 8:44:45, 8:45:0.300, 8:45:0.330
+# // var runAt = new Date(new Date().getTime() + 1 * 1000); // 8:44:45, 8:45:0.300, 8:45:0.330
+# var durationSeconds = 30; // 120
+# var clickInterval = 350; // 310=3/36!=8%, 320=6/48=12%, 350=3/45=7%
+#
+# var maxTries = durationSeconds * 1000 / 100, retryCounter = 1, sellButton, mode, config = {attributes: true};
+# var stockName = document.querySelector('.instrument-name').textContent.split(' ').filter(function (item) {
+#     return !['', 'اقدام', 'نظارتي', 'مجاز', 'پايان', 'مشاوره'].includes(item.trim());
+# })
+# var workerId = String(codePasteTime.getSeconds()) + codePasteTime.getMilliseconds();
+#
+# function appendValue(name, value) {
+#     var currentValue = localStorage.getItem(name);
+#     if (currentValue === null) {
+#         localStorage.setItem(name, value);
+#     } else {
+#         // Append the new value to the existing one
+#         localStorage.setItem(name, currentValue + ',' + value);
+#     }
+# }
+#
+# function arrayFromValue(name) {
+#     var raw = localStorage.getItem(name);
+#     if (raw === null) {
+#         return null;
+#     }
+#     return raw.split(',').filter(function (item) {
+#         return item.length > 0;
+#     });
+# }
+#
+# function continueConditions() {
+#     if (retryCounter++ > maxTries) {
+#         console.log('maxTries reached 1!');
+#         sellBtnObserver.disconnect()
+#         return false;
+#     }
+#     if (new Date().getTime() > (runAt.getTime() + durationSeconds * 1000)) {
+#         console.log('Timeout reached 1!');
+#         sellBtnObserver.disconnect()
+#         return false;
+#     }
+#     return true;
+# }
+#
+# function isPrimaryWorker(thisAttempt) {
+#     attemptWorkers = arrayFromValue('sk_attempt_' + thisAttempt)
+#     if (attemptWorkers === null || attemptWorkers.length < 1)
+#         throw new Error('Can not see myself in the list of attempt workers1');
+#     if (attemptWorkers.length > 0) {
+#         return (workerId === attemptWorkers.sort()[0]);
+#     } else
+#         throw new Error('Can not see myself in the list of attempt workers2');
+# }
+#
+# function bindWorkerToAttempt(thisAttempt) {
+#     appendValue('sk_attempt_' + thisAttempt, workerId + ',');
+#     var attemptWorker = localStorage.getItem('sk_attempt_' + thisAttempt)
+#     while (attemptWorker === null || (attemptWorker !== null && attemptWorker.indexOf(workerId) === -1)) {
+#         console.log('appendValue failed!' + attemptWorker);
+#         setTimeout(function () {
+#             bindWorkerToAttempt(thisAttempt)
+#         }, 5);
+#     }
+# }
+#
+# function fineTuneTryOnce(thisAttempt) {
+#     if (orderRequirements()) {
+#         if (isPrimaryWorker(thisAttempt)) {
+#             lastClickTs = localStorage.getItem('sk_lastClick');
+#             var fineTuneDelay = 0;
+#             if (lastClickTs !== null) {
+#                 var nextAllowedClick = Number(lastClickTs) + clickInterval;
+#                 if (nextAllowedClick > new Date().getTime()) {
+#                     fineTuneDelay = nextAllowedClick - new Date().getTime();
+#                 }
+#                 console.log('lastClickTs', lastClickTs, 'nextAllowedClick', nextAllowedClick, 'now', new Date().getTime(), 'fineTuneDelay', fineTuneDelay);
+#             }
+#             if (fineTuneDelay > 0) setTimeout(function () {
+#                 tryOnce(thisAttempt)
+#             }, fineTuneDelay);
+#             else tryOnce(thisAttempt);
+#         } else {
+#             console.log('!isPrimaryWorker', 'now', new Date().getTime());
+#             setTimeout(function () {
+#                 sellButtonEnabled()
+#             }, 5);
+#         }
+#     } else console.log('Sell requirements not satisfied!!!');
+#     if (!continueConditions())
+#         sellBtnObserver.disconnect();
+# }
+#
+# // function sellButtonEnabled() {}
+# function sellButtonEnabled() {
+#     console.log('sellButtonEnabled:', dateToStrMilliseconds(new Date()))
+#     var bookedAttemptTs = localStorage.getItem('sk_nextAttempt');
+#     var delayBeforeTry = 20, thisAttempt;
+#     if (bookedAttemptTs !== null && Number(bookedAttemptTs) > 0 && Number(bookedAttemptTs) > (new Date().getTime() - 10000)) {
+#         thisAttempt = new Date(Number(bookedAttemptTs)).getTime()
+#         console.log('bookedAttempt:', thisAttempt, 'now:', new Date().getTime());
+#         if (thisAttempt > new Date())
+#             delayBeforeTry = thisAttempt - new Date().getTime();
+#     } else {
+#         thisAttempt = runAt.getTime();
+#     }
+#     var nextAttempt = new Date(thisAttempt + clickInterval).getTime();
+#     bindWorkerToAttempt(thisAttempt);
+#     console.log('delayBeforeTry:', delayBeforeTry, 'now:', dateToStrMilliseconds(new Date()), '/', new Date().getTime(), 'bookedAttempt:', thisAttempt, 'nextAttempt:', nextAttempt);
+#     localStorage.setItem('sk_nextAttempt', nextAttempt);
+#     if (!continueConditions()) {
+#         sellBtnObserver.disconnect()
+#         return;
+#     }
+#     if (delayBeforeTry > 0)
+#         setTimeout(function () {
+#             fineTuneTryOnce(thisAttempt)
+#         }, delayBeforeTry)
+#     else
+#         fineTuneTryOnce(thisAttempt)
+# }
+#
+# var sellBtnObserver = new MutationObserver(function (mutations, observer) {
+#     mutations.forEach(function (mutation) {
+#         if (mutation.attributeName === 'disabled' && !sellButton.disabled) sellButtonEnabled();
+#         else if (mutation.attributeName === 'class' && !document.querySelector('.sell-btn.disabled')) sellButtonEnabled();
+#         else console.log('sellButtonDisabled:', dateToStrMilliseconds(new Date()))
+#     });
+# });
+#
+# function dateToStrMilliseconds(date) {
+#     if (typeof date !== 'undefined')
+#         return date.toString().replace(" GMT+0330 (Iran Standard Time)", "") + '.' + date.getMilliseconds() + 'ms'
+#     else
+#         return 'undefined'
+# }
+#
+# function findSellButton() {
+#     if (document.querySelector('rh-online-order#online-order div.form-container.online-order-container form') !== null) {	// OneLine mode
+#         // if (mode !== 'OneLine') {
+#         //     mode = 'OneLine'; // console.log('mode',mode);
+#         sellButton = document.querySelector('.sell-btn');
+#         // }
+#     } else if (document.querySelector('rh-online-order#online-order div.ng-star-inserted div.basic-container') !== null) {	// Tabbed view
+#         // if (mode !== 'Tabbed') {
+#         //     mode = 'Tabbed'; // console.log('mode',mode);
+#         sellButton = document.querySelector('button.sell');
+#         // }
+#     } else console.log('Unexpected mode');
+# };findSellButton();
+#
+# function orderRequirements() {
+#     if (document.querySelector('rh-online-order input#orderPrice').value === "") {
+#         alert('Price is not valid!');
+#         sellBtnObserver.disconnect();
+#         return false;
+#     }
+#     if (document.querySelector('rh-online-order input[name="orderQuantity"]').value === '') {
+#         alert('Quantity is not valid!');
+#         sellBtnObserver.disconnect();
+#         return false;
+#     }
+#     if (typeof sellButton === 'undefined' || sellButton === null) {
+#         alert('Sell button is not enabled!');
+#         sellBtnObserver.disconnect();
+#         return false;
+#     }
+#     return true;
+# }
+#
+# function tryOnce(thisAttempt) {
+#     if (orderRequirements()) {
+#         sellButton.click();
+#         setTimeout(function (){
+#             localStorage.removeItem('sk_attempt_' + thisAttempt);
+#         },10000)
+#         localStorage.setItem('sk_lastClick', new Date().getTime())
+#         console.log(stockName + ' Sell@' + dateToStrMilliseconds(new Date()) + ' by ' + workerId + '!');
+#     } else console.log('Sell requirements not satisfied!!!');
+#     if (!continueConditions())
+#         sellBtnObserver.disconnect();
+# }
+#
+# function retryIt() {
+#     sellBtnObserver.observe(sellButton, config);
+#     sellButtonEnabled();
+#     setTimeout(function () {
+#         sellBtnObserver.disconnect();
+#     }, durationSeconds * 1000);
+# }
+#
+# if (orderRequirements()) {
+#     var delayToStart = runAt - codePasteTime, timeIsOk = true;
+#     if (delayToStart < 0) {
+#         delayToStart += 86400000;
+#         timeIsOk = confirm('Timer set for tomorrow in ' + delayToStart / 1000 / 60 / 60 + ' hours! are you sure?');
+#     }
+#     if (timeIsOk === true) {
+#         setTimeout(function () {
+#             console.log(stockName + " Running in " + dateToStrMilliseconds(new Date()));
+#             retryIt();
+#         }, delayToStart);
+#         console.log(stockName + ' Scheduled for ' + dateToStrMilliseconds(new Date()) + ' + ' + delayToStart + 'ms@' + dateToStrMilliseconds(runAt));
+#     } else console.log('Time not confirmed!!!');
+# } else console.log('Sell requirements not satisfied!!!');(timeframe_pivots: pt.DataFrame[PivotDFM],
+#                                 time_frame_bbs_trends: pt.DataFrame[BullBearSide]):
+#     """
+#     Find the time_frame_bbs_boundary which matches with each pivot:
+#     Remove overlapped boundaries to prevent finding multiple bbs_trends for each pivot.
+#     :param time_frame_bbs_trends:
+#     :param bull_bear_trends:
+#     :param timeframe_pivots:
+#     :param pivots:
+#     :param bbs_boundaries:
+#     :return:
+#     """
+#     bull_bear_trends = (
+#         time_frame_bbs_trends[time_frame_bbs_trends['bull_bear_side'].isin([TREND.BULLISH.value, TREND.BEARISH.value])]
+#         .copy())
+#     no_overlap_bull_bear_trends = merge_bbs_overlap(time_frame_bbs=bull_bear_trends)
+#     no_overlap_bull_bear_trends = \
+#         no_overlap_bull_bear_trends.rename(columns={
+#             'movement_start_time': 'bbs_movement_start_time',
+#             'movement_start_value': 'bbs_movement_start_value',
+#         })[['bbs_movement_start_time', 'bbs_movement_start_value', ]]
+#     timeframe_pivots.loc[:, ['bbs_movement_start_time', 'bbs_movement_start_value']] = pd.merge_asof(
+#         left=timeframe_pivots, right=no_overlap_bull_bear_trends.dropna(), left_index=True,
+#         right_on='bbs_movement_start_time',
+#         direction='forward'
+#     )[['bbs_movement_start_time', 'bbs_movement_start_value']]
+#     timeframe_pivots['bbs_movement'] = \
+#         timeframe_pivots['bbs_movement_start_value'] - timeframe_pivots['level']  # todo: test
 
 
 def ftc_of_range_by_time(pivots_with_ftc_range_start_time, multi_timeframe_base_patterns, pivots_timeframe):
@@ -187,7 +392,7 @@ def insert_multi_timeframe_pivots_real_start(mt_pivot: pt.DataFrame[MultiTimefra
     mt_pivot['real_start_permanent'] = pd.Series(dtype=bool)
     for timeframe in mt_pivot.index.get_level_values('timeframe').unique():
         timeframe_pivots = single_timeframe(mt_pivot, timeframe).copy()
-        time_frame_peaks_n_valleys = major_peaks_n_valleys(mt_peaks_n_valleys, timeframe)
+        time_frame_peaks_n_valleys = major_timeframe(mt_peaks_n_valleys, timeframe)
         insert_pivots_real_start(timeframe_pivots, time_frame_peaks_n_valleys)
 
         timeframe_pivots['timeframe'] = timeframe

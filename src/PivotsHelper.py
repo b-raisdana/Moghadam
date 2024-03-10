@@ -4,10 +4,6 @@ import pandas as pd
 
 from Config import TopTYPE, config
 from PeakValley import peaks_only, valleys_only
-from helper.data_preparation import to_timeframe
-from helper.helper import measure_time, log_w
-
-
 
 
 # @measure_time
@@ -102,7 +98,7 @@ def peak_or_valley_pivots_level_n_margins(timeframe_pivots: pd.DataFrame, pivot_
 
 
 # @measure_time
-def pivot_margins(pivots: pd.DataFrame, _type: TopTYPE, pivot_peaks_or_valleys: pd.DataFrame,
+def pivot_margins(pivots: pd.DataFrame, _type: TopTYPE,  # pivot_peaks_or_valleys: pd.DataFrame,
                   candle_body_source: pd.DataFrame, breakout_margin_atr: pd.DataFrame) -> pd.DataFrame:
     """
     Calculate margins for pivot levels based on peak or valley type.
@@ -126,9 +122,9 @@ def pivot_margins(pivots: pd.DataFrame, _type: TopTYPE, pivot_peaks_or_valleys: 
         choose_body_operator = max
     else:  # _type == TopTYPE.valley
         choose_body_operator = min
-    pivot_times = pivot_peaks_or_valleys.index.get_level_values('date')
-    candle_body_source['nearest_body'] = candle_body_source[['open', 'close']] \
-        .apply(choose_body_operator, axis='columns')
+    # pivot_times = pivots.index.get_level_values('date')
+    candle_body_source['nearest_body'] = \
+        candle_body_source[['open', 'close']].apply(choose_body_operator, axis='columns')
 
     pivots.reset_index(level='original_start', inplace=True)
     if pivots.index.duplicated().any():
@@ -136,29 +132,27 @@ def pivot_margins(pivots: pd.DataFrame, _type: TopTYPE, pivot_peaks_or_valleys: 
                          "maybe running after duplicating, should be run before duplicating!")
     pivots = pd.merge_asof(pivots, candle_body_source, left_index=True, right_index=True, direction='backward',
                            suffixes=('_x', ''))
-    pivots.loc[pivot_times, 'internal_margin'] = pivots.loc[pivot_times, 'nearest_body']
+    pivots['internal_margin'] = pivots['nearest_body']
     breakout_margin_atr = breakout_margin_atr.rename(columns={'atr': 'breakout_margin_atr'})[['breakout_margin_atr']]
     pivots.drop(columns=['breakout_margin_atr', ], errors='ignore', inplace=True)
     pivots = pd.merge_asof(pivots, breakout_margin_atr, left_index=True, right_index=True, direction='backward', )
 
     pivots.set_index('original_start', append=True, inplace=True)
-
+    # pivots['timeframe_invalid'] = False
     if _type.value == TopTYPE.PEAK.value:
-        pivots.loc[pivot_times, 'external_margin'] = \
-            pivots.loc[pivot_times, 'level'] + pivots.loc[pivot_times, 'breakout_margin_atr']
-        if config.check_assertions and any(pivots.loc[pivot_times, 'external_margin'] <
-                                           pivots.loc[pivot_times, 'internal_margin']):
-            """ AAA in 02-28 08:04 nearest_body of candle_body_source is higher than level + breakout_margin_atr!!!""" # todo: test
+        pivots['external_margin'] = pivots['level'] + pivots['breakout_margin_atr']
+        if config.check_assertions and any(pivots['external_margin'] < pivots['internal_margin']):
+            # pivots['timeframe_invalid'] = True
+            # """ AAA in 02-28 08:04 nearest_body of candle_body_source is higher than level + breakout_margin_atr!!!"""  # todo: test
             raise AssertionError(
                 "any(pivots.loc[pivot_times, 'external_margin'] < pivots.loc[pivot_times, 'internal_margin'])")
     else:
-        pivots.loc[pivot_times, 'external_margin'] = \
-            pivots.loc[pivot_times, 'level'] - pivots.loc[pivot_times, 'breakout_margin_atr']
-        if config.check_assertions and any(pivots.loc[pivot_times, 'external_margin'] >
-                                           pivots.loc[pivot_times, 'internal_margin']):
+        pivots['external_margin'] = pivots['level'] - pivots['breakout_margin_atr']
+        if config.check_assertions and any(pivots['external_margin'] > pivots['internal_margin']):
             raise AssertionError("config.check_assertions and any(pivots.loc[pivot_times, 'external_margin'] > "
                                  "pivots.loc[pivot_times, 'internal_margin'])")
     if config.check_assertions and pivots[['internal_margin', 'external_margin']].isna().any().any():
+        # pivots['timeframe_invalid'] = True
         raise AssertionError("pivots[['internal_margin', 'external_margin']].isna().any().any()")
     return pivots
 

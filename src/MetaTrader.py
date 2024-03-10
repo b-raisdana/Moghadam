@@ -430,30 +430,30 @@ class MT:
             raise Exception(cls.autoit_script_path + ' does not exist!')
 
 
-def zz_write_hst(df: pt.DataFrame[OHLCV], symbol: str, period: int, price_precision: int, filepath: str):
-    # Define the structures as per the MT4 HST format
-    HST_HEADER_FORMAT = '64s12si2i13i'
-    HST_RECORD_FORMAT = 'I5d'
-    # Construct the header data
-    header = struct.pack(HST_HEADER_FORMAT,
-                         b'MetaTrader 4 Copyright',  # copyright
-                         symbol.encode('ascii'),  # symbol
-                         period,  # period
-                         price_precision,  # digits
-                         int(time.time()),  # timesign
-                         int(time.time()),  # last_sync
-                         *([0] * 12)  # unused
-                         )
-    with open(filepath, 'wb') as f:
-        f.write(header)
-
-        for index, row in df.iterrows():
-            record = struct.pack(HST_RECORD_FORMAT,
-                                 int(index.timestamp()),
-                                 row['open'],
-                                 row['low'],
-                                 row['high'],
-                                 row['close'],
-                                 row['volume']
-                                 )
-            f.write(record)
+# def zz_write_hst(df: pt.DataFrame[OHLCV], symbol: str, period: int, price_precision: int, filepath: str):
+#     # Define the structures as per the MT4 HST format
+#     HST_HEADER_FORMAT = '64s12si2i13i'
+#     HST_RECORD_FORMAT = 'I5d'
+#     # Construct the header data
+#     header = struct.pack(HST_HEADER_FORMAT,
+#                          b'MetaTrader 4 Copyright',  # copyright
+#                          symbol.encode('ascii'),  # symbol
+#                          period,  # period
+#                          price_precision,  # digits
+#                          int(time.time()),  # timesign
+#                          int(time.time()),  # last_sync
+#                          *([0] * 12)  # unused
+#                          )
+#     with open(filepath, 'wb') as f:
+#         f.write(header)
+#
+#         for index, row in df.iterrows():
+#             record = struct.pack(HST_RECORD_FORMAT,
+#                                  int(index.timestamp()),
+#                                  row['open'],
+#                                  row['low'],
+#                                  row['high'],
+#                                  row['close'],
+#                                  row['volume']
+#                                  )
+#             f.write(record)

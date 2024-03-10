@@ -4,6 +4,7 @@ from datetime import datetime
 from AtrMovementPivots import read_multi_timeframe_atr_movement_pivots
 from BasePattern import read_multi_timeframe_base_patterns
 from Config import config
+from FigurePlotter.PeakValley_plotter import plot_multi_timeframe_peaks_n_valleys
 from FigurePlotter.Pivot_plotter import plot_multi_timeframe_pivots
 from PeakValley import read_multi_timeframe_peaks_n_valleys
 from atr import read_multi_timeframe_ohlcva
@@ -14,7 +15,7 @@ from helper.helper import date_range_to_string
 
 if __name__ == "__main__":
     # config.processing_date_range = date_range_to_string(days=5, end=datetime(year=2023, month=11, day=18))
-    config.processing_date_range = date_range_to_string(days=15)#, end=datetime(year=2023, month=11, day=18))
+    config.processing_date_range = date_range_to_string(days=15, end=datetime(year=2023, month=3, day=8))
     #
     #     file_path: str = config.path_of_data
     #     today_morning = today_morning()
@@ -33,7 +34,7 @@ if __name__ == "__main__":
 
     ohlcva = read_multi_timeframe_ohlcva(config.processing_date_range)
     peaks_and_valleys = read_multi_timeframe_peaks_n_valleys()
-    # # plot_multi_timeframe_peaks_n_valleys(_peaks_and_valleys, config.processing_date_range)
+    # plot_multi_timeframe_peaks_n_valleys(peaks_and_valleys, config.processing_date_range)
     # # exit(0)
     # bull_bear_side = read_multi_timeframe_bull_bear_side_trends()
     # plot_multi_timeframe_bull_bear_side_trends(ohlcva, _peaks_and_valleys, bull_bear_side)

@@ -7,7 +7,7 @@ from helper.data_preparation import single_timeframe, df_timedelta_to_str
 from FigurePlotter.OHLVC_plotter import plot_ohlcva
 from FigurePlotter.plotter import plot_multiple_figures, file_id, timeframe_color, save_figure, update_figure_layout
 from PanderaDFM.PeakValley import MultiTimeframePeakValley
-from PeakValley import peaks_only, valleys_only, major_peaks_n_valleys
+from PeakValley import peaks_only, valleys_only, major_timeframe
 from atr import read_multi_timeframe_ohlcva
 from helper.helper import measure_time
 
@@ -22,8 +22,8 @@ def plot_multi_timeframe_peaks_n_valleys(multi_timeframe_peaks_n_valleys: pt.Dat
     _multi_timeframe_valleys = valleys_only(multi_timeframe_peaks_n_valleys)
     for _, timeframe in enumerate(config.timeframes):
         figures.append(plot_peaks_n_valleys(single_timeframe(multi_timeframe_ohlcva, timeframe),
-                                            peaks=major_peaks_n_valleys(_multi_timeframe_peaks, timeframe),
-                                            valleys=major_peaks_n_valleys(_multi_timeframe_valleys, timeframe),
+                                            peaks=major_timeframe(_multi_timeframe_peaks, timeframe),
+                                            valleys=major_timeframe(_multi_timeframe_valleys, timeframe),
                                             name=f'{timeframe} Peaks n Valleys', show=False, save=False))
     fig = plot_multiple_figures(figures, name=f'multi_timeframe_peaks_n_valleys.{file_id(multi_timeframe_ohlcva)}',
                                 show=show, save=save)

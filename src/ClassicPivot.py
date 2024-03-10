@@ -319,15 +319,15 @@ def insert_pivot_info(timeframe_pivots: pt.DataFrame['Pivot2DFM'], ohlcva: pt.Da
         timeframe_pivots['peak_or_valley'] == TopTYPE.PEAK.value].index
     timeframe_pivots.loc[timeframe_resistance_pivots, ['internal_margin', 'external_margin']] = \
         pivot_margins(timeframe_pivots.loc[timeframe_resistance_pivots], _type=TopTYPE.PEAK,
-                      pivot_peaks_or_valleys=timeframe_pivots.loc[timeframe_resistance_pivots],
+                      # pivot_peaks_or_valleys=timeframe_pivots.loc[timeframe_resistance_pivots],
                       candle_body_source=ohlcva, breakout_margin_atr=ohlcva)[['internal_margin', 'external_margin']]
 
     timeframe_support_pivots = timeframe_pivots[
         timeframe_pivots['peak_or_valley'] == TopTYPE.VALLEY.value].index
     timeframe_pivots.loc[timeframe_support_pivots, ['internal_margin', 'external_margin', ]] = \
         pivot_margins(timeframe_pivots.loc[timeframe_support_pivots], _type=TopTYPE.VALLEY,
-                      pivot_peaks_or_valleys=timeframe_pivots.loc[timeframe_support_pivots], candle_body_source=ohlcva,
-                      breakout_margin_atr=ohlcva)[['internal_margin', 'external_margin']]
+                      # pivot_peaks_or_valleys=timeframe_pivots.loc[timeframe_support_pivots],
+                      candle_body_source=ohlcva, breakout_margin_atr=ohlcva)[['internal_margin', 'external_margin']]
 
     timeframe_pivots['ttl'] = timeframe_pivots.index.get_level_values(level='date') + level_ttl(timeframe)
     timeframe_pivots['deactivated_at'] = pd.Series(dtype='datetime64[ns, UTC]')

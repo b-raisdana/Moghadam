@@ -3,7 +3,7 @@ import pandas as pd
 from Config import config, TREND
 from helper.data_preparation import single_timeframe
 from FigurePlotter.plotter import save_figure, file_id, plot_multiple_figures
-from PeakValley import peaks_only, valleys_only, major_peaks_n_valleys
+from PeakValley import peaks_only, valleys_only, major_timeframe
 from FigurePlotter.PeakValley_plotter import plot_peaks_n_valleys
 from helper.helper import measure_time
 
@@ -66,7 +66,7 @@ def plot_multi_timeframe_candle_trend(multi_timeframe_candle_trend, multi_timefr
     for _, timeframe in enumerate(config.timeframes):
         figures.append(
             plot_single_timeframe_candle_trend(ohlcv, single_timeframe(multi_timeframe_candle_trend, timeframe),
-                                               major_peaks_n_valleys(multi_timeframe_peaks_n_valleys, timeframe),
+                                               major_timeframe(multi_timeframe_peaks_n_valleys, timeframe),
                                                show=True,
                                                save=True,
                                                path_of_plot=path_of_plot, name=f'{timeframe} Candle Trend'))

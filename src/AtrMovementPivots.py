@@ -11,7 +11,8 @@ from PanderaDFM.AtrTopPivot import MultiTimeframeAtrMovementPivotDFM, MultiTimef
 from PanderaDFM.OHLCV import OHLCV
 from PanderaDFM.OHLCVA import OHLCVA
 from PanderaDFM.PeakValley import MultiTimeframePeakValley, PeakValley
-from PeakValley import read_multi_timeframe_peaks_n_valleys, peaks_only, valleys_only, insert_crossing2
+from PeakValley import read_multi_timeframe_peaks_n_valleys, peaks_only, valleys_only, insert_crossing2, \
+    major_timeframe
 from atr import read_multi_timeframe_ohlcva
 from ftc import insert_multi_timeframe_pivots_real_start
 from helper.data_preparation import to_timeframe, single_timeframe, pattern_timeframe
@@ -25,7 +26,7 @@ def find_multi_timeframe_atr_movement_pivots(mt_ohlcva, base_timeframe_ohlcva, m
     pivots = MultiTimeframeAtrMovementPivotDf.new()
     for timeframe in structure_timeframe_shortlist[::-1]:
         if timeframe in mt_tops.index.get_level_values('timeframe'):
-            timeframe_tops: pt.DataFrame[PeakValley] = mt_tops.copy()
+            timeframe_tops: pt.DataFrame[PeakValley] = major_timeframe(mt_tops, timeframe).copy()
             timeframe_tops.reset_index(level='timeframe', inplace=True)
             ohlcva: pt.DataFrame[OHLCVA] = single_timeframe(mt_ohlcva, timeframe)
             timeframe_tops = pd.merge_asof(timeframe_tops, ohlcva[['atr']], left_index=True, right_index=True,
@@ -135,6 +136,12 @@ def atr_movement_pivots(date_range_str: str = None, structure_timeframe_shortlis
             timeframe_pivots = insert_pivot_info(timeframe_pivots, ohlcva, timeframe)
             timeframe_pivots = update_pivot_deactivation(timeframe_pivots, timeframe, ohlcva)
             timeframe_pivots = AtrMovementPivotDf.cast_and_validate(timeframe_pivots)
+            # pivots_to_change_timeframe = timeframe_pivots[timeframe_pivots['timeframe_invalid'].astype(bool)].copy() # todo: test
+            # pivots_to_change_timeframe['timeframe'] = timeframe
+            # pivots_to_change_timeframe = \
+            #     pivots_to_change_timeframe.reset_index().set_index(['timeframe', 'date', 'original_start'])
+            # pivots.lov[pivots_to_change_timeframe.index, 'timeframe'] = pattern_timeframe(timeframe)
+            # timeframe_pivots = timeframe_pivots[~timeframe_pivots['timeframe_invalid'].astype(bool)]
             timeframe_pivots['timeframe'] = timeframe
             timeframe_pivots = timeframe_pivots.reset_index().set_index(['timeframe', 'date', 'original_start'])
             final_pivots = MultiTimeframeAtrMovementPivotDf.concat(final_pivots, timeframe_pivots)

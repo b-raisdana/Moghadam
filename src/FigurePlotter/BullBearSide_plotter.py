@@ -11,7 +11,7 @@ from FigurePlotter.PeakValley_plotter import plot_peaks_n_valleys
 from FigurePlotter.plotter import file_id, save_figure, plot_multiple_figures, update_figure_layout
 from PanderaDFM.BullBearSide import BullBearSide, bull_bear_side_repr
 from PanderaDFM.OHLCV import OHLCV
-from PeakValley import peaks_only, valleys_only, major_peaks_n_valleys
+from PeakValley import peaks_only, valleys_only, major_timeframe
 from helper.data_preparation import single_timeframe
 from helper.helper import measure_time, log, log_w
 
@@ -84,7 +84,7 @@ def plot_multi_timeframe_bull_bear_side_trends(multi_timeframe_ohlcva, multi_tim
     for timeframe in timeframe_shortlist:
         _figure = plot_single_timeframe_bull_bear_side_trends(
             single_timeframe_ohlcva=single_timeframe(multi_timeframe_ohlcva, timeframe),
-            peaks_n_valleys=major_peaks_n_valleys(multi_timeframe_peaks_n_valleys, timeframe).sort_index(level='date'),
+            peaks_n_valleys=major_timeframe(multi_timeframe_peaks_n_valleys, timeframe).sort_index(level='date'),
             boundaries=single_timeframe(_multi_timeframe_bull_bear_side_trends, timeframe).sort_index(level='date'),
             show=False, save=False,
             name=f'{timeframe} boundaries')

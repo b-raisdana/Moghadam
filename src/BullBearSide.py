@@ -11,7 +11,7 @@ from PanderaDFM.CandleTrend import MultiTimeframeCandleTrend, CandleTrend
 from PanderaDFM.OHLCV import OHLCV
 from PanderaDFM.OHLCVA import OHLCVA
 from PanderaDFM.PeakValley import PeakValley, MultiTimeframePeakValley
-from PeakValley import peaks_only, valleys_only, read_multi_timeframe_peaks_n_valleys, major_peaks_n_valleys, \
+from PeakValley import peaks_only, valleys_only, read_multi_timeframe_peaks_n_valleys, major_timeframe, \
     insert_previous_n_next_top
 from atr import read_multi_timeframe_ohlcva
 from helper.data_preparation import read_file, single_timeframe, to_timeframe, cast_and_validate, empty_df, concat, \
@@ -367,7 +367,7 @@ def multi_timeframe_bull_bear_side_trends(multi_timeframe_candle_trend: pt.DataF
                 f'{timeframe}/{date_range_of_data(multi_timeframe_ohlcva)}',
                 stack_trace=False, severity=LogSeverity.WARNING)
             continue
-        timeframe_peaks_n_valleys = major_peaks_n_valleys(multi_timeframe_peaks_n_valleys, timeframe) \
+        timeframe_peaks_n_valleys = major_timeframe(multi_timeframe_peaks_n_valleys, timeframe) \
             .reset_index(level='timeframe')
         timeframe_trends = single_timeframe_bull_bear_side_trends(timeframe_candle_trend,
                                                                   timeframe_peaks_n_valleys,
@@ -619,7 +619,7 @@ def generate_multi_timeframe_candle_trend(date_range_str: str, timeframe_shortli
     for timeframe in timeframe_shortlist:  # peaks_n_valleys.index.unique(level='timeframe'):
         t_candle_trend = \
             single_timeframe_candles_trend(single_timeframe(multi_timeframe_ohlcv, timeframe),
-                                           major_peaks_n_valleys(multi_timeframe_peaks_n_valleys, timeframe))
+                                           major_timeframe(multi_timeframe_peaks_n_valleys, timeframe))
         if len(t_candle_trend) > 0:
             t_candle_trend['timeframe'] = timeframe
             t_candle_trend = t_candle_trend.set_index('timeframe', append=True)
