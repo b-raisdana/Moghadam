@@ -218,13 +218,13 @@ def draw_base(base_info, fig, index_date, real_start, timeframe, legendgroup=Non
     xs = [real_start, base_info['effective_end'], base_info['effective_end'], real_start]
     ys = [base_info['internal_low'], base_info['internal_low'],
           base_info['internal_high'], base_info['internal_high']]
-    fill_color = 'blue'
+    fill_color = 'cyan'
     if legendgroup is None:
         legendgroup = MultiTimeframeBasePattern.str(index_date, timeframe, base_info)
     name = MultiTimeframeBasePattern.str(index_date, timeframe, base_info)
     text = MultiTimeframeBasePattern.repr(index_date, timeframe, base_info)
     fig.add_scatter(x=xs, y=ys, fill="toself",  # fillcolor=fill_color,
-                    fillpattern=dict(fgopacity=0.5),
+                    opacity=0.1,
                     name=name,
                     text=text,
                     line=dict(color=fill_color, width=0),

@@ -384,6 +384,7 @@ def ftc_of_range_by_price(pivots: pt.DataFrame[Pivot2DFM],
 
 def insert_multi_timeframe_pivots_real_start(mt_pivot: pt.DataFrame[MultiTimeframePivot2DFM],
                                              mt_peaks_n_valleys: pt.DataFrame[MultiTimeframePeakValley], ):
+    # todo: real start is most far point in the range of pivots and their previous more significant candle
     # log_w("do insert_multi_timeframe_pivots_real_start before duplicating pivots.")
     # original_pivots = mt_pivot[
     #     mt_pivot.index.get_level_values('original_start') == mt_pivot.index.get_level_values('date')]

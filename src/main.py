@@ -40,7 +40,7 @@ if __name__ == "__main__":
     # plot_multi_timeframe_bull_bear_side_trends(ohlcva, _peaks_and_valleys, bull_bear_side)
     # generate_multi_timeframe_atr_movement_pivots(config.processing_date_range)
     pivots = read_multi_timeframe_atr_movement_pivots(config.processing_date_range)
-    major_pivots = pivots[pivots['major_timeframe']].copy()
+    major_pivots = pivots[pivots['major_timeframe'].astype(bool)].copy()
     # if 'real_start_time' not in major_pivots.columns:
     #     insert_multi_timeframe_pivots_real_start(major_pivots, peaks_and_valleys)
     if 'real_start_time' not in major_pivots.columns:
@@ -70,7 +70,7 @@ if __name__ == "__main__":
 
     plot_multi_timeframe_pivots(mt_pivots=major_pivots,
                                 multi_timeframe_ohlcva=ohlcva,
-                                group_by='original_start'
+                                group_by='timeframe',#'original_start'
                                 )
     sys.exit(0)
     test_strategy(cash=100000)

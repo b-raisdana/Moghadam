@@ -70,29 +70,6 @@ def plot_multi_timeframe_pivots(mt_pivots: pt.DataFrame[MultiTimeframePivot2DFM]
         else:
             raise ValueError(f"Invalid group_by:{group_by}")
         pivot_description = Pivot2DFM.description(pivot_start, pivot_timeframe, pivot_info)
-        # add movement and return paths
-        if (hasattr(pivot_info, 'movement_start_time')
-                and hasattr(pivot_info, 'return_end_time')
-                and hasattr(pivot_info, 'movement_start_value')
-                and hasattr(pivot_info, 'return_end_value')
-        ):
-            fig.add_scatter(x=[pivot_info['movement_start_time'], pivot_start, ],
-                            y=[pivot_info['movement_start_value'], pivot_info['level'], ],
-                            name=legend_group, line=dict(color='green', width=0.5), mode='lines',  # +text',
-                            legendgroup=legend_group, showlegend=False, hoverinfo='none',
-                            )
-            fig.add_scatter(x=[pivot_start, pivot_info['return_end_time']],
-                            y=[pivot_info['level'], pivot_info['return_end_value']],
-                            name=legend_group, line=dict(color='red', width=0.5), mode='lines',  # +text',
-                            legendgroup=legend_group, showlegend=False, hoverinfo='none',
-                            )
-        # add real start
-        if (hasattr(pivot_info, 'real_start_time') and hasattr(pivot_info, 'real_start_value')):
-            fig.add_scatter(x=[pivot_info['real_start_time'], pivot_start, ],
-                            y=[pivot_info['real_start_value'], pivot_info['level'], ],
-                            name=legend_group, line=dict(color='gray', width=0.5), mode='lines',  # +text',
-                            legendgroup=legend_group, showlegend=False, hoverinfo='none',
-                            )
         # add a dotted line from creating time of level to the activation time
         fig.add_scatter(
             x=[pivot_start, pivot_original_start],
@@ -126,18 +103,44 @@ def plot_multi_timeframe_pivots(mt_pivots: pt.DataFrame[MultiTimeframePivot2DFM]
             name=legend_group, line=dict(color=boundary_color, width=0), mode='lines',  # +text',
             legendgroup=legend_group, showlegend=show_legend, hoverinfo='text',  # text=pivot_description,
         )
-        #draw pivot FTC base patterns
-        if pivots_have_ftc:
-            if isinstance(pivot_info['ftc_list'], list):
-                for ftc in pivot_info['ftc_list']:
-                    real_start = ftc['date'] + \
-                                 pd.to_timedelta(
-                                     ftc['timeframe']) * config.base_pattern_index_shift_after_last_candle_in_the_sequence
-                    ftc['effective_end'] = min(
-                        ftc['end'] if pd.notna(ftc['end']) else ftc['ttl'],
-                        ftc['ttl'] if pd.notna(ftc['ttl']) else ftc['end'],
-                        end_time
-                    )
-                    draw_base(ftc, fig, ftc['date'], real_start, ftc['timeframe'], legend_group)
+        if pivot_start == pivot_original_start:
+            # add movement and return paths
+            if (hasattr(pivot_info, 'movement_start_time')
+                    and hasattr(pivot_info, 'return_end_time')
+                    and hasattr(pivot_info, 'movement_start_value')
+                    and hasattr(pivot_info, 'return_end_value')
+            ):
+                fig.add_scatter(x=[pivot_info['movement_start_time'], pivot_start, ],
+                                y=[pivot_info['movement_start_value'], pivot_info['level'], ],
+                                name=legend_group, line=dict(color='green', width=0.5), mode='lines',  # +text',
+                                legendgroup=legend_group, showlegend=False, hoverinfo='none',
+                                )
+                fig.add_scatter(x=[pivot_start, pivot_info['return_end_time']],
+                                y=[pivot_info['level'], pivot_info['return_end_value']],
+                                name=legend_group, line=dict(color='red', width=0.5), mode='lines',  # +text',
+                                legendgroup=legend_group, showlegend=False, hoverinfo='none',
+                                )
+            # add real start
+            if (hasattr(pivot_info, 'real_start_time') and hasattr(pivot_info, 'real_start_value')):
+                fig.add_scatter(x=[pivot_info['real_start_time'], pivot_start, ],
+                                y=[pivot_info['real_start_value'], pivot_info['level'], ],
+                                name=legend_group, line=dict(color='gray', width=0.5), mode='lines',  # +text',
+                                legendgroup=legend_group, showlegend=False, hoverinfo='none',
+                                )
+                # draw pivot FTC base patterns
+                if pivots_have_ftc:
+                    if isinstance(pivot_info['ftc_list'], list):
+                        for ftc in pivot_info['ftc_list']:
+                            real_start = ftc['date'] + \
+                                         pd.to_timedelta(
+                                             ftc[
+                                                 'timeframe']) * config.base_pattern_index_shift_after_last_candle_in_the_sequence
+                            ftc['effective_end'] = min(
+                                ftc['end'] if pd.notna(ftc['end']) else ftc['ttl'],
+                                ftc['ttl'] if pd.notna(ftc['ttl']) else ftc['end'],
+                                end_time
+                            )
+                            draw_base(ftc, fig, ftc['date'], real_start, ftc['timeframe'], legend_group)
+
     show_and_save_plot(fig, save, show, name_without_prefix=f'multi_timeframe_classic_pivots.{date_range_str}')
     return fig
