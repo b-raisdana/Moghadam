@@ -15,7 +15,7 @@ from PeakValley import read_multi_timeframe_peaks_n_valleys, peaks_only, valleys
     major_timeframe
 from atr import read_multi_timeframe_ohlcva
 from ftc import insert_multi_timeframe_pivots_real_start
-from helper.data_preparation import to_timeframe, single_timeframe, pattern_timeframe
+from helper.data_preparation import to_timeframe, single_timeframe, pattern_timeframe, trigger_timeframe
 from helper.helper import measure_time, date_range, date_range_to_string
 
 
@@ -132,8 +132,10 @@ def atr_movement_pivots(date_range_str: str = None, structure_timeframe_shortlis
     for timeframe in structure_timeframe_shortlist[::-1]:
         if timeframe in pivots.index.get_level_values(level='timeframe').unique():
             ohlcva: pt.DataFrame[OHLCVA] = single_timeframe(mt_ohlcva, timeframe)
+            pattern_ohlcva: pt.DataFrame[OHLCVA] = single_timeframe(mt_ohlcva, pattern_timeframe(timeframe))
+            trigger_ohlcva: pt.DataFrame[OHLCVA] = single_timeframe(mt_ohlcva, trigger_timeframe(timeframe))
             timeframe_pivots = single_timeframe(pivots, timeframe)
-            timeframe_pivots = insert_pivot_info(timeframe_pivots, ohlcva, timeframe)
+            timeframe_pivots = insert_pivot_info(timeframe_pivots, ohlcva, timeframe, pattern_ohlcva, trigger_ohlcva)
             timeframe_pivots = update_pivot_deactivation(timeframe_pivots, timeframe, ohlcva)
             timeframe_pivots = AtrMovementPivotDf.cast_and_validate(timeframe_pivots)
             # pivots_to_change_timeframe = timeframe_pivots[timeframe_pivots['timeframe_invalid'].astype(bool)].copy() # todo: test
@@ -242,8 +244,8 @@ def insert_pivot_movement_times(timeframe_peak_or_valleys: pt.DataFrame[PeakVall
         def aggregate(low, n_atr):
             return low + n_atr
 
-    peak_or_valley_indexes = timeframe_peak_or_valleys[
-        timeframe_peak_or_valleys['peak_or_valley'] == top_type.value].index
+    peak_or_valley_indexes = \
+        timeframe_peak_or_valleys[timeframe_peak_or_valleys['peak_or_valley'] == top_type.value].index
     peak_or_valleys = timeframe_peak_or_valleys.loc[peak_or_valley_indexes]
 
     peak_or_valleys['previous_target'] = \

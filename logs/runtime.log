@@ -1,0 +1,86 @@
+DEBUG@03-13.12:18:01:...Starting
+DEBUG@03-13.12:18:02:atr_movement_pivots(date_range_str:23-02-21.00-01T23-03-08.00-00, structure_timeframe_shortlist:list...) started
+DEBUG@03-13.12:18:03:find_multi_timeframe_atr_movement_pivots(27833*Index(['open', 'close', 'high', 'low', 'volume', 'atr'], dtype='object'), 21601*Index(['open', 'close', 'high', 'low', 'volume', 'atr'], dtype='object'), 518*Index(['open', 'close', 'high', 'low', 'volume', 'peak_or_valley', 'strength',
+       'permanent_strength'],
+      dtype='object'), list(5,), True) started
+DEBUG@03-13.12:18:03:major_timeframe(518*Index(['open', 'close', 'high', 'low', 'volume', 'peak_or_valley', 'strength',
+       'permanent_strength'],
+      dtype='object'), 1D) started
+INFO@03-13.12:18:03:major_timeframe(518*Index(['open', 'close', 'high', 'low', 'volume', 'peak_or_valley', 'strength',
+       'permanent_strength'],
+      dtype='object'), 1D) executed in [94m0.000 seconds
+DEBUG@03-13.12:18:03:insert_pivot_movements(5*Index(['timeframe', 'open', 'close', 'high', 'low', 'volume', 'peak_or_valley',
+       'strength', 'permanent_strength', 'atr'],
+      dtype='object'), 21601*Index(['open', 'close', 'high', 'low', 'volume', 'atr'], dtype='object')) started
+DEBUG@03-13.12:18:03:insert_pivot_movement_times(2*Index(['timeframe', 'open', 'close', 'high', 'low', 'volume', 'peak_or_valley',
+       'strength', 'permanent_strength', 'atr', 'right_crossing_time',
+       'right_crossing_value', 'left_crossing_time', 'left_crossing_value'],
+      dtype='object'), 21601*Index(['open', 'close', 'high', 'low', 'volume', 'atr'], dtype='object'), top_type:TopTYPE.PEAK) started
+INFO@03-13.12:18:03:insert_pivot_movement_times(2*Index(['timeframe', 'open', 'close', 'high', 'low', 'volume', 'peak_or_valley',
+       'strength', 'permanent_strength', 'atr', 'right_crossing_time',
+       'right_crossing_value', 'left_crossing_time', 'left_crossing_value'],
+      dtype='object'), 21601*Index(['open', 'close', 'high', 'low', 'volume', 'atr'], dtype='object'), top_type:TopTYPE.PEAK) executed in [92m0.040 seconds
+DEBUG@03-13.12:18:03:insert_pivot_movement_times(3*Index(['timeframe', 'open', 'close', 'high', 'low', 'volume', 'peak_or_valley',
+       'strength', 'permanent_strength', 'atr', 'right_crossing_time',
+       'right_crossing_value', 'left_crossing_time', 'left_crossing_value'],
+      dtype='object'), 21601*Index(['open', 'close', 'high', 'low', 'volume', 'atr'], dtype='object'), top_type:TopTYPE.VALLEY) started
+INFO@03-13.12:18:03:insert_pivot_movement_times(3*Index(['timeframe', 'open', 'close', 'high', 'low', 'volume', 'peak_or_valley',
+       'strength', 'permanent_strength', 'atr', 'right_crossing_time',
+       'right_crossing_value', 'left_crossing_time', 'left_crossing_value'],
+      dtype='object'), 21601*Index(['open', 'close', 'high', 'low', 'volume', 'atr'], dtype='object'), top_type:TopTYPE.VALLEY) executed in [93m0.168 seconds
+INFO@03-13.12:18:03:insert_pivot_movements(5*Index(['timeframe', 'open', 'close', 'high', 'low', 'volume', 'peak_or_valley',
+       'strength', 'permanent_strength', 'atr'],
+      dtype='object'), 21601*Index(['open', 'close', 'high', 'low', 'volume', 'atr'], dtype='object')) executed in [93m0.210 seconds
+DEBUG@03-13.12:18:03:major_timeframe(518*Index(['open', 'close', 'high', 'low', 'volume', 'peak_or_valley', 'strength',
+       'permanent_strength'],
+      dtype='object'), 4h) started
+INFO@03-13.12:18:03:major_timeframe(518*Index(['open', 'close', 'high', 'low', 'volume', 'peak_or_valley', 'strength',
+       'permanent_strength'],
+      dtype='object'), 4h) executed in [94m0.000 seconds
+DEBUG@03-13.12:18:03:insert_pivot_movements(34*Index(['timeframe', 'open', 'close', 'high', 'low', 'volume', 'peak_or_valley',
+       'strength', 'permanent_strength', 'atr'],
+      dtype='object'), 21601*Index(['open', 'close', 'high', 'low', 'volume', 'atr'], dtype='object')) started
+DEBUG@03-13.12:18:03:insert_pivot_movement_times(18*Index(['timeframe', 'open', 'close', 'high', 'low', 'volume', 'peak_or_valley',
+       'strength', 'permanent_strength', 'atr', 'right_crossing_time',
+       'right_crossing_value', 'left_crossing_time', 'left_crossing_value'],
+      dtype='object'), 21601*Index(['open', 'close', 'high', 'low', 'volume', 'atr'], dtype='object'), top_type:TopTYPE.PEAK) started
+INFO@03-13.12:18:03:insert_pivot_movement_times(18*Index(['timeframe', 'open', 'close', 'high', 'low', 'volume', 'peak_or_valley',
+       'strength', 'permanent_strength', 'atr', 'right_crossing_time',
+       'right_crossing_value', 'left_crossing_time', 'left_crossing_value'],
+      dtype='object'), 21601*Index(['open', 'close', 'high', 'low', 'volume', 'atr'], dtype='object'), top_type:TopTYPE.PEAK) executed in [93m0.116 seconds
+DEBUG@03-13.12:18:03:insert_pivot_movement_times(16*Index(['timeframe', 'open', 'close', 'high', 'low', 'volume', 'peak_or_valley',
+       'strength', 'permanent_strength', 'atr', 'right_crossing_time',
+       'right_crossing_value', 'left_crossing_time', 'left_crossing_value'],
+      dtype='object'), 21601*Index(['open', 'close', 'high', 'low', 'volume', 'atr'], dtype='object'), top_type:TopTYPE.VALLEY) started
+INFO@03-13.12:18:03:insert_pivot_movement_times(16*Index(['timeframe', 'open', 'close', 'high', 'low', 'volume', 'peak_or_valley',
+       'strength', 'permanent_strength', 'atr', 'right_crossing_time',
+       'right_crossing_value', 'left_crossing_time', 'left_crossing_value'],
+      dtype='object'), 21601*Index(['open', 'close', 'high', 'low', 'volume', 'atr'], dtype='object'), top_type:TopTYPE.VALLEY) executed in [93m0.185 seconds
+INFO@03-13.12:18:03:insert_pivot_movements(34*Index(['timeframe', 'open', 'close', 'high', 'low', 'volume', 'peak_or_valley',
+       'strength', 'permanent_strength', 'atr'],
+      dtype='object'), 21601*Index(['open', 'close', 'high', 'low', 'volume', 'atr'], dtype='object')) executed in [93m0.317 seconds
+DEBUG@03-13.12:18:03:insert_more_significant_tops(22*Index(['timeframe', 'open', 'close', 'high', 'low', 'volume', 'peak_or_valley',
+       'strength', 'permanent_strength', 'atr', 'return_end_time',
+       'movement_start_time', 'return_end_value', 'movement_start_value'],
+      dtype='object'), 518*Index(['open', 'close', 'high', 'low', 'volume', 'peak_or_valley', 'strength',
+       'permanent_strength'],
+      dtype='object')) started
+INFO@03-13.12:18:04:insert_more_significant_tops(22*Index(['timeframe', 'open', 'close', 'high', 'low', 'volume', 'peak_or_valley',
+       'strength', 'permanent_strength', 'atr', 'return_end_time',
+       'movement_start_time', 'return_end_value', 'movement_start_value'],
+      dtype='object'), 518*Index(['open', 'close', 'high', 'low', 'volume', 'peak_or_valley', 'strength',
+       'permanent_strength'],
+      dtype='object')) executed in [93m0.202 seconds
+DEBUG@03-13.12:18:04:major_timeframe(518*Index(['open', 'close', 'high', 'low', 'volume', 'peak_or_valley', 'strength',
+       'permanent_strength'],
+      dtype='object'), 1h) started
+INFO@03-13.12:18:04:major_timeframe(518*Index(['open', 'close', 'high', 'low', 'volume', 'peak_or_valley', 'strength',
+       'permanent_strength'],
+      dtype='object'), 1h) executed in [94m0.000 seconds
+DEBUG@03-13.12:18:04:insert_pivot_movements(134*Index(['timeframe', 'open', 'close', 'high', 'low', 'volume', 'peak_or_valley',
+       'strength', 'permanent_strength', 'atr'],
+      dtype='object'), 21601*Index(['open', 'close', 'high', 'low', 'volume', 'atr'], dtype='object')) started
+DEBUG@03-13.12:18:04:insert_pivot_movement_times(65*Index(['timeframe', 'open', 'close', 'high', 'low', 'volume', 'peak_or_valley',
+       'strength', 'permanent_strength', 'atr', 'right_crossing_time',
+       'right_crossing_value', 'left_crossing_time', 'left_crossing_value'],
+      dtype='object'), 21601*Index(['open', 'close', 'high', 'low', 'volume', 'atr'], dtype='object'), top_type:TopTYPE.PEAK) started

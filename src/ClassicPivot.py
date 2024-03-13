@@ -311,7 +311,8 @@ def insert_hit(pivots: pt.DataFrame[Pivot2DFM], n: int, ohlcv: pt.DataFrame[OHLC
 
 
 # @measure_time
-def insert_pivot_info(timeframe_pivots: pt.DataFrame['Pivot2DFM'], ohlcva: pt.DataFrame[OHLCVA], timeframe: str):
+def insert_pivot_info(timeframe_pivots: pt.DataFrame['Pivot2DFM'], ohlcva: pt.DataFrame[OHLCVA], timeframe: str,
+                      pattern_ohlcva: pt.DataFrame[OHLCVA], trigger_ohlcva: pt.DataFrame[OHLCVA]):
     timeframe_pivots['original_start'] = timeframe_pivots.index
     timeframe_pivots.set_index('original_start', append=True, inplace=True)
 
@@ -335,6 +336,14 @@ def insert_pivot_info(timeframe_pivots: pt.DataFrame['Pivot2DFM'], ohlcva: pt.Da
     timeframe_pivots['master_pivot_timeframe'] = pd.Series(dtype='str')
     timeframe_pivots['master_pivot_date'] = pd.Series(dtype='datetime64[ns, UTC]')
     timeframe_pivots['hit'] = 0
+    timeframe_pivots = timeframe_pivots.reset_index().set_index('date')
+    pattern_ohlcva = pattern_ohlcva[['atr']].rename(columns={'atr': 'pattern_atr'})
+    timeframe_pivots = pd.merge_asof(left=timeframe_pivots, right=pattern_ohlcva, left_index=True, right_index=True,
+                                     direction='backward')
+    trigger_ohlcva = trigger_ohlcva[['atr']].rename(columns={'atr': 'trigger_atr'})
+    timeframe_pivots = pd.merge_asof(left=timeframe_pivots, right=trigger_ohlcva, left_index=True, right_index=True,
+                                     direction='backward')
+    timeframe_pivots = timeframe_pivots.reset_index().set_index(['date', 'original_start'])
     # insert_ftc(timeframe_pivots, structure_timeframe_shortlist)
     return timeframe_pivots
 

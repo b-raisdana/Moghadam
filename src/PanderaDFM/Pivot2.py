@@ -34,14 +34,24 @@ class Pivot2DFM(BaseDFM):
 
     @staticmethod
     def description(start_time: datetime, pivot_timeframe: str, pivot_info) -> str:
-        output = (f"Pivot {'R' if pivot_info['is_resistance'] else 'S'}{pivot_info['level']:.0f}={pivot_timeframe}@{start_time.strftime('%m/%d.%H:%M')}"
-                  f"[{pivot_info['internal_margin']:.0f}-{pivot_info['external_margin']:.0f}](")
+        output = (f"Pivot {'R' if pivot_info['is_resistance'] else 'S'}{pivot_info['level']:.0f}={pivot_timeframe}"
+                  f"@{start_time.strftime('%m/%d.%H:%M')}"
+                  f"[{pivot_info['internal_margin']:.0f}-{pivot_info['external_margin']:.0f}]")
 
         if hasattr(pivot_info, 'movement_start_value'):
-            output += f"M{abs(pivot_info['movement_start_value'] - pivot_info['level']):.0f}"
+            output += f"\r\nMov:{abs(pivot_info['movement_start_value'] - pivot_info['level']):.0f}"
         if hasattr(pivot_info, 'return_end_value'):
-            output += f"R{abs(pivot_info['return_end_value'] - pivot_info['level']):.0f}"
-        output += f"H{pivot_info['hit']}"
+            output += f"\r\nRet:{abs(pivot_info['return_end_value'] - pivot_info['level']):.0f}"
+        output += f"\r\nATR:{int(pivot_info['atr'])}"
+        if hasattr(pivot_info, 'pattern_atr'):
+            output += f"\r\nP-ATR:{int(pivot_info['pattern_atr'])}"
+        else:
+            raise AssertionError("!hasattr(pivot_info, 'pattern_atr')")
+        if hasattr(pivot_info, 'trigger_atr'):
+            output += f"\r\nT-ATR:{int(pivot_info['trigger_atr'])}"
+        else:
+            raise AssertionError("!hasattr(pivot_info, 'trigger_atr')")
+        output += f"\r\nHit{pivot_info['hit']}"
         if pd.notna(pivot_info['master_pivot_timeframe']):
             output += f"O{pivot_info['master_pivot_timeframe']}/{pivot_info['master_pivot_date']}"
         return output
