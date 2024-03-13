@@ -426,7 +426,7 @@ def multi_timeframe_ftc(
         # time_frame_peaks_n_valleys = single_timeframe(mt_peaks_n_valleys, timeframe)
         # ohlcv = single_timeframe(mt_ohlcv, timeframe)
         pivots_with_ftc = insert_ftc(
-            timeframe_original_pivots=timeframe_pivots,
+            timeframe_pivots=timeframe_pivots,
             # time_frame_bbs_boundaries=timeframe_bbs,
             # time_frame_peaks_n_valleys=time_frame_peaks_n_valleys,
             # ohlcv=ohlcv,
@@ -511,32 +511,32 @@ def insert_pivots_real_start(original_pivots: pt.DataFrame[PivotDFM], peaks_n_va
             "original_pivots[['real_start_time', 'real_start_value', 'real_start_permanent']].isna().any().any('")
 
 
-def insert_ftc(timeframe_original_pivots: pt.DataFrame[Pivot2DFM],
+def insert_ftc(timeframe_pivots: pt.DataFrame[Pivot2DFM],
                multi_timeframe_base_patterns: pt.DataFrame[MultiTimeframeBasePattern], timeframe):
-    if 'real_start_time' not in timeframe_original_pivots.columns:
+    if 'real_start_time' not in timeframe_pivots.columns:
         raise ValueError("'real_start' not in original_pivots.columns")  # todo: test
-    if 'real_start_value' not in timeframe_original_pivots.columns:
+    if 'real_start_value' not in timeframe_pivots.columns:
         raise ValueError("'real_start' not in original_pivots.columns")  # todo: test
     # log_w("after testing properly, extend the operation to support duplicated pivots.")
-    # original_pivots = timeframe_pivots[
-    #     timeframe_pivots.index.get_level_values(level='date')
-    #     == timeframe_pivots.index.get_level_values(level='original_start')] \
-    #     .copy().reset_index().set_index('date')
-    if timeframe_original_pivots.index.get_level_values(level='date') != \
-            timeframe_original_pivots.index.get_level_values(level='original_start'):
-        raise AssertionError("timeframe_pivots.index.get_level_values(level='date')!= "
-                             "timeframe_pivots.index.get_level_values(level='original_start')")
-    ftc_of_range_by_price(timeframe_original_pivots, multi_timeframe_base_patterns, timeframe)
-    if 'ftc_range_start_value' not in timeframe_original_pivots.columns:
+    original_pivots = timeframe_pivots[
+        timeframe_pivots.index.get_level_values(level='date')
+        == timeframe_pivots.index.get_level_values(level='original_start')] \
+        .copy().reset_index().set_index('date')
+    # if any(timeframe_original_pivots.index.get_level_values(level='date') != \
+    #         timeframe_original_pivots.index.get_level_values(level='original_start')):
+    #     raise AssertionError("timeframe_pivots.index.get_level_values(level='date')!= "
+    #                          "timeframe_pivots.index.get_level_values(level='original_start')")
+    ftc_of_range_by_price(original_pivots, multi_timeframe_base_patterns, timeframe)
+    if 'ftc_range_start_value' not in original_pivots.columns:
         raise AssertionError("'ftc_range_start_value' not in pivots_with_bbs_movement.columns")
-    if 'ftc_range_low' not in timeframe_original_pivots.columns:
+    if 'ftc_range_low' not in original_pivots.columns:
         raise AssertionError("'ftc_range_low' not in pivots_with_bbs_movement.columns")
-    if 'ftc_range_high' not in timeframe_original_pivots.columns:
+    if 'ftc_range_high' not in original_pivots.columns:
         raise AssertionError("'ftc_range_high' not in pivots_with_bbs_movement.columns")
-    if timeframe_original_pivots[['ftc_range_start_value', 'ftc_range_low', 'ftc_range_high']].isna().any().any():
+    if original_pivots[['ftc_range_start_value', 'ftc_range_low', 'ftc_range_high']].isna().any().any():
         raise AssertionError(
             "original_pivots[['ftc_range_start_value', 'ftc_range_low', 'ftc_range_high']].isna().any().any()")
-    return timeframe_original_pivots
+    return original_pivots
 
 
 def zz_ftc_range_start_time(pivots_with_bbs_movement, ohlcv):
