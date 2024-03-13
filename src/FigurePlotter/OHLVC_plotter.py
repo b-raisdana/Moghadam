@@ -190,7 +190,8 @@ def plot_ohlcva_with_subplot(ohlcva: pd.DataFrame, save: bool = True, show: bool
     sub_fig.add_scatter(x=ohlcva.index, y=midpoints,
                         mode='none',
                         showlegend=False,
-                        text=[f'atr: {atr:0.1f}' for atr in ohlcva['atr']],
+                        # text=[f'atr: {atr:0.1f}' for atr in ohlcva['atr']],
+                        text=f'atr-{name}:' + ohlcva['atr'].apply(int).apply(str),
                         hoverinfo='text')
 
     sub_fig.update_layout(hovermode='x unified')
@@ -238,13 +239,19 @@ def plot_ohlcva_with_subplot(ohlcva: pd.DataFrame, save: bool = True, show: bool
 
 def add_atr_scatter(fig: plgo.Figure, xs: pd.Series, midpoints: pd.Series, widths: pd.Series,
                     transparency: float = 0.2, name: str = 'atr', legendgroup: str = None,
-                    showlegend=True) -> plgo.Figure:
+                    showlegend=True, show_hover: bool = False) -> plgo.Figure:
     xs = xs.tolist()
     half_widths = widths.fillna(value=0).div(2)
     upper_band: pd.Series = midpoints + half_widths
     lower_band: pd.Series = midpoints - half_widths
-
-    return fig.add_scatter(
+    """
+        fig.add_scatter(x=ohlcva.index, y=midpoints,
+                        mode='none',
+                        showlegend=False,
+                        text=[f'atr: {atr:0.1f}' for atr in ohlcva['atr']],
+                        hoverinfo='text')
+    """
+    fig.add_scatter(
         x=xs + xs[::-1],
         y=upper_band.tolist() + lower_band.tolist()[::-1],
         mode='lines',
@@ -255,6 +262,13 @@ def add_atr_scatter(fig: plgo.Figure, xs: pd.Series, midpoints: pd.Series, width
         showlegend=showlegend,
         name=name, legendgroup=legendgroup
     )
+    if show_hover:
+        fig.add_scatter(x=xs, y=midpoints, mode='none',
+                        showlegend=False,
+                        text=f'atr-{name}:' + widths.apply(int).apply(str),
+                        legendgroup=legendgroup,
+                        hoverinfo='text')
+    return fig
 
 
 def plot_merged_timeframe_ohlcva(multi_timeframe_ohlcva: pt.DataFrame[MultiTimeframeOHLCVA]):

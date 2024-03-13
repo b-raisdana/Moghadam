@@ -4,6 +4,7 @@ from datetime import datetime
 from AtrMovementPivots import read_multi_timeframe_atr_movement_pivots
 from BasePattern import read_multi_timeframe_base_patterns
 from Config import config
+from FigurePlotter.OHLVC_plotter import plot_multi_timeframe_ohlcva
 from FigurePlotter.PeakValley_plotter import plot_multi_timeframe_peaks_n_valleys
 from FigurePlotter.Pivot_plotter import plot_multi_timeframe_pivots
 from PeakValley import read_multi_timeframe_peaks_n_valleys
@@ -33,6 +34,7 @@ if __name__ == "__main__":
     #     exit(0)
 
     ohlcva = read_multi_timeframe_ohlcva(config.processing_date_range)
+    # plot_multi_timeframe_ohlcva(ohlcva)
     peaks_and_valleys = read_multi_timeframe_peaks_n_valleys()
     # plot_multi_timeframe_peaks_n_valleys(peaks_and_valleys, config.processing_date_range)
     # # exit(0)
@@ -71,6 +73,8 @@ if __name__ == "__main__":
     plot_multi_timeframe_pivots(mt_pivots=major_pivots,
                                 multi_timeframe_ohlcva=ohlcva,
                                 group_by='timeframe',#'original_start'
+                                show_duplicates=False,
+                                show_boundaries=False,
                                 )
     sys.exit(0)
     test_strategy(cash=100000)

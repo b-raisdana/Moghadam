@@ -1,5 +1,3 @@
-import os
-import webbrowser
 from datetime import datetime
 
 import pandas as pd
@@ -45,8 +43,6 @@ def plot_multi_timeframe_base_pattern(_multi_timeframe_base_pattern: pt.DataFram
     show_and_save_plot(fig, save, show, name_without_prefix=f'merged_base_pattern.{file_id(_multi_timeframe_ohlcva)}')
 
 
-
-
 def draw_band_activators(base_pattern, fig, legend_group, start, text):
     if base_pattern['below_band_activated'] is not None:
         # add a vertical line equal to atr of BasePattern at the time price chart goes 1 atr under below edge.
@@ -86,7 +82,8 @@ def draw_band_orders_df(orders_df: pd.DataFrame, fig: plotly.graph_objs.Figure,
     ), 'info_order_group_id'].unique().tolist()
     for order_group_id in order_group_ids:
         original_order, stop_loss_order, take_profit_order = df_triple_orders_of_group(order_group_id, orders_df)
-        if config.check_assertions and len(original_order) == 0 or len(stop_loss_order) == 0 or len(take_profit_order) == 0:
+        if config.check_assertions and len(original_order) == 0 or len(stop_loss_order) == 0 or len(
+                take_profit_order) == 0:
             raise AssertionError("original_order.empty or stop_loss_order.empty or take_profit_order.empty")
         start = datetime.strptime(original_order['date'], "%Y-%m-%d %H:%M:%S%z")
         started = (original_order['status'] == "Completed")
@@ -223,13 +220,29 @@ def draw_base(base_info, fig, index_date, real_start, timeframe, legendgroup=Non
         legendgroup = MultiTimeframeBasePattern.str(index_date, timeframe, base_info)
     name = MultiTimeframeBasePattern.str(index_date, timeframe, base_info)
     text = MultiTimeframeBasePattern.repr(index_date, timeframe, base_info)
+    """
+    fig.add_scatter(
+            x=[pivot_start, level_end_time],
+            y=[pivot_info['level'], pivot_info['level']],
+            text=[pivot_description] * 2,
+            name=legend_group, line=dict(color=level_color, width=0.5), mode='lines', 
+            legendgroup=legend_group, showlegend=True, hoverinfo='text',
+        )
+    """
     fig.add_scatter(x=xs, y=ys, fill="toself",  # fillcolor=fill_color,
                     opacity=0.1,
                     name=name,
-                    text=text,
+                    # text=[text] * 2 + [None] * (len(xs) - 2),
+                    text=[text] * 4,
                     line=dict(color=fill_color, width=0),
                     mode='lines',
                     legendgroup=legendgroup,
-                    hoverinfo='text'
+                    showlegend=False,
+                    hoverinfo='none'
                     )
+    fig.add_scatter(x=[real_start, base_info['effective_end']],
+                    y=[base_info['internal_low'], base_info['internal_low']],
+                    mode='lines', line=dict(color=fill_color, width=0), # fill="toself",
+                    showlegend=False, legendgroup=legendgroup,
+                    text=[name] * 2, hoverinfo='text')
     return legendgroup, text

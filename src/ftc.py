@@ -324,7 +324,7 @@ def merge_bbs_overlap(time_frame_bbs: pt.DataFrame[BullBearSide]):
 #         timeframe_pivots['bbs_movement_start_value'] - timeframe_pivots['level']  # todo: test
 
 
-def ftc_of_range_by_time(pivots_with_ftc_range_start_time, multi_timeframe_base_patterns, pivots_timeframe):
+def zz_ftc_of_range_by_time(pivots_with_ftc_range_start_time, multi_timeframe_base_patterns, pivots_timeframe):
     if len(pivots_with_ftc_range_start_time) > 0:
         pass
     pivot_lower_timeframes = config.timeframes[config.timeframes.index(pivots_timeframe):0:-1]
@@ -369,7 +369,8 @@ def ftc_of_range_by_price(pivots: pt.DataFrame[Pivot2DFM],
             for pivot_start, pivot_info in remained_pivots.iterrows():
                 matched_bases = timeframe_base_patterns[
                     (timeframe_base_patterns['internal_low'] < pivot_info['ftc_range_high'])
-                    & (timeframe_base_patterns['internal_high'] > pivot_info['ftc_range_low'])
+                    # & (timeframe_base_patterns['internal_high'] > pivot_info['ftc_range_low'])
+                    & (timeframe_base_patterns['internal_low'] > pivot_info['ftc_range_low'])
                     & (timeframe_base_patterns.index.get_level_values('date') <= pivot_start)
                     & (timeframe_base_patterns['ttl'] >= pivot_start)
                     ].copy().reset_index()
@@ -551,7 +552,7 @@ def insert_ftc(timeframe_pivots: pt.DataFrame[Pivot2DFM],  # time_frame_bbs_boun
     return original_pivots
 
 
-def ftc_range_start_time(pivots_with_bbs_movement, ohlcv):
+def zz_ftc_range_start_time(pivots_with_bbs_movement, ohlcv):
     if len(pivots_with_bbs_movement) > 0:
         pass
     resistance_pivots = pivots_with_bbs_movement[pivots_with_bbs_movement['is_resistance']]
