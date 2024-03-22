@@ -383,10 +383,16 @@ def ftc_of_range_by_price(pivots: pt.DataFrame[Pivot2DFM],
 
 def insert_multi_timeframe_pivots_real_start(mt_pivot: pt.DataFrame[MultiTimeframePivot2DFM],
                                              mt_peaks_n_valleys: pt.DataFrame[MultiTimeframePeakValley], ):
-    # todo: real start is most far point in the range of pivots and their previous more significant candle
-    # log_w("do insert_multi_timeframe_pivots_real_start before duplicating pivots.")
-    # original_pivots = mt_pivot[
-    #     mt_pivot.index.get_level_values('original_start') == mt_pivot.index.get_level_values('date')]
+    """
+    todo: change to:
+    real start is most significant candle between pivot movement start and first pivot of the same or higher timeframe
+    before movement start.
+    real end is most significant candle between pivot movement end and first pivot of the same or higher timeframe
+    after movement end.
+    :param mt_pivot:
+    :param mt_peaks_n_valleys:
+    :return:
+    """
     mt_pivot['real_start_time'] = pd.Series(dtype='datetime64[ns, UTC]')
     mt_pivot['real_start_value'] = pd.Series(dtype=float)
     mt_pivot['real_start_permanent'] = pd.Series(dtype=bool)
@@ -441,6 +447,13 @@ def multi_timeframe_ftc(
 def insert_pivot_real_start(support_resistance: pt.DataFrame[PivotDFM], peaks_or_valleys: pt.DataFrame[PeakValley],
                             top_type: TopTYPE):
     """
+    todo:
+        real start is most significant candle between pivot movement start and first pivot of the same kind and of the
+        same or higher timeframe
+        before movement start.
+        real end is most significant candle between pivot movement end and first pivot of the same kind and of the
+        same or higher timeframe
+        after movement end.
     real_start of support/resistance pivot is the first valley/peak which in compare with previous valley/peak is
     less_significant: (valley < previous / peak > previous)
     :param top_type:
@@ -454,9 +467,16 @@ def insert_pivot_real_start(support_resistance: pt.DataFrame[PivotDFM], peaks_or
     else:  # top_type == TopTYPE.VALLEY: #Support
         more_significant = lambda top, previous_top: top < previous_top
         high_low = 'low'
-    support_resistance['real_start_time'] = pd.Series(dtype='datetime64[ns, UTC]')
-    support_resistance['real_start_value'] = pd.Series(dtype=float)
-    support_resistance['real_start_permanent'] = pd.Series(dtype=bool)
+
+    if 'real_start_time' not in support_resistance.columns:
+        raise AssertionError("'real_start_time' not in support_resistance.columns")
+    if 'real_start_value' not in support_resistance.columns:
+        raise AssertionError("'real_start_value' not in support_resistance.columns")
+    if 'real_start_permanent' not in support_resistance.columns:
+        raise AssertionError("'real_start_permanent' not in support_resistance.columns")
+    # support_resistance['real_start_time'] = pd.Series(dtype='datetime64[ns, UTC]')
+    # support_resistance['real_start_value'] = pd.Series(dtype=float)
+    # support_resistance['real_start_permanent'] = pd.Series(dtype=bool)
     if support_resistance.index.names != ['date']:  # , 'original_start']:
         raise AssertionError("support_resistance.index.names != ['date']")
         # raise AssertionError("support_resistance.index.names != ['date', 'original_start']")
@@ -478,29 +498,32 @@ def insert_pivot_real_start(support_resistance: pt.DataFrame[PivotDFM], peaks_or
 
 
 def insert_pivots_real_start(original_pivots: pt.DataFrame[PivotDFM], peaks_n_valleys: pt.DataFrame[PeakValley]):
+    """
+    todo: change to:
+    real start is most significant candle between pivot movement start and first pivot of the same or higher timeframe
+    before movement start.
+    real end is most significant candle between pivot movement end and first pivot of the same or higher timeframe
+    after movement end.
+    """
+    if 'real_start_time' not in original_pivots.columns:
+        raise AssertionError("'real_start_time' not in original_pivots.columns")
+    if 'real_start_value' not in original_pivots.columns:
+        raise AssertionError("'real_start_value' not in original_pivots.columns")
+    if 'real_start_permanent' not in original_pivots.columns:
+        raise AssertionError("'real_start_permanent' not in original_pivots.columns")
+    # original_pivots['real_start_time'] = pd.Series(dtype='datetime64[ns, UTC]')
+    # original_pivots['real_start_value'] = pd.Series(dtype=float)
+    # original_pivots['real_start_permanent'] = pd.Series(dtype=bool)
     resistance_pivots = original_pivots[original_pivots['is_resistance'].astype(bool)].copy()
     valleys = valleys_only(peaks_n_valleys)
-    original_pivots['real_start_time'] = pd.Series(dtype='datetime64[ns, UTC]')
-    original_pivots['real_start_value'] = pd.Series(dtype=float)
-    original_pivots['real_start_permanent'] = pd.Series(dtype=bool)
     original_pivots.loc[resistance_pivots.index, ['real_start_time', 'real_start_value', 'real_start_permanent']] = \
         insert_pivot_real_start(resistance_pivots, valleys, top_type=TopTYPE.VALLEY)[
             ['real_start_time', 'real_start_value', 'real_start_permanent']]
-    if 'real_start_time' not in original_pivots.columns:
-        raise AssertionError("'real_start_time' not in original_pivots.columns")  # todo: test
-    if 'real_start_value' not in original_pivots.columns:
-        raise AssertionError("'real_start_value' not in original_pivots.columns")  # todo: test
     support_pivots = original_pivots[~original_pivots['is_resistance'].astype(bool)].copy()
     peaks = peaks_only(peaks_n_valleys)
     original_pivots.loc[support_pivots.index, ['real_start_time', 'real_start_value', 'real_start_permanent']] = \
         insert_pivot_real_start(support_pivots, peaks, top_type=TopTYPE.PEAK)[
             ['real_start_time', 'real_start_value', 'real_start_permanent']]
-    """
-    after following line the 'real_start_time' and 'real_start_value'are NA 
-    but 'movement_start_time' and 'movement_start_value' have values. why?
-    original_pivots['real_start_time'].isna()=((Timestamp('2023-11-16 19:40:00+0000', tz='UTC'), Timestamp('2023-11-16 19:40:00+0000', tz='UTC')), True)
-    original_pivots[['real_start_time', 'real_start_value', 'movement_start_time', 'movement_start_value']].dtypes = ('real_start_time', datetime64[ns, UTC]) ('real_start_value', dtype('float64')) ('movement_start_time', datetime64[ns, UTC]) ('movement_start_value', dtype('float64'))
-    """
     na_real_starts = original_pivots['real_start_time'].isna()
     original_pivots.loc[na_real_starts, 'real_start_time'] = original_pivots.loc[na_real_starts, 'movement_start_time']
     original_pivots.loc[na_real_starts, 'real_start_value'] = original_pivots.loc[
